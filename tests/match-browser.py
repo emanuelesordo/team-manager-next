@@ -80,12 +80,12 @@ async def test_view(browser, width, height):
  assert await page.locator(".pitch-player").count()==11
  await page.locator('[data-tab="events"]').click()
  await page.wait_for_function("document.querySelectorAll('.timeline-item').length === 16")
+ assert await page.locator(".timeline-item").count()==16
  await page.locator('[data-tab="staff"]').click()
  await page.locator('[data-staff-match-tab="events"]').click()
  await page.locator('[data-staff-action="review-approve"]').first.wait_for()
  assert await page.locator('[data-staff-action="review-approve"]').count()==16
  assert "non modifica automaticamente" in (await page.locator('.staff-subpanel').inner_text()).lower()
- assert await page.locator(".timeline-item").count()==16
  # Browser refresh must reconstruct the selected fixture and fetch match data.
  await page.reload(wait_until="domcontentloaded")
  await page.locator(".match-detail-head").wait_for(timeout=15000)
