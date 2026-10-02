@@ -15,7 +15,7 @@ export function summary(fixtures,team){
  }
  return {...result,form:result.form.slice(-5)};
 }
-export function rankRows(rows){return [...rows].sort((a,b)=>(b.points??-999)-(a.points??-999)||(b.goal_difference??-999)-(a.goal_difference??-999)||String(a.team).localeCompare(String(b.team),'it'));}
+export function rankRows(rows){/* Gli spareggi dipendono dal regolamento: negli ex aequo mantenere l'ordine originale. */return [...rows].sort((a,b)=>(b.points??-999)-(a.points??-999));}
 export function fixtureToMatch(f,matches,opponents,team){
  const opponentName=isOurs(f.home_team,team)?f.away_team:f.home_team;
  const home=isOurs(f.home_team,team);

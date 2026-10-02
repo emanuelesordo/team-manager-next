@@ -3,7 +3,7 @@ const SESSION_KEY='tm_next_session';
 let session=null;
 try{session=JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{localStorage.removeItem(SESSION_KEY)}
 const unauthorized=e=>[401,403].includes(e.status);
-const headers=()=>({'apikey':PUBLISHABLE_KEY,'Authorization':'Bearer '+(session?.access_token||PUBLISHABLE_KEY),'Accept':'application/json'});
+const headers=()=>({'apikey':PUBLISHABLE_KEY,...(session?.access_token?{'Authorization':'Bearer '+session.access_token}:{}),'Accept':'application/json'});
 async function call(path,{method='GET',body,signal,extraHeaders={}}={}){
  const response=await fetch(API_URL+path,{method,headers:{...headers(),...extraHeaders,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal,cache:'no-store'});
  const data=await response.json().catch(()=>null);
@@ -12,7 +12,7 @@ async function call(path,{method='GET',body,signal,extraHeaders={}}={}){
 }
 async function refresh(){
  if(!session?.refresh_token)return false;
- try{const s=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token},extraHeaders:{Authorization:'Bearer '+PUBLISHABLE_KEY}});
+ try{const s=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token},extraHeaders:{}});
    session={...session,...s};localStorage.setItem(SESSION_KEY,JSON.stringify(session));return true;
  }catch{session=null;localStorage.removeItem(SESSION_KEY);return false}
 }
@@ -49,7 +49,9 @@ export async function loadIdentity(){
  return {user:id,role:rows[0].status==='fulfilled'?rows[0].value[0]||null:null,profile:rows[1].status==='fulfilled'?rows[1].value[0]||null:null};
 }
 export async function loadBase(){
- const [t,s,o]=await Promise.all([get('teams','select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,home_venue_name&limit=10'),get('app_seasons','select=id,team_id,name,status,start_date,end_date&order=start_date.desc'),get('app_opponents','select=id,name,short_name,logo_url,primary_color,secondary_color')]);
+ const query='select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,home_venue_name&limit=10';
+ const [publicTeams,s,o]=await Promise.all([get('tm_public_teams',query),get('app_seasons','select=id,team_id,name,status,start_date,end_date&order=start_date.desc'),get('app_opponents','select=id,name,short_name,logo_url,primary_color,secondary_color')]);
+ const t=publicTeams.length?publicTeams:hasSession()?await get('teams',query):[];
  const current=s.find(x=>x.status==='active')||s[0],team=t.find(x=>x.id===current?.team_id)||t[0];
  if(!current||!team)throw Error('Squadra o stagione non configurata');
  return {team,seasons:s,opponents:o};
@@ -75,4 +77,15 @@ export async function loadMatchInfo(matchId){
  const names=Object.keys(params),results=await Promise.allSettled(names.map(x=>get(...params[x])));
  const data={errors:{}};names.forEach((k,i)=>{data[k]=results[i].status==='fulfilled'?results[i].value:[];if(results[i].status==='rejected')data.errors[k]=results[i].reason.message});
  return data;
+}
+
+/** Scrittura transazionale del record ufficiale, con autorizzazione RLS server-side. */
+export async function saveFixture(id,fields){
+ const {home_score,away_score,status}=fields;
+ if(!id||!['scheduled','live','finished'].includes(status))throw Error('Stato partita non valido');
+ if(![home_score,away_score].every(x=>x===null||(Number.isInteger(x)&&x>=0&&x<=99)))throw Error('Punteggio non valido');
+ if(status==='finished'&&(home_score===null||away_score===null))throw Error('Inserisci entrambi i punteggi');
+ const result=await authorized('/rest/v1/app_competition_fixtures?id=eq.'+encodeURIComponent(id),{method:'PATCH',body:fields,extraHeaders:{Prefer:'return=representation'}});
+ if(!Array.isArray(result)||result.length!==1)throw Error('Nessuna partita aggiornata. Controlla i permessi.');
+ return result[0];
 }
