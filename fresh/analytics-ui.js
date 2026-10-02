@@ -1,3 +1,4 @@
+import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {resultSplit,eventCoverage,verifiedEvents} from './analytics.js';
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&#39;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=value=>Number(value).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
@@ -17,8 +18,8 @@ export function teamAnalyticsPanel(fixtures,team){
 export function eventAnalyticsPlaceholder(){
  return '<section class="glass panel event-analysis"><div class="panel-heading"><h2>Eventi e rimonte verificabili</h2></div><div data-event-analysis>Verifica eventi ufficializzati…</div></section>';
 }
-export function renderEventAnalytics(fixtures,matches,events,team){
- const coverage=eventCoverage(fixtures,matches,events,team);
+export function renderEventAnalytics(fixtures,matches,events,team,competitions=[]){
+ const coverage=eventCoverage(fixtures,matches,events,team,competitions);
  const validated=verifiedEvents(events);
  const proposed=events.filter(e=>e.validation_status==='proposed').length;
  const status='<div class="team-metric-grid">'+cell('Eventi ufficializzati',validated.length)+cell('Proposte da verificare',proposed)+cell('Partite con timeline completa',coverage.complete+'/'+coverage.possible)+'</div>';
@@ -29,11 +30,11 @@ export function renderEventAnalytics(fixtures,matches,events,team){
  [['In vantaggio','ahead'],['In parità','equal'],['In svantaggio','behind']].map(([label,k])=>'<tr><td>'+label+'</td><td>'+g[k]+'</td><td>'+a[k]+'</td></tr>').join('')+'</tbody></table></div>'+
  '<p class="subnote">Calcolato solo per '+coverage.complete+' gare con tutti i gol certificati, minuto noto e punteggio finale riconciliato. Le altre gare sono escluse e non valgono zero per le metriche non disponibili.</p>';
 }
-export function fixtureEventsPanel(events){
- const rows=(events||[]).filter(e=>e.event_type).sort((a,b)=>(a.minute??999)-(b.minute??999)||(a.stoppage_minute??0)-(b.stoppage_minute??0));
+export function fixtureEventsPanel(events,competition=null){
+ const rows=(events||[]).filter(e=>e.event_type).sort((a,b)=>(cumulativeEventMinute(a,competition)??999)-(cumulativeEventMinute(b,competition)??999)||(a.stoppage_minute??0)-(b.stoppage_minute??0));
  if(!rows.length)return '';
  const badges=rows.map(e=>{
-  const time=Number.isInteger(e.minute)?e.minute+'′'+(e.stoppage_minute?'+'+e.stoppage_minute:''):'—';
+  const time=displayEventMinute(e,competition);
   const which=e.side==='home'?'Casa':e.side==='away'?'Ospiti':e.side||'';
   const snapshot=Number.isInteger(e.home_score)&&Number.isInteger(e.away_score)?' · '+e.home_score+'–'+e.away_score:'';
   return '<div class="fixture-event-row"><b>'+E(time)+'</b><span>'+E(e.event_type)+' · '+E(which)+E(snapshot)+'</span><small>'+E(e.source||'')+'</small></div>'
