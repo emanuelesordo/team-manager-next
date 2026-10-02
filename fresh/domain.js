@@ -1,3 +1,4 @@
+import {displayEventMinute} from './match-minutes.js';
 export const normalized=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 export const isFinished=f=>['finished','completed','finalized','final','ft'].includes(String(f?.status??'').toLowerCase());
 export const isLive=f=>['live','in_progress','playing'].includes(String(f?.status??'').toLowerCase());
@@ -24,4 +25,4 @@ export function fixtureToMatch(f,matches,opponents,team){
  return candidates.length===1?candidates[0]:null;
 }
 export const roleName=x=>{const s=String(x??'').toLowerCase();return s==='p'||s.includes('port')?'P':s==='d'||s.includes('dif')?'D':s==='c'||s.includes('centr')?'C':s==='a'||s.includes('att')?'A':'—'};
-export const matchMinutes=ev=>ev.minute==null?'Senza minuto':String(ev.minute)+(ev.stoppage_minute?'+'+ev.stoppage_minute:'')+"’";
+export const matchMinutes=(ev,competition=null)=>displayEventMinute(ev,competition,'Senza minuto').replace('′','’');
