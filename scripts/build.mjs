@@ -1,11 +1,1 @@
-import {cp,mkdir,rm,readFile,writeFile} from 'node:fs/promises';
-import {createHash} from 'node:crypto';
-const root=new URL('../',import.meta.url),out=new URL('../dist/',import.meta.url);
-await rm(out,{recursive:true,force:true});await mkdir(out,{recursive:true});
-for(const f of ['index.html','.nojekyll'])await cp(new URL(f,root),new URL(f,out));
-for(const d of ['src','assets'])await cp(new URL(d+'/',root),new URL(d+'/',out),{recursive:true});
-let html=await readFile(new URL('index.html',out),'utf8');
-const css=await readFile(new URL('src/styles.css',out));const js=await readFile(new URL('src/app.js',out));
-const v=createHash('sha256').update(css).update(js).digest('hex').slice(0,10);
-html=html.replace('./src/styles.css','./src/styles.css?v='+v).replace('./src/app.js','./src/app.js?v='+v);
-await writeFile(new URL('index.html',out),html);console.log('build '+v);
+import{rm,mkdir,cp,readFile,writeFile}from'node:fs/promises';import{createHash}from'node:crypto';const root=new URL('../',import.meta.url),out=new URL('../dist/',import.meta.url);await rm(out,{force:true,recursive:true});await mkdir(out,{recursive:true});for(const f of ['index.html','sw.js','manifest.webmanifest','.nojekyll'])await cp(new URL(f,root),new URL(f,out));for(const d of ['fresh','src','assets'])await cp(new URL(d+'/',root),new URL(d+'/',out),{recursive:true});const hash=createHash('sha256').update(await readFile(new URL('fresh/app.css',out))).update(await readFile(new URL('fresh/app.js',out))).digest('hex').slice(0,10);let html=await readFile(new URL('index.html',out),'utf8');html=html.replace('./fresh/app.css','./fresh/app.css?v='+hash).replace('./fresh/app.js','./fresh/app.js?v='+hash);await writeFile(new URL('index.html',out),html);console.log('Fresh build',hash)

@@ -1,44 +1,14 @@
-# Team Manager
+# Team Manager Next
 
-Modern football team web app. **Mobile-first**, zero-runtime-dependency on public pages, with two distinct visual systems: dark petrol/soft-glass stadium desktop and green/ivory minimal mobile. Intended for a single principal team per organization.
+Interfaccia ricostruita da zero sulla base delle quattro reference e della specifica fornita. Nessun componente CSS/HTML/JS precedente viene caricato.
 
-> **Stage**: consultative web/PWA foundation with a redesigned match-day Home, interactive carousel, seasonal KPIs, schedules, standings, players and dedicated mobile UI. Admin match editing, event authorization, roster mutation and import processes are intentionally not implemented yet.
+- `fresh/app.css`: layout desktop e mobile originali.
+- `fresh/app.js`: nuove viste.
+- `fresh/data.js`: lettura dati Supabase.
+- `src/config.js`: infrastruttura già autorizzata per il solo collegamento Supabase.
+- `fresh/stadium.svg`: asset originale.
+- `docs/specification-original.txt`: specifica originale.
 
-## Open the app
+Funzioni: Home, Competizioni, Calendario, Rosa, Statistiche e dettagli consultivi. Gestione live e modifica dati da implementare. Nessun dato di database è stato alterato.
 
-The deployment workflow validates and publishes the `dist/` folder to **GitHub Pages**, once Pages has been enabled with **GitHub Actions** as its source in the repository settings. Expected path: `https://emanuelesordo.github.io/team-manager-next/`.
-
-## Develop
-
-- `npm run dev` — local server at `http://localhost:8080` (no install required).
-- `npm run check` — domain tests, module syntax validation, deterministic production build.
-- `npm run build` — publishable `dist/` directory; only runtime files are copied.
-
-This is a **native HTML/CSS/ESM application**, without a front-end framework or runtime bundle. The logged-out experience fetches the Supabase REST endpoint directly. The pinned Supabase Auth SDK is lazy-loaded only for sign-in and active sessions. Images are lazy-loaded and the prototype screenshot is excluded from production.
-
-## Architecture
-
-- Backend: the existing `team-manager` Supabase project. No new tables or migrations.
-- Principal team, season, competition, fixture, match, event and ratings use the existing app-specific schema as documented in [the data map](docs/architecture-data.md).
-- Supabase RLS and column privileges decide server-side authorization. UI access is not an authorization boundary.
-- All standings, match results and statistical cards reflect existing records only. No fabricated sports data.
-- A missing score is different from 0–0; an event suggestion is not automatically official.
-
-## Design and documentation
-
-The supplied brief is preserved in [`docs/specification-original.txt`](docs/specification-original.txt), the reference image (WebP) in [`assets/reference-design.webp`](assets/reference-design.webp). They are product-direction references, **not** a frozen official README. The README stays intentionally concise; details evolve by topic:
-
-| Document | Purpose |
-|---|---|
-| [Esperienza UI](docs/experience-03.md) | Traduzione delle quattro reference in interfacce desktop/mobile e animazioni |
-| [Design](docs/design-system.md) | Palette, glass treatment, mobile/desktop behavior, animation |
-| [Architecture](docs/architecture-data.md) | Model, sources of truth, API, caching and null handling |
-| [Modules](docs/modules.md) | Screens and user-facing functionality |
-| [UI layouts](docs/ui-layout.md) | Content composition and distinct mobile/desktop hierarchies |
-| [Security](docs/security.md) | Supabase grants, RLS, Auth, personal data and CORS |
-| [Roadmap](docs/roadmap.md) | Planned development milestones, explicitly distinguished from production |
-| [Deployment](docs/deployment.md) | Build and GitHub Pages configuration |
-
-## Product constraints
-
-The `app_*` model and the general administrative model (`seasons`, `matches`, etc.) are distinct and intentionally **not** merged. Fixtures are authoritative for results and match scheduling. The interface supports historical seasons, clear missing-data states and deep links with hash navigation. Public assets contain only the Supabase publishable API key, never privileged credentials.
+`npm run check` valida la build, GitHub Actions pubblica `dist/`.

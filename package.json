@@ -1,1 +1,1 @@
-{"name":"team-manager-next","private":true,"type":"module","scripts":{"build":"node scripts/build.mjs","check":"node scripts/check.mjs && npm run build"}}
+{"name":"team-manager-next","version":"2.0.0","private":true,"type":"module","engines":{"node":">=20"},"scripts":{"dev":"python3 -m http.server 8080","build":"node scripts/build.mjs","check":"node --check fresh/app.js && node --check fresh/data.js && npm run build"}}
