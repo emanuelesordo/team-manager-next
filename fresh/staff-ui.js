@@ -1,6 +1,7 @@
 import {get,rpc,adminWrite,reviewPasswordRequest} from './api.js';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup} from './lineup-pitch.js';
+import {parseKickoff} from './import-domain.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const attrs=(rows,key,label)=>rows.map(row=>'<option value="'+esc(row[key])+'">'+esc(row[label])+'</option>').join('');
@@ -72,10 +73,27 @@ export function adminPage(ctx){
    input('draw_points','Punti pareggio',c?.draw_points??1,'number','min="0" max="20" required')+
    input('loss_points','Punti sconfitta',c?.loss_points??0,'number','min="0" max="20" required')+
    input('blue_duration','Blu: sospensione in minuti',settings.blue_duration_minutes||'','number','min="1" max="30"')+
+   input('yellow_thresholds','Soglie diffida (es. 5,4,3,2)',Array.isArray(settings.yellow_thresholds)?settings.yellow_thresholds.join(','):'','text','maxlength="80"')+
+   selection('knockout_two_legged','Eliminazione diretta',[['false','Gara secca'],['true','Andata e ritorno']],String(c?.knockout_two_legged??false))+
+   selection('extra_time_enabled','Tempi supplementari',[['false','Disabilitati'],['true','Abilitati']],String(c?.extra_time_enabled??false))+
+   input('extra_time_periods','Tempi supplementari: numero',c?.extra_time_periods??2,'number','min="1" max="4" required')+
+   input('extra_time_minutes','Durata supplementare (minuti)',c?.extra_time_minutes??15,'number','min="1" max="45" required')+
+   selection('penalties_enabled','Rigori dopo i supplementari',[['false','Disabilitati'],['true','Abilitati']],String(c?.penalties_enabled??false))+
+   selection('playoff_playout_enabled','Playoff e playout',[['false','No'],['true','Sì']],String(c?.playoff_playout_enabled??false))+
    selection('general_competition_id','Competizione gestionale collegata',
     [['','Nessuna (blocco conservativo delle squalifiche attive)'],...generalCandidates.map(x=>[x.id,x.name])],
     chosenBridge?.general_competition_id||'')+'</div>',
    'Le competizioni conservano la propria durata e regole. Non vengono cancellati calendario o partite.');
+  if(c){
+   const linked=new Set((data.competitionOpponents||[]).filter(x=>x.competition_id===c.id).map(x=>x.opponent_id));
+   const choices=opps.map(o=>'<label class="staff-check staff-participant">'+
+    '<input type="checkbox" name="opponent_ids" value="'+esc(o.id)+'" '+(linked.has(o.id)?'checked disabled':'')+'>'+
+    '<span>'+esc(o.name)+(linked.has(o.id)?' · già associata':'')+'</span></label>').join('');
+   form+=wrapForm('participants','Squadre partecipanti', 
+    '<p class="staff-help">Le associazioni esistenti restano nello storico. Seleziona nuove avversarie da aggiungere senza rimuovere quelle già collegate.</p>'+
+    '<div class="participant-grid">'+choices+'</div>',
+    'L’aggiunta è transazionale. I risultati e le giornate esistenti non vengono alterati.');
+  }
  }
  if(memory.area==='opponents'){
   const o=idOf(opps,S.opponents);
@@ -171,10 +189,17 @@ export function adminPage(ctx){
  if(memory.area==='fixtures'){
   const own=fixtures.filter(x=>ctx.involvesTeam(x,base.team));
   const f=idOf(own,S.fixtures);
-  const local=f?.kickoff_at?new Date(new Date(f.kickoff_at).getTime()-new Date(f.kickoff_at).getTimezoneOffset()*60000).toISOString().slice(0,16):'';
+  const local=f?.kickoff_at?new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(f.kickoff_at)).replace(' ','T'):'';
   form=wrapForm('fixtures','Calendario e risultati',
    selectExisting('fixtures',own.map(f=>({...f,name:f.home_team+' – '+f.away_team+' · '+(f.round_no??'')})),'name')+
-   (!f?'<p class="staff-help">Seleziona una partita esistente. La creazione di calendari massivi è gestita separatamente.</p>':
+   (!f?'<p class="staff-help">Nuova partita: scegli giornata, competizione, squadre, data e campo. Per molti incontri usa Importa CSV.</p>'+
+   '<div class="staff-form-grid">'+
+    selection('competition_id','Competizione',comps.map(c=>[c.id,c.name]),comps[0]?.id)+
+    input('round_no','Giornata',1,'number','min="1" max="250" required')+
+    selection('home_team','Squadra di casa',[[t.name,t.name],...opps.map(o=>[o.name,o.name])],t.name)+
+    selection('away_team','Ospite',[[t.name,t.name],...opps.map(o=>[o.name,o.name])],opps[0]?.name)+
+    input('kickoff_at','Data e ora (Italia)','', 'datetime-local','required')+
+    input('venue_name','Campo','')+input('venue_address','Indirizzo','')+'</div>':
    '<div class="staff-form-grid">'+input('kickoff_at','Data e ora',local,'datetime-local','required')+
    input('venue_name','Campo',f.venue_name||'')+
    input('venue_address','Indirizzo',f.venue_address||'')+
@@ -287,17 +312,40 @@ function adminPayload(form){
  if(kind==='team')return {table:'teams',id:null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','home_venue_name'])};
  if(kind==='seasons')return {table:'app_seasons',id:blank.seasons||null,payload:cleaned(data,['name','start_date','end_date','status'])};
  if(kind==='competitions'){
+  const rules={};
+  if(data.blue_duration)rules.blue_duration_minutes=Number(data.blue_duration);
+  if(String(data.yellow_thresholds||'').trim()){
+   if(!/^\d{1,2}(\s*,\s*\d{1,2}){0,9}$/.test(String(data.yellow_thresholds).trim()))
+    throw Error('Soglie diffida: usa numeri separati da virgole');
+   rules.yellow_thresholds=String(data.yellow_thresholds).split(',').map(x=>Number(x.trim()));
+   if(rules.yellow_thresholds.some(x=>x<1||x>30))throw Error('Soglie diffida non valide');
+  }
   return {table:'app_competitions',id:blank.competitions||null,payload:{
     ...cleaned(data,['name','kind','format']),periods:Number(data.periods),minutes_per_period:Number(data.minutes_per_period),
     win_points:Number(data.win_points),draw_points:Number(data.draw_points),loss_points:Number(data.loss_points),
-    ... (data.blue_duration?{discipline_rules:{blue_duration_minutes:Number(data.blue_duration)}}:{})
+    knockout_two_legged:data.knockout_two_legged==='true',
+    extra_time_enabled:data.extra_time_enabled==='true',
+    extra_time_periods:Number(data.extra_time_periods),extra_time_minutes:Number(data.extra_time_minutes),
+    penalties_enabled:data.penalties_enabled==='true',
+    playoff_playout_enabled:data.playoff_playout_enabled==='true',
+    ... (Object.keys(rules).length?{discipline_rules:rules}:{})
   }};
  }
  if(kind==='opponents')return {table:'app_opponents',id:blank.opponents||null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','home_venue_name','home_venue_address'])};
  if(kind==='fixtures'){
+  if(!blank.fixtures){
+   const round=Number(data.round_no);
+   if(!Number.isInteger(round)||round<1||round>250||!data.competition_id)throw Error('Competizione e giornata obbligatorie');
+   if(!data.home_team||!data.away_team||data.home_team===data.away_team)throw Error('Le due squadre devono essere diverse');
+   return {table:'new-fixture',payload:{
+    competition_id:data.competition_id,round_no:round,
+    kickoff_at:parseKickoff(data.kickoff_at),home_team:data.home_team,
+    away_team:data.away_team,venue_name:data.venue_name||null,
+    venue_address:data.venue_address||null
+   }};
+  }
   const d=cleaned(data,['venue_name','venue_address','status']);
-  if(!blank.fixtures)throw Error('Seleziona una fixture');
-  if(data.kickoff_at)d.kickoff_at=new Date(data.kickoff_at).toISOString();
+  if(data.kickoff_at)d.kickoff_at=parseKickoff(data.kickoff_at);
   d.home_score=numberOrNull(data.home_score);d.away_score=numberOrNull(data.away_score);
   return {table:'app_competition_fixtures',id:blank.fixtures,payload:d};
  }
@@ -461,6 +509,13 @@ export async function staffSubmit(e,ctx){
    await pendingFn(form,()=>adminWrite(kind,id?'PATCH':'POST',payload,id?{id}:{}));
    await ctx.reloadAll();ctx.toast('Situazione aggiornata');return true;
   }
+  if(kind==='participants'){
+   const competitionId=memory.selected.competitions;
+   if(!competitionId)throw Error('Seleziona una competizione');
+   const ids=[...form.querySelectorAll('input[name="opponent_ids"]:checked:not(:disabled)')].map(x=>x.value);
+   const output=await pendingFn(form,()=>rpc('tm_app_add_competition_opponents',{p_competition_id:competitionId,p_opponent_ids:ids}));
+   await ctx.reloadAll();ctx.toast((output?.added??0)+' partecipanti aggiunti');return true;
+  }
   if(kind==='account'){
    if(roleOf(ctx)!=='admin')throw Error('Accesso riservato agli amministratori');
    const userId=form.dataset.userId;
@@ -480,6 +535,14 @@ export async function staffSubmit(e,ctx){
   }
   const obj=adminPayload(form);
   if(!obj.table)throw Error('Modulo sconosciuto');
+  if(obj.table==='new-fixture'){
+   if(!(ctx.state.data?.competitions||[]).some(c=>c.id===obj.payload.competition_id))throw Error('Competizione non appartenente alla stagione');
+   if(!window.confirm('Inserire la nuova partita nel calendario?'))return true;
+   const {competition_id,...row}=obj.payload;
+   const result=await pendingFn(form,()=>rpc('tm_app_import_fixtures',{p_competition_id:competition_id,p_rows:[row],p_dry_run:false}));
+   if(result?.new!==1)throw Error('Partita già presente nel calendario');
+   await ctx.reloadAll();ctx.toast('Nuova partita inserita');return true;
+  }
   if(obj.table==='teams')obj.id=ctx.state.base.team.id;
   if(obj.table==='app_competitions'){
    const previous=ctx.state.data?.competitions?.find(c=>c.id===obj.id);

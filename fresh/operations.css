@@ -50,3 +50,9 @@
 .recent-vote .vote-date{font-size:11px;color:var(--muted)}.recent-vote .vote-opp{min-width:0;display:grid;gap:6px}.recent-vote .vote-opp b{font-size:12px}.recent-vote .vote-opp small{font-size:10px;color:var(--muted)}
 .recent-vote strong{text-align:right;color:var(--ink);font-size:18px}.vote-meter{height:5px;border-radius:8px;background:var(--border);overflow:hidden}.vote-meter i{display:block;height:100%;border-radius:inherit;background:var(--accent)}
 @media(max-width:760px){.recent-vote{grid-template-columns:52px minmax(0,1fr) 44px;gap:8px;padding:9px 6px}.recent-vote strong{font-size:15px}.recent-vote .vote-date{font-size:10px}}
+
+/* Competition participant additions, safety-preserving (no historical unlink). */
+.participant-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:12px 0}
+.staff-participant{display:flex;align-items:center;gap:10px;min-width:0;padding:11px;border:1px solid var(--border);border-radius:12px;background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.staff-participant input{accent-color:var(--accent)}.staff-participant input:disabled{opacity:.55}.staff-participant span{min-width:0;font-size:11px}
+@media(max-width:760px){.participant-grid{grid-template-columns:1fr}}

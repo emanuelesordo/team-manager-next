@@ -46,3 +46,9 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [x] Maglia abituale derivata dal numero più frequente nelle partite concluse; spareggio per ultimo utilizzo.
 - [x] Ultimi cinque rating medi per partita, comprensivi di SV e avversaria, tramite vista aggregata senza ID dei votanti.
 - [ ] Collegamento tra infortuni e scheda giocatore riservato allo staff, con verifiche su modello stagionale generale.
+
+## Calendario e configurazione (ottobre 2026)
+- [x] Creazione manuale fixture con data/ora Europe/Rome attraverso la stessa RPC atomica dell'import CSV.
+- [x] Configurazioni competizione aggiuntive: andata/ritorno, supplementari, rigori, playoff/playout e soglie di diffida; valori salvati sui campi originali.
+- [x] Associazione additiva avversarie↔competizione su `app_competition_opponents`, senza cancellazione storica.
+- [ ] Editor fasi e gironi avanzati `phase_rules` con schema validato; modifiche ai partecipanti storici gestite separatamente.
