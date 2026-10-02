@@ -35,7 +35,8 @@ const roster=()=>state.season.roster||[];
 const stats=()=>state.season.playerStats||[];
 const players=()=>state.season.players||[];
 const nameOf=player=>player?`${player.first_name||''} ${player.last_name||''}`.trim():'Giocatore non identificato';
-const playerById=id=>players().find(x=>x.id===id)||stats().find(x=>x.player_id===id);
+// Public stats identify players with player_id rather than id: adapt in memory, never duplicate DB records.
+const playerById=id=>players().find(x=>x.id===id)||(()=>{const stat=stats().find(x=>x.player_id===id);return stat?{...stat,id:stat.player_id}:null})();
 const teamName=()=>state.team?.name||CONFIG.fallbackTeamName;
 const ours=name=>{const n=norm(name);if(!n)return false;const candidates=[teamName(),state.team?.short_name,CONFIG.fallbackTeamName,'Calcio Caselle 08'].filter(Boolean).map(norm);return candidates.includes(n)};
 const mine=f=>ours(f.home_team)||ours(f.away_team);
