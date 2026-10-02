@@ -1,1 +1,11 @@
-import{rm,mkdir,cp,readFile,writeFile}from'node:fs/promises';import{createHash}from'node:crypto';const root=new URL('../',import.meta.url),out=new URL('../dist/',import.meta.url);await rm(out,{force:true,recursive:true});await mkdir(out,{recursive:true});for(const f of ['index.html','.nojekyll'])await cp(new URL(f,root),new URL(f,out));await cp(new URL('ui/',root),new URL('ui/',out),{recursive:true});const hash=createHash('sha256').update(await readFile(new URL('ui/main.css',out))).update(await readFile(new URL('ui/main.js',out))).digest('hex').slice(0,10);let html=await readFile(new URL('index.html',out),'utf8');html=html.replace(/\.\/ui\/main\.css\?v=[^"']+/,'./ui/main.css?v='+hash).replace(/\.\/ui\/main\.js\?v=[^"']+/,'./ui/main.js?v='+hash);await writeFile(new URL('index.html',out),html);console.log('Team Manager Next build',hash);
+import{rm,mkdir,cp,readFile,writeFile}from'node:fs/promises';
+import{createHash}from'node:crypto';
+const base=new URL('../',import.meta.url),out=new URL('../dist/',import.meta.url);
+await rm(out,{force:true,recursive:true});await mkdir(out,{recursive:true});
+for(const file of ['index.html','.nojekyll'])await cp(new URL(file,base),new URL(file,out));
+for(const dir of ['fresh','assets'])await cp(new URL(dir+'/',base),new URL(dir+'/',out),{recursive:true});
+const hash=createHash('sha256').update(await readFile(new URL('fresh/main.js',out))).update(await readFile(new URL('fresh/style.css',out))).digest('hex').slice(0,12);
+let html=await readFile(new URL('index.html',out),'utf8');
+html=html.replace('./fresh/style.css','./fresh/style.css?v='+hash).replace('./fresh/main.js','./fresh/main.js?v='+hash);
+await writeFile(new URL('index.html',out),html);
+console.log('Fresh frontend build:',hash);

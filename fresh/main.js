@@ -1,0 +1,206 @@
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession} from './api.js';
+import {normalized,isOurs,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js';
+import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js';
+
+const $=s=>document.querySelector(s);
+const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl=u=>{try{const x=new URL(String(u));return ['https:','http:'].includes(x.protocol)?E(x.href):''}catch{return ''}};
+const date=v=>v?new Intl.DateTimeFormat(LOCALE,{day:'2-digit',month:'short',timeZone:TIME_ZONE}).format(new Date(v)):'—';
+const weekday=v=>v?new Intl.DateTimeFormat(LOCALE,{weekday:'long',day:'numeric',month:'long',timeZone:TIME_ZONE}).format(new Date(v)):'Data da definire';
+const time=v=>v?new Intl.DateTimeFormat(LOCALE,{hour:'2-digit',minute:'2-digit',timeZone:TIME_ZONE}).format(new Date(v)):'—';
+const ico=(n,size=20)=>{const paths={
+ home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+ calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18"/>',
+ trophy:'<path d="M8 3h8v7a4 4 0 0 1-8 0zM8 5H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4M12 14v5m-4 2h8"/>',
+ users:'<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2zM17 5a3 3 0 0 1 0 6m1 4a5 5 0 0 1 3 5"/>',
+ chart:'<path d="M4 20V10m5 10V5m5 15v-8m5 8V8M2 21h20"/>',
+ chevron:'<path d="m9 18 6-6-6-6"/>',back:'<path d="m15 18-6-6 6-6"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>',
+ settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+ moon:'<path d="M20 14a8 8 0 0 1-10-10A8 8 0 1 0 20 14z"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M19 5l-1.5 1.5m-11 11L5 19"/>',
+ menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',close:'<path d="M5 5l14 14M19 5 5 19"/>',
+ arrow:'<path d="M4 12h16m-7-7 7 7-7 7"/>',pin:'<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2"/>',
+ refresh:'<path d="M20 7V3l-3 3a8 8 0 1 0 3 9M20 3v5h-5"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ spark:'<path d="m2 16 6-6 4 3 9-9m-6 0h6v6"/>'
+ };return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[n]||paths.home}</svg>`};
+const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar','calendar','Calendario'],['roster','users','Rosa'],['stats','chart','Numeri']];
+const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'summary',matchData:null,player:null,slide:0,filter:'all',mineOnly:false,role:'all',q:'',theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
+let carouselTimer=null,refreshTimer=null,toastTimer=null;
+function comps(){return(state.data?.competitions||[])}
+function fixtures(){return(state.data?.fixtures||[])}
+function team(){return state.base?.team||{name:'Team Manager'}}
+function ours(n){return isOurs(n,team())}
+function ownFixtures(){return fixtures().filter(f=>involvesTeam(f,team())).sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))}
+function next(){const n=Date.now();return ownFixtures().filter(f=>isLive(f)||(!isFinished(f)&&new Date(f.kickoff_at).getTime()>=n-3600000)).sort((a,b)=>Number(isLive(b))-Number(isLive(a))||new Date(a.kickoff_at)-new Date(b.kickoff_at))[0]||null}
+function previous(){return [...ownFixtures()].filter(f=>isFinished(f)).sort((a,b)=>new Date(b.kickoff_at)-new Date(a.kickoff_at))[0]||null}
+function competition(id){return comps().find(c=>c.id===id)}
+function currentComp(){return competition(state.comp)||comps()[0]}
+function club(n,sz='md'){const o=ours(n)?team():state.base?.opponents.find(x=>normalized(x.name)===normalized(n)||normalized(x.short_name)===normalized(n));const img=safeUrl(o?.logo_url);return `<span class="crest ${sz}">${img?`<img alt="" src="${img}" loading="lazy">`:`<span>${E(String(n||'?').slice(0,2)).toUpperCase()}</span>`}</span>`}
+function status(f){return isLive(f)?'<span class="status live"><i></i>LIVE</span>':isFinished(f)?'<span class="status end">Terminata</span>':'<span class="status upcoming">In programma</span>'}
+function score(f){return hasScore(f)?`${E(f.home_score)} <span>–</span> ${E(f.away_score)}`:'<span class="vs">VS</span>'}
+function heading(k,title,caption=''){return `<div class="page-heading"><div><p class="eyebrow">${E(k)}</p><h1>${E(title)}</h1>${caption?`<p class="subtitle">${E(caption)}</p>`:''}</div></div>`}
+function header(){
+ return `<header class="topbar"><div class="mobile-symbol">${club(team().name,'tiny')}</div><div class="breadcrumb"><span>TEAM MANAGER</span><b> / </b><strong>${E(nav.find(x=>x[0]===state.page)?.[2]||(state.page==='match'?'Match Center':state.page==='player'?'Giocatore':'Area personale'))}</strong></div><div class="top-actions"><span class="connection-pill"><i></i> Dati sincronizzati</span><button type="button" class="icon-btn theme-btn" data-action="theme" aria-label="Cambia aspetto">${ico(state.theme==='night'?'sun':'moon')}</button><button type="button" class="icon-btn" data-action="reload" aria-label="Aggiorna dati">${ico('refresh')}</button><button type="button" class="icon-btn user-btn" data-action="account" aria-label="Area personale">${ico('user')}</button><button type="button" class="icon-btn mobile-more" data-action="menu" aria-label="Apri menu">${ico('menu')}</button></div></header>`
+}
+function sidebar(){return `<aside class="sidebar"><button class="identity-brand" data-page="home">${club(team().name,'brand')}<span><b>TEAM MANAGER</b><small>THE FOOTBALL EXPERIENCE</small></span></button><div class="side-label">IL TUO SPAZIO</div><nav class="side-nav">${nav.map(([id,ic,label])=>`<button type="button" class="side-item ${state.page===id?'selected':''}" data-page="${id}">${ico(ic,20)}<span>${label}</span>${state.page===id?`<i class="side-dot"></i>`:''}</button>`).join('')}</nav><div class="side-spacer"></div><div class="side-label">STAGIONE</div><label class="season-box"><span>${ico('calendar',17)} Stagione sportiva</span><select aria-label="Seleziona stagione" data-season>${state.base.seasons.map(s=>`<option value="${E(s.id)}" ${state.season===s.id?'selected':''}>${E(s.name)}</option>`).join('')}</select></label><button class="account-card" data-action="account">${ico('user')}<span><b>${E(state.identity.profile?.display_name||'Visitatore')}</b><small>${hasSession()?'Account collegato':'Accesso facoltativo'}</small></span>${ico('chevron',15)}</button></aside>`}
+function mobileNav(){return `<nav class="mobile-nav" aria-label="Navigazione principale">${nav.map(([id,ic,label])=>`<button type="button" data-page="${id}" class="${state.page===id?'active':''}" aria-label="${label}">${ico(ic,21)}<span>${label}</span></button>`).join('')}</nav>`}
+function panelTitle(title,action,label='Vedi tutto'){return `<div class="panel-heading"><h2>${E(title)}</h2>${action?`<button class="plain-link" data-page="${action}">${label} ${ico('chevron',15)}</button>`:''}</div>`}
+function scorecard(f,compact=false){if(!f)return '<div class="empty">Nessun incontro disponibile.</div>';
+ return `<button class="scorecard ${compact?'compact':''}" data-match="${E(f.id)}"><div class="scorecard-top">${status(f)}<span>${E(competition(f.competition_id)?.name||'Partita')} · ${f.round_no!=null?'Giornata '+E(f.round_no):'Calendario'}</span></div><div class="scorecard-main"><div class="scoreclub">${club(f.home_team,compact?'sm':'lg')}<strong>${E(f.home_team)}</strong></div><div class="scorecentre"><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="scoreclub">${club(f.away_team,compact?'sm':'lg')}<strong>${E(f.away_team)}</strong></div></div><div class="scorecard-foot">${ico('pin',14)} <span>${E(f.venue_name||f.venue||'Campo da definire')}</span><span class="match-cta">Dettagli ${ico('chevron',15)}</span></div></button>`
+}
+function fixtureRow(f,short=false){return `<button class="fixture-row" data-match="${E(f.id)}"><span class="fixture-date"><b>${date(f.kickoff_at).split(' ')[0]}</b><small>${date(f.kickoff_at).split(' ').slice(1).join(' ')}</small></span><div class="fixture-main"><div class="fixture-clubs">${club(f.home_team,'tiny')}<strong>${E(f.home_team)}</strong><span class="fixture-separator">—</span><strong>${E(f.away_team)}</strong>${club(f.away_team,'tiny')}</div><small>${E(competition(f.competition_id)?.name||'Partita')} ${f.round_no!=null?' · G'+E(f.round_no):''}${short?'':' · '+E(f.venue_name||f.venue||'Campo da definire')}</small></div><span class="fixture-result ${hasScore(f)?'played':''}">${hasScore(f)?E(f.home_score)+'–'+E(f.away_score):time(f.kickoff_at)}</span>${ico('chevron',15)}</button>`}
+function standings(comp,limit=0){
+ const all=rankRows((state.data?.standings||[]).filter(x=>x.competition_id===comp?.id));const rows=limit?all.slice(0,limit):all;
+ if(!rows.length)return '<div class="empty">Classifica non disponibile per questa competizione.</div>';
+ return `<div class="table-scroller"><table class="standing-table"><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>DR</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${ours(r.team)?'ours':''}"><td>${i+1}</td><td><span class="standing-team">${club(r.team,'tiny')}<span>${E(r.team)}</span></span></td><td>${r.played??'—'}</td><td>${r.won??'—'}</td><td>${r.drawn??'—'}</td><td>${r.lost??'—'}</td><td>${r.goal_difference??'—'}</td><td class="points">${r.points??'—'}</td></tr>`).join('')}</tbody></table></div>`
+}
+function carouselFixtures(){const a=[...ownFixtures().filter(f=>isLive(f)),...ownFixtures().filter(f=>!isLive(f)&&!isFinished(f)&&new Date(f.kickoff_at)>=Date.now()-3600000).slice(0,2),...ownFixtures().filter(isFinished).reverse().slice(0,2)];return a.slice(0,5)}
+function hero(){
+ const slides=carouselFixtures();if(!slides.length)return '<div class="hero-panel"><div class="empty light">Non ci sono ancora partite in calendario.</div></div>';
+ state.slide=Math.min(state.slide,slides.length-1);const f=slides[state.slide];
+ return `<section class="hero-panel"><div class="hero-bg"></div><div class="hero-content"><div class="hero-title"><span class="hero-eyebrow">${ico('spark',15)} MATCH CENTER</span><span class="hero-season">${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</span></div><h2>${isLive(f)?'In campo, adesso.':isFinished(f)?'L’ultimo risultato.':'Il prossimo appuntamento.'}</h2><p>${E(competition(f.competition_id)?.name||'Competizione')} ${f.round_no!=null?'· Giornata '+E(f.round_no):''}</p><div class="hero-score"><div class="hero-club">${club(f.home_team,'xl')}<strong>${E(f.home_team)}</strong></div><div class="hero-mid"><span class="hero-live">${status(f)}</span><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="hero-club">${club(f.away_team,'xl')}<strong>${E(f.away_team)}</strong></div></div><div class="hero-bottom"><div class="dots">${slides.map((_,i)=>`<button data-slide="${i}" class="${i===state.slide?'on':''}" aria-label="Mostra partita ${i+1}"></button>`).join('')}</div><div class="hero-arrows"><button data-action="prevslide" aria-label="Precedente">${ico('back',17)}</button><button data-action="nextslide" aria-label="Successiva">${ico('chevron',17)}</button></div><button class="primary-btn" data-match="${E(f.id)}">Match Center ${ico('arrow',17)}</button></div></div></section>`;
+}
+function kpis(){const s=summary(fixtures(),team());return `<div class="kpi-strip">${[['played','Partite giocate','calendar'],['wins','Vittorie','trophy'],['draws','Pareggi','clock'],['losses','Sconfitte','chart'],['gf','Gol fatti','spark'],['ga','Gol subiti','chart']].map(([key,label,ic])=>`<article class="kpi"><span class="kpi-icon">${ico(ic,19)}</span><strong>${s[key]}</strong><small>${label}</small></article>`).join('')}</div>`}
+function miniForm(){const a=summary(fixtures(),team()).form;return a.length?`<span class="form-strip">${a.map(x=>`<b class="form-${x}">${x}</b>`).join('')}</span>`:'<span class="muted">Ancora nessuna partita.</span>'}
+function home(){
+ const latest=previous(),future=ownFixtures().filter(f=>!isFinished(f)&&!isLive(f)&&new Date(f.kickoff_at)>=Date.now()-3600000).slice(0,4);
+ return `${heading('WELCOME TO MATCHDAY',team().name,'Risultati, calendario e protagonisti della tua squadra.') }
+ <div class="home-feature"><div class="feature-primary">${hero()}</div><aside class="feature-aside glass"><div class="aside-top"><span class="eyebrow">IL CAMPO RACCONTA</span><span class="aside-icon">${ico('spark',20)}</span></div>${panelTitle('Ultima partita')}${latest?scorecard(latest,true):'<div class="empty">Nessun risultato registrato.</div>'}<div class="aside-divider"></div><div class="aside-form"><div><span class="eyebrow">ULTIMI INCONTRI</span><h3>La nostra forma</h3></div>${miniForm()}</div><button class="outline-btn" data-page="calendar">Esplora il calendario ${ico('arrow',17)}</button></aside></div>
+ ${kpis()}
+ <div class="home-bottom"><section class="glass panel schedule-panel">${panelTitle('Prossime partite','calendar')}<div class="fixture-list">${future.length?future.map(x=>fixtureRow(x,true)).join(''):'<div class="empty">Nessun incontro futuro programmato.</div>'}</div></section><section class="glass panel standings-panel">${panelTitle('Classifica','competitions')}${standings(currentComp(),6)}<p class="subnote">Parità di punti: ordine indicativo finché non sono applicati gli spareggi del regolamento.</p></section></div>`;
+}
+function competitions(){
+ const c=currentComp(),all=fixtures().filter(f=>f.competition_id===c?.id);
+ const rounds=[...new Set(all.map(f=>f.round_no).filter(x=>x!=null))].sort((a,b)=>a-b),shown=state.mineOnly?all.filter(f=>involvesTeam(f,team())):all;
+ return `${heading('IL CAMPIONATO','Competizioni','Classifiche e incontri ufficiali, giornata per giornata.')}<div class="filters"><div class="segmented">${comps().map(x=>`<button data-comp="${E(x.id)}" class="${c?.id===x.id?'active':''}">${E(x.name)}</button>`).join('')}</div><label class="toggle"><input type="checkbox" data-mine ${state.mineOnly?'checked':''}><span>Solo ${E(team().short_name||'la squadra')}</span></label></div><div class="competition-grid"><section class="glass panel comp-stand">${panelTitle('Classifica completa')}${standings(c)}<p class="subnote">Classifica derivata dalla vista Supabase. I criteri di spareggio possono essere differenti.</p></section><section class="glass panel comp-rounds">${panelTitle('Calendario del torneo')}${rounds.length?rounds.map(no=>`<div class="round-block"><div class="round-heading">GIORNATA ${no}<span>${shown.filter(x=>x.round_no===no).length} partite</span></div>${shown.filter(x=>x.round_no===no).map(x=>fixtureRow(x,true)).join('')||'<div class="empty small">Nessuna partita della squadra in questa giornata.</div>'}</div>`).join(''):shown.map(x=>fixtureRow(x,true)).join('')||'<div class="empty">Nessun incontro registrato.</div>'}</section></div>`;
+}
+function calendar(){
+ const rows=ownFixtures().filter(f=>state.filter==='all'||(state.filter==='upcoming'?!isFinished(f):isFinished(f))).filter(f=>!state.comp||f.competition_id===state.comp);
+ const grouped={};for(const f of rows){const key=new Intl.DateTimeFormat(LOCALE,{month:'long',year:'numeric',timeZone:TIME_ZONE}).format(new Date(f.kickoff_at));(grouped[key]??=[]).push(f)}
+ return `${heading('MATCH SCHEDULE','Calendario','Le gare della squadra, dalle prossime date ai risultati passati.')}<div class="filters"><div class="segmented">${[['all','Tutte'],['upcoming','Da giocare'],['results','Risultati']].map(([k,v])=>`<button data-filter="${k}" class="${state.filter===k?'active':''}">${v}</button>`).join('')}</div><select aria-label="Competizione" class="filter-select" data-comp-select><option value="">Tutte le competizioni</option>${comps().map(c=>`<option value="${E(c.id)}" ${state.comp===c.id?'selected':''}>${E(c.name)}</option>`).join('')}</select></div><div class="calendar-groups">${Object.entries(grouped).map(([month,a])=>`<section class="glass panel month-card"><div class="month-heading"><h2>${E(month)}</h2><span>${a.length} ${a.length===1?'gara':'gare'}</span></div><div class="fixture-list">${a.map(f=>fixtureRow(f)).join('')}</div></section>`).join('')||'<div class="glass panel empty">Nessuna partita per questo filtro.</div>'}</div>`
+}
+function roster(){
+ const roster=(state.data?.roster||[]).filter(r=>r.active!==false),all=(state.data?.players||[]),stats=state.data?.playerStats||[];
+ const items=roster.map(r=>{const p=all.find(p=>p.id===r.player_id);return p?{...p,roster:r,stats:stats.find(s=>s.player_id===p.id)||null}:null}).filter(Boolean).filter(p=>state.role==='all'||roleName(p.generic_role_manual||p.stats?.position_group)===state.role);
+ items.sort((a,b)=>(a.last_name||'').localeCompare(b.last_name||'','it'));
+ return `${heading('I PROTAGONISTI','La rosa','Giocatori della stagione selezionata, con dati collegati al profilo originale.')}<div class="filters roster-filters"><div class="segmented">${[['all','Tutti'],['P','Portieri'],['D','Difensori'],['C','Centrocampisti'],['A','Attaccanti']].map(([k,l])=>`<button data-role="${k}" class="${state.role===k?'active':''}">${l}</button>`).join('')}</div><label class="local-search">${ico('search',18)}<input id="player-search" placeholder="Cerca giocatore" value="${E(state.q)}" aria-label="Cerca giocatore"></label></div><div class="player-grid">${items.map(p=>playerCard(p)).join('')||'<div class="empty">Nessun giocatore in questa categoria.</div>'}</div><p class="muted small" id="roster-empty" hidden>Nessun giocatore corrisponde alla ricerca.</p>`;
+}
+function playerCard(p){const s=p.stats||{};const name=(p.first_name||'')+' '+(p.last_name||'');return `<button class="player-card glass" data-player="${E(p.id)}" data-search-name="${E(normalized(name))}"><div class="player-image">${safeUrl(p.photo_url)?`<img src="${safeUrl(p.photo_url)}" alt="" loading="lazy">`:`<span>${E((p.first_name||'?')[0])}${E((p.last_name||'?')[0])}</span>`}<b>${E(p.roster.shirt_number??'·')}</b></div><div class="player-info"><span class="eyebrow">${E(roleName(p.generic_role_manual||s.position_group))} · ${E(p.generic_role_manual||s.position_group||'Giocatore')}</span><h3>${E(name)}</h3><div class="player-metrics"><span>${s.appearances??'—'} <small>pres.</small></span><span>${s.goals??'—'} <small>gol</small></span><span>${s.avg_rating!=null?Number(s.avg_rating).toFixed(1):'—'} <small>voto</small></span></div></div>${ico('chevron',16)}</button>`}
+function player(){
+ const p=state.data?.players.find(x=>x.id===state.player);if(!p)return'<section class="empty">Giocatore non disponibile.</section>';
+ const r=state.data.roster.find(x=>x.player_id===p.id),s=state.data.playerStats.find(x=>x.player_id===p.id)||{};
+ const name=(p.first_name||'')+' '+(p.last_name||'');
+ return `<button class="back-link" data-page="roster">${ico('back')} Torna alla rosa</button><section class="glass player-detail"><div class="player-detail-cover"><div class="big-player-avatar">${safeUrl(p.photo_url)?`<img src="${safeUrl(p.photo_url)}" alt="">`:`<span>${E((p.first_name||'?')[0])}${E((p.last_name||'?')[0])}</span>`}</div><div><p class="eyebrow">SCHEDA GIOCATORE · ${E(roleName(p.generic_role_manual||s.position_group))}</p><h1>${E(name)}</h1><p>${E(p.generic_role_manual||s.position_group||'Ruolo non specificato')} · ${r?.shirt_number!=null?'#'+E(r.shirt_number):'Numero non disponibile'}</p></div></div><div class="detail-kpis">${[['appearances','Presenze'],['starts','Da titolare'],['minutes','Minuti'],['goals','Gol'],['assists','Assist'],['avg_rating','Voto medio']].map(([k,l])=>`<div><b>${s[k]!=null?(k==='avg_rating'?Number(s[k]).toFixed(2):E(s[k])):'—'}</b><small>${l}</small></div>`).join('')}</div><div class="detail-biography"><div><span>Piede</span><b>${E(p.preferred_foot||'—')}</b></div><div><span>Altezza</span><b>${p.height_cm?E(p.height_cm)+' cm':'—'}</b></div><div><span>Nazionalità</span><b>${E(p.nationality_code||'—')}</b></div><div><span>Gialli / Rossi</span><b>${E(s.yellow_cards??'—')} / ${E(s.red_cards??'—')}</b></div></div></section>`
+}
+function stats(){
+ const s=summary(fixtures(),team()),p=state.data?.playerStats||[],sorted=(key)=>[...p].filter(x=>x[key]!=null).sort((a,b)=>Number(b[key])-Number(a[key])).slice(0,7);
+ const ranking=(title,key,unit='')=>`<section class="glass panel leaderboard">${panelTitle(title)}${sorted(key).length?sorted(key).map((r,i)=>`<div class="leader-row"><span class="leader-position">${String(i+1).padStart(2,'0')}</span><strong>${E((r.first_name||'')+' '+(r.last_name||''))}</strong><div class="leader-bar"><span style="width:${Math.max(3,Math.round(Number(r[key])/(Number(sorted(key)[0][key])||1)*100))}%"></span></div><b>${key==='avg_rating'?Number(r[key]).toFixed(2):E(r[key])}${unit}</b></div>`).join(''):'<div class="empty">Dato non disponibile.</div>'}</section>`;
+ return `${heading('DATA & PERFORMANCE','Statistiche','Indicatori calcolati soltanto da risultati ed eventi effettivamente registrati.')}${kpis()}<div class="stats-intro glass panel"><div><span class="eyebrow">STAGIONE IN NUMERI</span><h2>${s.gf} gol segnati <span>/</span> ${s.ga} subiti</h2><p>${s.played} gare concluse con risultato valido</p></div><div class="stats-form">${miniForm()}</div></div><div class="leaderboard-grid">${ranking('Classifica marcatori','goals')}${ranking('Più presenti','appearances')}${ranking('Media voti','avg_rating')}</div>`;
+}
+function resolveMatch(){const f=fixtures().find(x=>x.id===state.match);return {fixture:f,operational:f?fixtureToMatch(f,state.data?.matches||[],state.base.opponents,team()):null}}
+function match(){
+ const {fixture:f,operational:m}=resolveMatch();if(!f)return'<section class="empty">Partita non disponibile.</section>';
+ const tabs=[['summary','Riepilogo'],['lineup','Formazioni'],['events','Eventi'],['ratings','Voti']],data=state.matchData||{players:[],events:[],ratings:[]};
+ const people=id=>state.data?.players.find(p=>p.id===id),playerName=id=>{const p=people(id);return p?(p.first_name||'')+' '+(p.last_name||''):'Giocatore non censito'};
+ const events=(data.events||[]).filter(e=>e.validation_status!=='rejected').sort((a,b)=>(a.minute??999)-(b.minute??999));
+ const eName=e=>({'goal':'Gol','own_goal':'Autogol','yellow_card':'Ammonizione','red_card':'Espulsione','blue_card':'Cartellino blu','substitution':'Sostituzione','sub_out':'Uscita','period_end':'Fine tempo','assist':'Assist'}[e.event_type]||e.event_type||'Evento');
+ const body=state.matchTab==='summary'?`<div class="match-two"><div class="inner-card"><h3>Informazioni partita</h3><div class="detail-line"><span>Competizione</span><b>${E(competition(f.competition_id)?.name||'—')}</b></div><div class="detail-line"><span>Giornata</span><b>${E(f.round_no??'—')}</b></div><div class="detail-line"><span>Data</span><b>${E(weekday(f.kickoff_at))}</b></div><div class="detail-line"><span>Ora</span><b>${time(f.kickoff_at)}</b></div><div class="detail-line"><span>Campo</span><b>${E(f.venue_name||f.venue||'—')}</b></div>${f.venue_address?`<p class="subnote">${E(f.venue_address)}</p>`:''}</div><div class="inner-card"><h3>Tabellino</h3>${m?`<p class="muted">Dati operativi associati alla partita.</p><div class="event-mini">${events.length?events.slice(0,6).map(e=>`<div><b>${matchMinutes(e)}</b><span>${E(eName(e))} ${e.player_id?'· '+E(playerName(e.player_id)):''}</span></div>`).join(''):'<div class="empty">Nessun evento registrato.</div>'}</div>`:'<div class="empty">Nessun tabellino operativo collegato con certezza a questa gara.</div>'}</div></div>`:state.matchTab==='lineup'?m?`<div class="match-two"><div class="inner-card"><h3>Formazione iniziale</h3><div class="pitch"><div class="pitch-mid"></div><div class="pitch-players">${data.players.filter(x=>x.started).sort((a,b)=>(a.tactical_slot??99)-(b.tactical_slot??99)).map(x=>`<div class="pitch-player"><b>${x.shirt_number??'•'}</b><span>${E((people(x.player_id)?.last_name||playerName(x.player_id)))}</span></div>`).join('')||'<div class="empty">Formazione iniziale non registrata.</div>'}</div></div></div><div class="inner-card"><h3>Panchina e convocati</h3>${data.players.filter(x=>!x.started).map(x=>`<div class="detail-line"><span>${E(playerName(x.player_id))}</span><b>${E(x.selection_status||'—')}</b></div>`).join('')||'<div class="empty">Nessun dato disponibile.</div>'}<p class="subnote">Posizioni grafiche indicative; i dati storici di partenza non vengono modificati.</p></div></div>`:'<div class="empty padded">Nessuna formazione operativa associata a questa gara.</div>':state.matchTab==='events'?`<div class="event-timeline">${m&&events.length?events.map(x=>`<div class="timeline-item"><span class="timeline-minute">${matchMinutes(x)}</span><span class="timeline-symbol">●</span><div><strong>${E(eName(x))}</strong><p>${x.player_id?E(playerName(x.player_id)):'Squadra'}${x.secondary_player_id?' · '+E(playerName(x.secondary_player_id)):''}</p></div></div>`).join(''):'<div class="empty padded">Non risultano eventi verificati in questo tabellino.</div>'}</div>`:`<div class="votes-list">${m&&data.ratings.length?data.ratings.map(r=>`<div class="detail-line"><span>${E(playerName(r.player_id))}</span><b>${r.rating==null?'SV':Number(r.rating).toFixed(1)}</b></div>`).join(''):'<div class="empty padded">Non risultano valutazioni registrate per questa partita.</div>'}</div>`;
+ return `<button class="back-link" data-page="calendar">${ico('back')} Torna al calendario</button><div class="match-detail-head glass"><div class="match-detail-top">${status(f)}<span>${E(competition(f.competition_id)?.name||'Competizione')} · Giornata ${E(f.round_no??'—')}</span></div><div class="match-detail-score"><div>${club(f.home_team,'xl')}<strong>${E(f.home_team)}</strong></div><div class="match-big-score"><b>${score(f)}</b><span>${E(weekday(f.kickoff_at))} · ${time(f.kickoff_at)}</span></div><div>${club(f.away_team,'xl')}<strong>${E(f.away_team)}</strong></div></div></div><section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">${tabs.map(([id,label])=>`<button role="tab" aria-selected="${state.matchTab===id}" data-tab="${id}" class="${state.matchTab===id?'active':''}">${label}</button>`).join('')}</div><div class="match-tab-body">${body}</div></section>`;
+}
+function settings(){return `${heading('IL TUO ACCOUNT','Area personale','Accesso riservato e impostazioni di consultazione.')}<div class="glass panel profile-panel"><h2>${E(state.identity.profile?.display_name||'Visitatore')}</h2><p>${hasSession()?'Sessione autenticata':'Puoi consultare i dati pubblici anche senza accedere.'}</p><div class="detail-line"><span>Ruolo applicativo</span><b>${E(state.identity.role?.role||'Visitatore')}</b></div><div class="detail-line"><span>Stagione attiva</span><b>${E(state.base.seasons.find(s=>s.id===state.season)?.name||'—')}</b></div><button class="primary-btn" data-action="${hasSession()?'logout':'account'}">${hasSession()?'Esci dall’account':'Accedi'} ${ico('arrow',17)}</button></div>`}
+function overlay(){
+ if(!state.overlay)return '';
+ if(state.overlay==='login')return `<div class="overlay" data-dismiss><section class="overlay-card" role="dialog" aria-modal="true" aria-label="Accedi"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><span class="eyebrow">AREA RISERVATA</span><h2>Bentornato in squadra.</h2><p>Accedi con le credenziali già configurate su Team Manager.</p><form id="login-form"><label>Username<input name="username" autocomplete="username" required placeholder="Il tuo username"></label><label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="••••••••"></label><div id="login-error" class="form-error" aria-live="polite"></div><button type="submit" class="primary-btn">Accedi ${ico('arrow',17)}</button></form></section></div>`;
+ if(state.overlay==='menu')return `<div class="overlay" data-dismiss><section class="overlay-card menu-sheet" role="dialog" aria-modal="true" aria-label="Menu"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><h2>Esplora Team Manager</h2><label class="season-box dark"><span>Stagione</span><select data-season>${state.base.seasons.map(s=>`<option value="${E(s.id)}" ${s.id===state.season?'selected':''}>${E(s.name)}</option>`).join('')}</select></label>${nav.map(([id,ic,l])=>`<button class="menu-link" data-page="${id}">${ico(ic)} ${l} ${ico('chevron',16)}</button>`).join('')}<button class="menu-link" data-page="account">${ico('user')} Profilo ${ico('chevron',16)}</button></section></div>`;
+ return '';
+}
+function render(){
+ if(!state.base)return;
+ const section={home,competitions,calendar,roster,stats,match,player,account:settings}[state.page]||home;
+ document.body.dataset.theme=state.theme;
+ $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
+ manageCarousel();
+}
+function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
+function navigate(page){
+ state.page=page;state.overlay=null;state.slide=0;if(page==='calendar')state.comp=null;
+ history.replaceState(null,'','#'+page);
+ render();window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+}
+function changeSlide(nextIndex){const a=carouselFixtures();if(!a.length)return;state.slide=(nextIndex+a.length)%a.length;render()}
+function manageCarousel(){
+ clearInterval(carouselTimer);if(state.page!=='home'||state.loading||document.hidden||state.overlay)return;
+ if(carouselFixtures().length<2)return;
+ carouselTimer=setInterval(()=>{if(!document.hidden&&!state.overlay&&state.page==='home')changeSlide(state.slide+1)},CAROUSEL_INTERVAL);
+}
+async function switchSeason(id){
+ if(!state.base.seasons.some(x=>x.id===id))return;
+ const loadId=++state.loadId;state.season=id;state.comp=null;state.match=null;state.player=null;state.slide=0;state.loading=true;render();
+ try{const data=await loadSeason(id);if(loadId!==state.loadId)return;state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render()}
+ catch(e){state.loading=false;render();toast('Dati non disponibili: '+e.message)}
+}
+async function openMatch(id){
+ if(!fixtures().some(x=>x.id===id))return;
+ state.match=id;state.matchTab='summary';state.matchData=null;navigate('match');
+ const matched=resolveMatch().operational;
+ if(matched){state.matchData=await loadMatchInfo(matched.id);if(state.match===id)render()}
+}
+async function reload(){
+ const saved=state.season;await switchSeason(saved);toast('Dati aggiornati')}
+document.addEventListener('click',async e=>{
+ const x=e.target.closest('button,[data-dismiss]');if(!x)return;
+ if(x.dataset.dismiss!==undefined&&e.target===x){state.overlay=null;render();return}
+ if(x.dataset.page){navigate(x.dataset.page);return}
+ if(x.dataset.match){openMatch(x.dataset.match);return}
+ if(x.dataset.player){state.player=x.dataset.player;navigate('player');return}
+ if(x.dataset.slide!==undefined){changeSlide(Number(x.dataset.slide));return}
+ if(x.dataset.comp){state.comp=x.dataset.comp;render();return}
+ if(x.dataset.filter){state.filter=x.dataset.filter;render();return}
+ if(x.dataset.role){state.role=x.dataset.role;render();return}
+ if(x.dataset.tab){state.matchTab=x.dataset.tab;render();return}
+ switch(x.dataset.action){
+ case 'prevslide':changeSlide(state.slide-1);break;
+ case 'nextslide':changeSlide(state.slide+1);break;
+ case 'theme':state.theme=state.theme==='night'?'ice':'night';localStorage.setItem('tm_next_theme',state.theme);render();break;
+ case 'reload':reload();break;
+ case 'menu':state.overlay='menu';render();break;
+ case 'close':state.overlay=null;render();break;
+ case 'account':state.overlay=hasSession()?null:'login';if(hasSession())navigate('account');else render();break;
+ case 'logout':await logout();state.identity={user:null,role:null,profile:null};navigate('home');toast('Sessione chiusa.');break;
+ }
+});
+document.addEventListener('change',e=>{
+ if(e.target.matches('[data-season]'))switchSeason(e.target.value);
+ if(e.target.matches('[data-mine]')){state.mineOnly=e.target.checked;render()}
+ if(e.target.matches('[data-comp-select]')){state.comp=e.target.value||null;render()}
+});
+document.addEventListener('input',e=>{
+ if(e.target.id==='player-search'){
+  state.q=e.target.value;const query=normalized(state.q);let visible=0;
+  document.querySelectorAll('.player-card').forEach(el=>{const show=el.dataset.searchName.includes(query);el.hidden=!show;if(show)visible++});
+  const missing=$('#roster-empty');if(missing)missing.hidden=visible>0;
+ }
+});
+document.addEventListener('submit',async e=>{
+ if(e.target.id!=='login-form')return;e.preventDefault();const b=e.target.querySelector('[type=submit]'),error=$('#login-error');
+ b.disabled=true;error.textContent='';
+ try{const form=new FormData(e.target),profile=await login(String(form.get('username')||'').trim(),String(form.get('password')||''));state.identity=await loadIdentity();state.identity.profile??=profile;state.overlay=null;render();toast('Accesso effettuato.')}
+ catch(ex){error.textContent=ex.message;b.disabled=false}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.overlay){state.overlay=null;render()}});
+document.addEventListener('visibilitychange',manageCarousel);
+window.addEventListener('hashchange',()=>{const page=location.hash.slice(1);if(['home','competitions','calendar','roster','stats','account'].includes(page)&&page!==state.page)navigate(page)});
+async function bootstrap(){
+ try{
+  state.base=await loadBase();
+  const stored=sessionStorage.getItem('tm_next_season');
+  const initial=state.base.seasons.find(x=>x.id===stored)||state.base.seasons.find(x=>x.status==='active')||state.base.seasons[0];
+  state.season=initial.id;state.identity=await loadIdentity().catch(()=>({user:null,role:null,profile:null}));
+  const hash=location.hash.slice(1);if(['home','competitions','calendar','roster','stats','account'].includes(hash))state.page=hash;
+  await switchSeason(initial.id);
+ }catch(e){console.error('Boot error',e);$('#app').innerHTML=`<div class="fatal"><b>Team Manager</b><h1>Connessione non disponibile</h1><p>Non è stato possibile caricare la squadra: ${E(e.message)}</p><button onclick="location.reload()">Riprova</button></div>`}
+}
+bootstrap();

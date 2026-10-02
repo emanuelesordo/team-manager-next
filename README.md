@@ -1,14 +1,21 @@
 # Team Manager Next
 
-Interfaccia ricostruita da zero sulla base delle quattro reference e della specifica fornita. Nessun componente CSS/HTML/JS precedente viene caricato.
+Webapp calcistica con frontend interamente nuovo, adattato a desktop e smartphone e con Supabase come unica fonte dei dati. Il README ufficiale resta intenzionalmente sintetico: le decisioni si accumulano in file specializzati dentro `docs/`.
 
-- `fresh/app.css`: layout desktop e mobile originali.
-- `fresh/app.js`: nuove viste.
-- `fresh/data.js`: lettura dati Supabase.
-- `src/config.js`: infrastruttura già autorizzata per il solo collegamento Supabase.
-- `fresh/stadium.svg`: asset originale.
-- `docs/specification-original.txt`: specifica originale.
+## Avvio
+`npm run dev` → apri `http://localhost:8080`. Nessun bundler richiesto. `npm run check` verifica la sintassi dei moduli, i test di dominio e la build. Il workflow GitHub Pages pubblica automaticamente `dist/`.
 
-Funzioni: Home, Competizioni, Calendario, Rosa, Statistiche e dettagli consultivi. Gestione live e modifica dati da implementare. Nessun dato di database è stato alterato.
+## Architettura attiva
+- `index.html`: unico entrypoint.
+- `fresh/main.js`: app, navigazione, carousel, schede desktop/mobile.
+- `fresh/style.css`: interfaccia desktop stile stadium glass e mobile in avorio/salvia.
+- `fresh/api.js`: gateway Supabase e autenticazione esistente.
+- `fresh/domain.js`: calcoli deterministici e riconciliazione prudente delle partite.
+- `fresh/config.js`: soltanto URL e chiave *publishable*.
+- `docs/`: specifica e documentazione progressiva.
 
-`npm run check` valida la build, GitHub Actions pubblica `dist/`.
+I vecchi esperimenti `src/` e `ui/` restano nel repository come materiale non caricato, escluso dalla build; saranno rimossi dopo la verifica della nuova versione.
+
+Stato: consultazione Home, Competizioni, Calendario, Match Center, Rosa, scheda giocatore e Statistiche; login username/password e sessione. Operazioni amministrative, import e gestione live con scritture richiedono una fase dedicata di audit e integrazione RLS/DB, non sono simulate come già disponibili.
+
+[Specifica funzionale integrale](docs/specification-original.txt) · [Design](docs/design-system.md) · [Layout](docs/ui-layout.md) · [Funzioni](docs/modules.md) · [Stato di sviluppo](docs/roadmap.md).

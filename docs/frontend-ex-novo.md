@@ -1,20 +1,11 @@
-# Frontend ex-novo — 02/10/2026
+# Frontend ex novo — ottobre 2026
+## Fonti
+Quattro screenshot di riferimento allegati dall'utente e specifica funzionale in `docs/specification-original.txt`. Ispezionati **soltanto** il repository `team-manager-next` e il Supabase `team-manager`, non i repository o le conversazioni precedenti.
 
-Questa versione non deriva dal frontend precedente.
+## Separazione visiva
+**Desktop (>760px).** Sidebar compatta, topbar, atmosfera da stadio notturno, hero principale, pannelli petrolio sfumati in vetro, verde lime per gli stati attivi; possibilità di variante light blu ghiaccio. La priorità è leggere incontro, classifica, forma e scadenze.
 
-## Input utilizzati
-- indicazioni della chat corrente;
-- quattro reference grafiche allegate nella chat;
-- schema e dati Supabase già esistenti, usati esclusivamente come sorgente dati;
-- repository `team-manager-next` esclusivamente come destinazione di pubblicazione.
+**Mobile (≤760px).** Composizione dedicata su sfondo giallo tenue, salvia e azzurro, header da 70px, card risultato translucida, KPI orizzontali con snap, navigazione dock inferiore in 5 sezioni, menu e login come bottom sheet. Non usa la stessa struttura ad incastro delle colonne desktop.
 
-## Direzione
-Desktop: esperienza “match center” immersiva, senza sidebar; top navigation orizzontale, hero da stadio, grande spotlight della prossima partita, metriche e pannelli sottostanti.
-
-Mobile: composizione autonoma, non semplice riduzione del desktop. Header compatto, hero verde, scorecard, KPI orizzontali a swipe, contenuti chiari avorio e bottom navigation.
-
-## Moduli presenti
-Home, Calendario, Competizione, Rosa, Statistiche.
-
-## Regole
-Nessun dato sportivo dei mockup viene copiato. Risultati, squadra, stagione, classifica e rosa arrivano da Supabase. Il frontend non modifica lo schema DB.
+## Dati e sicurezza
+Ogni valore viene richiesto a Supabase usando soltanto chiavi pubblicabili. La stagione è filtrata alla fonte, non via duplicazione in locale. Login mediante la Edge Function `auth-login` esistente. RLS governa l'accesso; le scritture saranno implementate soltanto dopo verifica di autorizzazioni, transazioni e sincronizzazione fixture/match. Le fixture ufficiali danno calendario e score; i dati operativi sono associati solo se nome avversario, competizione, casa/trasferta e orario producono una corrispondenza univoca.

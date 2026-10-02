@@ -1,1 +1,12 @@
-{"name":"team-manager-next","version":"3.0.0","private":true,"type":"module","engines":{"node":">=20"},"scripts":{"dev":"python3 -m http.server 8080","build":"node scripts/build.mjs","check":"node --check ui/main.js && node --check ui/data.js && npm run build"}}
+{
+  "name":"team-manager-next",
+  "version":"4.0.0",
+  "private":true,
+  "type":"module",
+  "engines":{"node":">=20"},
+  "scripts":{
+    "dev":"python3 -m http.server 8080",
+    "build":"node scripts/build.mjs",
+    "check":"node --check fresh/main.js && node --check fresh/api.js && node --check fresh/domain.js && node --check fresh/config.js && node --test tests/fresh-domain.test.mjs && npm run build"
+  }
+}
