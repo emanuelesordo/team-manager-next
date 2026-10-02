@@ -207,7 +207,7 @@ async function openMatch(id){
  const matched=resolveMatch().operational;
  const [op,fx]=await Promise.allSettled([matched?loadMatchInfo(matched.id):Promise.resolve(null),loadFixtureEvents(id)]);
  if(state.match!==id)return;
- if(op.status==='fulfilled')state.matchData=op.value;
+ if(op.status==='fulfilled'){state.matchData=op.value;if(Object.keys(op.value?.errors||{}).length)toast('Dati del tabellino non caricati: '+Object.keys(op.value.errors).join(', '))}
  else toast('Tabellino non caricato: '+op.reason.message);
  if(fx.status==='fulfilled')state.fixtureEvents=fx.value;
  else toast('Eventi fixture non caricati: '+fx.reason.message);

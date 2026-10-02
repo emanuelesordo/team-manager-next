@@ -15,7 +15,14 @@ const btn=(action,label)=>'<button type="button" class="staff-soft" data-staff-a
 const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</button>';
 const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'lineup',busy:false};
 const memory=initial;
-const areas=[['team','Squadra'],['seasons','Stagioni'],['competitions','Competizioni'],['opponents','Avversarie'],['players','Rosa'],['fixtures','Calendario'],['import','Importa CSV'],['availability','Disponibilità'],['users','Utenti']];
+let integrityData=null,integrityError='';
+function integrityPanel(){
+ const count=Number(integrityData?.issue_count||0);
+ const entries=(integrityData?.issues||[]).map(x=>'<div class="staff-event-row"><div><strong>'+esc(x.kind)+'</strong><span>'+esc(x.message)+'</span><small>Match: '+esc(x.match_id||'—')+' / Fixture: '+esc(x.fixture_id||'—')+'</small></div></div>').join('');
+ return '<section class="glass panel staff-editor">'+title('DIAGNOSTICA','Integrità dei dati')+help('Controlla collegamenti, risultati discordanti, giocatori ed eventi orfani. Non modifica, elimina o approva nulla.')+btn('audit-integrity','Esegui controllo')+(integrityError?'<p class="data-warning">'+esc(integrityError)+'</p>':'')+(integrityData?'<p class="staff-help">Segnalazioni: '+count+' · '+esc(new Date(integrityData.checked_at).toLocaleString('it-IT'))+'</p>'+ (entries||help('Nessuna incongruenza rilevata.')):help('Controllo non ancora eseguito.'))+'<div class="staff-event-list">'+entries+'</div></section>';
+}
+
+const areas=[['team','Squadra'],['seasons','Stagioni'],['competitions','Competizioni'],['opponents','Avversarie'],['players','Rosa'],['fixtures','Calendario'],['import','Importa CSV'],['integrity','Integrità'],['availability','Disponibilità'],['users','Utenti']];
 const types=[['starter','Titolare'],['bench','Panchina'],['available','Da definire'],['absent','Non convocato']];
 const reasons=[['','Nessuno'],['injury','Infortunio'],['suspension','Squalifica'],['work','Lavoro'],['personal','Personale'],['illness','Malattia'],['travel','Viaggio'],['technical_choice','Scelta tecnica'],['physical','Condizione fisica'],['other','Altro']];
 const events=[['goal','Gol'],['own_goal','Autogol'],['penalty_scored','Rigore segnato'],['penalty_missed','Rigore sbagliato'],['yellow_card','Ammonizione'],['blue_card','Cartellino blu'],['blue_return','Rientro blu'],['red_card','Espulsione'],['substitution','Sostituzione / Uscita'],['period_end','Fine periodo'],['other','Altro']];
@@ -155,6 +162,7 @@ export function adminPage(ctx){
   }
  }
  if(memory.area==='import')form=importPanel(ctx);
+ if(memory.area==='integrity')form=integrityPanel();
  if(memory.area==='availability'){
   const s=base.seasons.find(x=>x.id===ctx.state.season),general=findGeneralSeason(data.generalSeasons,s,t.id);
   if(!general){
@@ -416,6 +424,7 @@ export async function staffClick(e,button,ctx){
    const index=ctx.state.data.matches.findIndex(x=>x.id===id);if(index>=0)ctx.state.data.matches[index]=rows[0];else ctx.state.data.matches.push(rows[0]);
    ctx.state.matchData=await ctx.loadMatchInfo(id);memory.matchTab='lineup';ctx.render();ctx.toast('Tabellino operativo collegato');return true;
   }
+  if(action==='audit-integrity'){integrityError='';try{integrityData=await rpc('tm_app_integrity_report')}catch(e){integrityError=e.message||String(e)}ctx.render();return true}
   if(action==='refresh-match'){await reloadMatch(ctx);return true}
   if(!m)throw Error('Apri prima la gestione del match');
   if(action==='start'&&!window.confirm('Avviare ora il live? I comandi cronometro, eventi e risultato saranno attivi.'))return true;
