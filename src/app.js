@@ -106,9 +106,60 @@ function kpi(n,label,foot=''){return `<div class="kpi"><small>${h(label)}</small
 function matchSmall(f){return `<div class="match-row" role="button" tabindex="0" data-fixture="${h(f.id)}"><div class="match-date"><strong>${h(fmtDate(f.kickoff_at,{day:'2-digit'}))}</strong><small>${h(fmtDate(f.kickoff_at,{month:'short'}))}</small></div><div class="match-row-body"><strong>${gameIdentity(f)}</strong><small>${h(competitions().find(c=>c.id===f.competition_id)?.name||'Partita')} · ${h(fmtTime(f.kickoff_at))}</small></div><span class="match-score ${f.home_score==null?'scheduled':''}">${h(matchScore(f))}</span></div>`}
 function homeForm(){const games=recentFixtures().slice(0,5).reverse();return games.length?`<div class="form-dots">${games.map(x=>`<span class="form-dot ${h(teamResult(x)||'')}">${({w:'V',d:'N',l:'P'})[teamResult(x)]||'—'}</span>`).join('')}</div><div class="tiny muted">Forma nelle ultime ${games.length} gare concluse</div>`:empty('Forma non disponibile','Nessuna partita conclusa con punteggio ufficiale.');}
 function miniStandings(){const comp=competitions()[0];const rows=standings().filter(x=>x.competition_id===comp?.id).sort((a,b)=>b.points-a.points||b.goal_difference-a.goal_difference||b.goals_for-a.goals_for);if(!rows.length)return empty('Classifica non disponibile');return `<div class="table-scroll"><table class="standings-table"><thead><tr><th>#</th><th>Squadra</th><th>PG</th><th>DR</th><th>PT</th></tr></thead><tbody>${rows.slice(0,10).map((r,i)=>`<tr class="${ours(r.team)?'our-team':''}"><td class="position">${i+1}</td><td class="name-cell"><div class="row-team">${crest(r.team,'sm')} ${h(r.team)}</div></td><td>${h(r.played)}</td><td>${h(r.goal_difference)}</td><td><b>${h(r.points)}</b></td></tr>`).join('')}</tbody></table></div><p class="tiny muted">Ordine indicativo per punti e differenza reti; i criteri ufficiali possono differire.</p>`}
-function renderHome(){const s=summary();const upcoming=ownFixtures().filter(f=>!matchFinished(f)&&new Date(f.kickoff_at)>=new Date(Date.now()-7200000)).sort((a,b)=>+new Date(a.kickoff_at)-+new Date(b.kickoff_at)).slice(0,3);const loggedPlayerStats=stats().find(x=>x.player_id===state.user.playerId);
-return title('CLUB DASHBOARD',`La tua <span class="highlight">squadra.</span>`,`${teamName()} · Stagione ${activeSeason()?.name||'da impostare'}`,badge('DATI LIVE',true))+
-`<div class="dash-grid"><div class="dash-col">${hero()}${panel('Panoramica stagionale',`<div class="kpi-grid">${kpi(s.played,'Partite giocate',`${s.w}V · ${s.d}N · ${s.l}P`)}${kpi(s.w,'Vittorie','Partite concluse')}${kpi(`${s.gf}:${s.ga}`,'Gol fatti / subiti','Risultati ufficiali')}${kpi(s.played?(s.w/s.played*100).toFixed(0)+'%':'—','Percentuale vittorie',s.played?'Calcolo sulle gare giocate':'Nessuna gara')}</div><div class="panel-head" style="margin:24px 0 6px"><h2>Forma recente</h2></div>${homeForm()}`,goButton('stats'))}${panel('Risultati recenti',recentFixtures().length?recentFixtures().slice(0,4).map(matchSmall).join(''):empty('Non ci sono risultati'),goButton('calendar'))}</div><div class="dash-col">${panel('Prossime partite',upcoming.length?upcoming.map(matchSmall).join(''):empty('Nessun incontro in programma'),goButton('calendar'))}${panel('Classifica · '+(competitions()[0]?.name||'Campionato'),miniStandings(),goButton('competitions'))}${state.user.session?panel('Il mio profilo',loggedPlayerStats?`<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">${kpi(loggedPlayerStats.appearances,'Presenze')}${kpi(loggedPlayerStats.goals,'Gol')}${kpi(loggedPlayerStats.avg_rating??'—','Media voto')}</div>`:empty('Nessun giocatore associato','Il profilo attuale non ha una scheda giocatore associata.')):''}</div></div>`}
+function renderHome(){
+  const s=summary();
+  const scheduled=ownFixtures()
+    .filter(f=>!matchFinished(f)&&new Date(f.kickoff_at)>=new Date(Date.now()-7200000))
+    .sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at));
+  const latest=recentFixtures()[0];
+  const personal=stats().find(x=>x.player_id===state.user.playerId);
+  const lastMarkup=latest
+    ? `${scoreboard(latest)}<p class="aside-caption">${h(competitions().find(c=>c.id===latest.competition_id)?.name||'Partita')} · ${h(fmtDate(latest.kickoff_at,{day:'2-digit',month:'long'}))}</p><button type="button" class="aside-link" data-fixture="${h(latest.id)}">Apri tabellino ↗</button>`
+    : `${empty('Nessun risultato recente')}<button class="aside-link" data-go="calendar" type="button">Vai al calendario ↗</button>`;
+  const nextRows=scheduled.length
+    ? scheduled.slice(0,4).map(matchSmall).join('')
+    : empty('Nessuna partita programmata','Non sono presenti fixture future per la stagione.');
+  const recentRows=recentFixtures().length
+    ? recentFixtures().slice(0,3).map(matchSmall).join('')
+    : empty('Nessun risultato recente');
+  const playerBlock=state.user.session&&state.user.playerId&&personal
+    ? panel('La mia stagione',`<div class="kpi-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">${kpi(personal.appearances??'—','Presenze')}${kpi(personal.goals??'—','Gol')}${kpi(personal.avg_rating??'—','Media voto')}</div>`)
+    : '';
+  return title(
+      'MATCH DAY / CLUB OVERVIEW',
+      `Il nostro <span class="highlight">campo.</span>`,
+      `${teamName()} · Stagione ${activeSeason()?.name||'non definita'}`,
+      badge(competitions()[0]?.name||'Stagione corrente')
+    )+
+    `<div class="home-dashboard">
+      <div class="home-feature-grid">
+        ${hero()}
+        <section class="panel home-aside" aria-label="Ultima partita">
+          <div class="home-aside-heading"><span>ULTIMA PARTITA</span>${latest?badge('FINALE'):''}</div>
+          ${lastMarkup}
+        </section>
+      </div>
+      <div class="home-kpi-rail" aria-label="Bilancio stagionale">
+        ${kpi(s.played,'Partite giocate','Risultati ufficiali')}
+        ${kpi(s.w,'Vittorie','Stagione selezionata')}
+        ${kpi(s.d,'Pareggi','Stagione selezionata')}
+        ${kpi(s.l,'Sconfitte','Stagione selezionata')}
+        ${kpi(`${s.gf} – ${s.ga}`,'Gol fatti / subiti','Solo fixture concluse')}
+      </div>
+      <div class="home-bottom-grid">
+        <div class="home-bottom-column">
+          ${panel('Prossime partite',nextRows,goButton('calendar','Calendario completo ↗'))}
+          ${panel('Ultimi risultati',recentRows,goButton('matches','Match Center ↗'))}
+          ${playerBlock}
+        </div>
+        <div class="home-bottom-column">
+          ${panel('Classifica · '+(competitions()[0]?.name||'Campionato'),miniStandings(),goButton('competitions','Tutta la classifica ↗'))}
+          ${panel('Andamento recente',`<div class="home-form">${homeForm()}</div>`)}
+          <div class="home-note"><div><strong>${h(teamName())}</strong><br><small>Dati e risultati della stagione ${h(activeSeason()?.name||'—')}</small></div>${badge('SUPABASE',true)}</div>
+        </div>
+      </div>
+    </div>`;
+}
 function compButtons(){const opts=competitions();if(!opts.length)return '';if(state.competitionId==='all'||!opts.some(c=>c.id===state.competitionId))state.competitionId=opts[0].id;return `<div class="filter-bar">${opts.map(c=>`<button class="filter-button ${state.competitionId===c.id?'selected':''}" data-comp="${h(c.id)}">${h(c.name)}</button>`).join('')}<span class="grow"></span><button class="filter-button ${state.fixtureOnlyOur?'selected':''}" data-toggle-mine="true">${state.fixtureOnlyOur?'Solo squadra':'Tutte le squadre'}</button></div>`}
 function fullTable(compId){const rows=standings().filter(x=>x.competition_id===compId).sort((a,b)=>b.points-a.points||b.goal_difference-a.goal_difference||b.goals_for-a.goals_for);if(!rows.length)return empty('Classifica non disponibile');return `<div class="table-scroll"><table class="standings-table"><thead><tr><th>#</th><th>Squadra</th><th>PG</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>DR</th><th>PT</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${ours(r.team)?'our-team':''}"><td class="position">${i+1}</td><td class="name-cell"><div class="row-team">${crest(r.team,'sm')}${h(r.team)}</div></td><td>${h(r.played)}</td><td>${h(r.won)}</td><td>${h(r.drawn)}</td><td>${h(r.lost)}</td><td>${h(r.goals_for)}</td><td>${h(r.goals_against)}</td><td>${h(r.goal_difference)}</td><td><b>${h(r.points)}</b></td></tr>`).join('')}</tbody></table></div><p class="tiny muted">Il database fornisce i punti; l'ordinamento visualizzato a parità è provvisorio finché non vengono applicati gli spareggi specifici della competizione.</p>`;}
 function fixtureCard(f){let comp=competitions().find(x=>x.id===f.competition_id);return `<article class="fixture-card ${mine(f)?'mine':''}" data-fixture="${h(f.id)}" role="button" tabindex="0"><div class="fixture-meta"><strong>${h(fmtDate(f.kickoff_at,{day:'2-digit',month:'short',year:'numeric'}))}</strong><span>${h(comp?.name||'Competizione')} · ${h(fmtTime(f.kickoff_at))}</span></div><div class="fixture-teams"><span class="fixture-team">${h(f.home_team)}</span>${crest(f.home_team,'sm')}<span class="fixture-score ${f.home_score==null?'pending':''}">${h(matchScore(f))}</span>${crest(f.away_team,'sm')}<span class="fixture-team">${h(f.away_team)}</span></div><div class="fixture-place">${h(f.venue_name||'Campo da definire')}${mine(f)?'<br><span class="pill">Squadra</span>':''}</div></article>`;}
