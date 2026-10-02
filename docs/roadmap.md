@@ -52,3 +52,9 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [x] Configurazioni competizione aggiuntive: andata/ritorno, supplementari, rigori, playoff/playout e soglie di diffida; valori salvati sui campi originali.
 - [x] Associazione additiva avversarie↔competizione su `app_competition_opponents`, senza cancellazione storica.
 - [ ] Editor fasi e gironi avanzati `phase_rules` con schema validato; modifiche ai partecipanti storici gestite separatamente.
+
+## Tattica live
+- [x] Storico reale delle variazioni di modulo/posizioni da `app_match_tactical_changes` per lettori e staff.
+- [x] Form staff per modulo, minuto e assegnazioni giocatori con controlli su duplicati e presenza effettiva in campo dal backend.
+- [x] RPC transazionale staff-only `tm_app_record_tactic` su partita operativa live, senza riscrivere la formazione iniziale.
+- [ ] Deducibilità dei minuti per ruolo/comfort: non calcolata finché non sono riconciliati cambi e rientri.

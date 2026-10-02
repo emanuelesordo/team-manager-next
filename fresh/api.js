@@ -90,7 +90,7 @@ export async function loadFixtureEvents(fixtureId){
 }
 export async function loadMatchInfo(matchId){
  if(!matchId)return {players:[],events:[],ratings:[],errors:{}};
- const params={players:['app_match_players','select=*&match_id=eq.'+matchId],events:['app_match_events','select=*&match_id=eq.'+matchId+'&order=minute.asc.nullslast,created_at.asc'],ratings:['app_match_ratings','select=*&match_id=eq.'+matchId]};
+ const params={players:['app_match_players','select=*&match_id=eq.'+matchId],events:['app_match_events','select=*&match_id=eq.'+matchId+'&order=minute.asc.nullslast,created_at.asc'],ratings:['app_match_ratings','select=*&match_id=eq.'+matchId],tacticalChanges:['app_match_tactical_changes','select=*&match_id=eq.'+matchId+'&order=minute.asc,created_at.asc']};
  const names=Object.keys(params),results=await Promise.allSettled(names.map(x=>get(...params[x])));
  const data={errors:{}};names.forEach((k,i)=>{data[k]=results[i].status==='fulfilled'?results[i].value:[];if(results[i].status==='rejected')data.errors[k]=results[i].reason.message});
  return data;

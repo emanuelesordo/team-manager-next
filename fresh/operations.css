@@ -64,3 +64,12 @@
 .notification-entry.unread{background:color-mix(in srgb,var(--accent) 15%,var(--surface));border-color:color-mix(in srgb,var(--accent) 29%,var(--border))}
 .notification-entry>div{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.notification-entry strong{font-size:12px;line-height:1.4}.notification-entry small{font-size:10px;color:var(--muted);white-space:nowrap}.notification-entry p{margin:0;font-size:11px;line-height:1.6}.notification-entry button{justify-self:start}.notification-read{font-size:10px;color:var(--muted)}
 @media(max-width:760px){.notifications-overlay .overlay-card{max-height:86dvh}.notifications-list{padding-bottom:env(safe-area-inset-bottom,0px)}}
+
+/* Tactical changes: history and team assignment in live only. */
+.tactic-history{margin:18px 0}.tactic-history h3{font-size:13px;margin:12px 0 15px}
+.tactic-entry{border:1px solid var(--border);border-radius:13px;background:color-mix(in srgb,var(--accent) 5%,var(--surface));padding:12px 14px;margin-bottom:8px}
+.tactic-entry-head{display:flex;align-items:center;gap:18px;font-size:13px}.tactic-entry-head strong{color:var(--accent)}
+.tactic-entry>small{display:block;margin-top:8px;line-height:1.5;color:var(--muted);font-size:10px}
+.tactic-entry p{font-size:11px;margin:9px 0 0}
+.tactic-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:15px 0}
+@media(max-width:760px){.tactic-slots{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.tactic-entry{padding:10px}}

@@ -1,6 +1,7 @@
 import {get,rpc,adminWrite,reviewPasswordRequest} from './api.js';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup} from './lineup-pitch.js';
+import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -298,10 +299,10 @@ export function staffMatchPanel(ctx,f,m){
  help('Associa la partita ufficiale a un unico tabellino operativo, riutilizzando le registrazioni già esistenti quando la corrispondenza è univoca. Nessun dato storico viene duplicato.')+
  btn('ensure','Apri gestione di questa partita')+'</section>';
  const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===f.competition_id);
- const tabs=[['lineup','Convocazioni'],['live','Live'],['events','Eventi']];
+ const tabs=[['lineup','Convocazioni'],['live','Live'],['events','Eventi'],['tactics','Tattica']];
  const tabNav='<div class="staff-switch small-tabs" role="tablist">'+tabs.map(([k,v])=>
   '<button type="button" role="tab" aria-selected="'+(k===memory.matchTab)+'" class="'+(k===memory.matchTab?'selected':'')+'" data-staff-match-tab="'+k+'">'+v+'</button>').join('')+'</div>';
- const page=memory.matchTab==='lineup'?matchLineup(ctx,m):memory.matchTab==='live'?matchLive(ctx,m,competition):matchEvents(ctx,m);
+ const page=memory.matchTab==='lineup'?matchLineup(ctx,m):memory.matchTab==='live'?matchLive(ctx,m,competition):memory.matchTab==='tactics'?staffTacticsPanel(ctx,m):matchEvents(ctx,m);
  return '<section class="glass panel staff-root">'+tabNav+page+'<div class="staff-bottom-actions">'+btn('refresh-match','Aggiorna tabellino')+'</div></section>';
 }
 function dataForm(form){return Object.fromEntries(new FormData(form))}
@@ -449,6 +450,16 @@ export async function staffSubmit(e,ctx){
  e.preventDefault();
  if(!isStaff(ctx))return true;
  try{
+  if(kind==='tactics'){
+   const match=ctx.resolveMatch().operational;
+   if(!match||match.status!=='live')throw Error('Variazioni tattiche disponibili solo durante il live');
+   const info=tacticalPayload(form);
+   await pendingFn(form,()=>rpc('tm_app_record_tactic',{
+    p_match_id:match.id,p_minute:info.minute,p_formation:info.formation_to,
+    p_positions:info.positions,p_notes:info.notes||null
+   }));
+   await reloadMatch(ctx);ctx.toast('Variazione tattica registrata');return true;
+  }
   if(kind==='lineup'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
    const rows=[...form.querySelectorAll('[data-lineup-player]')].map(el=>{
