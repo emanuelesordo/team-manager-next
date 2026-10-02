@@ -20,7 +20,7 @@ Nessun effetto neon invasivo. Ombre profonde, bordi sottili e blur moderato. Ang
 
 - Sidebar persistente da 242px.
 - Barra superiore contestuale (sezione, stato sync, refresh).
-- Home a due colonne editoriali, carosello match spotlight, tabella classifica e KPI.
+- Home con hero carosello dell'ultimo match e prossimo,.
 - Competizioni con classifica e calendario affiancati quando c'è spazio.
 - Match Center in dialog consultivo unificato, con tre tab.
 
@@ -28,7 +28,7 @@ Nessun effetto neon invasivo. Ombre profonde, bordi sottili e blur moderato. Ang
 
 - Breakpoint principale 800px, design dedicato invece di semplice desktop ridotto.
 - Navigazione inferiore a cinque voci con tap target ampi e safe-area.
-- Home a colonna singola: carosello prima dei KPI.
+- Home: carosello prima di KPI principali.
 - Fixture e partite con griglia ricomposta.
 - Tabelle scorrevoli orizzontalmente soltanto quando non esiste una rappresentazione equivalente più semplice.
 - Setup amministrativo non inserito nella navigazione mobile primaria: verrà introdotto come percorso separato al completamento dei permessi.
@@ -39,6 +39,10 @@ Nessun effetto neon invasivo. Ombre profonde, bordi sottili e blur moderato. Ang
 - Controlli manuali e indicatori di slide.
 - Hover/press discreti nelle card, filtri, menu e pulsanti.
 - `prefers-reduced-motion`: disabilita animazioni e rotazione automatica.
+
+## Altre regole comuni
+
+- ogni sezione ha una hero che si distingue rispetto agli altri contenuti della pagina, per forma e colori.
 
 ## Componenti riutilizzabili
 
