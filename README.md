@@ -30,6 +30,7 @@ The supplied brief is preserved in [`docs/specification-original.txt`](docs/spec
 
 | Document | Purpose |
 |---|---|
+| [Esperienza UI](docs/experience-03.md) | Traduzione delle quattro reference in interfacce desktop/mobile e animazioni |
 | [Design](docs/design-system.md) | Palette, glass treatment, mobile/desktop behavior, animation |
 | [Architecture](docs/architecture-data.md) | Model, sources of truth, API, caching and null handling |
 | [Modules](docs/modules.md) | Screens and user-facing functionality |

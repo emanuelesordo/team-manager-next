@@ -58,7 +58,8 @@ function nav(view,{scroll=true}={}){
   if(!MENU.some(([id])=>id===view))view='home';
   state.view=view;state.carouselIndex=0;state.matchId=null;
   location.hash=view;
-  render();if(scroll)window.scrollTo({top:0,behavior:'instant'});
+  if(document.startViewTransition && !window.matchMedia('(prefers-reduced-motion:reduce)').matches){document.startViewTransition(()=>render())}else render();
+  if(scroll)window.scrollTo({top:0,behavior:'instant'});
 }
 function updateNav(){
   document.querySelectorAll('[data-nav]').forEach(el=>{const isActive=el.dataset.nav===state.view;el.classList.toggle('active',isActive);if(isActive)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current')});
@@ -86,7 +87,7 @@ const gameIdentity=f=>`${h(f.home_team)} · ${h(f.away_team)}`;
 const teamResult=f=>matchResult(f,ours);
 function ownFixtures(){return fixtures().filter(mine)}
 function recentFixtures(){return ownFixtures().filter(matchFinished).sort((a,b)=>+new Date(b.kickoff_at)-+new Date(a.kickoff_at))}
-function nextFixture(){return ownFixtures().filter(f=>!matchFinished(f)&&new Date(f.kickoff_at)>=new Date(Date.now()-7200000)).sort((a,b)=>+new Date(a.kickoff_at)-+new Date(b.kickoff_at))[0]}
+function nextFixture(){return ownFixtures().filter(f=>matchLive(f)||(!matchFinished(f)&&new Date(f.kickoff_at)>=new Date(Date.now()-7200000))).sort((a,b)=>(matchLive(b)?1:0)-(matchLive(a)?1:0)||+new Date(a.kickoff_at)-+new Date(b.kickoff_at))[0]}
 const summary=()=>computeTeamSummary(fixtures(),ours);
 function scoreboard(f){return `<div class="scoreboard"><div class="team-column">${crest(f.home_team)}<strong>${h(f.home_team)}</strong><small>Casa</small></div><div class="score-center"><strong>${h(matchScore(f))}</strong><small>${h(matchLive(f)?'LIVE':matchFinished(f)?'FINALE':fmtTime(f.kickoff_at))}</small></div><div class="team-column">${crest(f.away_team)}<strong>${h(f.away_team)}</strong><small>Trasferta</small></div></div>`}
 function heroSlides(){const upcoming=nextFixture();const last=recentFixtures()[0];const slides=[];
@@ -110,7 +111,7 @@ function miniStandings(){const comp=competitions()[0];const rows=standings().fil
 function renderHome(){
   const s=summary();
   const scheduled=ownFixtures()
-    .filter(f=>!matchFinished(f)&&new Date(f.kickoff_at)>=new Date(Date.now()-7200000))
+    .filter(f=>matchLive(f)||(!matchFinished(f)&&new Date(f.kickoff_at)>=new Date(Date.now()-7200000)))
     .sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at));
   const latest=recentFixtures()[0];
   const personal=stats().find(x=>x.player_id===state.user.playerId);
