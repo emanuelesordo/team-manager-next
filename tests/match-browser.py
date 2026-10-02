@@ -94,7 +94,7 @@ async def test_view(browser, width, height):
  await page.locator('[data-staff-action="review-result-history"]').click()
  await page.wait_for_function("document.querySelector('.staff-subpanel')?.textContent.includes('Nessun allineamento')",timeout=12000)
 
- assert "non modifica automaticamente" in (await page.locator('.staff-subpanel').inner_text()).lower()
+ assert "non riscrive i punteggi" in (await page.locator('.staff-subpanel').inner_text()).lower()
  # Browser refresh must reconstruct the selected fixture and fetch match data.
  await page.reload(wait_until="domcontentloaded")
  await page.locator(".match-detail-head").wait_for(timeout=15000)
