@@ -1,0 +1,54 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+const store=new Map();
+globalThis.localStorage={getItem:key=>store.get(key)??null,setItem:(key,val)=>store.set(key,String(val)),removeItem:key=>store.delete(key)};
+const user='aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
+const fixture='bb86b6c8-e0f1-4ec1-8dd8-4e35c55f3139';
+const match='e6e870aa-8c21-4948-9b6d-fc3023cda2cb';
+const season='810361d4-1d1e-4a53-b173-19885de43fa9';
+const competition='8b8bf938-0ad9-4219-96bc-348750e84ed6';
+const club='bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
+const players=Array.from({length:21},(_,i)=>({id:'p'+i,match_id:match,player_id:'player-'+i,started:i<11,selection_status:i<11?'starter':'bench',tactical_slot:i<11?i+1:null}));
+const events=Array.from({length:16},(_,i)=>({id:'e'+i,match_id:match,event_type:i<5?'goal':'substitution',minute:i+1,validation_status:'proposed'}));
+let requests=[],loggedIn=false;
+const response=(body,status=200)=>({ok:status>=200&&status<300,status,json:async()=>body});
+globalThis.fetch=async(url,options={})=>{
+ const u=new URL(url);const name=u.pathname.split('/').at(-1),method=options.method||'GET';
+ requests.push({table:name,method,authorized:Boolean(options.headers?.Authorization)});
+ if(name==='auth-login')return response({ok:true,session:{access_token:['x',Buffer.from(JSON.stringify({sub:user})).toString('base64url'),'sig'].join('.'),refresh_token:'token'},profile:{id:user,display_name:'Admin prova'}});
+ if(name==='logout')return response({});
+ if(name==='tm_public_teams')return response([{id:club,name:'Calcio Caselle',short_name:'CAS'}]);
+ if(name==='app_seasons')return response([{id:season,team_id:club,name:'2026/27',status:'active',start_date:'2026-07-01'}]);
+ if(name==='app_opponents')return response([{id:'opp',name:'Voltesea Calcio'}]);
+ if(name==='app_competitions')return response([{id:competition,season_id:season,name:'Campionato'}]);
+ if(name==='app_competition_fixtures')return response([{id:fixture,season_id:season,competition_id:competition,home_team:'Voltesea Calcio',away_team:'Calcio Caselle',status:'finished',home_score:1,away_score:4,kickoff_at:'2026-09-28T19:00:00Z'}]);
+ if(name==='app_matches')return response([{id:match,fixture_id:fixture,season_id:season,competition_id:competition,status:'finished',home_score:0,away_score:0}]);
+ if(name==='app_match_players')return response(players);
+ if(name==='app_match_events')return response(events);
+ if(name==='app_user_roles')return response([{user_id:user,role:'admin'}]);
+ if(name==='profiles')return response([{id:user,display_name:'Admin prova',username:'admin',is_active:true}]);
+ return response([]);
+};
+const api=await import('../fresh/api.js');
+test('admin login, registered lineup/events and fresh read across page reload workflow',async()=>{
+ assert.equal(api.hasSession(),false);
+ const before=await api.loadBase();
+ assert.equal(before.seasons[0].id,season);
+ await api.login('demo','not-a-real-password');
+ assert.equal(api.hasSession(),true);
+ const who=await api.loadIdentity();
+ assert.equal(who.role.role,'admin');
+ for(let turn=0;turn<2;turn++){
+  const current=await api.loadSeason(season,true,true);
+  const linked=current.matches.find(x=>x.fixture_id===fixture);
+  assert.equal(linked.id,match);
+  const data=await api.loadMatchInfo(linked.id);
+  assert.equal(data.players.length,21);
+  assert.equal(data.events.length,16);
+  assert.equal(Object.keys(data.errors).length,0);
+ }
+ const sensitiveReads=requests.filter(r=>['app_match_players','app_match_events','app_user_roles'].includes(r.table));
+ assert.ok(sensitiveReads.every(r=>r.authorized),'session must accompany protected reads');
+ await api.logout();
+ assert.equal(api.hasSession(),false);
+});
