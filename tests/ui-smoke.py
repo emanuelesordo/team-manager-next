@@ -26,36 +26,54 @@ TABLES={
 'app_match_events':[],
 }
 async def main():
+ from pathlib import Path
+ p=Path(__file__).resolve().parent.parent
+ html=(p/'index.html').read_text()
+ css=(p/'src/styles.css').read_text()
+ script=(p/'src/domain.js').read_text().replace('export ','')
+ # Do not fake a remote backend: the visual smoke test explicitly injects
+ # controlled fixtures and leaves actual backend queries to production.
+ import json
+ reference={"seasons":TABLES['app_seasons'],"teams":TABLES['teams'],"opponents":TABLES['app_opponents']}
+ season={"competitions":TABLES['app_competitions'],"fixtures":TABLES['app_competition_fixtures'],"standings":TABLES['app_competition_standings'],"roster":TABLES['app_roster'],"playerStats":TABLES['app_player_season_stats'],"matches":TABLES['app_matches'],"players":TABLES['players']}
+ stub=("const CONFIG="+json.dumps({"locale":"it-IT","timeZone":"Europe/Rome","fallbackTeamName":"Calcio Caselle","carouselDelayMs":7200})+";\n"
+       +script+"\nconst loadReference=()=>Promise.resolve("+json.dumps(reference)+");\n"
+       +"const loadSeason=()=>Promise.resolve("+json.dumps(season)+");\n"
+       +"const getMatchDetail=()=>Promise.resolve("+json.dumps({"participants":TABLES['app_match_players'],"events":[]})+");\n"
+       +"const clearCache=()=>{};const signIn=async()=>{};const signOut=async()=>{};"
+       +"const sessionInfo=async()=>({session:null,role:null});\n")
+ app=(p/'src/app.js').read_text()
+ app='\n'.join(x for x in app.split('\n') if not x.startswith('import '))
+ html=html.replace('<link rel="stylesheet" href="./src/styles.css">','<style>'+css+'</style>')
+ html=html.replace('<script type="module" src="./src/app.js"></script>', '<script type="module">'+stub+app+'</script>')
+ html=html.replace('<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">','')
  async with async_playwright() as playwright:
-  browser=await playwright.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox','--no-proxy-server','--proxy-bypass-list=*'])
+  browser=await playwright.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
   async def run(width,height,prefix):
    page=await browser.new_page(viewport={'width':width,'height':height},device_scale_factor=1)
    errors=[]
-   page.on('pageerror',lambda x:errors.append(str(x)))
-   async def respond(route):
-    table=urlsplit(route.request.url).path.rsplit('/',1)[-1]
-    rows=TABLES.get(table,[])
-    params=parse_qs(urlsplit(route.request.url).query)
-    for key,value in params.items():
-     if key not in ['select','order'] and value and value[0].startswith('eq.'):
-      field=key;target=value[0][3:];rows=[x for x in rows if str(x.get(field))==target]
-    await route.fulfill(status=200,content_type='application/json',body=__import__('json').dumps(rows),headers={'Access-Control-Allow-Origin':'*'})
-   await page.route('**/rest/v1/**',respond)
-   await page.goto('http://127.0.0.1:8080/',wait_until='domcontentloaded')
-   await page.wait_for_function("document.querySelector('.hero-panel') !== null",timeout=10000)
+   page.on('pageerror',lambda error:errors.append(str(error)))
+   await page.set_content(html,wait_until='domcontentloaded')
+   await page.wait_for_selector('.hero-panel',timeout=10000)
+   await page.wait_for_timeout(650)
    await page.screenshot(path=f'/mnt/data/team-manager-next-{prefix}.png',full_page=True)
-   await page.locator('button[data-nav="competitions"]').first.click()
+   if width<801:
+    assert await page.locator('.mobile-nav').is_visible()
+    assert await page.locator('.sidebar').is_hidden()
+    await page.locator('#moreMobile').click()
+    await page.wait_for_selector('.more-menu-item')
+    await page.locator('[data-close]').click()
+   else:
+    assert await page.locator('.sidebar').is_visible()
+   await page.locator(("#mobileNav " if width<801 else "#desktopNav ")+"button[data-nav=\"competitions\"]").click()
    await page.wait_for_selector('.standings-table')
    await page.locator('[data-fixture]').first.click()
    await page.wait_for_selector('dialog[open]')
    await page.locator('[data-match-tab="lineup"]').click()
    await page.locator('[data-close]').click()
-   await page.locator('button[data-nav="roster"]').first.click()
+   await page.locator(("#mobileNav " if width<801 else "#desktopNav ")+"button[data-nav=\"roster\"]").click()
    await page.wait_for_selector('.player-card')
-   if width<801:
-    await page.locator('[data-more]').click()
-    await page.wait_for_selector('.more-menu-item')
-   print(prefix,'rendered, navigated, modal and search passed','JS errors:',errors)
+   print(prefix,'nav & modal passed; JS errors=',errors)
    assert not errors,errors
    await page.close()
   await run(1440,900,'desktop')

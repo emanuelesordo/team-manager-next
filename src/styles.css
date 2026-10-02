@@ -53,3 +53,7 @@ button{touch-action:manipulation}
 @media(hover:none){.panel:hover,.fixture-card:hover,.match-row:hover,.player-card:hover{transform:none}}
 @media(prefers-reduced-transparency:reduce){.glass,.topbar,.mobile-nav,.dialog{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:#151c17}}
 @media(prefers-reduced-motion:reduce){.skeleton{animation:none}.dialog[open]{animation:none}}
+
+/* Correct the brand monogram: three inline glyphs, not three stacked grid rows. */
+.brand-mark{display:flex;align-items:center;justify-content:center;white-space:nowrap;gap:0;letter-spacing:-.1em}.brand-mark-accent{display:inline;margin:0 3px}.mobile-season-picker{margin:0 0 20px}.mobile-season-picker select{width:100%;height:48px;border-radius:13px;border:1px solid var(--line);background:#222b22;color:var(--ink);padding:0 13px;outline-color:var(--accent)}
+@media(max-width:800px){.hero-panel .scoreboard{opacity:1}.hero-panel .team-column{min-width:0}.hero-panel .team-column strong{overflow-wrap:anywhere}}
