@@ -11,6 +11,7 @@ import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './accoun
 import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js';
 import {loadFixtureEvents} from './api.js';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
+import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -33,6 +34,7 @@ const ico=(n,size=20)=>{const paths={
  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',close:'<path d="M5 5l14 14M19 5 5 19"/>',
  arrow:'<path d="M4 12h16m-7-7 7 7-7 7"/>',pin:'<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2"/>',
  refresh:'<path d="M20 7V3l-3 3a8 8 0 1 0 3 9M20 3v5h-5"/>',
+ bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21a2 2 0 0 0 4 0"/>',
  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  spark:'<path d="m2 16 6-6 4 3 9-9m-6 0h6v6"/>'
  };return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[n]||paths.home}</svg>`};
@@ -83,7 +85,7 @@ function status(f){return isLive(f)?'<span class="status live"><i></i>LIVE</span
 function score(f){return hasScore(f)?`${E(f.home_score)} <span>–</span> ${E(f.away_score)}`:'<span class="vs">VS</span>'}
 function heading(k,title,caption=''){return `<div class="page-heading"><div><p class="eyebrow">${E(k)}</p><h1>${E(title)}</h1>${caption?`<p class="subtitle">${E(caption)}</p>`:''}</div></div>`}
 function header(){
- return `<header class="topbar"><div class="mobile-symbol">${club(team().name,'tiny')}</div><div class="breadcrumb"><span>TEAM MANAGER</span><b> / </b><strong>${E(nav.find(x=>x[0]===state.page)?.[2]||(state.page==='match'?'Match Center':state.page==='player'?'Giocatore':state.page==='club'?'Squadra':state.page==='admin'?'Amministrazione':'Area personale'))}</strong></div><div class="top-actions"><span class="connection-pill"><i></i> Dati sincronizzati</span><button type="button" class="icon-btn theme-btn" data-action="theme" aria-label="Cambia aspetto">${ico(state.theme==='night'?'sun':'moon')}</button><button type="button" class="icon-btn" data-action="reload" aria-label="Aggiorna dati">${ico('refresh')}</button><button type="button" class="icon-btn user-btn" data-action="account" aria-label="Area personale">${ico('user')}</button><button type="button" class="icon-btn mobile-more" data-action="menu" aria-label="Apri menu">${ico('menu')}</button></div></header>`
+ return `<header class="topbar"><div class="mobile-symbol">${club(team().name,'tiny')}</div><div class="breadcrumb"><span>TEAM MANAGER</span><b> / </b><strong>${E(nav.find(x=>x[0]===state.page)?.[2]||(state.page==='match'?'Match Center':state.page==='player'?'Giocatore':state.page==='club'?'Squadra':state.page==='admin'?'Amministrazione':'Area personale'))}</strong></div><div class="top-actions"><span class="connection-pill"><i></i> Dati sincronizzati</span><button type="button" class="icon-btn theme-btn" data-action="theme" aria-label="Cambia aspetto">${ico(state.theme==='night'?'sun':'moon')}</button><button type="button" class="icon-btn" data-action="reload" aria-label="Aggiorna dati">${ico('refresh')}</button>${hasSession()?`<button type="button" class="icon-btn bell-btn" data-notifications-open aria-label="Notifiche">${ico("bell")}<span class="notification-count" hidden data-notification-badge></span></button>`:""}<button type="button" class="icon-btn user-btn" data-action="account" aria-label="Area personale">${ico('user')}</button><button type="button" class="icon-btn mobile-more" data-action="menu" aria-label="Apri menu">${ico('menu')}</button></div></header>`
 }
 function sidebar(){return `<aside class="sidebar"><button class="identity-brand" data-page="home">${club(team().name,'brand')}<span><b>TEAM MANAGER</b><small>THE FOOTBALL EXPERIENCE</small></span></button><div class="side-label">IL TUO SPAZIO</div><nav class="side-nav">${nav.map(([id,ic,label])=>`<button type="button" class="side-item ${state.page===id?'selected':''}" data-page="${id}">${ico(ic,20)}<span>${label}</span>${state.page===id?`<i class="side-dot"></i>`:''}</button>`).join('')}</nav><div class="side-label">IL CLUB</div><nav class="side-nav"><button type="button" class="side-item ${state.page==='club'?'selected':''}" data-page="club">${ico('settings',20)}<span>Squadra e avversarie</span></button></nav>${isStaff(staffContext())?`<div class="side-label">GESTIONALE</div><nav class="side-nav"><button class="side-item ${state.page==='admin'?'selected':''}" data-page="admin">${ico('settings',20)}<span>Amministrazione</span></button></nav>`:''}<div class="side-spacer"></div><div class="side-label">STAGIONE</div><label class="season-box"><span>${ico('calendar',17)} Stagione sportiva</span><select aria-label="Seleziona stagione" data-season>${state.base.seasons.map(s=>`<option value="${E(s.id)}" ${state.season===s.id?'selected':''}>${E(s.name)}</option>`).join('')}</select></label><button class="account-card" data-action="account">${ico('user')}<span><b>${E(state.identity.profile?.display_name||'Visitatore')}</b><small>${hasSession()?'Account collegato':'Accesso facoltativo'}</small></span>${ico('chevron',15)}</button></aside>`}
 function mobileNav(){return `<nav class="mobile-nav" aria-label="Navigazione principale">${nav.map(([id,ic,label])=>`<button type="button" data-page="${id}" class="${state.page===id?'active':''}" aria-label="${label}">${ico(ic,21)}<span>${label}</span></button>`).join('')}</nav>`}
@@ -171,7 +173,7 @@ function render(){
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
  document.body.dataset.theme=state.theme;
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
- manageCarousel();manageLivePolling();maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
+ manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
@@ -244,7 +246,7 @@ async function fillAnalytics(){
  }catch(error){const current=document.querySelector('[data-event-analysis]');if(current)current.textContent='Eventi non leggibili: '+error.message}
  finally{analyticsBusy=false}
 }
-async function logoutUser(){document.getElementById('tm-account-dialog')?.remove();await logout();state.identity={user:null,role:null,profile:null};state.overlay=null;await reloadAll();navigate('home');toast('Sessione chiusa')}
+async function logoutUser(){document.getElementById('tm-account-dialog')?.remove();resetNotifications();await logout();state.identity={user:null,role:null,profile:null};state.overlay=null;await reloadAll();navigate('home');toast('Sessione chiusa')}
 async function reloadAll(){
  const season=state.season;state.base=await loadBase();const chosen=state.base.seasons.some(s=>s.id===season)?season:state.base.seasons.find(s=>s.status==='active')?.id||state.base.seasons[0].id;
  await switchSeason(chosen);
@@ -323,4 +325,5 @@ async function bootstrap(){
 installCalendarImport(()=>staffContext());
 installLineupPitch();
 installAccountUI(()=>staffContext());
+installNotifications(()=>staffContext());
 bootstrap();

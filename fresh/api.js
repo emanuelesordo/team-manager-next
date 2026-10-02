@@ -150,3 +150,16 @@ export async function changePassword(password){
  if(!response?.ok)throw Error(response?.error||'Password non modificata');
  return response;
 }
+
+/** Mark own notification read; recipient filter + RLS bind the mutation. */
+export async function markNotificationRead(id,user){
+ if(!hasSession())throw Error('Accesso richiesto');
+ if(!/^[0-9a-f-]{36}$/i.test(String(id))||!/^[0-9a-f-]{36}$/i.test(String(user)))
+  throw Error('Notifica o destinatario non valido');
+ const rows=await authorized('/rest/v1/team_notifications?id=eq.'+encodeURIComponent(id)+
+  '&recipient_profile_id=eq.'+encodeURIComponent(user),{
+   method:'PATCH',body:{read_at:new Date().toISOString()},extraHeaders:{Prefer:'return=representation'}
+ });
+ if(!Array.isArray(rows)||rows.length!==1)throw Error('Notifica non aggiornata');
+ return rows[0];
+}
