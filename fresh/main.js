@@ -133,7 +133,7 @@ function navigate(page){
 function changeSlide(nextIndex){const a=carouselFixtures();if(!a.length)return;state.slide=(nextIndex+a.length)%a.length;render()}
 function manageCarousel(){
  clearInterval(carouselTimer);if(state.page!=='home'||state.loading||document.hidden||state.overlay)return;
- if(carouselFixtures().length<2)return;
+ if(carouselFixtures().length<2||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  carouselTimer=setInterval(()=>{if(!document.hidden&&!state.overlay&&state.page==='home')changeSlide(state.slide+1)},CAROUSEL_INTERVAL);
 }
 async function switchSeason(id){

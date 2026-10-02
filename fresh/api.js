@@ -12,7 +12,7 @@ async function call(path,{method='GET',body,signal,extraHeaders={}}={}){
 }
 async function refresh(){
  if(!session?.refresh_token)return false;
- try{const s=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token}});
+ try{const s=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token},extraHeaders:{Authorization:'Bearer '+PUBLISHABLE_KEY}});
    session={...session,...s};localStorage.setItem(SESSION_KEY,JSON.stringify(session));return true;
  }catch{session=null;localStorage.removeItem(SESSION_KEY);return false}
 }
@@ -45,7 +45,7 @@ export async function logout(){
 export async function loadIdentity(){
  if(!hasSession())return {user:null,role:null,profile:null};
  const id=userId();if(!id)return {user:null,role:null,profile:null};
- const rows=await Promise.allSettled([get('app_user_roles','select=user_id,role,player_id&user_id=eq.'+id),get('profiles','select=id,display_name,username& id=eq.'+id).catch(()=>[])]);
+ const rows=await Promise.allSettled([get('app_user_roles','select=user_id,role,player_id&user_id=eq.'+id),get('profiles','select=id,display_name,username&id=eq.'+id).catch(()=>[])]);
  return {user:id,role:rows[0].status==='fulfilled'?rows[0].value[0]||null:null,profile:rows[1].status==='fulfilled'?rows[1].value[0]||null:null};
 }
 export async function loadBase(){
