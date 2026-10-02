@@ -27,3 +27,13 @@
 .projection-table{font-size:10px}.projection-table th{white-space:normal}.projection-table td:first-child{font-weight:700}
 .projection-table td.tabular{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 @media(max-width:760px){.projected{margin-top:14px}.projection-numbers b{font-size:17px}.projection-table{min-width:420px}}
+
+/* Identity, recovery and admin-linked profiles */
+.account-center{max-width:750px;margin-top:15px}.account-center .staff-form{max-width:450px;margin-top:18px}.account-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.account-badges span{border:1px solid var(--border);background:color-mix(in srgb,var(--accent) 12%,var(--surface));padding:7px 10px;border-radius:99px;font-size:11px}
+.account-tools,.account-signout{margin:15px 0}.account-recover{padding:12px 6px;text-decoration:underline;text-align:center;color:var(--muted);background:none;border:0;font-size:12px}
+.account-overlay .overlay-card{max-height:calc(100dvh - 40px);overflow:auto}.account-overlay .overlay-card .soft-btn{margin:14px auto 0}
+.account-admin-row{padding:15px 12px;border:1px solid var(--border);border-radius:15px;display:grid;gap:12px;margin-top:12px;background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.account-admin-title{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px}.account-admin-title strong{font-size:14px}.account-admin-title small{font-size:11px;color:var(--muted)}
+.account-admin-row .staff-submit{justify-self:end}
+@media(max-width:760px){.account-admin-row .staff-form-grid{grid-template-columns:1fr}.account-admin-row .staff-submit{width:100%}}

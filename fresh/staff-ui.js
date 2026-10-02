@@ -110,8 +110,20 @@ export function adminPage(ctx){
    const requests=(data.passwordRequests||[]).filter(x=>x.status==='pending');
    form='<section class="glass panel staff-editor">'+title('ACCOUNT','Utenti registrati')+
     help('Identità gestite da Supabase Auth: password e token non sono consultabili.')+
-    '<div class="staff-account-list">'+profiles.map(p=>'<div class="staff-account-row"><div><strong>'+esc(p.display_name||p.username||'Account')+'</strong>'+
-    '<small>@'+esc(p.username||'—')+'</small></div><span>'+esc(p.is_active?'Attivo':'Disattivato')+'</span></div>').join('')+
+
+    '<div class="staff-account-list">'+profiles.map(p=>{
+      const record=(data.userRoles||[]).find(r=>r.user_id===p.id);
+      if(!record)return '';
+      const taken=new Set((data.userRoles||[]).filter(r=>r.user_id!==p.id&&r.player_id).map(r=>r.player_id));
+      const options=(data.players||[]).filter(x=>!taken.has(x.id)).sort((a,b)=>String(a.last_name||'').localeCompare(String(b.last_name||''),'it')).map(x=>[x.id,(x.last_name||'')+' '+(x.first_name||'')]);
+      return '<form class="account-admin-row" data-staff-form="account" data-user-id="'+esc(p.id)+'">'+
+       '<div class="account-admin-title"><strong>'+esc(p.display_name||p.username||'Account')+'</strong>'+
+       '<small>@'+esc(p.username||'—')+'</small></div><div class="staff-form-grid">'+
+       selection('role','Ruolo',[['fan','Fan'],['player','Giocatore'],['coach','Allenatore'],['manager','Manager'],['admin','Admin']],record.role)+
+       selection('player_id','Giocatore collegato',[['','Nessuno'],...options],record.player_id||'')+
+       selection('active','Accesso',[['true','Attivo'],['false','Disattivato']],String(p.is_active))+
+       '</div>'+submit('Salva account')+'</form>';
+    }).join('')+
     (!profiles.length?'<p class="empty">Elenco non disponibile.</p>':'')+'</div></section>'+
     '<section class="glass panel staff-editor staff-requests">'+title('RECUPERO','Richieste di ripristino password')+
     help('La password temporanea viene generata sul server e mostrata una sola volta. Il profilo sarà obbligato a cambiarla.')+
@@ -448,6 +460,17 @@ export async function staffSubmit(e,ctx){
    }
    await pendingFn(form,()=>adminWrite(kind,id?'PATCH':'POST',payload,id?{id}:{}));
    await ctx.reloadAll();ctx.toast('Situazione aggiornata');return true;
+  }
+  if(kind==='account'){
+   if(roleOf(ctx)!=='admin')throw Error('Accesso riservato agli amministratori');
+   const userId=form.dataset.userId;
+   if(!userId)throw Error('Utente non identificato');
+   const d=dataForm(form);
+   await pendingFn(form,()=>rpc('tm_app_manage_account',{
+    p_user_id:userId,p_role:d.role,
+    p_player_id:d.player_id||null,p_set_player:true,p_active:d.active==='true'
+   }));
+   await ctx.reloadAll();ctx.toast('Permessi e collegamento giocatore aggiornati');return true;
   }
   if(kind==='players'){
    const d=dataForm(form),payload={...d,id:memory.selected.players||null,

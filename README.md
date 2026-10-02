@@ -16,6 +16,7 @@ Avvio locale: `npm run dev`; verifica sintassi, test e build: `npm run check`. G
 - [Amministrazione, convocazioni e live](docs/administration-and-live.md)
 - [Import calendario e campo tattico](docs/import-and-tactics.md)
 - [Modello simulazione classifica](docs/projections.md)
+- [Account, password e ruoli](docs/account-and-roles.md)
 - [Accesso pubblico](docs/public-views.md)
 
 Le funzionalità di consultazione presentano dati reali. Le modifiche ai risultati ufficiali, quando disponibili per gli admin, passano dalle policy RLS; sono disponibili l'editor convocazioni, la console live e l'import CSV di fixture nuove per lo staff. Necessario collaudo reale autenticato desktop/mobile.

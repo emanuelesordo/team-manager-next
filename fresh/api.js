@@ -45,7 +45,7 @@ export async function logout(){
 export async function loadIdentity(){
  if(!hasSession())return {user:null,role:null,profile:null};
  const id=userId();if(!id)return {user:null,role:null,profile:null};
- const rows=await Promise.allSettled([get('app_user_roles','select=user_id,role,player_id&user_id=eq.'+id),get('profiles','select=id,display_name,username&id=eq.'+id).catch(()=>[])]);
+ const rows=await Promise.allSettled([get('app_user_roles','select=user_id,role,player_id&user_id=eq.'+id),get('profiles','select=id,display_name,username,is_active,must_change_password&id=eq.'+id).catch(()=>[])]);
  return {user:id,role:rows[0].status==='fulfilled'?rows[0].value[0]||null:null,profile:rows[1].status==='fulfilled'?rows[1].value[0]||null:null};
 }
 export async function loadBase(){
@@ -73,7 +73,7 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
   injuries:['injuries','select=*&order=injury_date.desc&limit=500'],
   suspensions:['suspensions','select=*&order=issued_date.desc&limit=500']
  });
- if(includeAdmin)Object.assign(requests,{profiles:['profiles','select=id,username,display_name,is_active,must_change_password&limit=200'],passwordRequests:['tm_password_reset_requests','select=id,user_id,status,requested_at,reviewed_at&order=requested_at.desc&limit=200']});
+ if(includeAdmin)Object.assign(requests,{profiles:['profiles','select=id,username,display_name,is_active,must_change_password&limit=200'],passwordRequests:['tm_password_reset_requests','select=id,user_id,status,requested_at,reviewed_at&order=requested_at.desc&limit=200'],userRoles:['app_user_roles','select=user_id,role,player_id&limit=300']});
  const names=Object.keys(requests),arr=await Promise.allSettled(names.map(k=>get(...requests[k])));
  const output={errors:{}};
  names.forEach((n,i)=>{const x=arr[i];output[n]=x.status==='fulfilled'?x.value:[];if(x.status==='rejected')output.errors[n]=x.reason.message});
@@ -124,5 +124,20 @@ export async function reviewPasswordRequest(request_id,decision){
  const response=await authorized('/functions/v1/tm-password-admin',
   {method:'POST',body:{request_id,decision}});
  if(!response?.ok)throw new Error(response?.error||'Richiesta non gestita');
+ return response;
+}
+
+
+/** Endpoints for password self-service; user enumeration is prevented server-side. */
+export async function requestPassword(username){
+ const normalized=String(username??'').trim().toLowerCase();
+ if(!/^[a-z0-9._-]{3,32}$/.test(normalized))throw Error('Username non valido');
+ return call('/functions/v1/tm-password-request',{method:'POST',body:{username:normalized}});
+}
+export async function changePassword(password){
+ if(!hasSession())throw Error('Accesso richiesto');
+ if(typeof password!=='string'||password.length<10||password.length>128)throw Error('Password: da 10 a 128 caratteri');
+ const response=await authorized('/functions/v1/tm-password-change',{method:'POST',body:{password}});
+ if(!response?.ok)throw Error(response?.error||'Password non modificata');
  return response;
 }

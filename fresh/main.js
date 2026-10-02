@@ -7,6 +7,7 @@ import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,sta
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch} from './lineup-pitch.js';
 import {projectionContainer,updateProjection} from './projection-ui.js';
+import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -136,7 +137,7 @@ function stats(){
  return `${heading('DATA & PERFORMANCE','Statistiche','Indicatori calcolati soltanto da risultati ed eventi effettivamente registrati.')}${kpis()}<div class="stats-intro glass panel"><div><span class="eyebrow">STAGIONE IN NUMERI</span><h2>${s.gf} gol segnati <span>/</span> ${s.ga} subiti</h2><p>${s.played} gare concluse con risultato valido</p></div><div class="stats-form">${miniForm()}</div></div><div class="leaderboard-grid">${ranking('Classifica marcatori','goals')}${ranking('Più presenti','appearances')}${ranking('Media voti','avg_rating')}</div>`;
 }
 function resolveMatch(){const f=fixtures().find(x=>x.id===state.match);const exact=state.data?.matches?.find(m=>m.fixture_id===f?.id);return {fixture:f,operational:f?(exact||fixtureToMatch(f,state.data?.matches||[],state.base.opponents,team())):null}}
-function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll,refreshLive}}
+function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll,refreshLive,logoutUser}}
 function admin(){return adminPage(staffContext())}
 function match(){
  const {fixture:f,operational:m}=resolveMatch();if(!f)return'<section class="empty">Partita non disponibile.</section>';
@@ -148,10 +149,15 @@ function match(){
  return `<button class="back-link" data-page="calendar">${ico('back')} Torna al calendario</button><div class="match-detail-head glass"><div class="match-detail-top">${status(f)}<span>${E(competition(f.competition_id)?.name||'Competizione')} · Giornata ${E(f.round_no??'—')}</span></div><div class="match-detail-score"><div>${club(f.home_team,'xl')}<strong>${E(f.home_team)}</strong></div><div class="match-big-score"><b>${score(f)}</b><span>${E(weekday(f.kickoff_at))} · ${time(f.kickoff_at)}</span></div><div>${club(f.away_team,'xl')}<strong>${E(f.away_team)}</strong></div></div></div><section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">${tabs.map(([id,label])=>`<button role="tab" aria-selected="${state.matchTab===id}" data-tab="${id}" class="${state.matchTab===id?'active':''}">${label}</button>`).join('')}</div><div class="match-tab-body">${body}</div></section>`;
 }
 function clubScreen(){return clubPage({team:team(),seasons:state.base.seasons,season:state.season,opponents:state.base.opponents,E,crest:club,heading,ico})}
-function settings(){return `${heading('IL TUO ACCOUNT','Area personale','Accesso riservato e impostazioni di consultazione.')}<div class="glass panel profile-panel"><h2>${E(state.identity.profile?.display_name||'Visitatore')}</h2><p>${hasSession()?'Sessione autenticata':'Puoi consultare i dati pubblici anche senza accedere.'}</p><div class="detail-line"><span>Ruolo applicativo</span><b>${E(state.identity.role?.role||'Visitatore')}</b></div><div class="detail-line"><span>Stagione attiva</span><b>${E(state.base.seasons.find(s=>s.id===state.season)?.name||'—')}</b></div><button class="primary-btn" data-action="${hasSession()?'logout':'account'}">${hasSession()?'Esci dall’account':'Accedi'} ${ico('arrow',17)}</button></div>`}
+function settings(){
+ const season=state.base.seasons.find(s=>s.id===state.season);
+ return heading('IL TUO ACCOUNT','Area personale','Il tuo profilo, le credenziali e la stagione attiva.')+
+  profilePanel(state.identity,season?.name)+
+  (hasSession()?'<div class="account-signout"><button type="button" class="soft-btn" data-action="logout">Esci dall’account</button></div>':'');
+}
 function overlay(){
  if(!state.overlay)return '';
- if(state.overlay==='login')return `<div class="overlay" data-dismiss><section class="overlay-card" role="dialog" aria-modal="true" aria-label="Accedi"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><span class="eyebrow">AREA RISERVATA</span><h2>Bentornato in squadra.</h2><p>Accedi con le credenziali già configurate su Team Manager.</p><form id="login-form"><label>Username<input name="username" autocomplete="username" required placeholder="Il tuo username"></label><label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="••••••••"></label><div id="login-error" class="form-error" aria-live="polite"></div><button type="submit" class="primary-btn">Accedi ${ico('arrow',17)}</button></form></section></div>`;
+ if(state.overlay==='login')return `<div class="overlay" data-dismiss><section class="overlay-card" role="dialog" aria-modal="true" aria-label="Accedi"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><span class="eyebrow">AREA RISERVATA</span><h2>Bentornato in squadra.</h2><p>Accedi con le credenziali già configurate su Team Manager.</p><form id="login-form"><label>Username<input name="username" autocomplete="username" required placeholder="Il tuo username"></label><label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="••••••••"></label><div id="login-error" class="form-error" aria-live="polite"></div><button type="submit" class="primary-btn">Accedi ${ico('arrow',17)}</button><button type="button" data-account-recover class="account-recover">Password dimenticata?</button></form></section></div>`;
  if(state.overlay==='menu')return `<div class="overlay" data-dismiss><section class="overlay-card menu-sheet" role="dialog" aria-modal="true" aria-label="Menu"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><h2>Esplora Team Manager</h2><label class="season-box dark"><span>Stagione</span><select data-season>${state.base.seasons.map(s=>`<option value="${E(s.id)}" ${s.id===state.season?'selected':''}>${E(s.name)}</option>`).join('')}</select></label>${nav.map(([id,ic,l])=>`<button class="menu-link" data-page="${id}">${ico(ic)} ${l} ${ico('chevron',16)}</button>`).join('')}<button class="menu-link" data-page="club">${ico('settings')} Squadra e avversarie ${ico('chevron',16)}</button>${isStaff(staffContext())?`<button class="menu-link" data-page="admin">${ico('settings')} Amministrazione ${ico('chevron',16)}</button>`:''}<button class="menu-link" data-page="account">${ico('user')} Profilo ${ico('chevron',16)}</button></section></div>`;
  return '';
 }
@@ -160,7 +166,7 @@ function render(){
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
  document.body.dataset.theme=state.theme;
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
- manageCarousel();manageLivePolling();if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
+ manageCarousel();manageLivePolling();maybeRequirePasswordChange(state.identity);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
@@ -206,6 +212,7 @@ async function refreshLive(){
  }
  if(state.match===id)render();
 }
+async function logoutUser(){document.getElementById('tm-account-dialog')?.remove();await logout();state.identity={user:null,role:null,profile:null};state.overlay=null;await reloadAll();navigate('home');toast('Sessione chiusa')}
 async function reloadAll(){
  const season=state.season;state.base=await loadBase();const chosen=state.base.seasons.some(s=>s.id===season)?season:state.base.seasons.find(s=>s.status==='active')?.id||state.base.seasons[0].id;
  await switchSeason(chosen);
@@ -231,7 +238,7 @@ document.addEventListener('click',async e=>{
  case 'menu':state.overlay='menu';render();break;
  case 'close':state.overlay=null;render();break;
  case 'account':state.overlay=hasSession()?null:'login';if(hasSession())navigate('account');else render();break;
- case 'logout':await logout();state.identity={user:null,role:null,profile:null};navigate('home');await reloadAll();toast('Sessione chiusa.');break;
+ case 'logout':await logoutUser();break;
  }
 });
 document.addEventListener('change',e=>{
@@ -283,4 +290,5 @@ async function bootstrap(){
 }
 installCalendarImport(()=>staffContext());
 installLineupPitch();
+installAccountUI(()=>staffContext());
 bootstrap();
