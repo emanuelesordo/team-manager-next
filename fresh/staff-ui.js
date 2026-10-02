@@ -110,9 +110,9 @@ export function adminPage(ctx){
 const playerText=p=>p?String(p.last_name||'')+' '+String(p.first_name||''):'Giocatore';
 function picker(name,label,choices,value){return selection(name,label,choices,value)}
 const statusOf=m=>String(m?.status||'scheduled');
-function displayClock(m){
+function displayClock(m,competition){
  if(!m)return '';
- return '<div class="clockline"><span class="status '+(m.status==='live'?'live':'end')+'">'+esc(m.status==='live'?'LIVE':m.status==='finished'?'FINALE':'PREPARTITA')+'</span><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+esc(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'">00:00</strong><span>'+esc(m.live_period||'pre')+'</span></div>';
+ return '<div class="clockline"><span class="status '+(m.status==='live'?'live':'end')+'">'+esc(m.status==='live'?'LIVE':m.status==='finished'?'FINALE':'PREPARTITA')+'</span><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+esc(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+esc(m.id)+'" data-blue-min="'+Number(competition?.discipline_rules?.blue_duration_minutes||0)+'">00:00</strong><span>'+esc(m.live_period||'pre')+'</span></div>';
 }
 function matchLineup(ctx,m){
  const players=ctx.state.data?.players||[],roster=(ctx.state.data?.roster||[]).filter(r=>r.active!==false),
@@ -167,7 +167,7 @@ function matchLive(ctx,m,competition){
  '<label class="staff-check"><input type="checkbox" name="count_score" checked> Aggiorna anche il tabellone per gol, autogol e rigori segnati</label>'+
  help('Il minuto è riferito alla frazione selezionata ('+mins+' minuti regolamentari). Lascia vuoto se sconosciuto; il recupero resta separato.')+
  submit('Registra evento')+'</form>':help('Gli eventi si registrano a match avviato. Una partita finalizzata richiede riapertura esplicita.');
- return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+displayClock(m)+liveControls(m)+
+ return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+displayClock(m,competition)+liveControls(m)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':'')+
  '<div class="staff-live-grid"><div class="staff-live-panel"><h3>Risultato ufficiale</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(m))+
  '</div><div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
 }
@@ -177,7 +177,7 @@ function matchEvents(ctx,m){
  return '<section class="staff-subpanel">'+title('VERIFICA','Registro eventi')+
  help('Annullamento logico: gli eventi non vengono eliminati fisicamente. Se un gol aveva modificato il risultato, l’annullamento rettifica il tabellone nella stessa transazione.')+
  '<div class="staff-event-list">'+evs.map(ev=>'<div class="staff-event-row"><div><strong>'+esc(ev.minute==null?'—':ev.minute+(ev.stoppage_minute?'+'+ev.stoppage_minute:'')+'′')+'</strong><span>'+esc(ev.event_type)+' · '+esc(ev.team_side)+ (ev.player_id?' · '+esc(playerText(people.find(p=>p.id===ev.player_id))):'')+'</span><small>'+esc(ev.validation_status||'—')+'</small></div>'+
- (m.status==='live'&&ev.validation_status!=='rejected'?'<button data-staff-action="void" data-event-id="'+esc(ev.id)+'" class="staff-danger" type="button">Annulla</button>':'')+'</div>').join('')+
+ (m.status==='live'&&ev.validation_status!=='rejected'?'<div class="staff-event-buttons">'+(['proposed','community_confirmed','disputed'].includes(ev.validation_status)?'<button data-staff-action="approve" data-event-id="'+esc(ev.id)+'" class="staff-soft" type="button">Approva</button>':'')+'<button data-staff-action="void" data-event-id="'+esc(ev.id)+'" class="staff-danger" type="button">Annulla</button></div>':'')+'</div>').join('')+
  (!evs.length?'<p class="empty">Nessun evento registrato.</p>':'')+'</div></section>';
 }
 export function staffMatchPanel(ctx,f,m){
@@ -251,7 +251,7 @@ export async function staffClick(e,button,ctx){
    const id=await rpc('tm_app_ensure_match',{p_fixture_id:ctx.state.match});
    const rows=await get('app_matches','select=*&id=eq.'+encodeURIComponent(id));
    if(!rows.length)throw Error('Tabellino creato ma non leggibile');
-   if(!ctx.state.data.matches.some(x=>x.id===id))ctx.state.data.matches.push(rows[0]);
+   const index=ctx.state.data.matches.findIndex(x=>x.id===id);if(index>=0)ctx.state.data.matches[index]=rows[0];else ctx.state.data.matches.push(rows[0]);
    ctx.state.matchData=await ctx.loadMatchInfo(id);memory.matchTab='lineup';ctx.render();ctx.toast('Tabellino operativo collegato');return true;
   }
   if(action==='refresh-match'){await reloadMatch(ctx);return true}
@@ -259,9 +259,10 @@ export async function staffClick(e,button,ctx){
   if(action==='finish'&&!window.confirm('Finalizzare la partita? Risultato e cronologia saranno ufficializzati.'))return true;
   if(action==='reopen'&&!window.confirm('Riaprire questa partita per correzioni?'))return true;
   if(action==='void'&&!window.confirm('Annullare questo evento e rettificare l’eventuale gol?'))return true;
-  const payload=action==='void'?{event_id:button.dataset.eventId}:
+  const payload=['void','approve'].includes(action)?{event_id:button.dataset.eventId}:
    ['halftime','second_half','extra'].includes(action)?{period:action}:{};
-  const map={halftime:'period',second_half:'period',extra:'period',void:'void_event'};
+  const map={halftime:'period',second_half:'period',extra:'period',void:'void_event',approve:'approve_event'};
+  if(action==='sync-blue'){const count=await rpc('tm_app_sync_blue',{p_match_id:m.id});await reloadMatch(ctx);ctx.toast(count>0?count+' rientri blu registrati':'Nessun rientro necessario');return true;}
   await rpc('tm_app_match_action',{p_match_id:m.id,p_action:map[action]||action,p_payload:payload});
   await reloadMatch(ctx);ctx.toast('Operazione registrata');
   return true;
@@ -326,7 +327,11 @@ export async function staffSubmit(e,ctx){
   const obj=adminPayload(form);
   if(!obj.table)throw Error('Modulo sconosciuto');
   if(obj.table==='teams')obj.id=ctx.state.base.team.id;
-  if(obj.table==='app_competitions'&&!obj.id)obj.payload.season_id=ctx.state.season;
+  if(obj.table==='app_competitions'){
+   const previous=ctx.state.data?.competitions?.find(c=>c.id===obj.id);
+   if(obj.payload.discipline_rules)obj.payload.discipline_rules={...(previous?.discipline_rules||{}),...obj.payload.discipline_rules};
+   if(!obj.id)obj.payload.season_id=ctx.state.season;
+  }
   if(obj.table==='app_seasons'&&!obj.id)obj.payload.team_id=ctx.state.base.team.id;
   if(obj.table==='app_seasons'&&obj.id&&obj.payload.status==='future'&&
    ctx.state.base.seasons.find(s=>s.id===obj.id)?.status==='active')
@@ -334,7 +339,11 @@ export async function staffSubmit(e,ctx){
   if(obj.table==='app_competition_fixtures'&&
    ['live','finished'].includes(obj.payload.status))
     throw Error('Per avviare/concludere una partita usa la console del Match Center');
-  await pendingFn(form,()=>adminWrite(obj.table,obj.id?'PATCH':'POST',obj.payload,obj.id?{id:obj.id}:{}));
+  if(obj.table==='app_competition_fixtures'){
+   await pendingFn(form,()=>rpc('tm_app_edit_fixture',{p_fixture_id:obj.id,p_changes:obj.payload}));
+  }else{
+   await pendingFn(form,()=>adminWrite(obj.table,obj.id?'PATCH':'POST',obj.payload,obj.id?{id:obj.id}:{}));
+  }
   await ctx.reloadAll();ctx.toast('Configurazione salvata');return true;
  }catch(err){ctx.toast('Errore: '+(err.message||err));return true}
 }
