@@ -1,4 +1,4 @@
-import {get,rpc,adminWrite} from './api.js';
+import {get,rpc,adminWrite,reviewPasswordRequest} from './api.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const attrs=(rows,key,label)=>rows.map(row=>'<option value="'+esc(row[key])+'">'+esc(row[label])+'</option>').join('');
@@ -11,7 +11,7 @@ const btn=(action,label)=>'<button type="button" class="staff-soft" data-staff-a
 const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</button>';
 const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'lineup',busy:false};
 const memory=initial;
-const areas=[['team','Squadra'],['seasons','Stagioni'],['competitions','Competizioni'],['opponents','Avversarie'],['players','Rosa'],['fixtures','Calendario'],['availability','Disponibilità']];
+const areas=[['team','Squadra'],['seasons','Stagioni'],['competitions','Competizioni'],['opponents','Avversarie'],['players','Rosa'],['fixtures','Calendario'],['availability','Disponibilità'],['users','Utenti']];
 const types=[['starter','Titolare'],['bench','Panchina'],['available','Da definire'],['absent','Non convocato']];
 const reasons=[['','Nessuno'],['injury','Infortunio'],['suspension','Squalifica'],['work','Lavoro'],['personal','Personale'],['illness','Malattia'],['travel','Viaggio'],['technical_choice','Scelta tecnica'],['physical','Condizione fisica'],['other','Altro']];
 const events=[['goal','Gol'],['own_goal','Autogol'],['penalty_scored','Rigore segnato'],['penalty_missed','Rigore sbagliato'],['yellow_card','Ammonizione'],['blue_card','Cartellino blu'],['blue_return','Rientro blu'],['red_card','Espulsione'],['substitution','Sostituzione / Uscita'],['period_end','Fine periodo'],['other','Altro']];
@@ -86,6 +86,26 @@ export function adminPage(ctx){
    selection('active','Nella rosa della stagione',[['true','Sì'],['false','No']],r?.active===false?'false':'true')+'</div>',
    'L’identità del giocatore resta invariata fra stagioni. La rimozione dalla rosa non elimina lo storico.');
  }
+ if(memory.area==='users'){
+  if(roleOf(ctx)!=='admin'){
+   form='<section class="glass panel staff-editor">'+help('Gestione account riservata agli amministratori.')+'</section>';
+  }else{
+   const profiles=(data.profiles||[]).slice().sort((a,b)=>String(a.display_name||'').localeCompare(String(b.display_name||''),'it'));
+   const requests=(data.passwordRequests||[]).filter(x=>x.status==='pending');
+   form='<section class="glass panel staff-editor">'+title('ACCOUNT','Utenti registrati')+
+    help('Identità gestite da Supabase Auth: password e token non sono consultabili.')+
+    '<div class="staff-account-list">'+profiles.map(p=>'<div class="staff-account-row"><div><strong>'+esc(p.display_name||p.username||'Account')+'</strong>'+
+    '<small>@'+esc(p.username||'—')+'</small></div><span>'+esc(p.is_active?'Attivo':'Disattivato')+'</span></div>').join('')+
+    (!profiles.length?'<p class="empty">Elenco non disponibile.</p>':'')+'</div></section>'+
+    '<section class="glass panel staff-editor staff-requests">'+title('RECUPERO','Richieste di ripristino password')+
+    help('La password temporanea viene generata sul server e mostrata una sola volta. Il profilo sarà obbligato a cambiarla.')+
+    requests.map(r=>'<div class="staff-request"><div><b>'+esc(profiles.find(p=>p.id===r.user_id)?.display_name||'Utente')+'</b><small>'+
+      esc(r.requested_at?new Date(r.requested_at).toLocaleDateString('it-IT'):'')+'</small></div><div class="staff-event-buttons">'+
+      '<button type="button" class="staff-soft" data-staff-action="password-resolve" data-request-id="'+esc(r.id)+'">Approva</button>'+
+      '<button type="button" class="staff-danger" data-staff-action="password-reject" data-request-id="'+esc(r.id)+'">Rifiuta</button></div></div>').join('')+
+    (!requests.length?'<p class="staff-help">Nessuna richiesta in sospeso.</p>':'')+'</section>';
+  }
+ }
  if(memory.area==='availability'){
   const s=base.seasons.find(x=>x.id===ctx.state.season),general=(data.generalSeasons||[])
     .find(x=>x.team_id===t.id && x.start_date===s?.start_date && x.end_date===s?.end_date);
@@ -135,7 +155,7 @@ export function adminPage(ctx){
    selection('status','Stato',statuses,f.status)+'</div>'),
    'La fixture è la fonte ufficiale di calendario e risultati. Per modifiche durante il live usa il Match Center.');
  }
- const tabs='<div class="staff-switch" role="tablist">'+areas.map(([key,label])=>
+ const tabs='<div class="staff-switch" role="tablist">'+areas.filter(x=>x[0]!=='users'||roleOf(ctx)==='admin').map(([key,label])=>
  '<button type="button" role="tab" aria-selected="'+(key===memory.area)+'" data-staff-area="'+key+'" class="'+(key===memory.area?'selected':'')+'">'+label+'</button>').join('')+'</div>';
  return ctx.heading('CENTRO DI CONTROLLO','Amministrazione','Gestione della squadra, delle competizioni e dei dati sportivi senza eliminare lo storico.')+
  '<div class="staff-intro glass"><span class="staff-orb">✦</span><div><span class="eyebrow">PERSONALE AUTORIZZATO</span><h2>Gestione sportiva</h2><p>Le modifiche vengono validate dal database. Operazioni distruttive disabilitate per proteggere i riferimenti storici.</p></div></div>'+
@@ -280,6 +300,30 @@ export async function staffClick(e,button,ctx){
  memory.busy=true;button.disabled=true;
  try{
   const m=ctx.resolveMatch().operational;
+  if(action==='password-resolve'||action==='password-reject'){
+   if(roleOf(ctx)!=='admin')throw Error('Operazione riservata agli amministratori');
+   const approved=action==='password-resolve';
+   if(!window.confirm(approved?'Approvare la richiesta e sostituire la password precedente?':'Rifiutare questa richiesta di recupero?'))return true;
+   const result=await reviewPasswordRequest(button.dataset.requestId,approved?'resolve':'reject');
+   await ctx.reloadAll();
+   if(approved){
+    const dialog=document.createElement('div');dialog.className='overlay staff-password-overlay';
+    dialog.innerHTML='<section class="overlay-card" role="dialog" aria-modal="true" aria-label="Password provvisoria">'+
+      '<span class="eyebrow">RECUPERO ACCOUNT</span><h2>Password temporanea</h2>'+
+      '<p>Comunicala direttamente all’utente. Dopo la chiusura non potrà più essere visualizzata.</p>'+
+      '<code class="staff-temporary"></code><div class="staff-temporary-actions">'+
+      '<button class="staff-soft" data-copy type="button">Copia</button>'+
+      '<button class="staff-submit" type="button" data-close>Chiudi</button></div></section>';
+    const password=String(result.temporary_password||'');
+    dialog.querySelector('code').textContent=password;
+    dialog.addEventListener('click',e=>{
+     if(e.target.closest('[data-close]'))dialog.remove();
+     if(e.target.closest('[data-copy]'))navigator.clipboard?.writeText(password).catch(()=>{});
+    });
+    document.body.appendChild(dialog);
+   }else ctx.toast('Richiesta rifiutata');
+   return true;
+  }
   if(action==='activate-season'){
    const id=memory.selected.seasons;if(!id)throw Error('Seleziona la stagione');
    if(!window.confirm('Attivare questa stagione? La precedente verrà archiviata.'))return true;
