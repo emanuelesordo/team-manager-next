@@ -140,7 +140,7 @@ function playerDetail(id){const p=playerById(id);if(!p)return;const st=stats().f
 
 async function loadAll(){connectionStatus('Connessione…');state.loading=true;try{
   state.reference=await loadReference();const list=state.reference.seasons||[];const last=state.seasonId;state.seasonId=list.some(x=>x.id===last)?last:(list.find(x=>x.status==='active')||list[0])?.id||null;
-  state.team=(state.reference.teams||[]).find(t=>t.id===activeSeason()?.team_id)||state.reference.teams?.[0]||null;
+  state.team=(state.reference.teams||[]).find(t=>t.id===activeSeason()?.team_id)||state.reference.teams?.[0]||{id:activeSeason()?.team_id||null,name:CONFIG.fallbackTeamName,short_name:'CAS',logo_url:state.reference.branding?.team_logo_url||null};
   fillSeasonSelect();if(state.seasonId)await changeSeason(state.seasonId,false);else {state.error='Nessuna stagione disponibile con i permessi correnti.';state.loading=false;render();}
   connectionStatus(errorMessages().length?'Dati parziali':'Sincronizzato',!!errorMessages().length);
 }catch(e){state.error=e.message;connectionStatus('Problemi di rete',true)}finally{state.loading=false;render()}}
