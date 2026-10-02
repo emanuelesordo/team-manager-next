@@ -9,7 +9,6 @@
 - [x] Login tramite Edge Function esistente
 - [x] Letture di stagioni, competizioni, fixture, classifica, rosa, match e statistiche con le policy in essere
 - [x] Specifica integrale e documentazione tecnica/grafica separata
-- [ ] Pubblicazione: richiede creazione nuova repository e attivazione Pages da proprietario
 - [ ] Collaudo end-to-end autenticato tramite browser su Pages
 
 ## Fasi successive
