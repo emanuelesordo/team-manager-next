@@ -49,3 +49,14 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 @media(max-width:550px){.mt-row{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr)}.mt-card-stack i{width:8px;flex-basis:8px;height:17px}}
 
 .mt-change span:last-child{transform:none}
+
+/* Group all same-minute match events (particularly simultaneous substitutions). */
+.mt-side .mt-stack{display:flex;flex-direction:column;gap:7px;min-width:0;width:100%}
+.mt-group-item{display:flex;align-items:center;min-width:0;gap:9px}
+.mt-home .mt-group-item{flex-direction:row-reverse;text-align:right}
+.mt-home .mt-group-item .mt-names{order:0}
+.mt-home .mt-group-item .mt-score{order:1}
+.mt-home .mt-group-item .mt-icon{order:2}
+.mt-away .mt-group-item .mt-names{order:2}
+.mt-minute-group{padding-block:12px}
+@media(max-width:550px){.mt-group-item{gap:4px}.mt-side .mt-stack{gap:7px}}
