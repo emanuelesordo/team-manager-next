@@ -24,14 +24,20 @@ export function revisionHistory(rows=[]){
  if(!rows.length)return '<p class="staff-help">Nessuna rettifica registrata.</p>';
  return '<div class="staff-revision-history"><h4>Storico rettifiche</h4>'+rows.map(r=>'<div class="staff-event-row"><strong>'+E(new Date(r.created_at).toLocaleString('it-IT'))+'</strong><span>'+E(r.reason)+'</span><small>Prima: '+E(r.previous_record?.event_type)+' ('+E(r.previous_record?.minute??'minuto ignoto')+') → dopo: '+E(r.next_record?.event_type)+' ('+E(r.next_record?.minute??'minuto ignoto')+')</small></div>').join('')+'</div>';
 }
+export function resultReconciliationHistory(rows=[]){
+ if(!rows.length)return '<p class="staff-help">Nessun allineamento manuale registrato.</p>';
+ return '<div class="staff-revision-history"><h4>Storico allineamenti risultato</h4>'+rows.map(r=>
+ '<div class="staff-event-row"><strong>'+E(new Date(r.created_at).toLocaleString('it-IT'))+'</strong><span>'+E(r.old_home_score)+'–'+E(r.old_away_score)+' → '+E(r.new_home_score)+'–'+E(r.new_away_score)+'</span></div>').join('')+'</div>';
+}
 export function resultReviewSection(m,f,s){
  if(!m||!f)return '';
  const confirmed=m.result_review_status==='confirmed',finished=m.status==='finished'&&f.status==='finished';
+ const history='<button type="button" class="staff-soft" data-staff-action="review-result-history">Storico allineamenti</button>';
  let h='<section class="staff-result-review"><h3>'+(confirmed?'Risultato confermato':'Risultato da verificare')+'</h3><p class="staff-help">Conclusione partita e conferma risultato sono distinte. Marcatori ignoti restano ignoti.</p>';
- if(!finished)return h+'<p class="staff-help">Disponibile dopo la conclusione della partita.</p></section>';
- if(confirmed)return h+'<p class="staff-help">Confermato il '+E(m.result_reviewed_at?new Date(m.result_reviewed_at).toLocaleString('it-IT'):'—')+'. Nuove modifiche revocano la conferma.</p><button type="button" class="staff-soft" data-staff-action="review-result-reopen">Riapri verifica</button></section>';
+ if(!finished)return h+'<p class="staff-help">Disponibile dopo la conclusione della partita.</p>'+history+'</section>';
+ if(confirmed)return h+'<p class="staff-help">Confermato il '+E(m.result_reviewed_at?new Date(m.result_reviewed_at).toLocaleString('it-IT'):'—')+'. Nuove modifiche revocano la conferma.</p><button type="button" class="staff-soft" data-staff-action="review-result-reopen">Riapri verifica</button>'+history+'</section>';
  if(s.scoreMismatch)h+='<p class="data-warning">Risultati discordanti: la fixture è la fonte ufficiale.</p><button type="button" class="staff-soft" data-staff-action="review-result-align">Allinea solo il tabellino al risultato ufficiale</button>';
  if(s.pending)h+='<p class="data-warning">'+s.pending+' eventi ancora da verificare.</p>';
  const can=s.pending===0&&!s.scoreMismatch&&s.fixtureHasScore&&s.matchHasScore;
- return h+'<button type="button" class="staff-submit" data-staff-action="review-result-confirm"'+(can?'':' disabled')+'>Conferma risultato definitivo</button></section>';
+ return h+'<button type="button" class="staff-submit" data-staff-action="review-result-confirm"'+(can?'':' disabled')+'>Conferma risultato definitivo</button>'+history+'</section>';
 }
