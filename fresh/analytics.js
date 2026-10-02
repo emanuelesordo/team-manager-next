@@ -39,11 +39,13 @@ export function eventCoverage(fixtures,matches,events,team){
   if(rows.some(e=>!Number.isInteger(e.minute))){withoutMinutes++;continue}
   rows.sort((a,b)=>a.minute-b.minute||(a.stoppage_minute||0)-(b.stoppage_minute||0)||String(a.created_at).localeCompare(String(b.created_at)));
   let teamGoals=0,oppGoals=0,wasBehind=false,wasAhead=false,positive=false,negative=false;
+  const localFor={equal:0,ahead:0,behind:0},localAgainst={equal:0,ahead:0,behind:0};
+  let ambiguousSide=false;
   for(const e of rows){
-   if(!['team','opponent'].includes(e.team_side)){unverified++;continue}
+   if(!['team','opponent'].includes(e.team_side)){ambiguousSide=true;break}
    const before=teamGoals-oppGoals,side=e.team_side==='team'?'location':'conceded';
    const bucket=before>0?'ahead':before<0?'behind':'equal';
-   (side==='location'?location:conceded)[bucket]++;
+   (side==='location'?localFor:localAgainst)[bucket]++;
    if(before<0)wasBehind=true;if(before>0)wasAhead=true;
    if(e.team_side==='team')teamGoals++;else oppGoals++;
    const after=teamGoals-oppGoals;
@@ -52,7 +54,8 @@ export function eventCoverage(fixtures,matches,events,team){
   }
   const officialFor=isTeam(f.home_team,team)?f.home_score:f.away_score;
   const officialAgainst=isTeam(f.home_team,team)?f.away_score:f.home_score;
-  if(teamGoals!==officialFor||oppGoals!==officialAgainst){unverified++;continue}
+  if(ambiguousSide||teamGoals!==officialFor||oppGoals!==officialAgainst){unverified++;continue}
+  for(const k of ['equal','ahead','behind']){location[k]+=localFor[k];conceded[k]+=localAgainst[k]}
   complete++;if(positive)comebacks++;if(negative)concededComebacks++;
   if(positive&&teamGoals>oppGoals)comebackWins++;
  }

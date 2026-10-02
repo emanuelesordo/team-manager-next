@@ -8,6 +8,8 @@ import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch} from './lineup-pitch.js';
 import {projectionContainer,updateProjection} from './projection-ui.js';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
+import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js';
+import {loadFixtureEvents} from './api.js';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -34,8 +36,9 @@ const ico=(n,size=20)=>{const paths={
  spark:'<path d="m2 16 6-6 4 3 9-9m-6 0h6v6"/>'
  };return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[n]||paths.home}</svg>`};
 const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar','calendar','Calendario'],['roster','users','Rosa'],['stats','chart','Numeri']];
-const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'summary',matchData:null,player:null,slide:0,filter:'all',mineOnly:false,role:'all',q:'',theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
+const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'summary',matchData:null,player:null,slide:0,filter:'all',mineOnly:false,role:'all',q:'',theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
 let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
+let verifiedEventCache=null,analyticsBusy=false;
 async function pollLive(){
  if(pollBusy||document.hidden||state.loading||!state.season||state.overlay||state.page==='admin'||state.page==='match'&&state.matchTab==='staff')return;
  pollBusy=true;const currentSeason=state.season;
@@ -134,7 +137,7 @@ function player(){
 function stats(){
  const s=summary(fixtures(),team()),p=state.data?.playerStats||[],sorted=(key)=>[...p].filter(x=>x[key]!=null).sort((a,b)=>Number(b[key])-Number(a[key])).slice(0,7);
  const ranking=(title,key,unit='')=>`<section class="glass panel leaderboard">${panelTitle(title)}${sorted(key).length?sorted(key).map((r,i)=>`<div class="leader-row"><span class="leader-position">${String(i+1).padStart(2,'0')}</span><strong>${E((r.first_name||'')+' '+(r.last_name||''))}</strong><div class="leader-bar"><span style="width:${Math.max(3,Math.round(Number(r[key])/(Number(sorted(key)[0][key])||1)*100))}%"></span></div><b>${key==='avg_rating'?Number(r[key]).toFixed(2):E(r[key])}${unit}</b></div>`).join(''):'<div class="empty">Dato non disponibile.</div>'}</section>`;
- return `${heading('DATA & PERFORMANCE','Statistiche','Indicatori calcolati soltanto da risultati ed eventi effettivamente registrati.')}${kpis()}<div class="stats-intro glass panel"><div><span class="eyebrow">STAGIONE IN NUMERI</span><h2>${s.gf} gol segnati <span>/</span> ${s.ga} subiti</h2><p>${s.played} gare concluse con risultato valido</p></div><div class="stats-form">${miniForm()}</div></div><div class="leaderboard-grid">${ranking('Classifica marcatori','goals')}${ranking('Più presenti','appearances')}${ranking('Media voti','avg_rating')}</div>`;
+ return `${heading('DATA & PERFORMANCE','Statistiche','Indicatori calcolati soltanto da risultati ed eventi effettivamente registrati.')}${kpis()}${teamAnalyticsPanel(fixtures(),team())}${eventAnalyticsPlaceholder()}<div class="stats-intro glass panel"><div><span class="eyebrow">STAGIONE IN NUMERI</span><h2>${s.gf} gol segnati <span>/</span> ${s.ga} subiti</h2><p>${s.played} gare concluse con risultato valido</p></div><div class="stats-form">${miniForm()}</div></div><div class="leaderboard-grid">${ranking('Classifica marcatori','goals')}${ranking('Più presenti','appearances')}${ranking('Media voti','avg_rating')}</div>`;
 }
 function resolveMatch(){const f=fixtures().find(x=>x.id===state.match);const exact=state.data?.matches?.find(m=>m.fixture_id===f?.id);return {fixture:f,operational:f?(exact||fixtureToMatch(f,state.data?.matches||[],state.base.opponents,team())):null}}
 function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll,refreshLive,logoutUser}}
@@ -146,7 +149,7 @@ function match(){
  const events=(data.events||[]).filter(e=>e.validation_status!=='rejected').sort((a,b)=>(a.minute??999)-(b.minute??999));
  const eName=e=>({'goal':'Gol','own_goal':'Autogol','yellow_card':'Ammonizione','red_card':'Espulsione','blue_card':'Cartellino blu','substitution':'Sostituzione','sub_out':'Uscita','period_end':'Fine tempo','assist':'Assist'}[e.event_type]||e.event_type||'Evento');
  const body=state.matchTab==='staff'?staffMatchPanel(staffContext(),f,m):state.matchTab==='summary'?`<div class="match-two"><div class="inner-card"><h3>Informazioni partita</h3><div class="detail-line"><span>Competizione</span><b>${E(competition(f.competition_id)?.name||'—')}</b></div><div class="detail-line"><span>Giornata</span><b>${E(f.round_no??'—')}</b></div><div class="detail-line"><span>Data</span><b>${E(weekday(f.kickoff_at))}</b></div><div class="detail-line"><span>Ora</span><b>${time(f.kickoff_at)}</b></div><div class="detail-line"><span>Campo</span><b>${E(f.venue_name||f.venue||'—')}</b></div>${f.venue_address?`<p class="subnote">${E(f.venue_address)}</p>`:''}</div><div class="inner-card"><h3>Tabellino</h3>${m?`<p class="muted">Dati operativi associati alla partita.</p><div class="event-mini">${events.length?events.slice(0,6).map(e=>`<div><b>${matchMinutes(e)}</b><span>${E(eName(e))} ${e.player_id?'· '+E(playerName(e.player_id)):''}</span></div>`).join(''):'<div class="empty">Nessun evento registrato.</div>'}</div>`:'<div class="empty">Nessun tabellino operativo collegato con certezza a questa gara.</div>'}</div></div>`:state.matchTab==='lineup'?m?`<div class="match-two"><div class="inner-card"><h3>Formazione iniziale</h3><div class="pitch"><div class="pitch-mid"></div><div class="pitch-players">${data.players.filter(x=>x.started).sort((a,b)=>(a.tactical_slot??99)-(b.tactical_slot??99)).map(x=>`<div class="pitch-player"><b>${x.shirt_number??'•'}</b><span>${E((people(x.player_id)?.last_name||playerName(x.player_id)))}</span></div>`).join('')||'<div class="empty">Formazione iniziale non registrata.</div>'}</div></div></div><div class="inner-card"><h3>Panchina e convocati</h3>${data.players.filter(x=>!x.started).map(x=>`<div class="detail-line"><span>${E(playerName(x.player_id))}</span><b>${E(x.selection_status||'—')}</b></div>`).join('')||'<div class="empty">Nessun dato disponibile.</div>'}<p class="subnote">Posizioni grafiche indicative; i dati storici di partenza non vengono modificati.</p></div></div>`:'<div class="empty padded">Nessuna formazione operativa associata a questa gara.</div>':state.matchTab==='events'?`<div class="event-timeline">${m&&events.length?events.map(x=>`<div class="timeline-item"><span class="timeline-minute">${matchMinutes(x)}</span><span class="timeline-symbol">●</span><div><strong>${E(eName(x))}</strong><p>${x.player_id?E(playerName(x.player_id)):'Squadra'}${x.secondary_player_id?' · '+E(playerName(x.secondary_player_id)):''}</p></div></div>`).join(''):'<div class="empty padded">Non risultano eventi verificati in questo tabellino.</div>'}</div>`:votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E});
- return `<button class="back-link" data-page="calendar">${ico('back')} Torna al calendario</button><div class="match-detail-head glass"><div class="match-detail-top">${status(f)}<span>${E(competition(f.competition_id)?.name||'Competizione')} · Giornata ${E(f.round_no??'—')}</span></div><div class="match-detail-score"><div>${club(f.home_team,'xl')}<strong>${E(f.home_team)}</strong></div><div class="match-big-score"><b>${score(f)}</b><span>${E(weekday(f.kickoff_at))} · ${time(f.kickoff_at)}</span></div><div>${club(f.away_team,'xl')}<strong>${E(f.away_team)}</strong></div></div></div><section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">${tabs.map(([id,label])=>`<button role="tab" aria-selected="${state.matchTab===id}" data-tab="${id}" class="${state.matchTab===id?'active':''}">${label}</button>`).join('')}</div><div class="match-tab-body">${body}</div></section>`;
+ return `<button class="back-link" data-page="calendar">${ico('back')} Torna al calendario</button><div class="match-detail-head glass"><div class="match-detail-top">${status(f)}<span>${E(competition(f.competition_id)?.name||'Competizione')} · Giornata ${E(f.round_no??'—')}</span></div><div class="match-detail-score"><div>${club(f.home_team,'xl')}<strong>${E(f.home_team)}</strong></div><div class="match-big-score"><b>${score(f)}</b><span>${E(weekday(f.kickoff_at))} · ${time(f.kickoff_at)}</span></div><div>${club(f.away_team,'xl')}<strong>${E(f.away_team)}</strong></div></div></div><section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">${tabs.map(([id,label])=>`<button role="tab" aria-selected="${state.matchTab===id}" data-tab="${id}" class="${state.matchTab===id?'active':''}">${label}</button>`).join('')}</div><div class="match-tab-body">${body}${state.matchTab==='summary'?fixtureEventsPanel(state.fixtureEvents):''}</div></section>`;
 }
 function clubScreen(){return clubPage({team:team(),seasons:state.base.seasons,season:state.season,opponents:state.base.opponents,E,crest:club,heading,ico})}
 function settings(){
@@ -166,7 +169,7 @@ function render(){
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
  document.body.dataset.theme=state.theme;
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
- manageCarousel();manageLivePolling();maybeRequirePasswordChange(state.identity);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
+ manageCarousel();manageLivePolling();maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
@@ -192,9 +195,15 @@ async function switchSeason(id){
 }
 async function openMatch(id){
  if(!fixtures().some(x=>x.id===id))return;
- state.match=id;state.matchTab='summary';state.matchData=null;navigate('match');
+ state.match=id;state.matchTab='summary';state.matchData=null;state.fixtureEvents=[];navigate('match');
  const matched=resolveMatch().operational;
- if(matched){state.matchData=await loadMatchInfo(matched.id);if(state.match===id)render()}
+ const [op,fx]=await Promise.allSettled([matched?loadMatchInfo(matched.id):Promise.resolve(null),loadFixtureEvents(id)]);
+ if(state.match!==id)return;
+ if(op.status==='fulfilled')state.matchData=op.value;
+ else toast('Tabellino non caricato: '+op.reason.message);
+ if(fx.status==='fulfilled')state.fixtureEvents=fx.value;
+ else toast('Eventi fixture non caricati: '+fx.reason.message);
+ render();
 }
 async function reload(){
  const saved=state.season;await switchSeason(saved);toast('Dati aggiornati')}
@@ -204,6 +213,7 @@ async function refreshLive(){
  const f=await get('app_competition_fixtures','select=*&id=eq.'+encodeURIComponent(id));
  if(state.match!==id)return;
  if(f.length){const i=state.data.fixtures.findIndex(x=>x.id===id);if(i>=0)state.data.fixtures[i]=f[0]}
+ state.fixtureEvents=await loadFixtureEvents(id).catch(()=>[]);
  const m=resolveMatch().operational;
  if(m){
   const rows=await get('app_matches','select=*&id=eq.'+encodeURIComponent(m.id));
@@ -211,6 +221,26 @@ async function refreshLive(){
   state.matchData=await loadMatchInfo(m.id);
  }
  if(state.match===id)render();
+}
+async function fillAnalytics(){
+ const box=document.querySelector('[data-event-analysis]');if(!box||!state.data)return;
+ if(verifiedEventCache?.season===state.season){
+  box.innerHTML=renderEventAnalytics(fixtures(),state.data.matches||[],verifiedEventCache.events,team());return;
+ }
+ if(analyticsBusy)return;
+ const chosen=state.season,matches=state.data.matches||[],ids=matches.map(m=>m.id).filter(Boolean);
+ if(!ids.length){verifiedEventCache={season:chosen,events:[]};box.innerHTML=renderEventAnalytics(fixtures(),matches,[],team());return}
+ analyticsBusy=true;
+ try{
+  const query='select=match_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&match_id=in.('+
+   ids.map(encodeURIComponent).join(',')+')&limit=1000';
+  const events=await get('app_match_events',query);
+  if(chosen!==state.season)return;
+  verifiedEventCache={season:chosen,events};
+  const current=document.querySelector('[data-event-analysis]');
+  if(current)current.innerHTML=renderEventAnalytics(fixtures(),state.data.matches||[],events,team());
+ }catch(error){const current=document.querySelector('[data-event-analysis]');if(current)current.textContent='Eventi non leggibili: '+error.message}
+ finally{analyticsBusy=false}
 }
 async function logoutUser(){document.getElementById('tm-account-dialog')?.remove();await logout();state.identity={user:null,role:null,profile:null};state.overlay=null;await reloadAll();navigate('home');toast('Sessione chiusa')}
 async function reloadAll(){

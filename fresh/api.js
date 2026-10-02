@@ -79,6 +79,13 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
  names.forEach((n,i)=>{const x=arr[i];output[n]=x.status==='fulfilled'?x.value:[];if(x.status==='rejected')output.errors[n]=x.reason.message});
  return output;
 }
+/** Source-separated calendar timeline. */
+export async function loadFixtureEvents(fixtureId){
+ if(!fixtureId)return [];
+ return get('app_fixture_events',
+  'select=id,event_type,minute,stoppage_minute,side,home_score,away_score,source,created_at&fixture_id=eq.'+
+  encodeURIComponent(fixtureId)+'&order=minute.asc.nullslast,created_at.asc&limit=250');
+}
 export async function loadMatchInfo(matchId){
  if(!matchId)return {players:[],events:[],ratings:[],errors:{}};
  const params={players:['app_match_players','select=*&match_id=eq.'+matchId],events:['app_match_events','select=*&match_id=eq.'+matchId+'&order=minute.asc.nullslast,created_at.asc'],ratings:['app_match_ratings','select=*&match_id=eq.'+matchId]};

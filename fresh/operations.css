@@ -37,3 +37,9 @@
 .account-admin-title{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px}.account-admin-title strong{font-size:14px}.account-admin-title small{font-size:11px;color:var(--muted)}
 .account-admin-row .staff-submit{justify-self:end}
 @media(max-width:760px){.account-admin-row .staff-form-grid{grid-template-columns:1fr}.account-admin-row .staff-submit{width:100%}}
+
+/* Source-aware match timeline and official-only team statistics */
+.team-detail-stats,.event-analysis{margin-top:17px}.team-metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px;margin:16px 0}
+.team-metric{display:grid;gap:8px;text-align:center;background:color-mix(in srgb,var(--accent) 7%,var(--surface));border:1px solid var(--border);border-radius:15px;padding:17px 10px}.team-metric b{font-size:23px;color:var(--ink)}.team-metric small{font-size:10px;color:var(--muted)}
+.fixture-events-panel{margin-top:16px}.fixture-event-row{display:grid;grid-template-columns:58px minmax(0,1fr) 76px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:11px}.fixture-event-row b{color:var(--accent)}.fixture-event-row small{color:var(--muted);text-align:right}
+@media(max-width:760px){.team-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.team-metric b{font-size:20px}.fixture-event-row{grid-template-columns:42px minmax(0,1fr) 58px;gap:6px;font-size:10px}}
