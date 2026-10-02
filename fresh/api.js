@@ -67,6 +67,8 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
   players:['players','select=id,team_id,first_name,last_name,photo_url,generic_role_manual,preferred_foot,height_cm,birth_date,nationality_code&limit=1000']
  };
  if(includePrivate)Object.assign(requests,{
+  generalCompetitions:['competitions','select=id,name,season_id&limit=300'],
+  competitionLinks:['tm_app_competition_links','select=app_competition_id,general_competition_id&limit=300'],
   generalSeasons:['seasons','select=id,team_id,name,start_date,end_date&order=start_date.desc'],
   injuries:['injuries','select=*&order=injury_date.desc&limit=500'],
   suspensions:['suspensions','select=*&order=issued_date.desc&limit=500']

@@ -49,6 +49,10 @@ export function adminPage(ctx){
  }
  if(memory.area==='competitions'){
   const c=idOf(comps,S.competitions);let settings=c?.discipline_rules||{};
+  const appSeason=seasons.find(x=>x.id===ctx.state.season);
+  const generalSeason=(data.generalSeasons||[]).find(x=>x.team_id===t.id&&x.start_date===appSeason?.start_date&&x.end_date===appSeason?.end_date);
+  const generalCandidates=(data.generalCompetitions||[]).filter(x=>x.season_id===generalSeason?.id);
+  const chosenBridge=(data.competitionLinks||[]).find(x=>x.app_competition_id===c?.id);
   form=wrapForm('competitions','Regolamenti delle competizioni',selectExisting('competitions',comps,'name')+
    '<div class="staff-form-grid">'+input('name','Denominazione',c?.name||'','text','required')+
    selection('kind','Categoria',[['league','Campionato'],['cup','Coppa'],['friendly','Amichevole'],['tournament','Torneo'],['other','Altro']],c?.kind||'league')+
@@ -58,7 +62,10 @@ export function adminPage(ctx){
    input('win_points','Punti vittoria',c?.win_points??3,'number','min="0" max="20" required')+
    input('draw_points','Punti pareggio',c?.draw_points??1,'number','min="0" max="20" required')+
    input('loss_points','Punti sconfitta',c?.loss_points??0,'number','min="0" max="20" required')+
-   input('blue_duration','Blu: sospensione in minuti',settings.blue_duration_minutes||'','number','min="1" max="30"')+'</div>',
+   input('blue_duration','Blu: sospensione in minuti',settings.blue_duration_minutes||'','number','min="1" max="30"')+
+   selection('general_competition_id','Competizione gestionale collegata',
+    [['','Nessuna (blocco conservativo delle squalifiche attive)'],...generalCandidates.map(x=>[x.id,x.name])],
+    chosenBridge?.general_competition_id||'')+'</div>',
    'Le competizioni conservano la propria durata e regole. Non vengono cancellati calendario o partite.');
  }
  if(memory.area==='opponents'){
