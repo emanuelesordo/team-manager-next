@@ -464,7 +464,13 @@ export async function staffSubmit(e,ctx){
   if(obj.table==='app_competition_fixtures'){
    await pendingFn(form,()=>rpc('tm_app_edit_fixture',{p_fixture_id:obj.id,p_changes:obj.payload}));
   }else{
-   await pendingFn(form,()=>adminWrite(obj.table,obj.id?'PATCH':'POST',obj.payload,obj.id?{id:obj.id}:{}));
+   const written=await pendingFn(form,()=>adminWrite(obj.table,obj.id?'PATCH':'POST',obj.payload,obj.id?{id:obj.id}:{}));
+   if(obj.table==='app_competitions'){
+    const rowId=obj.id||written?.[0]?.id;
+    if(!rowId)throw Error('Competizione salvata, ma identificativo non restituito: riprova a collegarla');
+    const linkId=String(dataForm(form).general_competition_id||'');
+    await rpc('tm_app_link_competition',{p_app_id:rowId,p_general_id:linkId||null});
+   }
   }
   await ctx.reloadAll();ctx.toast('Configurazione salvata');return true;
  }catch(err){ctx.toast('Errore: '+(err.message||err));return true}
