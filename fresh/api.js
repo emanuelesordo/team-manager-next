@@ -1,4 +1,5 @@
 import {API_URL,PUBLISHABLE_KEY} from './config.js';
+import {fixtureOnlyEvent} from './canonical-events.js';
 const SESSION_KEY='tm_next_session';
 let session=null;
 try{session=JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{localStorage.removeItem(SESSION_KEY)}
@@ -85,12 +86,15 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
  return output;
 }
 /** Source-separated calendar timeline. */
+/** Read fixture-only events from the same physical events table as the Match Center. */
 export async function loadFixtureEvents(fixtureId){
  if(!fixtureId)return [];
- return get('app_fixture_events',
-  'select=id,event_type,minute,stoppage_minute,side,home_score,away_score,source,created_at&fixture_id=eq.'+
-  encodeURIComponent(fixtureId)+'&order=minute.asc.nullslast,created_at.asc&limit=250');
+ const rows=await get('app_match_events',
+  'select=id,fixture_id,match_id,event_type,minute,stoppage_minute,team_side,source,payload,source_raw,created_at,validation_status&fixture_id=eq.'+
+  encodeURIComponent(fixtureId)+'&match_id=is.null&order=minute.asc.nullslast,created_at.asc&limit=250');
+ return rows.map(fixtureOnlyEvent);
 }
+
 export async function loadMatchInfo(matchId){
  if(!matchId)return {players:[],events:[],ratings:[],ratingMeans:[],tacticalChanges:[],errors:{}};
  const params={players:['app_match_players','select=*&match_id=eq.'+matchId],events:['app_match_events','select=*&match_id=eq.'+matchId+'&order=minute.asc.nullslast,created_at.asc'],ratings:['app_match_ratings','select=*&match_id=eq.'+matchId],ratingMeans:['tm_player_recent_votes','select=player_id,avg_rating,votes,sv&match_id=eq.'+matchId],tacticalChanges:['app_match_tactical_changes','select=*&match_id=eq.'+matchId+'&order=minute.asc,created_at.asc']};
