@@ -1,14 +1,1 @@
-{
-  "name":"team-manager-next",
-  "version":"1.0.0",
-  "description":"Team Manager: one-team mobile-first football management frontend",
-  "private":true,
-  "type":"module",
-  "engines":{"node":">=20"},
-  "scripts":{
-    "dev":"python3 -m http.server 8080",
-    "build":"node scripts/build.mjs",
-    "test":"node --test tests/*.test.mjs",
-    "check":"npm test && node --check src/app.js && node --check src/data.js && npm run build"
-  }
-}
+{"name":"team-manager-next","private":true,"type":"module","scripts":{"build":"node scripts/build.mjs","check":"node scripts/check.mjs && npm run build"}}
