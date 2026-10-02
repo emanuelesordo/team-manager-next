@@ -70,7 +70,9 @@ async function settle(sources, prefix) {
 export function loadReference() {
   return settle({
     seasons: () => read('app_seasons', 'id,team_id,name,start_date,end_date,status', [], { field:'start_date', ascending:false }),
-    teams: () => read('teams', 'id,name,short_name,logo_url'),
+    // The teams table is authenticated-only: use public app_settings branding for guests.
+    teams: () => bearerToken ? read('teams', 'id,name,short_name,logo_url') : Promise.resolve([]),
+    branding: () => read('app_settings', 'team_logo_url').then(rows => rows[0] || null),
     opponents: () => read('app_opponents', 'id,name,short_name,logo_url,primary_color'),
   }, 'ref');
 }
