@@ -1,4 +1,4 @@
-const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'",'&#39;'}[c]));
+const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const opts=(a,v)=>a.map(([k,n])=>'<option value="'+E(k)+'"'+(k===v?' selected':'')+'>'+E(n)+'</option>').join('');
 const types=['goal','own_goal','penalty_scored','penalty_missed','assist','substitution','yellow_card','blue_card','blue_return','red_card','period_end','other'].map(x=>[x,x]);
 const reasons=['','tactical','technical','injury','other','technical_choice','injury_prevention','disciplinary_prevention','standing_ovation','give_teammates_time'].map(x=>[x,x||'Non specificato']);
