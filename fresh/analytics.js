@@ -1,3 +1,4 @@
+import {cumulativeEventMinute} from './match-minutes.js';
 import {normalized} from './domain.js';
 const isTeam=(name,team)=>normalized(name)===normalized(team.name)||normalized(name)===normalized(team.short_name);
 export const isPlayed=f=>f?.status==='finished'&&Number.isInteger(f.home_score)&&Number.isInteger(f.away_score);
@@ -20,7 +21,7 @@ export function resultSplit(fixtures,team){
 export function verifiedEvents(events){
  return (events||[]).filter(e=>['official','community_confirmed'].includes(e.validation_status));
 }
-export function eventCoverage(fixtures,matches,events,team){
+export function eventCoverage(fixtures,matches,events,team,competitions=[]){
  const map=new Map(matches.map(m=>[m.id,m]));
  const eventsByMatch=new Map();
  for(const event of verifiedEvents(events)){
@@ -37,7 +38,8 @@ export function eventCoverage(fixtures,matches,events,team){
   const expected=f.home_score+f.away_score;
   if(rows.length!==expected){unverified++;continue}
   if(rows.some(e=>!Number.isInteger(e.minute))){withoutMinutes++;continue}
-  rows.sort((a,b)=>a.minute-b.minute||(a.stoppage_minute||0)-(b.stoppage_minute||0)||String(a.created_at).localeCompare(String(b.created_at)));
+  const competition=competitions.find(c=>c.id===f.competition_id)||null;
+  rows.sort((a,b)=>(cumulativeEventMinute(a,competition)??999)-(cumulativeEventMinute(b,competition)??999)||(a.stoppage_minute||0)-(b.stoppage_minute||0)||String(a.created_at).localeCompare(String(b.created_at)));
   let teamGoals=0,oppGoals=0,wasBehind=false,wasAhead=false,positive=false,negative=false;
   const localFor={equal:0,ahead:0,behind:0},localAgainst={equal:0,ahead:0,behind:0};
   let ambiguousSide=false;
