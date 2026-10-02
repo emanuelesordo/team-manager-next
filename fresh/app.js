@@ -1,5 +1,5 @@
 import {CONFIG} from '../src/config.js';
-import {read,load} from './data.js';
+import {load} from './data.js';
 const $=id=>document.getElementById(id),s={page:'home',slide:0,season:null,comp:null,mode:'all',role:'all',search:'',data:{},error:''};
 const e=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const our=x=>['calciocaselle','calciocaselle08'].includes(String(x||'').toLowerCase().replace(/[^a-z0-9]/g,''));
