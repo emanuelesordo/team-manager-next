@@ -43,3 +43,10 @@
 .team-metric{display:grid;gap:8px;text-align:center;background:color-mix(in srgb,var(--accent) 7%,var(--surface));border:1px solid var(--border);border-radius:15px;padding:17px 10px}.team-metric b{font-size:23px;color:var(--ink)}.team-metric small{font-size:10px;color:var(--muted)}
 .fixture-events-panel{margin-top:16px}.fixture-event-row{display:grid;grid-template-columns:58px minmax(0,1fr) 76px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:11px}.fixture-event-row b{color:var(--accent)}.fixture-event-row small{color:var(--muted);text-align:right}
 @media(max-width:760px){.team-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.team-metric b{font-size:20px}.fixture-event-row{grid-template-columns:42px minmax(0,1fr) 58px;gap:6px;font-size:10px}}
+
+/* Player history: per-match means with SV, sourced from aggregate public view. */
+.player-trend-panel{margin-top:17px}.recent-votes{display:grid;gap:8px;margin-top:14px}
+.recent-vote{display:grid;grid-template-columns:70px minmax(0,1fr) 62px;align-items:center;gap:13px;padding:10px 8px;border:1px solid var(--border);background:color-mix(in srgb,var(--accent) 5%,var(--surface));border-radius:13px}
+.recent-vote .vote-date{font-size:11px;color:var(--muted)}.recent-vote .vote-opp{min-width:0;display:grid;gap:6px}.recent-vote .vote-opp b{font-size:12px}.recent-vote .vote-opp small{font-size:10px;color:var(--muted)}
+.recent-vote strong{text-align:right;color:var(--ink);font-size:18px}.vote-meter{height:5px;border-radius:8px;background:var(--border);overflow:hidden}.vote-meter i{display:block;height:100%;border-radius:inherit;background:var(--accent)}
+@media(max-width:760px){.recent-vote{grid-template-columns:52px minmax(0,1fr) 44px;gap:8px;padding:9px 6px}.recent-vote strong{font-size:15px}.recent-vote .vote-date{font-size:10px}}

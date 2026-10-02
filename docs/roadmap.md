@@ -41,3 +41,8 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [x] Modello Monte Carlo deterministico con 10.000 simulazioni, forme/forza pesate 30/25/20/10/10/5 e seed dati.
 - [x] Stima posizione media, punti attesi, percentili P20-P80 e indicatore quantità stagione disputata; parità di punti senza attribuire spareggi inventati.
 - [x] Ricalcolo con cache legata al contenuto di risultati/calendario/regole, solo in vista Competizioni.
+
+## Schede giocatore: fonti derivate
+- [x] Maglia abituale derivata dal numero più frequente nelle partite concluse; spareggio per ultimo utilizzo.
+- [x] Ultimi cinque rating medi per partita, comprensivi di SV e avversaria, tramite vista aggregata senza ID dei votanti.
+- [ ] Collegamento tra infortuni e scheda giocatore riservato allo staff, con verifiche su modello stagionale generale.

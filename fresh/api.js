@@ -63,6 +63,7 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
   standings:['app_competition_standings','select=*&season_id=eq.'+id],
   roster:['app_roster','select=*&season_id=eq.'+id],
   playerStats:['app_player_season_stats','select=*&season_id=eq.'+id],
+  habitual:['tm_player_habitual_shirts','select=player_id,shirt_number,occurrences,last_used&limit=1000'],
   matches:['app_matches','select=*&season_id=eq.'+id],
   players:['players','select=id,team_id,first_name,last_name,photo_url,generic_role_manual,preferred_foot,height_cm,birth_date,nationality_code&limit=1000']
  };
