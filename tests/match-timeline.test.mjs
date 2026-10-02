@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {cumulativeEventMinute,displayEventMinute} from '../fresh/match-minutes.js';
 
 const source=readFileSync(new URL('../fresh/main.js',import.meta.url),'utf8');
 const begin=source.indexOf('function matchEventTimeline(');
 const end=source.indexOf('\nfunction match(){',begin);
 assert.ok(begin>=0&&end>begin,'match timeline function must be present');
-const render=new Function('E',source.slice(begin,end)+';return matchEventTimeline;')(String);
+const render=new Function('E','cumulativeEventMinute','displayEventMinute',source.slice(begin,end)+';return matchEventTimeline;')(String,cumulativeEventMinute,displayEventMinute);
 const fixture={status:'finished',home_team:'Caselle',away_team:'Rivals',home_score:1,away_score:2};
 const events=[
  {id:'first',minute:20,event_type:'goal',team_side:'home',player_id:'FirstHalf',payload:{period:'first_half'}},
