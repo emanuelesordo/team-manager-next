@@ -1,0 +1,15 @@
+.votes-intro{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:18px}
+.votes-intro h3{font-size:19px;margin:6px 0}.votes-intro p{font-size:11px;line-height:1.6;color:var(--muted);margin:0}
+.votes-pill{padding:8px 12px;border:1px solid var(--border);border-radius:24px;white-space:nowrap;font-size:10px;background:var(--surface)}
+.vote-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:12px}
+.vote-card{padding:16px;display:grid;align-content:start;gap:12px;border:1px solid var(--border);border-radius:16px;background:color-mix(in srgb,var(--surface) 93%,var(--accent));min-width:0}
+.vote-identity{display:flex;gap:11px;align-items:center}.vote-identity>div{display:grid;gap:4px}.vote-identity strong{font-size:13px}.vote-identity small{font-size:10px;color:var(--muted)}
+.vote-avatar{flex:0 0 42px;width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:color-mix(in srgb,var(--accent) 20%,var(--surface));font-weight:800}
+.vote-average{display:flex;align-items:baseline;gap:10px;padding-top:12px;border-top:1px solid var(--border)}
+.vote-average b{font-size:27px}.vote-average small{font-size:10px;color:var(--muted);line-height:1.5}
+.vote-form{display:grid;gap:7px}.vote-form>label{font-size:10px;font-weight:800;color:var(--muted)}
+.vote-form>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.vote-form select{min-width:0;color:var(--ink);background:var(--surface-solid);border:1px solid var(--border);border-radius:11px;padding:11px;font:inherit;font-size:12px}
+.vote-form button{padding:11px 15px;font-size:11px;border-radius:11px}.vote-personal{font-size:10px;color:var(--muted)}
+.vote-notice{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:15px;font-size:11px;color:var(--muted);line-height:1.5}
+@media(max-width:760px){.vote-grid{grid-template-columns:1fr}.vote-notice{flex-wrap:wrap}.vote-card{padding:15px}.votes-pill{font-size:9px}}

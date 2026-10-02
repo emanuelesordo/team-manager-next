@@ -21,3 +21,11 @@
 - [ ] Moduli PRO.
 
 Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`.
+
+## Integrità eventi e votazioni — 02/10/2026
+- [x] Direzione corretta dell'autogol e suo annullamento in RPC.
+- [x] Presenze e eventi statistici limitati alle gare concluse; panchinari mai entrati esclusi.
+- [x] Media stagionale = media dei valori medi per partita; SV nullo escluso.
+- [x] Tab Voti con selezione 1–10, mezzi punti e SV persistito, accessibile agli utenti autenticati.
+- [x] Funzione SQL e RLS restrittive per eleggibilità reale.
+- [ ] Collaudo browser autenticato e verifica fisica responsive.
