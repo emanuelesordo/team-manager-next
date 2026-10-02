@@ -52,3 +52,17 @@ test('recovery starts at the configured minute inclusive in each half',()=>{
  assert.ok(at("40'</b>")<at("RECUPERO +2'")&&at("RECUPERO +2'")<at("39'</b>"),'first-half boundary');
  assert.equal(rendered.split('RECUPERO').length-1,2);
 });
+
+test('declared recovery is shown in both halves even without stoppage-time events',()=>{
+ const noStoppageEvents=[
+  {minute:20,event_type:'goal',team_side:'home',player_id:'first',payload:{period:'first_half'}},
+  {minute:28,event_type:'goal',team_side:'away',player_id:'second',payload:{period:'second_half'}},
+  {event_type:'period_end',minute:null,stoppage_minute:2,payload:{period:'first_half'}},
+  {event_type:'period_end',minute:null,stoppage_minute:7,payload:{period:'second_half'}}
+ ];
+ const output=render(noStoppageEvents,fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
+ assert.ok(output.indexOf('>HT<')<output.indexOf("RECUPERO +2'"));
+ assert.ok(output.indexOf("RECUPERO +2'")<output.indexOf("20'</b>"));
+ assert.ok(output.indexOf("RECUPERO +7'")<output.indexOf("68'</b>"));
+ assert.equal(output.split('RECUPERO').length-1,2);
+});
