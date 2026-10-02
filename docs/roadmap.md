@@ -75,3 +75,8 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [x] Conferma staff server-side: solo gara conclusa, punteggi uguali e nessuna proposta pendente.
 - [x] Invalidazione automatica della conferma per mutazioni di score o eventi; riconciliazione dal risultato della fixture solo su conferma esplicita.
 - [ ] Collaudo con credenziali reali e su dispositivi fisici non sostituibile con una pipeline simulata.
+
+## Ultimo controllo CI — revisione postpartita
+- [x] UI postpartita: rettifica per evento, conferma risultato distinta dalla conclusione partita, log consultabili; browser desktop/mobile su API simulate superato.
+- [x] SQL versionato: audit append-only eventi, log allineamento punteggi, trigger invalidazione conferma e RPC protette.
+- [ ] Collaudo autenticato reale e fisico: richiede sessioni e dispositivi non disponibili negli attuali test automatici.

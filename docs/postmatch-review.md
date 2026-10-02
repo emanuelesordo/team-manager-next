@@ -1,11 +1,19 @@
-# Revisione postpartita (da team-manager.txt §§ 16–22)
+# Revisione postpartita — 2 ottobre 2026
 
-- Gli eventi sono in `app_match_events`, conservando stato, proponente, ufficializzatore e data.
-- I risultati live/provvisori e quelli ufficiali sono distinti. La conoscenza parziale dei marcatori non impedisce un risultato ufficiale e non autorizza inventare eventi.
-- `tm_app_review_event`: staff-only, match collegato, stato live/finished, controllo ottimistico di `validation_status`, approvazione `official` o scarto logico `rejected`. Nessun DELETE o aggiornamento punteggi.
-- Un evento `counted_in_score=true` non può essere scartato da questa revisione: usare prima la console di rettifica risultato; evitare inconsistenze sui gol.
-- La pagina Gestione → Eventi espone proposte, eventi ufficiali e scartati; mostra cronologia, minuto anche NULL, recupero, giocatore e assist quando disponibili, confronto tra fixture e tabellino e numero di gol con eventi ufficializzati.
-- NON ufficializza in blocco i 16 eventi storici Voltesea–Caselle e NON altera 0–0 operativo / 1–4 ufficiale. Convalida umana necessaria.
-- Test inclusi: partita senza eventi, risultato con marcatori parziali, recupero, autogol, rosso, blu, sostituzione e minuti NULL, annullamento logico.
+Fonte: `docs/specification-original.txt`, sezioni Match Center, eventi, eleggibilità, risultati e validazione. Non si inventano marcatori, minuti o eventi.
 
-Limiti attuali: rettifica dettagliata in-place di un evento e passaggio di stato finale/provvisorio separato sono ulteriori sviluppi; non si afferma che siano completati. Il test browser è simulato e non sostituisce la prova autenticata su produzione.
+## Confermato nel codice e nel database
+- La conclusione della partita (`app_matches.status='finished'`) non equivale alla conferma del risultato (`result_review_status='provisional'|'confirmed'`). Una gara storica conclusa parte come `provisional`.
+- `tm_app_review_result` riservata allo staff: `confirm` richiede partita/fixture concluse, punteggi operativi allineati al calendario ufficiale e assenza di eventi proposti/contestati/confermati dalla community in attesa; `reopen` revoca la validazione, `align_operational` copia **solo su conferma esplicita** il risultato ufficiale nel tabellino.
+- I trigger SQL annullano la conferma quando cambiano risultati, stato o eventi. Non modificano retroattivamente l'esito storico se non richiesto.
+- Gli allineamenti sono registrati in `tm_app_result_reconciliations` (valori precedenti/nuovi, fixture, staff e timestamp) e sono consultabili nell'interfaccia dallo staff.
+- `tm_app_amend_event` rettifica i singoli eventi conservando l'ID e un audit append-only `tm_app_event_revisions` (versione precedente e nuova, motivo obbligatorio, staff, data). La rettifica riporta l'evento allo stato `proposed` per nuova validazione.
+- Le revisioni normali continuano a usare `tm_app_review_event`: approvazione esplicita o scarto logico senza DELETE. La rettifica non può cambiare tipo/squadra di un gol già conteggiato nel punteggio.
+- Tutte le RPC controllano `auth.uid()`, `private.is_staff()`, partita collegata e stato. I registri hanno RLS: sola lettura staff, scrittura soltanto tramite funzioni SECURITY DEFINER.
+- Il frontend include i pulsanti in Match Center → Gestione → Eventi, l'editor motivato e gli storici; il comando live si chiama «Termina partita», non «Termina e ufficializza».
+
+## Verifiche
+La pipeline Node/build e il browser mock desktop/mobile sono stati superati sul commit di sviluppo. La simulazione utilizza dati e credenziali fittizi, quindi **non è un collaudo autenticato su Supabase con un dispositivo reale**. È verificato in produzione che Voltesea–Caselle conserva i suoi 16 eventi `proposed`, il risultato ufficiale 1–4 e il tabellino operativo 0–0, senza approvazioni o allineamenti forzati.
+
+## Pendenze indipendenti
+La roadmap generale contiene altre funzioni di progetto e collaudi non coperti da questa milestone (moduli PRO, attributi ruolo/comfort, fasi/gironi avanzati, test autenticato reale e dispositivi fisici). Non considerarli completati per deduzione.
