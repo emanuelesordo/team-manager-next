@@ -17,6 +17,13 @@ const reasons=[['','Nessuno'],['injury','Infortunio'],['suspension','Squalifica'
 const events=[['goal','Gol'],['own_goal','Autogol'],['penalty_scored','Rigore segnato'],['penalty_missed','Rigore sbagliato'],['yellow_card','Ammonizione'],['blue_card','Cartellino blu'],['blue_return','Rientro blu'],['red_card','Espulsione'],['substitution','Sostituzione / Uscita'],['period_end','Fine periodo'],['other','Altro']];
 const statuses=[['scheduled','Programmata'],['live','In corso'],['finished','Terminata'],['postponed','Rinviata'],['cancelled','Annullata']];
 const idOf=(list,id)=>list.find(x=>x.id===id)||null;
+function findGeneralSeason(available,app,teamId){
+ if(!app)return null;
+ const options=(available||[]).filter(g=>g.team_id===teamId &&
+  String(g.name||'').trim().toLowerCase()===String(app.name||'').trim().toLowerCase() &&
+  (Math.min(Date.parse(g.end_date),Date.parse(app.end_date))-Math.max(Date.parse(g.start_date),Date.parse(app.start_date)))>=180*86400000);
+ return options.length===1?options[0]:null;
+}
 const roleOf=ctx=>ctx.state.identity?.role?.role;
 export const isStaff=ctx=>['admin','manager'].includes(roleOf(ctx));
 function selectExisting(kind,records,text){return '<label class="staff-field"><span>Modifica esistente o crea nuovo</span><select data-staff-select="'+kind+'">'+option('','+ Nuovo',memory.selected[kind])+records.map(x=>option(x.id,x[text]||x.name||x.id,memory.selected[kind])).join('')+'</select></label>'}
@@ -50,7 +57,7 @@ export function adminPage(ctx){
  if(memory.area==='competitions'){
   const c=idOf(comps,S.competitions);let settings=c?.discipline_rules||{};
   const appSeason=seasons.find(x=>x.id===ctx.state.season);
-  const generalSeason=(data.generalSeasons||[]).find(x=>x.team_id===t.id&&x.start_date===appSeason?.start_date&&x.end_date===appSeason?.end_date);
+  const generalSeason=findGeneralSeason(data.generalSeasons,appSeason,t.id);
   const generalCandidates=(data.generalCompetitions||[]).filter(x=>x.season_id===generalSeason?.id);
   const chosenBridge=(data.competitionLinks||[]).find(x=>x.app_competition_id===c?.id);
   form=wrapForm('competitions','Regolamenti delle competizioni',selectExisting('competitions',comps,'name')+
@@ -114,11 +121,10 @@ export function adminPage(ctx){
   }
  }
  if(memory.area==='availability'){
-  const s=base.seasons.find(x=>x.id===ctx.state.season),general=(data.generalSeasons||[])
-    .find(x=>x.team_id===t.id && x.start_date===s?.start_date && x.end_date===s?.end_date);
+  const s=base.seasons.find(x=>x.id===ctx.state.season),general=findGeneralSeason(data.generalSeasons,s,t.id);
   if(!general){
    form='<section class="glass panel staff-editor"><h2>Stagione gestionale non associata</h2>'+
-    help('Infortuni e squalifiche usano la tabella seasons, diversa da app_seasons. È richiesta una corrispondenza esatta della stagione; nessun record viene scritto senza associazione sicura.')+'</section>';
+    help('Infortuni e squalifiche usano la tabella seasons, diversa da app_seasons. Occorrono squadra e denominazione stagione uguali e almeno 180 giorni sovrapposti; associazioni ambigue sono bloccate.')+'</section>';
   }else{
    const personChoices=players.map(x=>[x.id,(x.last_name||'')+' '+(x.first_name||'')])
     .sort((a,b)=>a[1].localeCompare(b[1],'it'));
@@ -421,7 +427,7 @@ export async function staffSubmit(e,ctx){
   }
   if(kind==='injuries'||kind==='suspensions'){
    const d=dataForm(form),app=ctx.state.base.seasons.find(x=>x.id===ctx.state.season);
-   const general=ctx.state.data?.generalSeasons?.find(x=>x.team_id===ctx.state.base.team.id && x.start_date===app?.start_date && x.end_date===app?.end_date);
+   const general=findGeneralSeason(ctx.state.data?.generalSeasons,app,ctx.state.base.team.id);
    if(!general)throw Error('La stagione gestionale non corrisponde alla stagione selezionata');
    const id=memory.selected[kind]||null;
    const fields=kind==='injuries'?
