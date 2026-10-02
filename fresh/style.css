@@ -13,3 +13,25 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 }
 @media(max-width:390px){.hero-content{padding-inline:13px}.hero-mid b{font-size:30px}.hero-club .crest.xl{width:58px;height:58px}.hero-score{grid-template-columns:1fr 75px 1fr}.fixture-clubs .crest.tiny{display:none}.fixture-main>small{font-size:8px}.mobile-nav{left:7px;right:7px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+/* Cronologia partita: casa | minuto | trasferta; ordine inverso dal fischio finale. */
+.match-timeline{width:100%;max-width:920px;margin:0 auto;padding:8px 0 14px}
+.mt-row{display:grid;grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr);align-items:center;column-gap:12px;min-height:54px;padding:7px 0}
+.mt-minute{text-align:center;font:800 13px 'Manrope',sans-serif;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.mt-side{display:flex;align-items:center;gap:9px;min-width:0;font-size:12px}
+.mt-home{justify-content:flex-start;flex-direction:row-reverse;text-align:right}
+.mt-away{justify-content:flex-start;text-align:left}
+.mt-icon{display:inline-flex;align-items:center;justify-content:center;width:27px;flex:0 0 27px;font-size:18px}
+.mt-names{min-width:0;display:inline-flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.mt-home .mt-names{justify-content:flex-end}
+.mt-names strong{font-size:12px;font-weight:800;color:var(--ink)}
+.mt-names small{font-size:10px;font-weight:750;color:var(--muted)}
+.mt-score{border:2px solid #6370ff;border-radius:100px;padding:4px 9px;white-space:nowrap;font-weight:900;font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums}
+.mt-change{display:flex;flex-direction:column;line-height:9px;font-size:18px;font-weight:900}
+.mt-change span:first-child{color:#ed6464}.mt-change span:last-child{color:#36bd81;transform:rotate(180deg)}
+.mt-cards{display:block;width:12px;height:18px;background:#f0ce36;border-radius:2px;box-shadow:5px 0 0 #e45c60}
+.mt-cards.mt-red{background:#e45c60;box-shadow:none}.mt-cards.mt-blue{background:#4a91f6;box-shadow:none}
+.mt-generic{color:var(--muted);font-size:10px}
+.mt-divider{display:flex;align-items:center;gap:15px;justify-content:center;margin:13px 0 6px;font-weight:900;font-size:11px;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+.mt-divider:before,.mt-divider:after{content:'';height:1px;background:var(--border);flex:1}
+@media(max-width:550px){.match-timeline{padding:4px 0}.mt-row{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);gap:5px;min-height:48px}.mt-side{gap:4px}.mt-icon{width:19px;flex-basis:19px;font-size:15px}.mt-score{font-size:10px;padding:3px 5px}.mt-names{gap:3px}.mt-names strong{font-size:10px}.mt-names small{font-size:9px}.mt-minute{font-size:11px}.mt-divider{font-size:10px}}
