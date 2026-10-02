@@ -14,3 +14,16 @@ test('valori permessi 1-10, step 0.5 e SV',()=>{
  assert.equal(parseVote('SV'),null);assert.equal(parseVote('1.5'),1.5);assert.equal(parseVote('10'),10);
  for(const bad of ['',undefined,'0','10.5','7.25','nan'])assert.throws(()=>parseVote(bad));
 });
+
+test('public match panel uses aggregate ratings without leaking voters',async()=>{
+ globalThis.localStorage={getItem(){return null},setItem(){},removeItem(){}};
+ const {votesPanel}=await import('../fresh/votes.js');
+ const html=votesPanel({
+  match:{status:'finished'},data:{players:[{player_id:'a',started:true}],events:[],ratings:[],
+  ratingMeans:[{player_id:'a',votes:4,sv:1,avg_rating:8.25}]},
+  people:[{id:'a',first_name:'Marco',last_name:'Prova'}],
+  userId:null,loggedIn:false,escape:x=>String(x)
+ });
+ assert.match(html,/8,25/);assert.match(html,/4 voti/);assert.match(html,/1 SV/);
+ assert.doesNotMatch(html,/voter_id/);
+});

@@ -58,3 +58,5 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [x] Form staff per modulo, minuto e assegnazioni giocatori con controlli su duplicati e presenza effettiva in campo dal backend.
 - [x] RPC transazionale staff-only `tm_app_record_tactic` su partita operativa live, senza riscrivere la formazione iniziale.
 - [ ] Deducibilità dei minuti per ruolo/comfort: non calcolata finché non sono riconciliati cambi e rientri.
+
+- [x] Medie voti nelle pagelle del Match Center pubbliche attraverso vista aggregata, senza `voter_id`; voto personale ancora protetto da RLS.

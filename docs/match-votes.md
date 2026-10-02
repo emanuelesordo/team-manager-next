@@ -7,3 +7,6 @@ La funzione SECURITY INVOKER tm_app_save_rating opera con auth.uid e usa upsert;
 La vista app_player_season_stats calcola media delle medie partita, senza ponderare per numero di votanti. I dati restano su Supabase e sono gestiti direttamente dalla UI Match Center.
 
 La funzione tm_app_match_action assegna gli autogol alla squadra che ne beneficia e applica la medesima regola in caso di annullamento.
+
+## Media pubblica protetta
+Il pannello match ottiene medie e conteggi dalla vista aggregata `tm_player_recent_votes` (player/match, senza identificatori dei votanti), consultabile anche da ospiti. Il voto individuale dell'utente autenticato resta recuperabile solo con le proprie autorizzazioni da `app_match_ratings`. Gli SV non contribuiscono alla media.

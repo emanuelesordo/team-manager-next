@@ -6,7 +6,7 @@ export async function saveVote(matchId,playerId,value){
 }
 export function votesPanel({match,data,people,userId,loggedIn,escape:e}){
  if(!match)return '<div class="empty padded">Tabellino operativo non disponibile: impossibile attribuire valutazioni.</div>';
- const rows=data?.players||[],events=data?.events||[],ratings=data?.ratings||[];
+ const rows=data?.players||[],events=data?.events||[],ratings=data?.ratings||[],aggregates=data?.ratingMeans||[];
  const eligible=votablePlayerIds(rows,events);
  const names=[...eligible].map(id=>people.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>String(a.last_name||'').localeCompare(String(b.last_name||''),'it'));
  const finished=match.status==='finished';
@@ -15,7 +15,8 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e}){
  const banner=!finished?'<p class="vote-notice">I voti saranno disponibili al termine ufficiale della partita.</p>':
   !loggedIn?'<div class="vote-notice">Accedi per esprimere il tuo voto.<button data-action="account" type="button" class="soft-btn">Accedi</button></div>':'';
  const cards=names.map(player=>{
-  const id=player.id,group=ratings.filter(row=>row.player_id===id),stats=ratingSummary(group);
+  const id=player.id,group=ratings.filter(row=>row.player_id===id),agg=aggregates.find(row=>row.player_id===id);
+  const stats=agg?{count:Number(agg.votes||0),sv:Number(agg.sv||0),average:agg.avg_rating==null?null:Number(agg.avg_rating)}:ratingSummary(group);
   const personal=loggedIn?group.find(row=>row.voter_id===userId):undefined;
   const display=stats.count?stats.average.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
   const fullName=String(player.first_name||'')+' '+String(player.last_name||'');
