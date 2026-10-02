@@ -30,7 +30,36 @@ const ico=(n,size=20)=>{const paths={
  };return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[n]||paths.home}</svg>`};
 const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar','calendar','Calendario'],['roster','users','Rosa'],['stats','chart','Numeri']];
 const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'summary',matchData:null,player:null,slide:0,filter:'all',mineOnly:false,role:'all',q:'',theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
-let carouselTimer=null,refreshTimer=null,toastTimer=null;
+let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
+async function pollLive(){
+ if(pollBusy||document.hidden||state.loading||!state.season||state.overlay||state.page==='admin'||state.page==='match'&&state.matchTab==='staff')return;
+ pollBusy=true;const currentSeason=state.season;
+ try{
+  const updated=await get('app_competition_fixtures','select=*&season_id=eq.'+encodeURIComponent(currentSeason)+'&order=kickoff_at.asc&limit=1000');
+  if(currentSeason!==state.season)return;
+  const old=state.data?.fixtures||[];
+  const changed=updated.length!==old.length||updated.some((f,i)=>f.id!==old[i]?.id||f.status!==old[i]?.status||f.home_score!==old[i]?.home_score||f.away_score!==old[i]?.away_score);
+  if(changed)state.data.fixtures=updated;
+  if(state.page==='match'&&state.match){
+   const m=resolveMatch().operational;
+   if(m&&['live','finished'].includes(m.status)){
+    const changes=await loadMatchInfo(m.id);
+    const present=state.matchData||{};
+    const eventVersion=JSON.stringify(changes.events||[]);
+    const oldVersion=JSON.stringify(present.events||[]);
+    if(eventVersion!==oldVersion){state.matchData=changes;if(!changed)render();return}
+   }
+  }
+  if(changed)render();
+ }catch(err){console.warn('Consultazione LIVE temporaneamente non sincronizzata:',err.message)}
+ finally{pollBusy=false}
+}
+function manageLivePolling(){
+ clearInterval(livePollTimer);livePollTimer=null;
+ if(state.loading||!state.data||!state.season)return;
+ if(!fixtures().some(f=>isLive(f)))return;
+ livePollTimer=setInterval(pollLive,20000);
+}
 function comps(){return(state.data?.competitions||[])}
 function fixtures(){return(state.data?.fixtures||[])}
 function team(){return state.base?.team||{name:'Team Manager'}}
@@ -127,7 +156,7 @@ function render(){
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
  document.body.dataset.theme=state.theme;
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
- manageCarousel();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
+ manageCarousel();manageLivePolling();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
@@ -222,7 +251,7 @@ document.addEventListener('submit',async e=>{
  catch(ex){error.textContent=ex.message;b.disabled=false}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.overlay){state.overlay=null;render()}});
-document.addEventListener('visibilitychange',manageCarousel);
+document.addEventListener('visibilitychange',()=>{manageCarousel();manageLivePolling();if(!document.hidden)pollLive()});
 window.addEventListener('hashchange',()=>{const page=location.hash.slice(1);if(['home','competitions','calendar','roster','stats','club','admin','account'].includes(page)&&page!==state.page)navigate(page)});
 async function bootstrap(){
  try{
