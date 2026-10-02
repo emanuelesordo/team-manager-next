@@ -256,11 +256,22 @@ export async function staffClick(e,button,ctx){
   }
   if(action==='refresh-match'){await reloadMatch(ctx);return true}
   if(!m)throw Error('Apri prima la gestione del match');
+  if(action==='start'&&!window.confirm('Avviare ora il live? I comandi cronometro, eventi e risultato saranno attivi.'))return true;
   if(action==='finish'&&!window.confirm('Finalizzare la partita? Risultato e cronologia saranno ufficializzati.'))return true;
   if(action==='reopen'&&!window.confirm('Riaprire questa partita per correzioni?'))return true;
   if(action==='void'&&!window.confirm('Annullare questo evento e rettificare l’eventuale gol?'))return true;
   const payload=['void','approve'].includes(action)?{event_id:button.dataset.eventId}:
+   action==='start'?
+    {force_start:(()=>{const kickoff=Date.parse(ctx.resolveMatch().fixture?.kickoff_at||'');
+      const delta=Date.now()-kickoff;
+      return (delta< -30*60000||delta>4*3600000)?
+        window.confirm('Partita fuori dall’orario previsto. Confermi l’avvio forzato del LIVE?'):false})()}:
+
    ['halftime','second_half','extra'].includes(action)?{period:action}:{};
+  if(action==='start'){
+   const kickoff=Date.parse(ctx.resolveMatch().fixture?.kickoff_at||'');
+   if((Date.now()-kickoff< -30*60000||Date.now()-kickoff>4*3600000)&&!payload.force_start)return true;
+  }
   const map={halftime:'period',second_half:'period',extra:'period',void:'void_event',approve:'approve_event'};
   if(action==='sync-blue'){const count=await rpc('tm_app_sync_blue',{p_match_id:m.id});await reloadMatch(ctx);ctx.toast(count>0?count+' rientri blu registrati':'Nessun rientro necessario');return true;}
   await rpc('tm_app_match_action',{p_match_id:m.id,p_action:map[action]||action,p_payload:payload});
@@ -347,11 +358,19 @@ export async function staffSubmit(e,ctx){
   await ctx.reloadAll();ctx.toast('Configurazione salvata');return true;
  }catch(err){ctx.toast('Errore: '+(err.message||err));return true}
 }
-let clockInterval;
+let clockInterval,clockContext=null,syncBusy=false,lastSyncTime=0;
 function tickClock(){
  const el=document.querySelector('[data-staff-clock]');if(!el)return;
  const base=Number(el.dataset.seconds||0),anchor=Date.parse(el.dataset.anchor||'');
  const n=base+(el.dataset.running==='true'&&Number.isFinite(anchor)?Math.max(0,Math.floor((Date.now()-anchor)/1000)):0);
  el.textContent=String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+ if(el.dataset.running==='true' && Number(el.dataset.blueMin)>0 &&
+    clockContext && !syncBusy && !document.hidden && Date.now()-lastSyncTime>20000){
+   lastSyncTime=Date.now();syncBusy=true;
+   rpc('tm_app_sync_blue',{p_match_id:el.dataset.match})
+     .then(async count=>{if(count>0)await clockContext.refreshLive()})
+     .catch(error=>console.warn('Rientro blu non verificato:',error.message))
+     .finally(()=>{syncBusy=false});
+ }
 }
-export function startStaffClock(){if(clockInterval)return;clockInterval=setInterval(tickClock,1000);tickClock()}
+export function startStaffClock(ctx){clockContext=ctx;if(clockInterval)return;clockInterval=setInterval(tickClock,1000);tickClock()}

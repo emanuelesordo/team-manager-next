@@ -1,4 +1,4 @@
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession} from './api.js';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get} from './api.js';
 import {normalized,isOurs,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js';
 import {clubPage,personalPanel} from './ui-extensions.js';
@@ -103,7 +103,7 @@ function stats(){
  return `${heading('DATA & PERFORMANCE','Statistiche','Indicatori calcolati soltanto da risultati ed eventi effettivamente registrati.')}${kpis()}<div class="stats-intro glass panel"><div><span class="eyebrow">STAGIONE IN NUMERI</span><h2>${s.gf} gol segnati <span>/</span> ${s.ga} subiti</h2><p>${s.played} gare concluse con risultato valido</p></div><div class="stats-form">${miniForm()}</div></div><div class="leaderboard-grid">${ranking('Classifica marcatori','goals')}${ranking('Più presenti','appearances')}${ranking('Media voti','avg_rating')}</div>`;
 }
 function resolveMatch(){const f=fixtures().find(x=>x.id===state.match);const exact=state.data?.matches?.find(m=>m.fixture_id===f?.id);return {fixture:f,operational:f?(exact||fixtureToMatch(f,state.data?.matches||[],state.base.opponents,team())):null}}
-function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll}}
+function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll,refreshLive}}
 function admin(){return adminPage(staffContext())}
 function match(){
  const {fixture:f,operational:m}=resolveMatch();if(!f)return'<section class="empty">Partita non disponibile.</section>';
@@ -127,7 +127,7 @@ function render(){
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
  document.body.dataset.theme=state.theme;
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
- manageCarousel();if(state.page==='match'&&isStaff(staffContext()))startStaffClock();
+ manageCarousel();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
@@ -159,6 +159,20 @@ async function openMatch(id){
 }
 async function reload(){
  const saved=state.season;await switchSeason(saved);toast('Dati aggiornati')}
+async function refreshLive(){
+ if(state.page!=='match'||!state.match)return;
+ const id=state.match;
+ const f=await get('app_competition_fixtures','select=*&id=eq.'+encodeURIComponent(id));
+ if(state.match!==id)return;
+ if(f.length){const i=state.data.fixtures.findIndex(x=>x.id===id);if(i>=0)state.data.fixtures[i]=f[0]}
+ const m=resolveMatch().operational;
+ if(m){
+  const rows=await get('app_matches','select=*&id=eq.'+encodeURIComponent(m.id));
+  if(rows.length){const i=state.data.matches.findIndex(x=>x.id===m.id);if(i>=0)state.data.matches[i]=rows[0]}
+  state.matchData=await loadMatchInfo(m.id);
+ }
+ if(state.match===id)render();
+}
 async function reloadAll(){
  const season=state.season;state.base=await loadBase();const chosen=state.base.seasons.some(s=>s.id===season)?season:state.base.seasons.find(s=>s.status==='active')?.id||state.base.seasons[0].id;
  await switchSeason(chosen);
