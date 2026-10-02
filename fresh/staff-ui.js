@@ -482,6 +482,21 @@ export async function staffSubmit(e,ctx){
  e.preventDefault();
  if(!isStaff(ctx))return true;
  try{
+  if(kind==='amend-event'){
+   const m=ctx.resolveMatch().operational;if(!m)throw Error('Partita non collegata');
+   const ev=ctx.state.matchData?.events?.find(x=>x.id===form.dataset.eventId);
+   if(!ev||ev.validation_status!==form.dataset.eventStatus)throw Error('Evento cambiato: ricarica la partita');
+   const d=dataForm(form);
+   const changes={event_type:d.event_type,team_side:d.team_side,
+    player_id:d.team_side==='team'?d.player_id||null:null,
+    secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
+    minute:numberOrNull(d.minute),stoppage_minute:numberOrNull(d.stoppage_minute),
+    substitution_reason:d.substitution_reason||null,notes:d.notes||''};
+   await pendingFn(form,()=>rpc('tm_app_amend_event',{p_match_id:m.id,p_event_id:ev.id,
+    p_expected_status:ev.validation_status,p_changes:changes,p_reason:d.reason||''}));
+   reviewEditEvent=null;reviewHistoryEvent=null;await reloadMatch(ctx);
+   ctx.toast('Rettifica salvata nello storico, da riapprovare');return true;
+  }
   if(kind==='tactics'){
    const match=ctx.resolveMatch().operational;
    if(!match||match.status!=='live')throw Error('Variazioni tattiche disponibili solo durante il live');
