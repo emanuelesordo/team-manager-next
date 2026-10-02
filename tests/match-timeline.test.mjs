@@ -35,3 +35,20 @@ test('stoppage divider uses period end settings rather than 45-minute default',(
  assert.match(html,/RECUPERO \+7'/);
  assert.match(html,/FT 1 - 2/);
 });
+
+test('recovery starts at the configured minute inclusive in each half',()=>{
+ const boundary=[
+  {minute:39,event_type:'yellow_card',team_side:'home',player_id:'preFirst',payload:{period:'first_half'}},
+  {minute:40,event_type:'goal',team_side:'home',player_id:'startFirst',payload:{period:'first_half'}},
+  {minute:1,event_type:'goal',team_side:'away',player_id:'startSecond',payload:{period:'second_half'}},
+  {minute:39,event_type:'goal',team_side:'away',player_id:'preSecond',payload:{period:'second_half'}},
+  {minute:40,event_type:'goal',team_side:'away',player_id:'startRecoverySecond',payload:{period:'second_half'}},
+  {event_type:'period_end',minute:null,payload:{period:'first_half',recovery_minutes:2}},
+  {event_type:'period_end',minute:null,payload:{period:'second_half',recovery_minutes:7}}
+ ];
+ const rendered=render(boundary,fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
+ const at=text=>rendered.indexOf(text);
+ assert.ok(at("80'</b>")<at("RECUPERO +7'")&&at("RECUPERO +7'")<at("79'</b>"),'second-half boundary');
+ assert.ok(at("40'</b>")<at("RECUPERO +2'")&&at("RECUPERO +2'")<at("39'</b>"),'first-half boundary');
+ assert.equal(rendered.split('RECUPERO').length-1,2);
+});
