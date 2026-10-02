@@ -84,7 +84,7 @@ async def test_view(browser, width, height):
  await page.locator('[data-staff-match-tab="events"]').click()
  await page.locator('[data-staff-action="review-approve"]').first.wait_for()
  assert await page.locator('[data-staff-action="review-approve"]').count()==16
- assert "non modifica" not in (await page.locator('.staff-subpanel').inner_text()).lower()
+ assert "non modifica automaticamente" in (await page.locator('.staff-subpanel').inner_text()).lower()
  assert await page.locator(".timeline-item").count()==16
  # Browser refresh must reconstruct the selected fixture and fetch match data.
  await page.reload(wait_until="domcontentloaded")
