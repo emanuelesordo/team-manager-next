@@ -1,5 +1,5 @@
 /** Post-match review. The official fixture score and proposed event history are independent. */
-import {amendEventForm,revisionHistory,resultReviewSection} from './postmatch-controls.js';
+import {amendEventForm,revisionHistory,resultReviewSection,resultReconciliationHistory} from './postmatch-controls.js';
 const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const reviewable=new Set(['proposed','community_confirmed','disputed']);
 const goalTypes=new Set(['goal','own_goal','penalty_scored']);
@@ -21,7 +21,7 @@ export function reviewSummary(match,fixture,events=[]){
   scoreMismatch:fixtureHasScore&&matchHasScore&&(fixture.home_score!==match.home_score||fixture.away_score!==match.away_score),
   knownGoalMismatch:fixtureHasScore&&(goals.home!==fixture.home_score||goals.away!==fixture.away_score)};
 }
-export function reviewPanel({match,fixture,events=[],players=[],editingEventId=null,historyEventId=null,historyEntries=[]}={}){
+export function reviewPanel({match,fixture,events=[],players=[],editingEventId=null,historyEventId=null,historyEntries=[],resultHistoryEntries=null}={}){
  const summary=reviewSummary(match,fixture,events);
  const names=new Map(players.map(p=>[p.id,[p.first_name,p.last_name].filter(Boolean).join(' ')]));
  const sorted=[...events].sort((a,b)=>(a.minute??999)-(b.minute??999)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
@@ -45,5 +45,5 @@ export function reviewPanel({match,fixture,events=[],players=[],editingEventId=n
  }).join('');
  return '<section class="staff-subpanel"><div class="staff-panel-heading"><div><span class="eyebrow">POSTPARTITA</span><h2>Revisione eventi</h2></div></div>'+
  '<p class="staff-help">Lo staff può ufficializzare o scartare le proposte una per volta. Gli eventi scartati rimangono nello storico. La revisione non assegna minuti, marcatori o assist sconosciuti e non riscrive i punteggi.</p>'+
- summaryText+resultReviewSection(match,fixture,summary)+discrepancy+coverage+'<div class="staff-event-list">'+(items||'<p class="empty">Nessun evento. Un risultato ufficiale può essere registrato anche senza eventi o marcatori noti.</p>')+'</div></section>';
+ summaryText+resultReviewSection(match,fixture,summary)+(resultHistoryEntries?resultReconciliationHistory(resultHistoryEntries):'')+discrepancy+coverage+'<div class="staff-event-list">'+(items||'<p class="empty">Nessun evento. Un risultato ufficiale può essere registrato anche senza eventi o marcatori noti.</p>')+'</div></section>';
 }
