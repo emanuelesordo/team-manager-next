@@ -1,4 +1,5 @@
 import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get} from './api.js';
+import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,isOurs,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js';
 import {clubPage,personalPanel} from './ui-extensions.js';
@@ -183,7 +184,7 @@ function toast(message){const el=$('#toast');if(!el)return;el.textContent=messag
 function navigate(page){
  if(page==='admin'&&!isStaff(staffContext()))page='home';
  state.page=page;state.overlay=null;state.slide=0;if(page==='calendar')state.comp=null;
- history.replaceState(null,'','#'+page);
+ history.replaceState(null,'',page==='match'&&state.match?matchRoute(state.match):'#'+page);
  render();window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
 }
 function changeSlide(nextIndex){const a=carouselFixtures();if(!a.length)return;state.slide=(nextIndex+a.length)%a.length;render()}
@@ -315,7 +316,7 @@ document.addEventListener('submit',async e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.overlay){state.overlay=null;render()}});
 document.addEventListener('visibilitychange',()=>{manageCarousel();manageLivePolling();if(!document.hidden)pollLive()});
-window.addEventListener('hashchange',()=>{const page=location.hash.slice(1);if(['home','competitions','calendar','roster','stats','club','admin','account'].includes(page)&&page!==state.page)navigate(page)});
+window.addEventListener('hashchange',()=>{const matchId=parseMatchRoute(location.hash);if(matchId){if(state.data?.fixtures?.some(f=>f.id===matchId)&&state.match!==matchId)openMatch(matchId);return;}const page=location.hash.slice(1);if(['home','competitions','calendar','roster','stats','club','admin','account'].includes(page)&&page!==state.page)navigate(page)});
 async function bootstrap(){
  try{
   state.base=await loadBase();
@@ -324,6 +325,8 @@ async function bootstrap(){
   state.season=initial.id;state.identity=await loadIdentity().catch(()=>({user:null,role:null,profile:null}));
   const hash=location.hash.slice(1);if(['home','competitions','calendar','roster','stats','club','admin','account'].includes(hash))state.page=hash;
   await switchSeason(initial.id);
+  const directMatch=parseMatchRoute(location.hash);
+  if(directMatch&&state.data.fixtures.some(f=>f.id===directMatch))await openMatch(directMatch);
  }catch(e){console.error('Boot error',e);$('#app').innerHTML=`<div class="fatal"><b>Team Manager</b><h1>Connessione non disponibile</h1><p>Non è stato possibile caricare la squadra: ${E(e.message)}</p><button onclick="location.reload()">Riprova</button></div>`}
 }
 installCalendarImport(()=>staffContext());

@@ -29,3 +29,6 @@ Le funzionalità di consultazione presentano dati reali. Le modifiche ai risulta
 
 ## Integrità sportiva
 Nell'amministrazione è disponibile il controllo manuale in sola lettura delle anomalie su tabellini, fixture, formazione ed eventi, tramite RPC `tm_app_integrity_report`.
+
+## Collegamento diretto alla partita
+Il Match Center conserva la fixture nell'URL (`#match/<uuid>`). Aggiornamento del browser e accessi successivi ricostruiscono la partita dalla fonte Supabase; formazioni ed eventi vengono riletti dal database. Test di regressione dedicato agli URL.
