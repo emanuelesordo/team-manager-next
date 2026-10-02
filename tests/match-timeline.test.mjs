@@ -88,5 +88,5 @@ test('red card with accumulated yellow reproduces the original card stack',()=>{
   {event_type:'red_card',minute:34,team_side:'home',player_id:'booked',payload:{period:'second_half',card_type:'second_card'}}
  ];
  const output=render(cards,fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
- assert.ok(output.includes('mt-card-yellow</i><i class="mt-card-red'));
+ assert.ok(output.includes('mt-card-yellow"></i><i class="mt-card-red'));
 });
