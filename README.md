@@ -1,8 +1,8 @@
 # Team Manager
 
-Modern football team web app. **Mobile-first**, zero-runtime-dependency on public pages, black/lime soft-glass visual design. Intended for a single principal team per organization.
+Modern football team web app. **Mobile-first**, zero-runtime-dependency on public pages, with two distinct visual systems: dark petrol/soft-glass stadium desktop and green/ivory minimal mobile. Intended for a single principal team per organization.
 
-> **Stage**: stable read-only frontend. Admin match editing, event authorization, roster mutation and import processes are intentionally not implemented yet.
+> **Stage**: consultative web/PWA foundation with a redesigned match-day Home, interactive carousel, seasonal KPIs, schedules, standings, players and dedicated mobile UI. Admin match editing, event authorization, roster mutation and import processes are intentionally not implemented yet.
 
 ## Open the app
 
@@ -33,6 +33,7 @@ The supplied brief is preserved in [`docs/specification-original.txt`](docs/spec
 | [Design](docs/design-system.md) | Palette, glass treatment, mobile/desktop behavior, animation |
 | [Architecture](docs/architecture-data.md) | Model, sources of truth, API, caching and null handling |
 | [Modules](docs/modules.md) | Screens and user-facing functionality |
+| [UI layouts](docs/ui-layout.md) | Content composition and distinct mobile/desktop hierarchies |
 | [Security](docs/security.md) | Supabase grants, RLS, Auth, personal data and CORS |
 | [Roadmap](docs/roadmap.md) | Planned development milestones, explicitly distinguished from production |
 | [Deployment](docs/deployment.md) | Build and GitHub Pages configuration |
