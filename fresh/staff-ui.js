@@ -16,6 +16,7 @@ const btn=(action,label)=>'<button type="button" class="staff-soft" data-staff-a
 const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</button>';
 const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'lineup',busy:false};
 const memory=initial;
+let reviewEditEvent=null,reviewHistoryEvent=null,reviewHistoryEntries=[];
 let integrityData=null,integrityError='';
 function integrityPanel(){
  const count=Number(integrityData?.issue_count||0);
@@ -294,7 +295,7 @@ function matchLive(ctx,m,competition){
  '<div class="staff-live-grid"><div class="staff-live-panel"><h3>Risultato ufficiale</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(m))+
  '</div><div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
 }
-function matchEvents(ctx,m){return reviewPanel({match:m,fixture:ctx.resolveMatch().fixture,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[]});}
+function matchEvents(ctx,m){return reviewPanel({match:m,fixture:ctx.resolveMatch().fixture,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries});}
 
 export function staffMatchPanel(ctx,f,m){
  if(!isStaff(ctx))return '';
@@ -420,6 +421,23 @@ export async function staffClick(e,button,ctx){
   }
   if(action==='audit-integrity'){integrityError='';try{integrityData=await rpc('tm_app_integrity_report')}catch(e){integrityError=e.message||String(e)}ctx.render();return true}
   if(action==='refresh-match'){await reloadMatch(ctx);return true}
+  if(action==='review-edit'){reviewEditEvent=button.dataset.eventId;reviewHistoryEvent=null;ctx.render();return true;}
+  if(action==='review-cancel-edit'){reviewEditEvent=null;ctx.render();return true;}
+  if(action==='review-history'){
+   if(!m)throw Error('Tabellino non disponibile');
+   const eventId=button.dataset.eventId;
+   reviewHistoryEntries=await get('tm_app_event_revisions','select=id,reason,previous_record,next_record,created_at&match_id=eq.'+encodeURIComponent(m.id)+'&event_id=eq.'+encodeURIComponent(eventId)+'&order=created_at.desc&limit=100');
+   reviewHistoryEvent=eventId;reviewEditEvent=null;ctx.render();return true;
+  }
+  if(['review-result-confirm','review-result-reopen','review-result-align'].includes(action)){
+   if(!m)throw Error('Tabellino non disponibile');
+   const f=ctx.resolveMatch().fixture;
+   const decision=action==='review-result-confirm'?'confirm':action==='review-result-reopen'?'reopen':'align_operational';
+   const q=decision==='confirm'?'Confermi definitivamente il risultato della fixture?':decision==='reopen'?'Revocare la conferma e riaprire la verifica?':'Allineare solo il tabellino operativo al risultato ufficiale della fixture? Gli eventi non cambiano.';
+   if(!window.confirm(q))return true;
+   await rpc('tm_app_review_result',{p_match_id:m.id,p_action:decision,p_expected_home:f.home_score,p_expected_away:f.away_score});
+   await reloadMatch(ctx);ctx.toast('Stato risultato aggiornato');return true;
+  }
   if(action==='review-approve'||action==='review-reject'){
    if(!m)throw Error('Tabellino non disponibile');
    const eventId=button.dataset.eventId,expected=button.dataset.eventStatus;
