@@ -64,6 +64,14 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 ## Coerenza fixture/tabellini — 02/10/2026
 - [x] Riconciliati 11/12 tabellini `app_matches` programmaticamente con corrispondenza 1:1 verificata.
 - [x] Bloccata la creazione automatica di tabellini per fixture concluse/live prive di collegamento, a protezione degli storici.
-- [ ] Conflitto storico giornata 1 Voltesea: tabellino 0–0, fixture 1–4. Richiede confronto documentale prima di collegare.
+- [x] Collegamento storico Voltesea ripristinato (fixture e tabellino coincidono per stagione, competizione, orario, avversaria); dati preservati.
+- [ ] Risultato storico discordante 0–0 operativo / 1–4 ufficiale: allineamento esplicito disponibile, ma richiede conferma documentale e dell'amministratore; eventi proposti non approvati automaticamente.
 
 - [x] Sessioni di account disattivati: la UI revoca la sessione alla rilettura del profilo e non mostra più controlli staff; il backend blocca comunque l'autorizzazione tramite `private.is_staff/is_admin`.
+
+## Revisione postpartita e risultato (ottobre 2026)
+- [x] Rettifica motivata dei singoli eventi senza cambiare l'ID; ogni versione precedente e successiva salvata nello storico append-only con autore e timestamp.
+- [x] Stato `provisional` / `confirmed` del risultato indipendente dallo stato `finished` della partita.
+- [x] Conferma staff server-side: solo gara conclusa, punteggi uguali e nessuna proposta pendente.
+- [x] Invalidazione automatica della conferma per mutazioni di score o eventi; riconciliazione dal risultato della fixture solo su conferma esplicita.
+- [ ] Collaudo con credenziali reali e su dispositivi fisici non sostituibile con una pipeline simulata.

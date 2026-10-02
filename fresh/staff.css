@@ -81,3 +81,15 @@
  .staff-bottom-actions .staff-soft{width:100%}
 }
 @media(max-width:380px){.staff-form-grid,.live-event-form .staff-form-grid{grid-template-columns:1fr}.lineup-row{grid-template-columns:1fr 1fr}.lineup-row select[name=status]{grid-column:1 / -1}.lineup-row input[name=shirt]{grid-column:1}.lineup-row input[name=slot]{grid-column:2}.lineup-row .captain-check{grid-column:1}.lineup-row select[name=reason]{grid-column:2}}
+
+/* Event revision + official result confirmation */
+.staff-result-review{margin:14px 0;padding:16px;border:1px solid rgba(150,165,178,.35);border-radius:12px;display:grid;gap:10px;min-width:0}
+.staff-result-review .staff-submit,.staff-result-review .staff-soft{justify-self:start;max-width:100%}
+.staff-result-review button:disabled{opacity:.48;cursor:not-allowed}
+.staff-amend-form{display:grid;gap:12px;padding:14px;margin:12px 0;border:1px solid rgba(150,165,178,.4);border-radius:10px;min-width:0}
+.staff-amend-form .staff-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px;min-width:0}
+.staff-amend-form .staff-field,.staff-amend-form input,.staff-amend-form select{max-width:100%;min-width:0}
+.staff-revision-history{display:grid;gap:8px;margin:12px 0;padding:12px;border-left:2px solid currentColor;overflow-wrap:anywhere}
+.staff-event-row{flex-wrap:wrap;min-width:0;overflow-wrap:anywhere}
+.staff-event-buttons{flex-wrap:wrap;gap:8px}
+@media(max-width:720px){.staff-result-review,.staff-amend-form{padding:10px}.staff-result-review button{width:100%;justify-self:stretch}}

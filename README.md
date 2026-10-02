@@ -35,3 +35,6 @@ Il Match Center conserva la fixture nell'URL (`#match/<uuid>`). Aggiornamento de
 
 ## Revisione postpartita
 In Match Center → Gestione → Eventi lo staff può approvare/scartare proposte anche dopo la chiusura della partita. La RPC `tm_app_review_event` controlla ruolo e stato concorrente, non altera punteggi e conserva gli eventi scartati per la tracciabilità. Risultato ufficiale e conteggio eventi restano distinti come da specifiche.
+
+## Revisione postpartita approfondita
+La partita conclusa è distinta dal risultato confermato (`app_matches.result_review_status`). In Gestione → Eventi si possono rettificare tipo, lato, giocatori, minuti, recupero, motivo e note con giustificazione obbligatoria; lo stesso ID evento è mantenuto e lo storico append-only è visibile solo allo staff. Dopo ogni rettifica l'evento torna proposto. Il risultato può essere confermato solo con fixture/tabellino conclusi, punteggi coerenti e nessuna proposta aperta. Un cambio di risultato o evento revoca la conferma. La fixture resta fonte ufficiale; l'allineamento del solo tabellino richiede una conferma umana.
