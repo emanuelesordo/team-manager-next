@@ -25,8 +25,8 @@ test('each stored event is displayed once, with halftime delimiter',()=>{
  for(const player of ['FirstHalf','SecondHalf','LateSecond','Outgoing','Incoming','LiveAbsolute']){
   assert.equal(html.split('>'+player+'<').length-1,1,player);
  }
- assert.ok(html.indexOf("68'")<html.indexOf('>HT<'));
- assert.ok(html.indexOf('>HT<')<html.indexOf("20'"));
+ assert.ok(html.indexOf("68'")<html.indexOf('>HT 1 - 0<'));
+ assert.ok(html.indexOf('>HT 1 - 0<')<html.indexOf("20'"));
 });
 test('goals keep chronological cumulative results',()=>{
  for(const score of ['1 - 0','1 - 1','1 - 2'])assert.ok(html.includes('>'+score+'</'),score);
@@ -61,8 +61,32 @@ test('declared recovery is shown in both halves even without stoppage-time event
   {event_type:'period_end',minute:null,stoppage_minute:7,payload:{period:'second_half'}}
  ];
  const output=render(noStoppageEvents,fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
- assert.ok(output.indexOf('>HT<')<output.indexOf("RECUPERO +2'"));
+ assert.ok(output.indexOf('>HT 1 - 0<')<output.indexOf("RECUPERO +2'"));
  assert.ok(output.indexOf("RECUPERO +2'")<output.indexOf("20'</b>"));
  assert.ok(output.indexOf("RECUPERO +7'")<output.indexOf("68'</b>"));
  assert.equal(output.split('RECUPERO').length-1,2);
+});
+
+test('same-minute substitutions are one row, retaining each change',()=>{
+ const group=[
+  {minute:10,event_type:'substitution',team_side:'home',player_id:'outA',secondary_player_id:'inA',payload:{period:'second_half'}},
+  {minute:10,event_type:'substitution',team_side:'home',player_id:'outB',secondary_player_id:'inB',payload:{period:'second_half'}},
+  {minute:10,event_type:'yellow_card',team_side:'away',payload:{period:'second_half',opponent_shirt_number:92}},
+  {minute:11,event_type:'goal',team_side:'away',payload:{period:'second_half'}},
+  {minute:null,event_type:'period_end',stoppage_minute:2,payload:{period:'first_half'}}
+ ];
+ const output=render(group,fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
+ assert.equal(output.split(">50'</b>").length-1,1);
+ assert.equal(output.split('mt-minute-group').length-1,1);
+ for(const id of ['outA','outB','inA','inB'])assert.equal(output.split('>'+id+'<').length-1,1);
+ assert.match(output,/RECUPERO \+2'/);
+ assert.match(output,/HT 0 - 0/);
+});
+test('red card with accumulated yellow reproduces the original card stack',()=>{
+ const cards=[
+  {event_type:'yellow_card',minute:12,team_side:'home',player_id:'booked',payload:{period:'first_half'}},
+  {event_type:'red_card',minute:34,team_side:'home',player_id:'booked',payload:{period:'second_half',card_type:'second_card'}}
+ ];
+ const output=render(cards,fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
+ assert.ok(output.includes('mt-card-yellow</i><i class="mt-card-red'));
 });
