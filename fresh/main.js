@@ -195,24 +195,38 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  for(const e of ordered){if(recovery(e)){const p=period(e);recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0))}else{const n=absoluteMinute(e);if(n!==null){const p=period(e),end=p==='first_half'?duration:duration*2;if(duration!==null&&n>end)recoveryByPeriod.set(p,Math.max(n-end,recoveryByPeriod.get(p)||0))}}}
  let parts='',lastPeriod=null,lastRecovery=false;
  const complete=['finished','completed','full_time','ft'].includes(norm(fixture.status));
- const recoveryHeading=p=>heading('RECUPERO +'+E(recoveryByPeriod.get(p)||0)+"'");
+ const displayedRecovery=new Set();
+ const recoveryHeading=p=>{
+  if(displayedRecovery.has(p)||!(recoveryByPeriod.get(p)>0))return '';
+  displayedRecovery.add(p);
+  return heading('RECUPERO +'+E(recoveryByPeriod.get(p))+"'");
+ };
  parts+=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI');
  for(const entry of [...tracked].reverse()){
   const e=entry.event,p=period(e),n=absoluteMinute(e),base=p==='first_half'?duration:duration*2;
   // Recovery begins at the configured period boundary, inclusive (40'/80' for 40-minute halves).
   const isRecovery=recovery(e)>0||(duration!==null&&n!==null&&n>=base);
   if(lastPeriod!==null&&lastPeriod!==p){
-   if(lastRecovery)parts+=recoveryHeading(lastPeriod);
+   // A declared recovery is visible even without any event in stoppage time.
+   parts+=recoveryHeading(lastPeriod);
    if(lastPeriod==='second_half'&&p==='first_half')parts+=heading('HT');
    lastRecovery=false;
   }
-  // Reverse chronology: place the separator below recovery events, before regular events.
+  if(lastPeriod!==p&&!isRecovery)parts+=recoveryHeading(p);
+  // Reverse chronology: separator lies below recovery events, above normal-time events.
   if(lastPeriod===p&&lastRecovery&&!isRecovery)parts+=recoveryHeading(p);
   lastPeriod=p;lastRecovery=isRecovery;
   const s=side(e),content=eventContent(entry);
   parts+='<div class="mt-row"><div class="mt-side mt-home">'+(s==='home'?content:'')+'</div><b class="mt-minute">'+minutes(e)+'</b><div class="mt-side mt-away">'+(s==='away'||s==='unknown'?content:'')+'</div></div>';
  }
- if(lastRecovery&&lastPeriod!==null)parts+=recoveryHeading(lastPeriod);
+ if(lastPeriod!==null)parts+=recoveryHeading(lastPeriod);
+ if(lastPeriod==='second_half'&&recoveryByPeriod.get('first_half')>0){
+  parts+=heading('HT')+recoveryHeading('first_half');
+ }
+ if(lastPeriod===null){
+  if(recoveryByPeriod.get('second_half')>0)parts+=recoveryHeading('second_half');
+  if(recoveryByPeriod.get('first_half')>0)parts+=heading('HT')+recoveryHeading('first_half');
+ }
  return '<div class="match-timeline" aria-label="Cronologia eventi della partita">'+(tracked.length?parts:heading(complete?'FT '+E(fixture.home_score??'–')+' - '+E(fixture.away_score??'–'):'EVENTI')+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>';
 }
 
