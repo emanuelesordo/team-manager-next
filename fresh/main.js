@@ -154,7 +154,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const homeIsOurs=ownNames.includes(norm(fixture.home_team));
  const side=e=>{const s=norm(e.team_side||e.side);if(['home','casa'].includes(s))return 'home';if(['away','ospite'].includes(s))return 'away';if(['team','ours','own'].includes(s))return homeIsOurs?'home':'away';if(['opponent','opposition'].includes(s))return homeIsOurs?'away':'home';return 'unknown'};
  const type=e=>norm(e.event_type);
- const goal=e=>['goal','penalty_goal','own_goal'].includes(type(e));
+ const goal=e=>['goal','penalty_goal','penalty_scored','own_goal'].includes(type(e));
  const configuredMinutes=Number(competitionSettings?.minutes_per_period);
  const duration=Number.isFinite(configuredMinutes)&&configuredMinutes>0?configuredMinutes:null;
  const period=e=>{const p=norm(e.payload?.period);if(p==='second_half'||p==='first_half')return p;return duration!==null&&Number(e.minute)>duration?'second_half':'first_half'};
@@ -174,10 +174,19 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  let home=0,away=0;
  const tracked=ordered.map(e=>{if(goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}return {event:e,score:goal(e)?home+' - '+away:null}});
  const heading=label=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
- const cards=(e)=>{
-  const t=type(e),history=Array.isArray(e.payload?.accumulated_cards)?e.payload.accumulated_cards:[];
-  const cumulative=t==='second_yellow'||t==='red_card'&&['second_yellow_blue','second_card'].includes(e.payload?.card_type);
-  const colors=cumulative?[...history.slice(-2).map(x=>x==='blue_card'?'blue':'yellow'),t==='second_yellow'?'red':'red']:[t==='red_card'?'red':t==='blue_card'?'blue':'yellow'];
+ const cards=e=>{
+  const t=type(e),shirt=String(e.payload?.opponent_shirt_number||'');
+  const cumulative=t==='second_yellow'||(t==='red_card'&&['second_yellow_blue','second_card'].includes(e.payload?.card_type));
+  let history=Array.isArray(e.payload?.accumulated_cards)?e.payload.accumulated_cards.slice(-2):[];
+  if(cumulative&&!history.length){
+   history=ordered.filter(previous=>{
+    if(!['yellow_card','blue_card'].includes(type(previous))||side(previous)!==side(e))return false;
+    if(e.player_id)return previous.player_id===e.player_id;
+    return !!shirt&&String(previous.payload?.opponent_shirt_number||'')===shirt;
+   }).filter(previous=>order(previous)<order(e)||(order(previous)===order(e)&&String(previous.created_at||'')<=String(e.created_at||'')))
+    .slice(-2).map(previous=>type(previous));
+  }
+  const colors=cumulative?[...history.map(c=>c==='blue_card'?'blue':'yellow'),'red']:[t==='red_card'?'red':t==='blue_card'?'blue':'yellow'];
   if(cumulative&&colors.length===1)colors.unshift('yellow');
   return '<span class="mt-card-stack" aria-label="Cartellino">'+colors.map(c=>'<i class="mt-card-'+c+'"></i>').join('')+'</span>';
  };
@@ -193,41 +202,39 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const recoveryByPeriod=new Map();
  for(const e of events||[]){if(type(e)==='period_end'){const p=period(e);const n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;recoveryByPeriod.set(p,Math.max(n,recoveryByPeriod.get(p)||0))}}
  for(const e of ordered){if(recovery(e)){const p=period(e);recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0))}else{const n=absoluteMinute(e);if(n!==null){const p=period(e),end=p==='first_half'?duration:duration*2;if(duration!==null&&n>end)recoveryByPeriod.set(p,Math.max(n-end,recoveryByPeriod.get(p)||0))}}}
- let parts='',lastPeriod=null,lastRecovery=false;
+ const halfGoals=tracked.filter(x=>period(x.event)==='first_half'&&goal(x.event));
+ const halfScore=halfGoals.some(x=>absoluteMinute(x.event)===null)?'? - ?':
+  halfGoals.reduce((scores,x)=>{let s=side(x.event);if(type(x.event)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')scores[0]++;if(s==='away')scores[1]++;return scores},[0,0]).join(' - ');
  const complete=['finished','completed','full_time','ft'].includes(norm(fixture.status));
- const displayedRecovery=new Set();
- const recoveryHeading=p=>{
-  if(displayedRecovery.has(p)||!(recoveryByPeriod.get(p)>0))return '';
-  displayedRecovery.add(p);
-  return heading('RECUPERO +'+E(recoveryByPeriod.get(p))+"'");
- };
- parts+=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI');
- for(const entry of [...tracked].reverse()){
-  const e=entry.event,p=period(e),n=absoluteMinute(e),base=p==='first_half'?duration:duration*2;
-  // Recovery begins at the configured period boundary, inclusive (40'/80' for 40-minute halves).
-  const isRecovery=recovery(e)>0||(duration!==null&&n!==null&&n>=base);
-  if(lastPeriod!==null&&lastPeriod!==p){
-   // A declared recovery is visible even without any event in stoppage time.
-   parts+=recoveryHeading(lastPeriod);
-   if(lastPeriod==='second_half'&&p==='first_half')parts+=heading('HT');
-   lastRecovery=false;
+ const hasSecond=tracked.some(x=>period(x.event)==='second_half')||recoveryByPeriod.has('second_half');
+ const descending=[...tracked].reverse();
+ const sameMoment=(a,b)=>period(a.event)===period(b.event)&&absoluteMinute(a.event)===absoluteMinute(b.event)&&recovery(a.event)===recovery(b.event);
+ const groupedRows=items=>{
+  let output='';
+  for(let i=0;i<items.length;){
+   let j=i+1;while(j<items.length&&sameMoment(items[i],items[j]))j++;
+   const group=items.slice(i,j),first=group[0].event;
+   const contentFor=which=>group.filter(x=>side(x.event)===which||(which==='away'&&side(x.event)==='unknown'))
+    .map(x=>'<div class="mt-group-item">'+eventContent(x)+'</div>').join('');
+   output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
+   i=j;
   }
-  if(lastPeriod!==p&&!isRecovery)parts+=recoveryHeading(p);
-  // Reverse chronology: separator lies below recovery events, above normal-time events.
-  if(lastPeriod===p&&lastRecovery&&!isRecovery)parts+=recoveryHeading(p);
-  lastPeriod=p;lastRecovery=isRecovery;
-  const s=side(e),content=eventContent(entry);
-  parts+='<div class="mt-row"><div class="mt-side mt-home">'+(s==='home'?content:'')+'</div><b class="mt-minute">'+minutes(e)+'</b><div class="mt-side mt-away">'+(s==='away'||s==='unknown'?content:'')+'</div></div>';
- }
- if(lastPeriod!==null)parts+=recoveryHeading(lastPeriod);
- if(lastPeriod==='second_half'&&recoveryByPeriod.get('first_half')>0){
-  parts+=heading('HT')+recoveryHeading('first_half');
- }
- if(lastPeriod===null){
-  if(recoveryByPeriod.get('second_half')>0)parts+=recoveryHeading('second_half');
-  if(recoveryByPeriod.get('first_half')>0)parts+=heading('HT')+recoveryHeading('first_half');
- }
- return '<div class="match-timeline" aria-label="Cronologia eventi della partita">'+(tracked.length?parts:heading(complete?'FT '+E(fixture.home_score??'–')+' - '+E(fixture.away_score??'–'):'EVENTI')+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>';
+  return output;
+ };
+ const renderPeriod=p=>{
+  const entries=descending.filter(x=>period(x.event)===p);
+  const base=duration===null?null:p==='first_half'?duration:duration*2;
+  const added=x=>{const n=absoluteMinute(x.event);return recovery(x.event)>0||(base!==null&&n!==null&&n>=base)};
+  const stoppage=entries.filter(added),regular=entries.filter(x=>!added(x));
+  const declared=Number(recoveryByPeriod.get(p))||0;
+  let output=groupedRows(stoppage);
+  if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO');
+  return output+groupedRows(regular);
+ };
+ let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI');
+ if(hasSecond)parts+=renderPeriod('second_half')+heading('HT '+halfScore);
+ parts+=renderPeriod('first_half');
+ return '<div class="match-timeline" aria-label="Cronologia eventi della partita">'+(tracked.length||recoveryByPeriod.size?parts:parts+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>';
 }
 
 function match(){
