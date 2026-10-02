@@ -92,7 +92,7 @@ async def test_view(browser, width, height):
  assert await page.locator('form[data-staff-form="amend-event"] input[name="reason"]').count()==1
  await page.locator('[data-staff-action="review-cancel-edit"]').click()
  await page.locator('[data-staff-action="review-result-history"]').click()
- assert "Nessun allineamento" in (await page.locator('.staff-subpanel').inner_text())
+ await page.wait_for_function("document.querySelector('.staff-subpanel')?.textContent.includes('Nessun allineamento')",timeout=12000)
 
  assert "non modifica automaticamente" in (await page.locator('.staff-subpanel').inner_text()).lower()
  # Browser refresh must reconstruct the selected fixture and fetch match data.
