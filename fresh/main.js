@@ -198,7 +198,7 @@ document.addEventListener('click',async e=>{
  case 'menu':state.overlay='menu';render();break;
  case 'close':state.overlay=null;render();break;
  case 'account':state.overlay=hasSession()?null:'login';if(hasSession())navigate('account');else render();break;
- case 'logout':await logout();state.identity={user:null,role:null,profile:null};navigate('home');toast('Sessione chiusa.');break;
+ case 'logout':await logout();state.identity={user:null,role:null,profile:null};navigate('home');await reloadAll();toast('Sessione chiusa.');break;
  }
 });
 document.addEventListener('change',e=>{
@@ -218,7 +218,7 @@ document.addEventListener('submit',async e=>{
  if(e.target.matches('[data-staff-form]')){await staffSubmit(e,staffContext());return}
  if(e.target.id!=='login-form')return;e.preventDefault();const b=e.target.querySelector('[type=submit]'),error=$('#login-error');
  b.disabled=true;error.textContent='';
- try{const form=new FormData(e.target),profile=await login(String(form.get('username')||'').trim(),String(form.get('password')||''));state.identity=await loadIdentity();state.identity.profile??=profile;state.overlay=null;render();toast('Accesso effettuato.')}
+ try{const form=new FormData(e.target),profile=await login(String(form.get('username')||'').trim(),String(form.get('password')||''));state.identity=await loadIdentity();state.identity.profile??=profile;state.overlay=null;await reloadAll();toast('Accesso effettuato.')}
  catch(ex){error.textContent=ex.message;b.disabled=false}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.overlay){state.overlay=null;render()}});
