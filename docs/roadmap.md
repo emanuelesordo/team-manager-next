@@ -60,3 +60,8 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [ ] Deducibilità dei minuti per ruolo/comfort: non calcolata finché non sono riconciliati cambi e rientri.
 
 - [x] Medie voti nelle pagelle del Match Center pubbliche attraverso vista aggregata, senza `voter_id`; voto personale ancora protetto da RLS.
+
+## Coerenza fixture/tabellini — 02/10/2026
+- [x] Riconciliati 11/12 tabellini `app_matches` programmaticamente con corrispondenza 1:1 verificata.
+- [x] Bloccata la creazione automatica di tabellini per fixture concluse/live prive di collegamento, a protezione degli storici.
+- [ ] Conflitto storico giornata 1 Voltesea: tabellino 0–0, fixture 1–4. Richiede confronto documentale prima di collegare.

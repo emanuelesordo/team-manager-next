@@ -73,3 +73,7 @@
 .tactic-entry p{font-size:11px;margin:9px 0 0}
 .tactic-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:15px 0}
 @media(max-width:760px){.tactic-slots{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.tactic-entry{padding:10px}}
+
+/* Conflicting historical score audit stays visible to staff; no forced pairing. */
+.staff-link-warning{margin:15px 0;padding:15px;border:1px solid #d8a65e8c;border-radius:14px;background:color-mix(in srgb,#d8a65e 12%,var(--surface));font-size:11px;color:var(--ink)}
+.staff-link-warning strong{font-size:13px}.staff-link-warning p{font-size:11px;line-height:1.65;color:var(--muted)}.staff-link-warning>div{padding:7px 0;border-top:1px solid var(--border)}

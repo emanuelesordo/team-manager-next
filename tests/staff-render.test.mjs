@@ -58,3 +58,11 @@ test('finished game displays disabled lineup editing',()=>{
  assert.match(html,/disabled/);
  assert.match(html,/bloccata dopo il fischio/);
 });
+
+test('unlinked finished fixture cannot create duplicate operational match',()=>{
+ const ctx=context('admin');
+ const fixture={...ctx.state.data.fixtures[0],status:'finished'};
+ const html=staffMatchPanel(ctx,fixture,null);
+ assert.match(html,/riconciliare manualmente/i);
+ assert.doesNotMatch(html,/data-staff-action="ensure"/);
+});

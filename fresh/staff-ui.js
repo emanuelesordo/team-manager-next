@@ -36,6 +36,7 @@ export function adminPage(ctx){
  if(!isStaff(ctx))return '<div class="empty">Gestione riservata allo staff autorizzato.</div>';
  const data=ctx.state.data||{},base=ctx.state.base||{},t=base.team||{};
  const S=memory.selected,seasons=base.seasons||[],comps=data.competitions||[],opps=base.opponents||[],players=data.players||[],fixtures=data.fixtures||[];
+ const unlinked=(data.matches||[]).filter(m=>!m.fixture_id);
  let form='';
  if(memory.area==='team'){
   form=wrapForm('team','Identità squadra',
@@ -213,7 +214,7 @@ export function adminPage(ctx){
  '<button type="button" role="tab" aria-selected="'+(key===memory.area)+'" data-staff-area="'+key+'" class="'+(key===memory.area?'selected':'')+'">'+label+'</button>').join('')+'</div>';
  return ctx.heading('CENTRO DI CONTROLLO','Amministrazione','Gestione della squadra, delle competizioni e dei dati sportivi senza eliminare lo storico.')+
  '<div class="staff-intro glass"><span class="staff-orb">✦</span><div><span class="eyebrow">PERSONALE AUTORIZZATO</span><h2>Gestione sportiva</h2><p>Le modifiche vengono validate dal database. Operazioni distruttive disabilitate per proteggere i riferimenti storici.</p></div></div>'+
- tabs+form+'<p class="staff-footnote">Moduli operativi di partita e convocazioni: apri un incontro dal calendario e scegli «Gestione».</p>';
+ tabs+(unlinked.length?'<div class="staff-link-warning" role="status"><strong>'+unlinked.length+' tabellino/i senza fixture collegata</strong><p>Le partite programmate vengono associate solo se dati e avversaria sono univoci. Quelle concluse con risultati discordanti richiedono revisione prima del collegamento.</p>'+unlinked.map(m=>'<div>'+esc(m.round_label||'Giornata non indicata')+' · '+esc(m.status)+' · '+esc(m.kickoff_at?.slice(0,10)||'Data assente')+'</div>').join('')+'</div>':'')+form+'<p class="staff-footnote">Moduli operativi di partita e convocazioni: apri un incontro dal calendario e scegli «Gestione».</p>';
 }
 const playerText=p=>p?String(p.last_name||'')+' '+String(p.first_name||''):'Giocatore';
 function picker(name,label,choices,value){return selection(name,label,choices,value)}
@@ -295,6 +296,7 @@ function matchEvents(ctx,m){
 }
 export function staffMatchPanel(ctx,f,m){
  if(!isStaff(ctx))return '';
+ if((!m||!m.fixture_id)&&['finished','live'].includes(f?.status))return '<section class="glass panel staff-root"><h2>Verifica collegamento partita</h2><p class="data-warning">Questa gara è già in corso o conclusa ma non ha un tabellino operativo collegato con certezza. Per evitare duplicazioni è necessario riconciliare manualmente risultati e provenienza dei dati.</p></section>';
  if(!m||!m.fixture_id)return '<section class="glass panel staff-root"><div class="staff-panel-heading"><div><span class="eyebrow">OPERAZIONI</span><h2>Prepara il Match Center</h2></div></div>'+
  help('Associa la partita ufficiale a un unico tabellino operativo, riutilizzando le registrazioni già esistenti quando la corrispondenza è univoca. Nessun dato storico viene duplicato.')+
  btn('ensure','Apri gestione di questa partita')+'</section>';
