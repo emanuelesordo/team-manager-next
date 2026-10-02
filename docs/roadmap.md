@@ -35,3 +35,9 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [x] Gestione cambio ora Europe/Rome; formato con timezone ISO supportato.
 - [x] Campo tattico interattivo desktop/mobile con drag-and-drop o tocco per assegnazione slot.
 - [ ] Test browser autenticati e collaudo import con dati reali.
+
+## Proiezioni — 02/10/2026
+- [x] Allineamento vista SQL ufficiale ai punti di ciascuna competizione (non più 3/1 hardcoded).
+- [x] Modello Monte Carlo deterministico con 10.000 simulazioni, forme/forza pesate 30/25/20/10/10/5 e seed dati.
+- [x] Stima posizione media, punti attesi, percentili P20-P80 e indicatore quantità stagione disputata; parità di punti senza attribuire spareggi inventati.
+- [x] Ricalcolo con cache legata al contenuto di risultati/calendario/regole, solo in vista Competizioni.

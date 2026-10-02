@@ -7,7 +7,9 @@
 | Match Center: tabellino, eventi, formazione, voti | app_matches / app_match_* | Consultazione prudente (link solo univoci) |
 | Rosa, profilo, statistiche individuali | app_roster, players, app_player_season_stats | Consultazione |
 | Login username/password | Edge auth-login, profiles, app_user_roles | Accesso/sessione |
-| Setup squadra, stagioni, gare, disponibilità, live, votazioni, import, proiezione, PRO | Tabelle già presenti, policy in verifica | Non ancora operativo nel nuovo frontend |
+| Setup squadra, stagioni, gare, disponibilità, live, votazioni, import | app_*, RLS/RPC staff | Implementazione di base; collaudo browser autenticato richiesto |
+| Classifica proiettata | app_competition_fixtures, app_competition_standings, app_competitions | Simulazione client-side deterministica con cache per contenuto |
+| Moduli PRO e workflow piattaforma generale | Tabelle senza prefisso | Separati: non ancora sviluppati end-to-end |
 
 ## Priorità funzionali
 1. Audit e test autenticati ruoli/RLS; ricostruzione certa fixture-match anche per eventuali divergenze d'orario.

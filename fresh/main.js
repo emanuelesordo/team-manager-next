@@ -6,6 +6,7 @@ import {votesPanel,saveVote} from './votes.js';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,startStaffClock} from './staff-ui.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch} from './lineup-pitch.js';
+import {projectionContainer,updateProjection} from './projection-ui.js';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -109,7 +110,7 @@ function home(){
 function competitions(){
  const c=currentComp(),all=fixtures().filter(f=>f.competition_id===c?.id);
  const rounds=[...new Set(all.map(f=>f.round_no).filter(x=>x!=null))].sort((a,b)=>a-b),shown=state.mineOnly?all.filter(f=>involvesTeam(f,team())):all;
- return `${heading('IL CAMPIONATO','Competizioni','Classifiche e incontri ufficiali, giornata per giornata.')}<div class="filters"><div class="segmented">${comps().map(x=>`<button data-comp="${E(x.id)}" class="${c?.id===x.id?'active':''}">${E(x.name)}</button>`).join('')}</div><label class="toggle"><input type="checkbox" data-mine ${state.mineOnly?'checked':''}><span>Solo ${E(team().short_name||'la squadra')}</span></label></div><div class="competition-grid"><section class="glass panel comp-stand">${panelTitle('Classifica completa')}${standings(c)}<p class="subnote">Classifica derivata dalla vista Supabase. I criteri di spareggio possono essere differenti.</p></section><section class="glass panel comp-rounds">${panelTitle('Calendario del torneo')}${rounds.length?rounds.map(no=>`<div class="round-block"><div class="round-heading">GIORNATA ${no}<span>${shown.filter(x=>x.round_no===no).length} partite</span></div>${shown.filter(x=>x.round_no===no).map(x=>fixtureRow(x,true)).join('')||'<div class="empty small">Nessuna partita della squadra in questa giornata.</div>'}</div>`).join(''):shown.map(x=>fixtureRow(x,true)).join('')||'<div class="empty">Nessun incontro registrato.</div>'}</section></div>`;
+ return `${heading('IL CAMPIONATO','Competizioni','Classifiche e incontri ufficiali, giornata per giornata.')}<div class="filters"><div class="segmented">${comps().map(x=>`<button data-comp="${E(x.id)}" class="${c?.id===x.id?'active':''}">${E(x.name)}</button>`).join('')}</div><label class="toggle"><input type="checkbox" data-mine ${state.mineOnly?'checked':''}><span>Solo ${E(team().short_name||'la squadra')}</span></label></div><div class="competition-grid"><section class="glass panel comp-stand">${panelTitle('Classifica completa')}${standings(c)}<p class="subnote">La classifica ufficiale usa i punti configurati per la competizione. Gli spareggi seguono il regolamento.</p>${projectionContainer(c)}</section><section class="glass panel comp-rounds">${panelTitle('Calendario del torneo')}${rounds.length?rounds.map(no=>`<div class="round-block"><div class="round-heading">GIORNATA ${no}<span>${shown.filter(x=>x.round_no===no).length} partite</span></div>${shown.filter(x=>x.round_no===no).map(x=>fixtureRow(x,true)).join('')||'<div class="empty small">Nessuna partita della squadra in questa giornata.</div>'}</div>`).join(''):shown.map(x=>fixtureRow(x,true)).join('')||'<div class="empty">Nessun incontro registrato.</div>'}</section></div>`;
 }
 function calendar(){
  const rows=ownFixtures().filter(f=>state.filter==='all'||(state.filter==='upcoming'?!isFinished(f):isFinished(f))).filter(f=>!state.comp||f.competition_id===state.comp);
@@ -159,7 +160,7 @@ function render(){
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
  document.body.dataset.theme=state.theme;
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
- manageCarousel();manageLivePolling();paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
+ manageCarousel();manageLivePolling();if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
