@@ -87,7 +87,8 @@ export function loadSeason(seasonId) {
     playerStats: () => read('app_player_season_stats', 'season_id,player_id,first_name,last_name,position_group,appearances,starts,minutes,goals,assists,yellow_cards,blue_cards,red_cards,avg_rating', filter),
     matches: () => read('app_matches', 'id,season_id,competition_id,opponent_id,kickoff_at,home_away,round_label,status,home_score,away_score,formation,live_period', filter),
     // Restrict anonymous reads to safe, column-granted attributes. Never SELECT *.
-    players: () => read('players', 'id,first_name,last_name,photo_url,generic_role_manual'),
+    // Guests are not granted SELECT on players. Their roster identity comes from the public stats view.
+    players: () => bearerToken ? read('players', 'id,first_name,last_name,photo_url,generic_role_manual') : Promise.resolve([]),
   }, `season:${seasonId}`);
 }
 
