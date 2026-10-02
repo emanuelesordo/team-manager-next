@@ -27,3 +27,12 @@ Stessa scheda logica per programmato/concluso; tab Riepilogo, Formazioni, Eventi
 ## Accesso e setup
 
 Login `auth-login` (username + password), `setSession` con access/refresh token del client Supabase; ruoli letti da `app_user_roles`. Il setup è una pagina informativa temporanea: non simula pulsanti di salvataggio. Il backend RLS governa letture/scritture indipendentemente dalla visualizzazione.
+
+
+## Dashboard analitiche
+
+- Home: KPI sintetici e trend reti, risultati W/N/P, classifica compatta, agenda e distribuzione della rosa.
+- Statistiche: analisi ultimi incontri, dettaglio bilancio, split casa/trasferta, marcatori registrati e ruoli.
+- Competizioni: barra completamento fixture calcolata per la competizione/filtri correnti.
+- Rosa: composizione per ruolo su una riga, filtri e ricerca immutati.
+- Tutte le rappresentazioni derivano dai dati ufficiali `app_competition_fixtures` e dalle viste/stagioni esistenti; la disponibilità della metrica non implica che sia nota la sequenza degli eventi.

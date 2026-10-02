@@ -1,6 +1,6 @@
 /* Progressive Web App: app shell only. No API, authentication or personal data is ever cached. */
-const VERSION='tm-next-shell-v1';
-const SHELL=['./','./index.html','./src/app.js','./src/config.js','./src/data.js','./src/domain.js','./src/styles.css','./assets/favicon.svg'];
+const VERSION='tm-next-shell-v2';
+const SHELL=['./','./index.html','./src/app.js','./src/config.js','./src/data.js','./src/domain.js','./src/visuals.js','./src/styles.css','./src/layout-compact.css','./assets/favicon.svg'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(SHELL)).catch(()=>{}));
   self.skipWaiting();

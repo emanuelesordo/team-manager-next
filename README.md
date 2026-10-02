@@ -11,7 +11,7 @@ The deployment workflow validates and publishes the `dist/` folder to **GitHub P
 ## Develop
 
 - `npm run dev` — local server at `http://localhost:8080` (no install required).
-- `npm run check` — domain tests, module syntax validation, deterministic production build.
+- `npm run check` — domain and visualization tests, module syntax validation, deterministic production build.
 - `npm run build` — publishable `dist/` directory; only runtime files are copied.
 
 This is a **native HTML/CSS/ESM application**, without a front-end framework or runtime bundle. The logged-out experience fetches the Supabase REST endpoint directly. The pinned Supabase Auth SDK is lazy-loaded only for sign-in and active sessions. Images are lazy-loaded and the prototype screenshot is excluded from production.
@@ -40,3 +40,7 @@ The supplied brief is preserved in [`docs/specification-original.txt`](docs/spec
 ## Product constraints
 
 The `app_*` model and the general administrative model (`seasons`, `matches`, etc.) are distinct and intentionally **not** merged. Fixtures are authoritative for results and match scheduling. The interface supports historical seasons, clear missing-data states and deep links with hash navigation. Public assets contain only the Supabase publishable API key, never privileged credentials.
+
+## Interfaccia compact / analytics
+
+Il progetto ha un livello separato per la densità (`src/layout-compact.css`) e uno per i grafici SVG accessibili (`src/visuals.js`), senza framework di charting esterni. Dashboard squadra, classifiche, risultati, distribuzione V/N/P, trend reti, rendimento casa/trasferta, composizione rosa e marcatori condividono le stesse fonti dati. Se l'informazione manca, vengono mostrati espliciti stati vuoti.

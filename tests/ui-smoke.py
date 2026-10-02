@@ -29,8 +29,8 @@ async def main():
  from pathlib import Path
  p=Path(__file__).resolve().parent.parent
  html=(p/'index.html').read_text()
- css=(p/'src/styles.css').read_text()
- script=(p/'src/domain.js').read_text().replace('export ','')
+ css=(p/'src/styles.css').read_text()+'\n'+(p/'src/layout-compact.css').read_text()
+ script=(p/'src/domain.js').read_text().replace('export ','')+'\n'+(p/'src/visuals.js').read_text().replace("import {isFinished, matchResult} from './domain.js';",'').replace('export ','')
  # Do not fake a remote backend: the visual smoke test explicitly injects
  # controlled fixtures and leaves actual backend queries to production.
  import json
@@ -55,7 +55,11 @@ async def main():
    page.on('pageerror',lambda error:errors.append(str(error)))
    await page.set_content(html,wait_until='domcontentloaded')
    await page.wait_for_selector('.hero-panel',timeout=10000)
-   await page.wait_for_timeout(650)
+   await page.wait_for_timeout(200)
+   assert (await page.locator('.goal-plot').count() + await page.locator('.single-goals').count()) > 0
+   assert await page.locator('.mix-view').count() > 0
+   assert await page.locator('.micro-stat').count() > 0
+   assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), 'horizontal overflow home'
    await page.screenshot(path=f'/mnt/data/team-manager-next-{prefix}.png',full_page=True)
    if width<801:
     assert await page.locator('.mobile-nav').is_visible()
@@ -67,12 +71,20 @@ async def main():
     assert await page.locator('.sidebar').is_visible()
    await page.locator(("#mobileNav " if width<801 else "#desktopNav ")+"button[data-nav=\"competitions\"]").click()
    await page.wait_for_selector('.standings-table')
+   assert await page.locator('.competition-progress').count() == 1
+   assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), 'horizontal overflow competition'
    await page.locator('[data-fixture]').first.click()
    await page.wait_for_selector('dialog[open]')
    await page.locator('[data-match-tab="lineup"]').click()
    await page.locator('[data-close]').click()
    await page.locator(("#mobileNav " if width<801 else "#desktopNav ")+"button[data-nav=\"roster\"]").click()
    await page.wait_for_selector('.player-card')
+   assert await page.locator('.role-strip').count()==1
+   await page.locator(("#mobileNav " if width<801 else "#desktopNav ")+"button[data-nav=\"stats\"]").click()
+   await page.wait_for_selector('.stats-dashboard')
+   assert (await page.locator('.goal-plot').count() + await page.locator('.single-goals').count())==1
+   assert await page.locator('.ranking-bars').count()==1
+   assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), 'horizontal overflow stats'
    print(prefix,'nav & modal passed; JS errors=',errors)
    assert not errors,errors
    await page.close()
