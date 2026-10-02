@@ -36,8 +36,8 @@ export function resultReviewSection(m,f,s){
  let h='<section class="staff-result-review"><h3>'+(confirmed?'Risultato confermato':'Risultato da verificare')+'</h3><p class="staff-help">Conclusione partita e conferma risultato sono distinte. Marcatori ignoti restano ignoti.</p>';
  if(!finished)return h+'<p class="staff-help">Disponibile dopo la conclusione della partita.</p>'+history+'</section>';
  if(confirmed)return h+'<p class="staff-help">Confermato il '+E(m.result_reviewed_at?new Date(m.result_reviewed_at).toLocaleString('it-IT'):'—')+'. Nuove modifiche revocano la conferma.</p><button type="button" class="staff-soft" data-staff-action="review-result-reopen">Riapri verifica</button>'+history+'</section>';
- if(s.scoreMismatch)h+='<p class="data-warning">Risultati discordanti: la fixture è la fonte ufficiale.</p><button type="button" class="staff-soft" data-staff-action="review-result-align">Allinea solo il tabellino al risultato ufficiale</button>';
+
  if(s.pending)h+='<p class="data-warning">'+s.pending+' eventi ancora da verificare.</p>';
- const can=s.pending===0&&!s.scoreMismatch&&s.fixtureHasScore&&s.matchHasScore;
+ const can=s.pending===0&&s.fixtureHasScore;
  return h+'<button type="button" class="staff-submit" data-staff-action="review-result-confirm"'+(can?'':' disabled')+'>Conferma risultato definitivo</button>'+history+'</section>';
 }

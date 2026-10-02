@@ -11,7 +11,7 @@ test('historic proposals remain proposed until staff manually approves',()=>{
  {id:'e2',event_type:'goal',team_side:'opponent',minute:43,stoppage_minute:3,validation_status:'official'},
  {id:'e3',event_type:'red_card',team_side:'opponent',minute:74,validation_status:'proposed'}];
  const s=reviewSummary(match,fixture,events);assert.equal(s.pending,2);assert.equal(s.officialGoals.home,1);assert.equal(s.officialGoals.away,0);
- const html=reviewPanel({match,fixture,events});assert.match(html,/Minuto non noto/);assert.match(html,/43\+3/);assert.match(html,/data-staff-action="review-approve"/);assert.match(html,/divergono/);
+ const html=reviewPanel({match,fixture,events});assert.match(html,/Minuto non noto/);assert.match(html,/43\+3/);assert.match(html,/data-staff-action="review-approve"/);assert.doesNotMatch(html,/divergono/);
 });
 test('own goal beneficiary is inverted; rejected goals never count',()=>{
  const x=reviewSummary({home_away:'home'},fixture,[

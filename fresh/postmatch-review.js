@@ -15,10 +15,10 @@ export function reviewSummary(match,fixture,events=[]){
   goals[e.event_type==='own_goal'?(home?'away':'home'):(home?'home':'away')]++;
  }
  const fixtureHasScore=Number.isInteger(fixture?.home_score)&&Number.isInteger(fixture?.away_score);
- const matchHasScore=Number.isInteger(match?.home_score)&&Number.isInteger(match?.away_score);
+ const matchHasScore=fixtureHasScore; // Compatibility fields are not an independent score.
  return {total:all.length,pending:pending.length,official:all.filter(e=>e.validation_status==='official').length,rejected:all.filter(e=>e.validation_status==='rejected').length,
   officialGoals:goals,fixtureHasScore,matchHasScore,
-  scoreMismatch:fixtureHasScore&&matchHasScore&&(fixture.home_score!==match.home_score||fixture.away_score!==match.away_score),
+  scoreMismatch:false,
   knownGoalMismatch:fixtureHasScore&&(goals.home!==fixture.home_score||goals.away!==fixture.away_score)};
 }
 export function reviewPanel({match,fixture,events=[],players=[],editingEventId=null,historyEventId=null,historyEntries=[],resultHistoryEntries=null}={}){
@@ -26,9 +26,8 @@ export function reviewPanel({match,fixture,events=[],players=[],editingEventId=n
  const names=new Map(players.map(p=>[p.id,[p.first_name,p.last_name].filter(Boolean).join(' ')]));
  const sorted=[...events].sort((a,b)=>(a.minute??999)-(b.minute??999)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  const score=fixture&&summary.fixtureHasScore?fixture.home_score+'–'+fixture.away_score:'Non disponibile';
- const op=match&&summary.matchHasScore?match.home_score+'–'+match.away_score:'Non disponibile';
  const summaryText='<div class="staff-review-summary"><div><b>'+summary.pending+'</b><small>Da verificare</small></div><div><b>'+summary.official+'</b><small>Ufficiali</small></div><div><b>'+summary.rejected+'</b><small>Scartati</small></div></div>';
- const discrepancy=summary.scoreMismatch?'<p class="data-warning" role="status">Risultato ufficiale '+E(score)+' e tabellino '+E(op)+' divergono. La validazione degli eventi non modifica automaticamente nessuno dei due risultati.</p>':'';
+ const discrepancy='';
  const coverage=summary.knownGoalMismatch?'<p class="staff-help">Gol con eventi ufficializzati: '+summary.officialGoals.home+'–'+summary.officialGoals.away+'. Risultato ufficiale: '+E(score)+'. Il risultato può essere valido anche senza tutti i marcatori identificati; non vengono creati eventi fittizi.</p>':'';
  const items=sorted.map(ev=>{
   const isPending=reviewable.has(ev.validation_status);

@@ -85,7 +85,7 @@ async def test_view(browser, width, height):
  await page.locator('[data-staff-match-tab="events"]').click()
  await page.locator('[data-staff-action="review-approve"]').first.wait_for()
  assert await page.locator('[data-staff-action="review-approve"]').count()==16
- assert await page.locator('[data-staff-action="review-result-align"]').is_visible()
+ assert await page.locator('[data-staff-action="review-result-align"]').count()==0
  assert await page.locator('[data-staff-action="review-result-confirm"]').is_disabled()
  await page.locator('[data-staff-action="review-edit"]').first.click()
  await page.locator('form[data-staff-form="amend-event"]').wait_for(timeout=10000)

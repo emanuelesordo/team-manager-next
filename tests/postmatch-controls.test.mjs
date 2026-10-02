@@ -4,7 +4,7 @@ const f={status:'finished',home_score:1,away_score:4};
 const m={id:'x',status:'finished',home_score:0,away_score:0,result_review_status:'provisional'};
 test('result confirmation blocked on pending events and mismatch',()=>{
  const html=resultReviewSection(m,f,{scoreMismatch:true,pending:16,fixtureHasScore:true,matchHasScore:true});
- assert.match(html,/Allinea solo il tabellino/);assert.match(html,/disabled/);assert.match(html,/16 eventi/);
+ assert.doesNotMatch(html,/Allinea solo il tabellino/);assert.match(html,/disabled/);assert.match(html,/16 eventi/);
 });
 test('confirmed result has explicit reopen control',()=>{
  const html=resultReviewSection({...m,result_review_status:'confirmed'},f,{pending:0,scoreMismatch:false});
