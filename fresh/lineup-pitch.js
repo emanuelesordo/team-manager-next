@@ -59,6 +59,7 @@ export function installLineupPitch(){
   const name=e.target.closest('.lineup-name');
   if(name){const row=name.closest('[data-lineup-player]');activePlayer=row?.dataset.lineupPlayer||null;paintLineupPitch()}
  });
+ document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('form[data-staff-form="lineup"] .lineup-name')){e.preventDefault();activePlayer=e.target.closest('[data-lineup-player]')?.dataset.lineupPlayer||null;paintLineupPitch()}});
  document.addEventListener('change',e=>{
   const el=e.target,form=el.closest('form[data-staff-form="lineup"]');if(!form)return;
   const row=el.closest('[data-lineup-player]');

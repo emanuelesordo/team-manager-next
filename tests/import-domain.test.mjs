@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {parseDelimited,parseKickoff,parseFixtureCSV} from '../fresh/import-domain.js';
+test('CSV con quote e BOM',()=>{const r=parseDelimited('\uFEFFgiornata;data;ora;casa;ospite;campo\n1;02/10/2026;20:30;"A; Squadra";Ospiti;"Campo ""A"""\n');assert.equal(r[1][3],'A; Squadra');assert.equal(r[1][5],'Campo "A"')});
+test('orari Europe/Rome e DST',()=>{assert.equal(parseKickoff('02/10/2026','20:30'),'2026-10-02T18:30:00.000Z');assert.equal(parseKickoff('01/12/2026','20:30'),'2026-12-01T19:30:00.000Z');assert.throws(()=>parseKickoff('29/03/2026','02:30'),/inesistente/);assert.throws(()=>parseKickoff('25/10/2026','02:30'),/ambig/);});
+test('blocca duplicati senza eliminare altre righe',()=>{const r=parseFixtureCSV('giornata;data;ora;casa;ospite\n1;02/10/2026;20:30;Test A;Test B\n1;03/10/2026;20:30;Test A;Test B\n2;01/12/2026;21:00;Test B;Test A\n');assert.equal(r.rows.length,2);assert.equal(r.errors.length,1);assert.match(r.errors[0].message,/ripetuto/);});
+test('data errata bloccata prima della RPC',()=>{const r=parseFixtureCSV('giornata,data_ora,casa,ospite\n4,not-a-date,Team A,Team B\n');assert.equal(r.rows.length,0);assert.equal(r.errors.length,1)});

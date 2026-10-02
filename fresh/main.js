@@ -4,6 +4,8 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js';
 import {clubPage,personalPanel} from './ui-extensions.js';
 import {votesPanel,saveVote} from './votes.js';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,startStaffClock} from './staff-ui.js';
+import {installCalendarImport} from './calendar-import.js';
+import {installLineupPitch,paintLineupPitch} from './lineup-pitch.js';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -157,7 +159,7 @@ function render(){
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
  document.body.dataset.theme=state.theme;
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
- manageCarousel();manageLivePolling();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
+ manageCarousel();manageLivePolling();paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
@@ -278,4 +280,6 @@ async function bootstrap(){
   await switchSeason(initial.id);
  }catch(e){console.error('Boot error',e);$('#app').innerHTML=`<div class="fatal"><b>Team Manager</b><h1>Connessione non disponibile</h1><p>Non è stato possibile caricare la squadra: ${E(e.message)}</p><button onclick="location.reload()">Riprova</button></div>`}
 }
+installCalendarImport(()=>staffContext());
+installLineupPitch();
 bootstrap();

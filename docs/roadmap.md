@@ -29,3 +29,9 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [x] Tab Voti con selezione 1–10, mezzi punti e SV persistito, accessibile agli utenti autenticati.
 - [x] Funzione SQL e RLS restrittive per eleggibilità reale.
 - [ ] Collaudo browser autenticato e verifica fisica responsive.
+
+## Import e tattiche — 02/10/2026
+- [x] Anteprima CSV e importazione atomica della sola nuova programmazione; niente sovrascrittura dello storico.
+- [x] Gestione cambio ora Europe/Rome; formato con timezone ISO supportato.
+- [x] Campo tattico interattivo desktop/mobile con drag-and-drop o tocco per assegnazione slot.
+- [ ] Test browser autenticati e collaudo import con dati reali.
