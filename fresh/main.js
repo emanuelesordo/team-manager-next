@@ -158,7 +158,15 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const configuredMinutes=Number(competitionSettings?.minutes_per_period);
  const duration=Number.isFinite(configuredMinutes)&&configuredMinutes>0?configuredMinutes:null;
  const period=e=>{const p=norm(e.payload?.period);if(p==='second_half'||p==='first_half')return p;return duration!==null&&Number(e.minute)>duration?'second_half':'first_half'};
- const absoluteMinute=e=>{if(e.minute==null||e.minute==='')return null;const n=Number(e.minute);if(!Number.isFinite(n))return null;return duration!==null&&e.payload?.minute_relative===true&&period(e)==='second_half'?duration+n:n};
+ const absoluteMinute=e=>{
+  if(e.minute==null||e.minute==='')return null;
+  const n=Number(e.minute);if(!Number.isFinite(n))return null;
+  // Historical records specify the half in payload.period and store a minute relative to that half.
+  // The live RPC instead stores the cumulative minute, without payload.period.
+  const relative=e.payload?.minute_relative===true||
+    (norm(e.payload?.period)==='second_half'&&e.payload?.minute_relative!==false&&e.payload?.entered_from!=='tm_app_live');
+  return duration!==null&&relative&&period(e)==='second_half'?duration+n:n;
+ };
  const recovery=e=>Math.max(0,Number(e.stoppage_minute)||0);
  const order=e=>{const n=absoluteMinute(e);return n===null?Infinity:n+recovery(e)/100};
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
