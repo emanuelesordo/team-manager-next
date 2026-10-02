@@ -47,3 +47,5 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 .mt-card-yellow{background:#edc93c}.mt-card-blue{background:#4a91f6}.mt-card-red{background:#d95461}
 .mt-change span:first-child{transform:none}.mt-change span:last-child{transform:rotate(180deg)}
 @media(max-width:550px){.mt-row{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr)}.mt-card-stack i{width:8px;flex-basis:8px;height:17px}}
+
+.mt-change span:last-child{transform:none}
