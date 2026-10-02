@@ -10,6 +10,7 @@ import {installLineupPitch,paintLineupPitch} from './lineup-pitch.js';
 import {projectionContainer,updateProjection} from './projection-ui.js';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js';
+import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {loadFixtureEvents} from './api.js';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {tacticalHistory} from './tactics.js';
@@ -158,15 +159,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const configuredMinutes=Number(competitionSettings?.minutes_per_period);
  const duration=Number.isFinite(configuredMinutes)&&configuredMinutes>0?configuredMinutes:null;
  const period=e=>{const p=norm(e.payload?.period);if(p==='second_half'||p==='first_half')return p;return duration!==null&&Number(e.minute)>duration?'second_half':'first_half'};
- const absoluteMinute=e=>{
-  if(e.minute==null||e.minute==='')return null;
-  const n=Number(e.minute);if(!Number.isFinite(n))return null;
-  // Historical records specify the half in payload.period and store a minute relative to that half.
-  // The live RPC instead stores the cumulative minute, without payload.period.
-  const relative=e.payload?.minute_relative===true||
-    (norm(e.payload?.period)==='second_half'&&e.payload?.minute_relative!==false&&e.payload?.entered_from!=='tm_app_live');
-  return duration!==null&&relative&&period(e)==='second_half'?duration+n:n;
- };
+ const absoluteMinute=e=>cumulativeEventMinute(e,competitionSettings);
  const recovery=e=>Math.max(0,Number(e.stoppage_minute)||0);
  const order=e=>{const n=absoluteMinute(e);return n===null?Infinity:n+recovery(e)/100};
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
@@ -198,7 +191,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+'</span>';
   return '<span class="mt-icon">'+icon(e)+'</span>'+score+names;
  };
- const minutes=e=>{const n=absoluteMinute(e);return n===null?'—':E(String(n)+(recovery(e)?'+'+recovery(e):'')+"'")};
+ const minutes=e=>E(displayEventMinute(e,competitionSettings).replace('′',"'"));
  const recoveryByPeriod=new Map();
  for(const e of events||[]){if(type(e)==='period_end'){const p=period(e);const n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;recoveryByPeriod.set(p,Math.max(n,recoveryByPeriod.get(p)||0))}}
  for(const e of ordered){if(recovery(e)){const p=period(e);recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0))}else{const n=absoluteMinute(e);if(n!==null){const p=period(e),end=p==='first_half'?duration:duration*2;if(duration!==null&&n>end)recoveryByPeriod.set(p,Math.max(n-end,recoveryByPeriod.get(p)||0))}}}
@@ -247,7 +240,7 @@ function match(){
  const matchNotice=(resultLabel?`<p class="staff-help">${E(resultLabel)}</p>`:'')+(pendingEvents?`<p class="data-warning">${pendingEvents} eventi da verificare: visibili, non ancora ufficializzati.</p>`:'');
  const eName=e=>({'goal':'Gol','own_goal':'Autogol','yellow_card':'Ammonizione','red_card':'Espulsione','blue_card':'Cartellino blu','substitution':'Sostituzione','sub_out':'Uscita','period_end':'Fine tempo','assist':'Assist'}[e.event_type]||e.event_type||'Evento');
  const body=state.matchTab==='staff'?staffMatchPanel(staffContext(),f,m):state.matchTab==='summary'?`<div class="match-two"><div class="inner-card"><h3>Informazioni partita</h3><div class="detail-line"><span>Competizione</span><b>${E(competition(f.competition_id)?.name||'—')}</b></div><div class="detail-line"><span>Giornata</span><b>${E(f.round_no??'—')}</b></div><div class="detail-line"><span>Data</span><b>${E(weekday(f.kickoff_at))}</b></div><div class="detail-line"><span>Ora</span><b>${time(f.kickoff_at)}</b></div><div class="detail-line"><span>Campo</span><b>${E(f.venue_name||f.venue||'—')}</b></div>${f.venue_address?`<p class="subnote">${E(f.venue_address)}</p>`:''}</div><div class="inner-card"><h3>Tabellino</h3>${m?matchEventTimeline(events,f,playerName,team(),competition(f.competition_id)):'<div class="empty">Nessun tabellino operativo collegato con certezza a questa gara.</div>'}</div></div>`:state.matchTab==='lineup'?m?`<div class="match-two"><div class="inner-card"><h3>Formazione iniziale</h3><div class="pitch"><div class="pitch-mid"></div><div class="pitch-players">${data.players.filter(x=>x.started).sort((a,b)=>(a.tactical_slot??99)-(b.tactical_slot??99)).map(x=>`<div class="pitch-player"><b>${x.shirt_number??'•'}</b><span>${E((people(x.player_id)?.last_name||playerName(x.player_id)))}</span></div>`).join('')||'<div class="empty">Formazione iniziale non registrata.</div>'}</div></div></div><div class="inner-card"><h3>Panchina e convocati</h3>${data.players.filter(x=>!x.started).map(x=>`<div class="detail-line"><span>${E(playerName(x.player_id))}</span><b>${E(x.selection_status||'—')}</b></div>`).join('')||'<div class="empty">Nessun dato disponibile.</div>'}<p class="subnote">Posizioni grafiche indicative; i dati storici di partenza non vengono modificati.</p></div></div>`:'<div class="empty padded">Nessuna formazione operativa associata a questa gara.</div>':state.matchTab==='events'?matchEventTimeline(events,f,playerName,team(),competition(f.competition_id)):votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E});
- return `<button class="back-link" data-page="calendar">${ico('back')} Torna al calendario</button><div class="match-detail-head glass"><div class="match-detail-top">${status(f)}<span>${E(competition(f.competition_id)?.name||'Competizione')} · Giornata ${E(f.round_no??'—')}</span></div><div class="match-detail-score"><div>${club(f.home_team,'xl')}<strong>${E(f.home_team)}</strong></div><div class="match-big-score"><b>${score(f)}</b><span>${E(weekday(f.kickoff_at))} · ${time(f.kickoff_at)}</span></div><div>${club(f.away_team,'xl')}<strong>${E(f.away_team)}</strong></div></div></div><section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">${tabs.map(([id,label])=>`<button role="tab" aria-selected="${state.matchTab===id}" data-tab="${id}" class="${state.matchTab===id?'active':''}">${label}</button>`).join('')}</div><div class="match-tab-body">${matchNotice}${body}${state.matchTab==='lineup'?tacticalHistory(data.tacticalChanges||[],state.data?.players||[]):''}${state.matchTab==='summary'?fixtureEventsPanel(state.fixtureEvents):''}</div></section>`;
+ return `<button class="back-link" data-page="calendar">${ico('back')} Torna al calendario</button><div class="match-detail-head glass"><div class="match-detail-top">${status(f)}<span>${E(competition(f.competition_id)?.name||'Competizione')} · Giornata ${E(f.round_no??'—')}</span></div><div class="match-detail-score"><div>${club(f.home_team,'xl')}<strong>${E(f.home_team)}</strong></div><div class="match-big-score"><b>${score(f)}</b><span>${E(weekday(f.kickoff_at))} · ${time(f.kickoff_at)}</span></div><div>${club(f.away_team,'xl')}<strong>${E(f.away_team)}</strong></div></div></div><section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">${tabs.map(([id,label])=>`<button role="tab" aria-selected="${state.matchTab===id}" data-tab="${id}" class="${state.matchTab===id?'active':''}">${label}</button>`).join('')}</div><div class="match-tab-body">${matchNotice}${body}${state.matchTab==='lineup'?tacticalHistory(data.tacticalChanges||[],state.data?.players||[]):''}${state.matchTab==='summary'?fixtureEventsPanel(state.fixtureEvents,competition(f.competition_id)):''}</div></section>`;
 }
 function clubScreen(){return clubPage({team:team(),seasons:state.base.seasons,season:state.season,opponents:state.base.opponents,E,crest:club,heading,ico})}
 function settings(){
@@ -323,11 +316,11 @@ async function refreshLive(){
 async function fillAnalytics(){
  const box=document.querySelector('[data-event-analysis]');if(!box||!state.data)return;
  if(verifiedEventCache?.season===state.season){
-  box.innerHTML=renderEventAnalytics(fixtures(),state.data.matches||[],verifiedEventCache.events,team());return;
+  box.innerHTML=renderEventAnalytics(fixtures(),state.data.matches||[],verifiedEventCache.events,team(),state.data.competitions||[]);return;
  }
  if(analyticsBusy)return;
  const chosen=state.season,matches=state.data.matches||[],ids=matches.map(m=>m.id).filter(Boolean);
- if(!ids.length){verifiedEventCache={season:chosen,events:[]};box.innerHTML=renderEventAnalytics(fixtures(),matches,[],team());return}
+ if(!ids.length){verifiedEventCache={season:chosen,events:[]};box.innerHTML=renderEventAnalytics(fixtures(),matches,[],team(),state.data.competitions||[]);return}
  analyticsBusy=true;
  try{
   const query='select=match_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&match_id=in.('+
@@ -336,7 +329,7 @@ async function fillAnalytics(){
   if(chosen!==state.season)return;
   verifiedEventCache={season:chosen,events};
   const current=document.querySelector('[data-event-analysis]');
-  if(current)current.innerHTML=renderEventAnalytics(fixtures(),state.data.matches||[],events,team());
+  if(current)current.innerHTML=renderEventAnalytics(fixtures(),state.data.matches||[],events,team(),state.data.competitions||[]);
  }catch(error){const current=document.querySelector('[data-event-analysis]');if(current)current.textContent='Eventi non leggibili: '+error.message}
  finally{analyticsBusy=false}
 }
