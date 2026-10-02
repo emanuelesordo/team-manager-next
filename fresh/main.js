@@ -149,36 +149,54 @@ function resolveMatch(){const f=fixtures().find(x=>x.id===state.match);const exa
 function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll,refreshLive,logoutUser}}
 function admin(){return adminPage(staffContext())}
 function matchEventTimeline(events,fixture,playerName,ourTeam){
- const norm=v=>String(v||'').trim().toLocaleLowerCase('it');
+ const norm=v=>String(v??'').trim().toLocaleLowerCase('it');
  const ownNames=[ourTeam?.name,ourTeam?.short_name,ourTeam?.abbreviation].map(norm);
  const homeIsOurs=ownNames.includes(norm(fixture.home_team));
  const side=e=>{const s=norm(e.team_side||e.side);if(['home','casa'].includes(s))return 'home';if(['away','ospite'].includes(s))return 'away';if(['team','ours','own'].includes(s))return homeIsOurs?'home':'away';if(['opponent','opposition'].includes(s))return homeIsOurs?'away':'home';return 'unknown'};
  const type=e=>norm(e.event_type);
  const goal=e=>['goal','penalty_goal','own_goal'].includes(type(e));
- const time=e=>Number.isFinite(Number(e.minute))&&e.minute!==null?Number(e.minute):999;
- const ordered=[...events].sort((a,b)=>time(a)-time(b)||(Number(a.stoppage_minute)||0)-(Number(b.stoppage_minute)||0)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+ const duration=Number(fixture?.minutes_per_period)||45;
+ const period=e=>{const p=norm(e.payload?.period);if(p==='second_half'||p==='first_half')return p;return Number(e.minute)>duration?'second_half':'first_half'};
+ const absoluteMinute=e=>{if(e.minute==null||e.minute==='')return null;const n=Number(e.minute);if(!Number.isFinite(n))return null;return period(e)==='second_half'&&n<=duration?duration+n:n};
+ const recovery=e=>Math.max(0,Number(e.stoppage_minute)||0);
+ const order=e=>{const n=absoluteMinute(e);return n===null?Infinity:n+recovery(e)/100};
+ const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
+ const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
  const tracked=ordered.map(e=>{if(goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}return {event:e,score:goal(e)?home+' - '+away:null}});
- const heading=(label)=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
- const icon=e=>{const t=type(e);if(goal(e))return '<span class="mt-ball" aria-label="Gol">⚽</span>';if(['yellow_card','red_card','blue_card','second_yellow'].includes(t))return '<span class="mt-cards mt-'+(t==='red_card'?'red':t==='blue_card'?'blue':'yellow')+'" aria-label="Cartellino"></span>';if(['substitution','sub_out','sub_in'].includes(t))return '<span class="mt-change" aria-label="Cambio"><span>→</span><span>←</span></span>';return '<span class="mt-generic" aria-hidden="true">◆</span>'};
- const eventContent=(entry)=>{const e=entry.event,t=type(e),isChange=['substitution','sub_out','sub_in'].includes(t),primary=isChange&&e.secondary_player_id?playerName(e.secondary_player_id):e.player_id?playerName(e.player_id):goal(e)?'Gol avversario':'Squadra',secondary=isChange?(e.secondary_player_id&&e.player_id?playerName(e.player_id):''):(e.secondary_player_id?playerName(e.secondary_player_id):''),score=entry.score?'<span class="mt-score">'+E(entry.score)+'</span>':'';
- return '<span class="mt-icon">'+icon(e)+'</span>'+score+'<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+(!e.player_id&&!goal(e)?'<small>'+E(t.replaceAll('_',' '))+'</small>':'')+'</span>'};
- const minutes=e=>e.minute===null||e.minute===undefined?'—':E(String(e.minute)+(Number(e.stoppage_minute)>0?'+'+e.stoppage_minute:'')+"'"); 
- const duration=Number(fixture?.minutes_per_period)||45;
- let parts='',lastPhase=Infinity,lastRecovery=false;
- for(const entry of tracked.reverse()){
- const e=entry.event,phase=time(e)>duration*2?3:time(e)>duration?2:1;
- if(lastPhase===Infinity){parts+=heading(fixture.status==='finished'?'FT '+E(fixture.home_score??'–')+' - '+E(fixture.away_score??'–'):'EVENTI');}
- if(lastPhase===3&&phase<3)parts+=heading('FINE TEMPI REGOLAMENTARI');
- if(lastPhase>=2&&phase===1)parts+=heading('HT');
- const recovery=Number(e.stoppage_minute)>0;
- if(recovery&&!lastRecovery)parts+=heading('RECUPERO +'+E(e.stoppage_minute)+"’");
- lastRecovery=recovery;lastPhase=phase;
- const s=side(e),left=s==='home',right=s==='away';
- const content=eventContent(entry);
- parts+='<div class="mt-row"><div class="mt-side mt-home">'+(left?content:'')+'</div><b class="mt-minute">'+minutes(e)+'</b><div class="mt-side mt-away">'+(right?content:(s==='unknown'?content:''))+'</div></div>';
+ const heading=label=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
+ const cards=(e)=>{
+  const t=type(e),history=Array.isArray(e.payload?.accumulated_cards)?e.payload.accumulated_cards:[];
+  const cumulative=t==='second_yellow'||t==='red_card'&&['second_yellow_blue','second_card'].includes(e.payload?.card_type);
+  const colors=cumulative?[...history.slice(-2).map(x=>x==='blue_card'?'blue':'yellow'),t==='second_yellow'?'red':'red']:[t==='red_card'?'red':t==='blue_card'?'blue':'yellow'];
+  if(cumulative&&colors.length===1)colors.unshift('yellow');
+  return '<span class="mt-card-stack" aria-label="Cartellino">'+colors.map(c=>'<i class="mt-card-'+c+'"></i>').join('')+'</span>';
+ };
+ const icon=e=>{const t=type(e);if(goal(e))return '<span class="mt-ball" aria-label="Gol">⚽</span>';if(['yellow_card','red_card','blue_card','second_yellow'].includes(t))return cards(e);if(['substitution','sub_out','sub_in'].includes(t))return '<span class="mt-change" aria-label="Sostituzione"><span>→</span><span>←</span></span>';if(t==='blue_return')return '<span class="mt-generic">↩</span>';return '<span class="mt-generic">◆</span>'};
+ const eventContent=entry=>{const e=entry.event,t=type(e),isChange=['substitution','sub_out','sub_in'].includes(t);
+  const primary=isChange&&e.secondary_player_id?playerName(e.secondary_player_id):e.player_id?playerName(e.player_id):goal(e)?'Gol avversario':e.payload?.opponent_shirt_number?'#'+e.payload.opponent_shirt_number:'Squadra';
+  const secondary=isChange?(e.secondary_player_id&&e.player_id?playerName(e.player_id):''):(goal(e)&&e.secondary_player_id?playerName(e.secondary_player_id):'');
+  const score=entry.score?'<span class="mt-score">'+E(entry.score)+'</span>':'';
+  const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+'</span>';
+  return '<span class="mt-icon">'+icon(e)+'</span>'+score+names;
+ };
+ const minutes=e=>{const n=absoluteMinute(e);return n===null?'—':E(String(n)+(recovery(e)?'+'+recovery(e):'')+"'")};
+ const recoveryByPeriod=new Map();
+ for(const e of events||[]){if(type(e)==='period_end'){const p=period(e);const n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;recoveryByPeriod.set(p,Math.max(n,recoveryByPeriod.get(p)||0))}}
+ for(const e of ordered){if(recovery(e)){const p=period(e);recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0))}else{const n=absoluteMinute(e);if(n!==null){const p=period(e),end=p==='first_half'?duration:duration*2;if(n>end)recoveryByPeriod.set(p,Math.max(n-end,recoveryByPeriod.get(p)||0))}}}
+ let parts='',lastPeriod=null,lastRecovery=null;
+ const complete=['finished','completed','full_time','ft'].includes(norm(fixture.status));
+ parts+=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI');
+ for(const entry of [...tracked].reverse()){
+  const e=entry.event,p=period(e),n=absoluteMinute(e),base=p==='first_half'?duration:duration*2;
+  const isRecovery=recovery(e)>0||(n!==null&&n>base);
+  if(lastPeriod==='second_half'&&p==='first_half'){parts+=heading('HT');lastRecovery=null}
+  if(isRecovery&&lastRecovery!==p){parts+=heading('RECUPERO +'+E(recoveryByPeriod.get(p)||Math.max(recovery(e),n-base))+"'");lastRecovery=p}
+  lastPeriod=p;
+  const s=side(e),content=eventContent(entry);
+  parts+='<div class="mt-row"><div class="mt-side mt-home">'+(s==='home'?content:'')+'</div><b class="mt-minute">'+minutes(e)+'</b><div class="mt-side mt-away">'+(s==='away'||s==='unknown'?content:'')+'</div></div>';
  }
- return '<div class="match-timeline" aria-label="Cronologia eventi della partita">'+(parts||'<div class="empty padded">Nessun evento registrato.</div>')+'</div>';
+ return '<div class="match-timeline" aria-label="Cronologia eventi della partita">'+(tracked.length?parts:heading(complete?'FT '+E(fixture.home_score??'–')+' - '+E(fixture.away_score??'–'):'EVENTI')+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>';
 }
 
 function match(){
