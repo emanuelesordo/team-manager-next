@@ -32,3 +32,6 @@ Nell'amministrazione è disponibile il controllo manuale in sola lettura delle a
 
 ## Collegamento diretto alla partita
 Il Match Center conserva la fixture nell'URL (`#match/<uuid>`). Aggiornamento del browser e accessi successivi ricostruiscono la partita dalla fonte Supabase; formazioni ed eventi vengono riletti dal database. Test di regressione dedicato agli URL.
+
+## Revisione postpartita
+In Match Center → Gestione → Eventi lo staff può approvare/scartare proposte anche dopo la chiusura della partita. La RPC `tm_app_review_event` controlla ruolo e stato concorrente, non altera punteggi e conserva gli eventi scartati per la tracciabilità. Risultato ufficiale e conteggio eventi restano distinti come da specifiche.

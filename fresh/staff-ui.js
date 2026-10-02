@@ -3,6 +3,7 @@ import {importPanel} from './calendar-import.js';
 import {pitchMarkup} from './lineup-pitch.js';
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
+import {reviewPanel} from './postmatch-review.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const attrs=(rows,key,label)=>rows.map(row=>'<option value="'+esc(row[key])+'">'+esc(row[label])+'</option>').join('');
@@ -293,15 +294,8 @@ function matchLive(ctx,m,competition){
  '<div class="staff-live-grid"><div class="staff-live-panel"><h3>Risultato ufficiale</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(m))+
  '</div><div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
 }
-function matchEvents(ctx,m){
- const evs=(ctx.state.matchData?.events||[]).slice().sort((a,b)=>(a.minute??999)-(b.minute??999)||String(a.created_at).localeCompare(String(b.created_at)));
- const people=ctx.state.data?.players||[];
- return '<section class="staff-subpanel">'+title('VERIFICA','Registro eventi')+
- help('Annullamento logico: gli eventi non vengono eliminati fisicamente. Se un gol aveva modificato il risultato, l’annullamento rettifica il tabellone nella stessa transazione.')+
- '<div class="staff-event-list">'+evs.map(ev=>'<div class="staff-event-row"><div><strong>'+esc(ev.minute==null?'—':ev.minute+(ev.stoppage_minute?'+'+ev.stoppage_minute:'')+'′')+'</strong><span>'+esc(ev.event_type)+' · '+esc(ev.team_side)+ (ev.player_id?' · '+esc(playerText(people.find(p=>p.id===ev.player_id))):'')+'</span><small>'+esc(ev.validation_status||'—')+'</small></div>'+
- (m.status==='live'&&ev.validation_status!=='rejected'?'<div class="staff-event-buttons">'+(['proposed','community_confirmed','disputed'].includes(ev.validation_status)?'<button data-staff-action="approve" data-event-id="'+esc(ev.id)+'" class="staff-soft" type="button">Approva</button>':'')+'<button data-staff-action="void" data-event-id="'+esc(ev.id)+'" class="staff-danger" type="button">Annulla</button></div>':'')+'</div>').join('')+
- (!evs.length?'<p class="empty">Nessun evento registrato.</p>':'')+'</div></section>';
-}
+function matchEvents(ctx,m){return reviewPanel({match:m,fixture:ctx.resolveMatch().fixture,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[]});}
+
 export function staffMatchPanel(ctx,f,m){
  if(!isStaff(ctx))return '';
  if((!m||!m.fixture_id)&&['finished','live'].includes(f?.status))return '<section class="glass panel staff-root"><h2>Verifica collegamento partita</h2><p class="data-warning">Questa gara è già in corso o conclusa ma non ha un tabellino operativo collegato con certezza. Per evitare duplicazioni è necessario riconciliare manualmente risultati e provenienza dei dati.</p></section>';
@@ -426,6 +420,15 @@ export async function staffClick(e,button,ctx){
   }
   if(action==='audit-integrity'){integrityError='';try{integrityData=await rpc('tm_app_integrity_report')}catch(e){integrityError=e.message||String(e)}ctx.render();return true}
   if(action==='refresh-match'){await reloadMatch(ctx);return true}
+  if(action==='review-approve'||action==='review-reject'){
+   if(!m)throw Error('Tabellino non disponibile');
+   const eventId=button.dataset.eventId,expected=button.dataset.eventStatus;
+   const decision=action==='review-approve'?'approve':'reject';
+   const question=decision==='approve'?'Confermare questo evento come ufficiale? Il risultato non verrà modificato.':'Scartare logicamente questo evento? Resterà consultabile nello storico e il risultato non cambierà.';
+   if(!window.confirm(question))return true;
+   await rpc('tm_app_review_event',{p_match_id:m.id,p_event_id:eventId,p_decision:decision,p_expected_status:expected});
+   await reloadMatch(ctx);ctx.toast(decision==='approve'?'Evento ufficializzato':'Evento scartato senza eliminazione');return true;
+  }
   if(!m)throw Error('Apri prima la gestione del match');
   if(action==='start'&&!window.confirm('Avviare ora il live? I comandi cronometro, eventi e risultato saranno attivi.'))return true;
   if(action==='finish'&&!window.confirm('Finalizzare la partita? Risultato e cronologia saranno ufficializzati.'))return true;
