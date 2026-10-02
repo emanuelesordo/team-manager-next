@@ -1,0 +1,1518 @@
+TEAM MANAGER — SPECIFICA FUNZIONALE E TECNICA COMPLETA
+1. OBIETTIVO DEL PROGETTO
+Realizzare una webapp gestionale calcistica denominata Team Manager, destinata inizialmente alla gestione di una singola squadra dilettantistica, [NOME SQUADRA]
+L'applicazione deve permettere di gestire l'intero ciclo sportivo di una squadra, dalla configurazione della squadra stessa, delle stagioni alla registrazione dei risultati, passando per anagrafiche, convocazioni, formazioni, eventi delle partite, valutazioni e statistiche.
+Principi fondamentali
+1. Il sistema è centrato su una squadra principale.
+2. Le squadre avversarie sono gestite attraverso info di base e risultati, senza richiedere una rosa.
+3. Tutti i dati sportivi devono essere riferibili alla stagione.
+4. Le competizioni appartengono a una stagione.
+5. La squadra può disputare partite, ognuna delle quali appartiene ad una competizione.
+6. Ogni giocatore possiede un'identità persistente anche passando da una stagione all'altra.
+7. Le statistiche devono derivare da dati registrati.
+8. I dati storici devono essere conservati.
+9. Le informazioni devono poter essere aggiornate senza compromettere i riferimenti esistenti.
+10. I dati devono essere centralizzati su Supabase/PostgreSQL.
+11. GitHub contiene il codice dell'applicazione.
+12. La gestione dei permessi deve distinguere amministratori, utenti associati a giocatori, utenti fan o ospiti senza login.
+13. Tutti i calcoli devono essere riproducibili a partire dai dati originali.
+14. Nessuna modifica alle funzionalità deve introdurre una seconda fonte di verità per lo stesso dato.
+
+2. ARCHITETTURA
+Tecnologie
+* Repository GitHub.
+* Database PostgreSQL gestito tramite Supabase.
+* Autenticazione Supabase.
+* Supabase Storage per i file.
+* Supabase Edge Functions per operazioni server-side.
+* Row Level Security per la protezione dei dati.
+* API REST Supabase per la lettura e la modifica dei record.
+Gerarchia logica
+Organizzazione
+→ Squadra
+→ Stagione
+→ Competizione
+→ Giornata
+→ Partita
+→ Formazione
+→ Eventi
+→ Valutazioni
+→ Statistiche
+La gerarchia dei giocatori è distinta:
+Squadra
+→ Giocatore
+→ Rosa stagionale
+→ Convocazioni
+→ Partecipazioni
+→ Eventi personali
+→ Valutazioni
+→ Statistiche individuali.
+Fonti dei dati
+Separare concettualmente:
+* Dati anagrafici: informazioni persistenti relative a squadra, giocatori, avversarie e organizzazione.
+* Dati configurativi: stagioni, competizioni, regolamenti e permessi.
+* Dati ufficiali: calendario, incontri e risultati.
+* Dati operativi: convocazioni, formazione, eventi e gestione live.
+* Dati valutativi: voti assegnati ai giocatori.
+* Dati derivati: statistiche e classifiche calcolate.
+Non duplicare inutilmente le informazioni.
+
+3. SEZIONI FUNZIONALI
+Le sezioni previste dall'applicazione sono:
+1. Home
+2. Competizioni
+3. Calendario
+4. Match Center (info e dettagli partita)
+5. Rosa
+6. Scheda giocatore
+7. Statistiche
+8. Squadra
+9. Avversarie
+10. Stagioni
+11. Setup competizioni
+12. Importazione dati
+13. Gestione utenti
+14. Profilo utente
+15. Autenticazione
+16. Gestione disponibilità e disciplina
+Nel database esistono inoltre strutture per gestione amministrativa, allenamenti, presenze, certificati medici, quote, multe, contratti, ruoli dello staff ed elezioni dei capitani (funzioni per versione PRO).
+
+4. CONFIGURAZIONE SQUADRA
+Ogni squadra dispone di un identificativo univoco.
+Dati salvati
+* ID squadra
+* Organizzazione di appartenenza
+* Nome completo
+* Nome abbreviato
+* Identificativo testuale univoco
+* Logo
+* Colore principale
+* Colore secondario
+* Terzo colore
+* Data creazione
+* Data aggiornamento
+* Campo di casa
+* Indirizzo del campo
+* Configurazione della divisa
+* Visibilità della squadra
+* Abilitazione al seguito da parte dei tifosi
+Configurazione divisa
+Memorizzare:
+* Tipologia della divisa
+* Colore principale
+* Colore secondario
+* Colore dei numeri
+Tipologie previste:
+* Tinta unita
+* Bande verticali
+* Bande orizzontali
+* Due metà
+* Diagonale
+Il numero mostrato per un giocatore in una partita deriva dalla registrazione specifica di quella partita.
+Il numero abituale associato al giocatore non deve sostituire il numero effettivamente utilizzato nello storico.
+
+5. GESTIONE STAGIONI
+La squadra può avere un numero indefinito di stagioni.
+Dati
+* ID stagione
+* ID squadra
+* Nome stagione
+* Data inizio
+* Data fine
+* Stato
+* Data creazione
+Stati
+* Futura
+* Attiva
+* Archiviata
+Regole
+* La stagione attiva è il contesto operativo predefinito.
+* È possibile selezionare stagioni precedenti.
+* Le competizioni sono riferite alla stagione.
+* Le partite sono riferite alla competizione.
+* I giocatori appartengono alla squadra indipendentemente dalla stagione, mentre la loro partecipazione alla rosa è stagionale (talvolta per solo un periodo parziale).
+* Le statistiche stagionali devono utilizzare esclusivamente gli incontri pertinenti.
+* Gli identificativi dei giocatori devono rimanere stabili.
+* Archiviare una stagione non significa cancellarne i record.
+
+6. GESTIONE COMPETIZIONI
+Gestire le seguenti categorie:
+* Campionato
+* Coppa
+* Amichevoli
+Informazioni registrate
+* ID competizione
+* ID stagione
+* Nome
+* Categoria
+* Formato
+* Numero dei tempi regolamentari
+* Durata di ciascun tempo
+* Sistema dei punti
+* Regole disciplinari
+* Struttura delle fasi
+* Abilitazione dei tempi supplementari
+* Numero e durata dei supplementari
+* Abilitazione dei rigori
+* Andata e ritorno negli incontri a eliminazione
+* Eventuali playoff e playout
+Formati
+Campionato
+* Girone unico
+* Sola andata
+* Andata e ritorno
+* Eventuali fasi successive
+Coppa
+* Gironi
+* Eliminazione diretta
+* Fase a gironi seguita da eliminazione diretta
+* Incontri singoli
+* Incontri di andata e ritorno
+Amichevoli
+* Partite singole
+* Nessun obbligo di classifica
+Regolamenti
+Per ogni competizione è possibile definire:
+* Punti vittoria
+* Punti pareggio
+* Punti sconfitta
+* Durata dei tempi
+* Supplementari
+* Rigori
+* Regole disciplinari
+* Soglie di ammonizioni
+* Durata dell'espulsione temporanea
+La configurazione del regolamento deve rimanere associata alla competizione, senza assumere che tutte seguano le stesse regole.
+
+7. AVVERSARIE
+Le squadre avversarie sono entità distinte dalla squadra principale.
+Dati
+* Identificativo
+* Nome completo
+* Nome abbreviato
+* Logo
+* Colore principale
+* Colore secondario
+* Terzo colore
+* Nome del campo di casa
+* Indirizzo del campo
+* Data creazione
+Relazioni
+Una squadra avversaria può partecipare a più competizioni e a più stagioni.
+La relazione fra avversaria e competizione è molti-a-molti.
+L'eliminazione di un'anagrafica non deve compromettere la consultazione delle partite storiche.
+
+8. CALENDARIO E FIXTURE
+Il calendario ufficiale è costituito dalle fixture.
+Dati fixture
+* ID fixture
+* Stagione
+* Competizione
+* Numero giornata
+* Data e ora
+* Squadra di casa
+* Squadra ospite
+* Campo
+* Indirizzo
+* Stato
+* Risultato casa
+* Risultato ospite
+Funzionalità
+* Creare incontri manualmente.
+* Modificare incontri.
+* Inserire risultati.
+* Gestire partite già disputate.
+* Filtrare per competizione.
+* Filtrare le partite della squadra principale.
+* Consultare tutte le giornate.
+* Associare avversarie già censite.
+Relazione fra fixture e partita operativa
+Distinguere:
+app_competition_fixtures: calendario e risultati ufficiali.
+app_matches: gestione operativa della partita della squadra principale.
+Un dettaglio match ha un ID fixture di riferimento
+Risultati senza marcatori
+Un risultato deve poter essere registrato anche senza conoscere tutti i marcatori.
+Esempio:
+Partita conclusa 3-2.
+Sono noti solamente due gol della squadra di casa.
+Il risultato ufficiale resta 3-2.
+Le statistiche complessive possono utilizzare il risultato; quelle individuali devono utilizzare esclusivamente gli eventi con autore identificato.
+Non inventare eventi mancanti.
+
+9. CLASSIFICHE
+Per ciascuna competizione con classifica calcolare o acquisire:
+* Partite giocate
+* Vittorie
+* Pareggi
+* Sconfitte
+* Gol fatti
+* Gol subiti
+* Differenza reti
+* Punti
+* Posizione
+* Variazione rispetto alla giornata precedente.
+Formule
+Partite giocate:
+PG = V + N + P
+Differenza reti:
+DR = GF - GS
+Punti:
+PT = V × PV + N × PN + P × PP
+Dove PV, PN e PP sono i punti configurati per vittoria, pareggio e sconfitta.
+Le regole di ordinamento a parità di punti devono seguire il regolamento della competizione.
+Non presumere automaticamente che la differenza reti sia sempre il primo criterio di spareggio.
+
+10. CLASSIFICA PROIETTATA
+Il progetto comprende un algoritmo client-side per stimare l'evoluzione della classifica.
+Fattori di forza della squadra
+La formula attualmente documentata utilizza:
+* 30% rendimento stagionale
+* 25% forma recente
+* 20% differenza reti
+* 10% efficacia offensiva
+* 10% efficacia difensiva
+* 5% rendimento casa/trasferta
+I fattori devono essere normalizzati prima della combinazione.
+La forma recente deve dare peso maggiore alle partite più vicine.
+Si dovrà implementare, quando disponibile, controllo sui dati con situazioni di vantaggio/svantaggio, casa/trasferta, avversarie di alto/basso rango, situazioni di inferiorità/superiorità numerica da combinare nelle simulazioni delle partite di calcolo previsione.
+Eventuale aggiunta del risultato finale della stagione passata (che può essere di un livello di serie diversa tra squadre: serie A/A2/B), da usare per i match iniziali, ma con progressiva diminuzione della valenza.
+Simulazione
+* Considerare il calendario residuo.
+* Calcolare la forza relativa delle squadre.
+* Simulare gli incontri mancanti.
+* Ripetere 10.000 simulazioni.
+* Utilizzare generazione pseudocasuale deterministica.
+* Ricalcolare le classifiche finali per ogni simulazione.
+Risultati derivati
+* Posizione stimata
+* Variazione rispetto alla posizione attuale
+* Punti finali attesi
+* Intervallo tra 20° e 80° percentile della posizione
+* Indicatore euristico di affidabilità
+L'affidabilità cresce in funzione della quantità di stagione già disputata.
+Questa proiezione non è una classifica ufficiale e non viene salvata come dato persistente.
+Deve essere ricalcolabile dai dati originali, solo quando avvengono variazioni su di essi (non ad ogni refresh).
+
+11. ANAGRAFICA GIOCATORI
+Ogni giocatore possiede un'identità unica.
+Dati
+* ID giocatore
+* ID squadra
+* ID profilo utente, se associato
+* Nome
+* Cognome
+* Data di nascita
+* Nazionalità
+* Altezza
+* Piede preferito
+* Ruolo generico
+* Foto
+* “Contratto” - Data inizio e fine della propria stagione (può iniziare/finire a stagione in corso), durata predefinita dal 1/7 al 30/6 della stagione in corso. Il dato viene mostrato solo se “Data inizio contratto > Data prima partita” o “Data fine contratto < Data ultima partita”.
+Ruoli
+Utilizzare la classificazione generale:
+* P: Portiere
+* D: Difensore
+* C: Centrocampista
+* A: Attaccante
+Il ruolo generico e l'eventuale posizione specifica in campo devono rimanere concetti distinti.
+Si prevede una definizione più dettagliata del ruolo (stile mantra/fifa, con posizione precisa sul campo e % comfort)
+Numero di maglia
+Il numero di maglia delle partite è un dato storico.
+Il numero abituale può essere derivato dalla moda dei numeri effettivamente utilizzati.
+Regole:
+1. Considerare le registrazioni storiche valide.
+2. Contare la frequenza di ogni numero.
+3. Individuare il numero maggiormente utilizzato.
+4. In caso di parità applicare un criterio deterministico, preferibilmente il numero utilizzato più recentemente.
+5. Non alterare i numeri delle partite precedenti.
+Il numero derivato non deve diventare automaticamente una modifica manuale dell'anagrafica.
+
+12. ROSA STAGIONALE
+La rosa collega giocatori e stagioni.
+Dati
+* ID record
+* ID stagione
+* ID giocatore
+* Numero eventualmente memorizzato per la stagione
+* Stato attivo
+Funzioni
+* Inserimento giocatore nella rosa.
+* Rimozione o disattivazione dalla rosa corrente (gestendo date contratto).
+* Consultazione dello storico.
+* Modifica dell'anagrafica da parte degli amministratori.
+* Ordinamento secondo le informazioni disponibili.
+* Consultazione del rating medio.
+* Accesso alla scheda giocatore.
+Un giocatore inattivo in una stagione non deve essere automaticamente eliminato dallo storico della squadra.
+
+13. MATCH CENTER
+Il Match Center è il sistema centrale per gestire una partita della squadra principale.
+Deve utilizzare lo stesso record di partita nelle fasi:
+* Prepartita
+* Live
+* Partita conclusa
+Dati partita
+* ID partita
+* ID stagione
+* ID competizione
+* ID avversaria
+* Data e ora
+* Casa o trasferta
+* Campo
+* Indirizzo
+* Giornata
+* Stato
+* Risultato casa
+* Risultato ospite
+* Tempo corrente
+* Orario inizio live
+* Orario finalizzazione
+* Formazione/modulo
+* Note
+Contenuti funzionali
+* Informazioni generali
+* Risultato
+* Marcatori
+* Eventi
+* Disponibilità
+* Formazione
+* Convocazioni
+* Sostituzioni
+* Gestione dei tempi
+* Valutazioni
+* Statistiche partita
+* Chiusura e finalizzazione
+Stati
+Gestire almeno:
+* Programmata
+* In corso
+* Conclusa
+Distinguere una partita conclusa da un risultato ancora provvisorio.
+
+14. DISPONIBILITÀ GIOCATORI
+Prima della partita deve essere possibile registrare le convocazioni:
+* Disponibile
+* Infortunato
+* Squalificato
+* Indisponibile per altri motivi
+Regole
+Squalifica: impedisce la convocazione nella formazione attiva secondo le regole della competizione.
+Infortunio: viene segnalato come indisponibilità; nel comportamento attualmente documentato non costituisce automaticamente un blocco assoluto.
+Altre indisponibilità: motivazione registrabile.
+Le indisponibilità possono avere validità per intervalli di date.
+
+15. FORMAZIONE E CONVOCAZIONI
+La partecipazione dei giocatori a una partita è salvata separatamente dall'anagrafica.
+Dati
+* ID
+* ID partita
+* ID giocatore
+* Stato convocazione
+* Titolare
+* Minuti eventualmente memorizzati
+* Numero maglia nella partita
+* Posizione tattica
+* Motivazione indisponibilità
+* Note indisponibilità
+* Capitano
+* Motivo del mancato utilizzo di un convocato
+Classificazioni
+* Titolare
+* Panchina
+* Non convocato
+Regole
+* Una formazione iniziale standard comprende undici titolari.
+* Il capitano deve appartenere ai titolari.
+* Le sostituzioni devono aggiornare la composizione effettiva in campo.
+* Il giocatore sostituito non è più attivo dal momento dell'uscita per gol/assist e possibilità di tornare in campo (eccetto amichevoli).
+* Il subentrato diventa attivo dal momento dell'ingresso.
+* Deve essere possibile registrare l'uscita di un giocatore senza sostituzione.
+* Le espulsioni modificano immediatamente il numero dei giocatori attivi.
+Modulo
+Memorizzare il modulo della squadra.
+È presente anche una struttura dedicata alle variazioni tattiche, con:
+* Partita
+* Minuto
+* Modulo precedente
+* Modulo successivo
+* Posizioni dei giocatori
+* Autore della modifica
+* Note
+
+16. GESTIONE EVENTI
+Gli eventi delle partite sono registrati in app_match_events.
+Dati dell'evento
+* ID evento
+* ID partita
+* Tipo evento
+* Minuto
+* Minuto di recupero
+* Giocatore principale
+* Giocatore secondario
+* Squadra interessata
+* Motivazione della sostituzione
+* Payload con informazioni aggiuntive
+* Autore della proposta
+* Stato di validazione
+* Autore dell'ufficializzazione
+* Data ufficializzazione
+* Fonte
+* Riferimento evento esterno
+* Dati originali importati
+* Data creazione
+Eventi supportati o previsti dal motore
+* Gol
+* Autogol, tramite classificazione del gol
+* Assist associato al gol
+* Sostituzione
+* Uscita senza sostituzione
+* Ammonizione
+* Cartellino blu
+* Espulsione
+* Rientro dopo espulsione temporanea
+* Fine periodo
+* Recupero
+* Eventi della squadra avversaria
+Regole per il gol/autogol
+Registrare:
+* Squadra beneficiaria
+* Marcatore, quando noto
+* Assist, quando noto
+* Tipologia del gol
+* Tempo
+* Minuto
+* Recupero
+Marcatore e assist devono restare distinguibili.
+Un evento privo di marcatore noto non deve generare un marcatore fittizio.
+Regole per sostituzione
+* Giocatore uscente obbligatorio.
+* Giocatore entrante facoltativo.
+* Minuto, se disponibile.
+* Motivazione, se disponibile.
+Regole per cartellini
+* Giallo: evento disciplinare.
+* Rosso: espulsione definitiva dalla partecipazione.
+* Blu: espulsione temporanea.
+* Rientro dal blu: evento automatico separato, nascosto.
+I cartellini possono essere attribuiti anche ai giocatori in panchina, secondo i controlli operativi.
+
+17. ELEGGIBILITÀ DEGLI EVENTI
+Un evento relativo a un giocatore deve essere coerente con la sua effettiva partecipazione.
+Titolari
+Sono eleggibili dal calcio d'inizio fino a:
+* Sostituzione
+* Espulsione
+* Uscita definitiva
+* Fine partita
+Subentrati
+Sono eleggibili dal loro ingresso fino a uno degli eventi di uscita.
+Applicazioni
+La verifica temporale deve essere utilizzata per:
+* Marcatori
+* Assist
+* Uscite
+* Eventi che richiedono la presenza in campo
+Se il minuto non è conosciuto, mantenere la possibilità di registrare l'evento senza inventarne il momento.
+Non assumere che un evento senza minuto sia avvenuto automaticamente al termine della partita.
+
+18. GESTIONE DEL TEMPO
+Il minutaggio deve distinguere:
+1. Minuto del periodo.
+2. Recupero.
+3. Tempo assoluto interno usato per i calcoli.
+Esempio
+Competizione con tempi da 45 minuti.
+Primo tempo:
+* 40 minuti regolamentari
+* 3 minuti di recupero
+Secondo tempo:
+* 40 minuti regolamentari
+* 4 minuti di recupero
+Durata totale effettivamente contabilizzata:
+40 + 3 + 40 + 4 = 87 minuti.
+L'asse temporale interno è continuo:
+* Primo tempo: da 0 a 43.
+* Secondo tempo: da 43 a 87.
+* A video, nel tabellino, gli eventi sommano solo il tempo senza recupero (es. 43'pt=40’+3’, 20’st=60’, 44’st=80’+4’)
+Regole
+* Le durate regolamentari dipendono dalla competizione.
+* Il recupero può essere registrato esplicitamente.
+* In assenza di registrazione esplicita può essere inferito dagli eventi disponibili.
+* Le statistiche devono essere calcolate usando un unico criterio temporale.
+* Gli eventi senza minuto non devono essere collocati artificialmente su una timeline numerica precisa.
+Cronologia degli eventi senza minuto
+Se il minuto manca:
+* Conservare il valore NULL.
+* Utilizzare l'ordine di registrazione quando necessario.
+* Utilizzare il periodo se conosciuto.
+* Evitare di attribuire un minuto fittizio.
+* Separare l'ordinamento logico dalla precisione temporale.
+
+19. CARTELLINO BLU
+Il cartellino blu comporta un'espulsione temporanea.
+Durata
+La durata può essere configurata nelle regole disciplinari della competizione.
+Effetti
+Alla registrazione del cartellino blu:
+1. Il giocatore viene temporaneamente escluso dai giocatori attivi, salvo per altri eventi disciplinari.
+2. La squadra rimane momentaneamente con un giocatore in meno.
+3. Inizia l'intervallo di sospensione.
+4. Il giocatore accumula lo stesso minuti di presenza attiva mentre è escluso.
+Rientro
+Automatico (o su forzatura esplicita con alert se inferiore durata prevista).
+
+20. RISULTATI E VALIDAZIONE
+Gestire due concetti separati:
+* Risultato provvisorio/live.
+* Risultato definitivo.
+Regole
+* Gli eventi possono contribuire al risultato live.
+* Il risultato ufficiale può essere registrato senza tutti gli eventi.
+* La conclusione di una partita non implica che ogni marcatore sia conosciuto.
+* Una partita finalizzata deve mantenere un risultato coerente.
+* Una successiva modifica deve consentire la riconciliazione con gli eventi.
+* Le statistiche individuali devono utilizzare solo informazioni effettivamente registrate.
+
+21. VALUTAZIONI GIOCATORI
+Il sistema di valutazione è denominato Voti.
+I dati sono registrati in app_match_ratings.
+Campi
+* ID
+* ID partita
+* ID giocatore
+* ID votante
+* Voto
+* Data registrazione
+Scala
+Valori ammessi:
+1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10.
+Prevedere inoltre:
+SV — Senza voto
+SV non è numericamente equivalente a zero e non entra nelle medie.
+Partecipanti
+Possono essere valutati i giocatori effettivamente entrati in campo.
+Media partita del giocatore
+Se vengono registrate N valutazioni valide:
+Rating partita = somma voti validi / N
+Rating medio stagionale del giocatore
+Il codice di aggregazione attuale utilizza la media delle valutazioni medie delle partite valutate:
+Rating stagionale = somma dei rating delle partite valutate / numero delle partite valutate
+Le partite SV non entrano nel denominatore.
+La media stagionale non deve essere confusa con la media ponderata in base ai minuti usata per il rating della squadra.
+
+22. STATISTICHE GIOCATORE
+Tutte le statistiche stagionali derivano dalle partite concluse e dai rispettivi eventi validi.
+Informazioni disponibili
+* Presenze
+* Presenze da titolare
+* Ingressi dalla panchina
+* Uscite
+* Minuti giocati
+* Gol
+* Assist
+* Gol nel primo tempo
+* Gol nel secondo tempo
+* Gol segnati da titolare
+* Gol segnati da subentrato
+* Cartellini gialli
+* Cartellini blu
+* Cartellini rossi
+* Totale cartellini
+* Espulsioni
+* Rating medio
+* Partite valutate
+* Ultime valutazioni
+* Gol fatti dalla squadra mentre il giocatore è in campo
+* Gol subiti mentre il giocatore è in campo
+* Plus/minus
+* Rimonte positive
+* Rimonte negative
+* Risultati migliorati
+* Risultati mantenuti
+* Risultati peggiorati
+Presenza
+Una presenza viene attribuita quando il giocatore ha effettivamente partecipato all'incontro.
+Un titolare è considerato presente anche nei casi limite in cui il minutaggio ricostruito sia zero.
+Un panchinaro mai entrato non riceve una presenza.
+Minuti giocati
+I minuti si ricostruiscono utilizzando:
+* Formazione iniziale
+* Sostituzioni
+* Espulsioni
+* Blu
+* Rientri
+* Fine partita
+Formula generale:
+Minuti = somma delle durate degli intervalli in cui il giocatore è effettivamente attivo in campo.
+Il campo minutes_played esiste nel database, ma il calcolo avanzato attuale ricostruisce la durata dalla timeline degli eventi, senza considerare il valore memorizzato come necessariamente autorevole.
+Gol
+Gol = numero di eventi gol validi attribuiti al giocatore.
+Assist
+Assist = numero di eventi gol nei quali il giocatore risulta come giocatore secondario associato all'assist.
+Disciplina
+Totale cartellini = gialli + blu + rossi.
+
+23. IMPATTO DEL GIOCATORE SUL RISULTATO
+Calcolare l'impatto considerando ciò che accade mentre il giocatore è effettivamente in campo.
+Gol a favore sul campo
+Numero di gol segnati dalla propria squadra durante i suoi intervalli di presenza.
+Gol contro sul campo
+Numero di gol subiti durante gli stessi intervalli.
+Plus/minus
+Plus/minus = gol a favore sul campo - gol contro sul campo.
+Esempio:
+Un giocatore entra con la squadra sotto 0-2.
+Durante la sua permanenza la squadra segna tre gol e non ne subisce.
+Il suo plus/minus è +3.
+Non equivale necessariamente a tre gol direttamente provocati dal giocatore.
+Impatto sul risultato
+Per ogni intervallo di permanenza considerare:
+* Differenza reti al momento dell'ingresso.
+* Differenza reti al momento dell'uscita.
+* Condizioni di vantaggio, parità o svantaggio attraversate.
+Attribuire una classificazione temporale:
+Risultato migliorato
+Il giocatore termina il proprio intervallo con uno stato di risultato migliore rispetto all'ingresso.
+Esempio: da sconfitta a pareggio oppure da pareggio a vittoria.
+Risultato peggiorato
+Lo stato del risultato peggiora.
+Esempio: da pareggio a sconfitta.
+Risultato mantenuto
+Il risultato conserva lo stesso livello durante l'intervallo considerato, rispettando le condizioni definite dall'algoritmo.
+Rimonte
+Rimonta positiva: durante l'intervallo del giocatore la squadra passa da una condizione di svantaggio alla parità o al vantaggio.
+Rimonta negativa: durante l'intervallo la squadra perde un vantaggio raggiungendo la parità o lo svantaggio.
+Queste metriche misurano una correlazione temporale con la presenza in campo, non la responsabilità causale del singolo calciatore.
+
+24. STATISTICHE SQUADRA (anche per avversarie, se disponibili - da usare nelle simulazioni scontri per classifica pronosticata)
+Risultati
+* Partite disputate
+* Vittorie
+* Pareggi
+* Sconfitte
+* Percentuale vittorie
+* Percentuale pareggi
+* Percentuale sconfitte
+* Gol fatti
+* Gol subiti
+* Differenza reti
+* Porte inviolate
+Calcoli
+Percentuale vittorie = vittorie / partite disputate × 100
+Differenza reti = gol fatti - gol subiti
+Porta inviolata = partita conclusa con zero gol subiti.
+Casa e trasferta
+Separare:
+* Partite in casa
+* Partite in trasferta
+* Gol fatti in casa
+* Gol subiti in casa
+* Gol fatti in trasferta
+* Gol subiti in trasferta
+Eventi
+* Numero sostituzioni
+* Numero assist
+* Numero ammonizioni
+* Numero cartellini blu
+* Numero espulsioni
+Distribuzione dei gol
+* Primo tempo
+* Secondo tempo
+* Prima metà del primo tempo
+* Seconda metà del primo tempo
+* Prima metà del secondo tempo
+* Seconda metà del secondo tempo
+Recuperi
+* Gol segnati nel recupero del primo tempo
+* Gol segnati nel recupero del secondo tempo
+* Gol subiti nel recupero del primo tempo
+* Gol subiti nel recupero del secondo tempo
+Titolari e subentrati
+* Gol dei titolari
+* Gol dei subentrati
+La distinzione è determinata dal ruolo iniziale del giocatore nella formazione, non semplicemente dal minuto del gol.
+
+25. STATISTICHE SITUAZIONALI (anche per avversarie, se disponibili - da usare nelle simulazioni scontri per classifica pronosticata)
+Per ogni gol distinguere la situazione del risultato immediatamente precedente.
+Gol segnati
+* Con squadra in vantaggio
+* Con squadra in parità
+* Con squadra in svantaggio
+Gol subiti
+* Con squadra in vantaggio
+* Con squadra in parità
+* Con squadra in svantaggio
+Inferiorità o superiorità numerica
+Registrare:
+* Gol fatti in superiorità
+* Gol fatti in parità numerica
+* Gol fatti in inferiorità
+* Gol subiti in superiorità
+* Gol subiti in parità numerica
+* Gol subiti in inferiorità
+Il conteggio dei giocatori disponibili deve considerare le espulsioni definitive e temporanee.
+Tempi trascorsi per situazione
+Calcolare i minuti complessivi in cui la squadra si trova:
+* In vantaggio
+* In parità
+* In svantaggio
+* In superiorità numerica
+* In parità numerica
+* In inferiorità numerica
+I periodi temporali sono ricostruiti dalla sequenza degli eventi.
+
+26. RIMONTE DELLA SQUADRA (anche per avversarie, se disponibili - da usare nelle simulazioni scontri per classifica pronosticata)
+Distinguere:
+Rimonta effettuata
+La squadra si trova in svantaggio e riesce successivamente a raggiungere almeno la parità.
+Rimonta subita
+La squadra è in vantaggio e successivamente viene raggiunta o superata.
+Rimonta conclusa con vittoria
+La squadra, dopo essere stata in svantaggio, recupera e conclude vincendo.
+Rimonta avversaria conclusa con sconfitta
+La squadra, dopo essere stata in vantaggio, perde definitivamente.
+Ogni indicatore deve essere ricostruito seguendo l'evoluzione del punteggio.
+Non dedurre una rimonta dal solo risultato finale.
+Un incontro terminato 3-2 non implica necessariamente che sia avvenuta una rimonta.
+
+27. RATING MEDIO DELLA SQUADRA
+Il rating della squadra deve tenere conto del minutaggio effettivo dei giocatori valutati.
+Formula
+Rating squadra partita =
+Somma (rating medio del giocatore × minuti giocati dal giocatore) / somma dei minuti dei giocatori con voto valido.
+Esempio
+Giocatore A:
+Voto 8, minuti 90.
+Giocatore B:
+Voto 6, minuti 45.
+Giocatore C:
+Voto 7, minuti 45.
+Calcolo:
+(8×90 + 6×45 + 7×45) / (90+45+45)
+Risultato = 7,25.
+Regole
+* SV esclusi.
+* Giocatori senza voto esclusi.
+* Minuti zero esclusi.
+* Utilizzare i minuti effettivamente ricostruiti.
+* Non attribuire automaticamente un voto ai giocatori privi di valutazione.
+Rating stagionale squadra
+Media del rating partita di tutta la stagione, suddivisibile per competizione.
+
+28. SCHEDA GIOCATORE
+Informazioni previste
+Identità
+* Nome
+* Cognome
+* Numero abituale
+* Ruolo
+* Età
+* Altezza
+* Piede preferito
+* Nazionalità
+* Stato nella rosa
+Statistiche stagionali
+* Presenze
+* Partite da titolare
+* Minuti
+* Gol
+* Assist
+* Rating medio
+* Gialli
+* Blu
+* Rossi
+Andamento
+* Ultime cinque valutazioni
+* Avversaria relativa a ogni valutazione
+* Data partita
+* Eventuali SV
+Disponibilità
+* Infortuni
+* Situazione attuale
+* Storico
+* Date di recupero
+Ruoli specifici
+La struttura per l'analisi delle posizioni è prevista, ma nella scheda attuale l'elaborazione delle posizioni è ancora indicata come futura.
+Non rappresentare questa funzione come un calcolo già completato.
+
+29. INFORTUNI
+Gli infortuni sono salvati nella tabella injuries.
+Campi
+* ID infortunio
+* ID squadra
+* ID stagione
+* ID giocatore
+* Stato
+* Data infortunio
+* Rientro
+* Descrizione pubblica
+* Autore registrazione
+* Data creazione
+* Data aggiornamento
+Regole
+* Conservare lo storico.
+* Non eliminare un vecchio infortunio quando se ne registra uno nuovo.
+* Permettere modifiche autorizzate.
+* Collegare gli infortuni alla disponibilità del giocatore.
+Esistono inoltre tabelle per aggiornamenti e note dedicate allo staff.
+
+30. SQUALIFICHE
+La tabella suspensions gestisce le squalifiche.
+Informazioni
+* Giocatore
+* Squadra
+* Stagione
+* Competizione eventuale
+* Tipologia
+* Motivazione
+* Data emissione
+* Numero di partite da scontare
+* Numero di partite già scontate
+* Periodo di validità
+* Stato
+* Partita di origine
+* Eventuale provvedimento automatico collegato
+Regole
+* Le squalifiche devono essere considerate nella disponibilità.
+* Una squalifica può essere limitata a determinate competizioni.
+* I turni da scontare devono essere distinti dai turni effettivamente scontati.
+* L'azzeramento degli accumuli disciplinari deve rispettare il regolamento applicabile.
+Il database comprende anche gruppi disciplinari per condividere regole tra competizioni e registrazioni delle squalifiche generate automaticamente.
+
+31. HOME
+La sezione Home comprende funzionalmente:
+* Identificazione squadra
+* Stagione corrente
+* Prossima partita
+* Ultima partita
+* Risultati recenti
+* Indicatori complessivi della squadra
+* Classifica
+* Calendario
+* Partite della squadra
+* Statistiche personali del giocatore associato all'account
+Personalizzazione
+Il collegamento tra utente autenticato e giocatore utilizza app_user_roles.player_id.
+Se l'utente non è associato a un giocatore, non devono essere inventate statistiche personali.
+La selezione della stagione deve influenzare tutti i dati aggregati.
+
+32. AUTENTICAZIONE
+Il progetto usa Supabase Auth con un sistema applicativo basato su username.
+Componenti
+* profiles
+* auth_aliases
+* Supabase Auth
+* Edge Function auth-login
+* app_user_roles
+Accesso
+L'utente inserisce:
+* Username
+* Password
+L'Edge Function gestisce il percorso applicativo di autenticazione.
+Il frontend conserva e utilizza la sessione Supabase.
+Sessione
+Gestire:
+* Access token
+* Refresh token
+* Scadenza
+* Rinnovo della sessione
+* Logout
+Ruoli
+Nel frontend corrente la distinzione principale è tra:
+* Admin
+* Utente giocatore
+* Utente fan
+* Utente non autenticato
+Il database più ampio contiene un sistema aggiuntivo di ruoli e permessi.
+Recupero password
+È presente la tabella:
+tm_password_reset_requests
+Contiene:
+* ID
+* Utente
+* Stato della richiesta
+* Data richiesta
+* Data valutazione
+* Amministratore responsabile
+La procedura prevista richiede l'intervento dell'amministratore per autorizzare o gestire il recupero.
+La richiesta di recupero password deve essere distinta dal normale primo accesso.
+Sicurezza
+* Mai salvare password in chiaro nelle tabelle applicative.
+* Mai esporre chiavi privilegiate Supabase nel frontend.
+* Tutte le modifiche devono essere autorizzate dal database.
+* Utilizzare RLS.
+* Verificare i privilegi lato server.
+* Non considerare sicuro un controllo presente soltanto nell'interfaccia.
+
+33. SCHEMA DATABASE OPERATIVO PRINCIPALE
+Le principali tabelle effettivamente presenti sono:
+Organizzazione e squadra
+organizations
+* id
+* name
+* display_code
+* logo_url
+* primary_color
+* secondary_color
+* accent_color
+* informazioni di contatto e indirizzo
+* created_at
+* updated_at
+teams
+* id
+* organization_id
+* name
+* short_name
+* slug
+* logo_url
+* colori
+* configurazione divisa
+* campo di casa
+* parametri di visibilità
+* created_at
+* updated_at
+Stagioni
+app_seasons
+* id
+* team_id
+* name
+* start_date
+* end_date
+* status
+* created_at
+Competizioni
+app_competitions
+* id
+* season_id
+* name
+* kind
+* format
+* periods
+* minutes_per_period
+* win_points
+* draw_points
+* loss_points
+* knockout_two_legged
+* extra_time_enabled
+* extra_time_periods
+* extra_time_minutes
+* penalties_enabled
+* playoff_playout_enabled
+* discipline_rules
+* phase_rules
+* created_at
+Avversarie
+app_opponents
+* id
+* name
+* short_name
+* logo_url
+* primary_color
+* secondary_color
+* accent_color
+* home_venue_name
+* home_venue_address
+* created_at
+Partecipazione avversarie alle competizioni
+app_competition_opponents
+* competition_id
+* opponent_id
+* created_at
+Fixture
+app_competition_fixtures
+* id
+* season_id
+* competition_id
+* round_no
+* kickoff_at
+* home_team
+* away_team
+* venue
+* venue_name
+* venue_address
+* match_code
+* status
+* home_score
+* away_score
+* source
+* source_url
+* source_imported_at
+* manual_result_override
+* created_at
+* updated_at
+Classifica
+app_competition_standings
+* season_id
+* competition_id
+* team
+* played
+* won
+* drawn
+* lost
+* goals_for
+* goals_against
+* goal_difference
+* points
+Partite operative
+app_matches
+* id
+* season_id
+* competition_id
+* opponent_id
+* kickoff_at
+* venue
+* venue_name
+* venue_address
+* home_away
+* round_label
+* status
+* home_score
+* away_score
+* live_started_at
+* finalized_at
+* live_period
+* formation
+* notes
+* created_at
+Partecipanti
+app_match_players
+* id
+* match_id
+* player_id
+* selection_status
+* started
+* minutes_played
+* shirt_number
+* tactical_slot
+* unavailability_reason
+* unavailability_note
+* is_captain
+* unused_sub_reason
+Eventi
+app_match_events
+* id
+* match_id
+* event_type
+* minute
+* stoppage_minute
+* player_id
+* secondary_player_id
+* payload
+* proposed_by
+* validation_status
+* officialized_by
+* officialized_at
+* team_side
+* substitution_reason
+* source
+* source_event_key
+* source_raw
+* created_at
+Voti
+app_match_ratings
+* id
+* match_id
+* player_id
+* voter_id
+* rating
+* created_at
+Rosa
+app_roster
+* id
+* season_id
+* player_id
+* shirt_number
+* active
+Anagrafiche
+players
+* id
+* team_id
+* profile_id
+* first_name
+* last_name
+* birth_date
+* preferred_foot
+* photo_url
+* public_notes
+* nationality_code
+* favorite_team
+* favorite_club_id
+* generic_role_manual
+* height_cm
+* created_at
+* updated_at
+Ruoli applicativi
+app_user_roles
+* user_id
+* role
+* player_id
+* created_at
+Setup applicativo
+app_settings
+* id
+* community_confirmations_required
+* team_logo_url
+* theme_mode
+* theme_primary
+* theme_secondary
+* theme_accent
+* theme_surface_tint
+Eventi fixture
+app_fixture_events
+* id
+* fixture_id
+* event_type
+* minute
+* stoppage_minute
+* side
+* home_score
+* away_score
+* source
+* source_event_key
+* source_raw
+* created_by
+* created_at
+Cambi tattici
+app_match_tactical_changes
+* id
+* match_id
+* minute
+* formation_from
+* formation_to
+* positions
+* created_by
+* created_at
+* notes
+
+34. RELAZIONI DATABASE
+Le seguenti relazioni sono presenti come foreign key nel database.
+Organizzazione
+teams.organization_id → organizations.id
+Stagione
+app_seasons.team_id → teams.id
+Competizione
+app_competitions.season_id → app_seasons.id
+Fixture
+app_competition_fixtures.season_id → app_seasons.id
+app_competition_fixtures.competition_id → app_competitions.id
+Associazione avversarie
+app_competition_opponents.competition_id → app_competitions.id
+app_competition_opponents.opponent_id → app_opponents.id
+Partita
+app_matches.season_id → app_seasons.id
+app_matches.competition_id → app_competitions.id
+app_matches.opponent_id → app_opponents.id
+Partecipazione
+app_match_players.match_id → app_matches.id
+app_match_players.player_id → players.id
+Eventi
+app_match_events.match_id → app_matches.id
+app_match_events.player_id → players.id
+app_match_events.secondary_player_id → players.id
+Rating
+app_match_ratings.match_id → app_matches.id
+app_match_ratings.player_id → players.id
+Rosa
+app_roster.season_id → app_seasons.id
+app_roster.player_id → players.id
+Anagrafica
+players.team_id → teams.id
+players.profile_id → profiles.id
+Fixture events
+app_fixture_events.fixture_id → app_competition_fixtures.id
+Modifiche tattiche
+app_match_tactical_changes.match_id → app_matches.id
+Infortuni
+injuries.player_id → players.id
+injuries.team_id → teams.id
+injuries.season_id → seasons.id
+Squalifiche
+suspensions.player_id → players.id
+suspensions.team_id → teams.id
+suspensions.season_id → seasons.id
+Identità
+team_members.profile_id → profiles.id
+team_members.team_id → teams.id
+Attenzione: app_user_roles.user_id e alcuni riferimenti agli utenti di autenticazione non compaiono tra le foreign key del database pubblico analizzate. Non inventare vincoli SQL soltanto perché esiste un collegamento logico.
+
+35. DOPPIO MODELLO DATABASE
+Il database contiene due famiglie principali di tabelle.
+Modello applicativo
+Prefisso:
+app_
+Comprende:
+* Stagioni
+* Competizioni
+* Calendari
+* Partite
+* Rose
+* Eventi
+* Rating
+* Classifiche
+* Importazioni CSI
+È il modello principalmente utilizzato dal frontend Team Manager analizzato.
+Modello gestionale generale
+Comprende:
+* seasons
+* competitions
+* matches
+* match_players
+* match_events
+* match_ratings
+* events
+* event_attendance
+* players
+* team_members
+* staff_assignments
+* injuries
+* suspensions
+* medical_examinations
+* membership_fees
+* fines
+* player_contracts
+Questi due modelli non devono essere considerati automaticamente intercambiabili.
+In particolare:
+* app_seasons non è la stessa tabella di seasons.
+* app_competitions non è la stessa tabella di competitions.
+* app_matches non è la stessa tabella di matches.
+* app_match_events non è la stessa tabella di match_events.
+Prima di consolidarli serve una mappatura completa delle dipendenze.
+Non eliminare alcuna delle due famiglie senza aver verificato riferimenti, permessi e dati esistenti.
+
+36. MODULI AGGIUNTIVI PRESENTI NEL DATABASE
+Le tabelle seguenti mostrano capacità predisposte dal modello dati, ma non attestano da sole l'esistenza di interfacce operative complete.
+Allenamenti e presenze
+* events
+* event_attendance
+* training_settings
+* v_attendance_stats
+Funzioni modellate:
+* Allenamenti
+* Eventi
+* Partecipazione
+* Presenze
+* Assenze
+* Ritardi
+* Statistiche delle presenze
+Certificati medici
+* medical_examinations
+* medical_appointments
+* player_contacts
+Funzioni modellate:
+* Scadenze mediche
+* Visite
+* Appuntamenti
+* Documentazione
+* Stato dell'idoneità
+Quote
+* membership_fees
+* season_fee_plans
+* season_fee_installments
+* player_fee_plan_assignments
+Funzioni modellate:
+* Quote stagionali
+* Piani di pagamento
+* Rate
+* Scadenze
+* Pagamenti
+* Approvazione dei pagamenti dichiarati
+Multe
+* fines
+* fine_categories
+* cash_fine_rules
+Funzioni modellate:
+* Tipologie di multa
+* Importi
+* Associazioni a eventi
+* Stato pagamento
+* Regole automatiche
+* Rettifiche
+Contratti
+* player_contracts
+* player_contract_requests
+Funzioni modellate:
+* Periodo contrattuale
+* Rinnovi
+* Scadenze
+* Richieste
+* Approvazioni
+Staff
+* staff_assignments
+* team_staff_access_requests
+Funzioni modellate:
+* Incarichi
+* Periodi di validità
+* Accesso autorizzato
+* Ruoli
+Elezioni dei capitani
+* captain_elections
+* captain_election_candidates
+* captain_ballots
+* captain_ballot_choices
+* captain_hierarchy
+Funzioni modellate:
+* Elezioni
+* Candidature
+* Preferenze
+* Punteggi
+* Graduatoria risultante
+Ruoli e autorizzazioni
+* roles
+* permissions
+* team_member_roles
+* team_role_permissions
+* user_permission_overrides
+* default_role_permissions
+* platform_roles
+* platform_user_roles
+Funzioni modellate:
+* Ruoli per squadra
+* Permessi granulari
+* Eccezioni individuali
+* Ruoli di piattaforma
+Notifiche e verifiche
+* team_notifications
+* audit_log
+* player_link_requests
+* team_creation_requests
+* tm_admin_requests
+* tm_password_reset_requests
+Funzioni modellate:
+* Notifiche
+* Tracciabilità delle modifiche
+* Associazione profilo-giocatore
+* Richieste di creazione squadra
+* Richieste amministrative
+* Recupero account
+
+37. VISTE E STATISTICHE SQL
+Nel database sono presenti viste come:
+* app_player_season_stats
+* app_competition_standings
+* v_player_season_stats
+* v_team_season_stats
+* v_player_match_minutes
+* v_player_position_minutes
+* v_match_score
+* v_match_rating_summary
+* v_player_rating_stats
+* v_attendance_stats
+* v_coach_match_results
+Le viste possono aggregare dati senza duplicarne fisicamente la memorizzazione.
+Regola
+Non presumere che due viste apparentemente equivalenti utilizzino gli stessi criteri.
+Per esempio, le viste del modello generale e le aggregazioni JavaScript del modello app_ potrebbero differire nelle modalità di calcolo dei minuti, delle presenze e dei rating.
+Definire esplicitamente una fonte autorevole per ogni indicatore.
+
+38. INTEGRITÀ E COERENZA
+L'applicazione deve rispettare i seguenti principi:
+1. Nessuna partita deve essere conteggiata due volte.
+2. Ogni evento deve appartenere a una partita valida.
+3. Ogni voto deve appartenere a un giocatore e una partita validi.
+4. Il conteggio delle presenze non deve includere automaticamente i convocati inutilizzati.
+5. Il minutaggio deve essere coerente con sostituzioni, cartellini e recuperi.
+6. Le statistiche stagionali devono dipendere dalla stagione selezionata.
+7. I risultati delle avversarie devono essere disponibili anche senza i marcatori.
+8. Le modifiche alle fixture non devono duplicare le partite operative.
+9. Le importazioni devono poter identificare record già esistenti.
+10. Le modifiche non devono cancellare dati storici non correlati.
+11. I giocatori non devono essere duplicati per differenze ortografiche facilmente riconciliabili.
+12. Le statistiche mancanti devono risultare non disponibili quando non sono calcolabili.
+13. La mancanza di un evento non equivale alla certezza che l'evento non sia avvenuto.
+14. Le elaborazioni devono essere deterministiche, salvo le simulazioni esplicitamente probabilistiche.
+15. Le simulazioni devono usare semi riproducibili.
+16. Tutte le scritture devono rispettare autorizzazioni e vincoli.
+17. I dati ufficiali e quelli derivati devono rimanere identificabili.
+
+39. STATO FUNZIONALE E PRIORITÀ DI COMPLETAMENTO
+Funzionalità
+* Autenticazione username/password
+* Sessione e refresh token
+* Gestione stagioni
+* Gestione squadra
+* Gestione competizioni
+* Gestione avversarie
+* Calendario e fixture
+* Risultati
+* Classifica
+* Proiezione classifica
+* Rosa
+* Scheda giocatore
+* Match Center
+* Formazione
+* Disponibilità
+* Eventi
+* Cartellini
+* Sostituzioni
+* Recuperi
+* Voti
+* Statistiche individuali e di squadra
+* Impatto sul risultato
+* Gestione infortuni
+* Richieste di ripristino password
+* 
+Funzionalità da considerare parziali o da verificare
+* Livescore avanzato
+* Regole disciplinari automatiche end-to-end
+* Consolidamento della disciplina con il modello gestionale generale
+* Rilevazione completa delle posizioni effettivamente giocate
+* Riconciliazione totale tra risultati ufficiali e tabellini
+* Gestione esaustiva dei flussi autorizzativi
+* Unificazione o convivenza definitiva dei due modelli di database
+
+40. ISTRUZIONI FINALI PER LO SVILUPPO
+L'obiettivo è preservare e completare il comportamento funzionale del Team Manager.
+Prima di intervenire:
+1. Leggere i file sorgenti effettivi dal repository GitHub.
+2. Analizzare lo schema PostgreSQL esistente.
+3. Controllare primary key, foreign key, unique constraint e check constraint.
+4. Identificare le tabelle utilizzate dal frontend.
+5. Verificare funzioni SQL, trigger, viste e policy RLS.
+6. Identificare le fonti di verità.
+7. Ricostruire le dipendenze fra i moduli.
+8. Distinguere dati salvati da dati calcolati.
+9. Preservare tutti i record storici.
+10. Evitare modifiche non necessarie a strutture condivise.
+Requisiti per i calcoli
+Ogni nuova metrica deve specificare:
+* Definizione
+* Dati di ingresso
+* Filtri
+* Formula
+* Unità di misura
+* Regole temporali
+* Trattamento dei valori null
+* Trattamento delle informazioni parziali
+* Casi limite
+* Aggregazione stagionale
+* Fonte di verità
+Requisiti per le modifiche al database
+* Non ricreare tabelle già esistenti senza necessità.
+* Non rinominare colonne senza analizzare tutte le dipendenze.
+* Non eliminare record come soluzione a incongruenze.
+* Non rimuovere RLS.
+* Utilizzare migrazioni controllate per modifiche strutturali.
+* Preservare i collegamenti fra entità.
+* Evitare duplicazione dei dati derivati.
+Requisiti per la validazione
+Prima di considerare completa una funzionalità, verificare almeno:
+* Partita senza eventi.
+* Partita con risultato ma marcatori parziali.
+* Partita con recupero.
+* Partita con espulsione.
+* Partita con cartellino blu e rientro.
+* Partita con sostituzione.
+* Partita con uscita senza ingresso.
+* Partita con eventi privi di minuto.
+* Partita con SV.
+* Giocatore convocato mai entrato.
+* Giocatore espulso.
+* Giocatore con più periodi di presenza in campo.
+* Competizione con durata diversa da X minuti.
+* Cambio stagione.
+* Competizione senza classifica.
+* Importazione ripetuta.
+* Utente senza giocatore associato.
+* Utente senza privilegi di modifica.
+Principio conclusivo: Team Manager deve essere un archivio sportivo coerente e verificabile, in cui anagrafiche, competizioni, partite, eventi, valutazioni e statistiche siano strettamente correlati e ricostruibili dai dati originali, senza introdurre risultati, minutaggi o valutazioni artificiali.
