@@ -1,28 +1,29 @@
+import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const opts=(a,v)=>a.map(([k,n])=>'<option value="'+E(k)+'"'+(k===v?' selected':'')+'>'+E(n)+'</option>').join('');
 const types=['goal','own_goal','penalty_scored','penalty_missed','assist','substitution','yellow_card','blue_card','blue_return','red_card','period_end','other'].map(x=>[x,x]);
 const reasons=['','tactical','technical','injury','other','technical_choice','injury_prevention','disciplinary_prevention','standing_ovation','give_teammates_time'].map(x=>[x,x||'Non specificato']);
-export function amendEventForm(ev,players=[]){
+export function amendEventForm(ev,players=[],competition=null){
  if(!ev)return '';
  const people=[['','Non noto / assente'],...players.map(p=>[p.id,[p.last_name,p.first_name].filter(Boolean).join(' ')])];
  const inp=(n,l,v='',t='text',a='')=>'<label class="staff-field"><span>'+l+'</span><input name="'+n+'" type="'+t+'" value="'+E(v)+'" '+a+'></label>';
  const sel=(n,l,items,v)=>'<label class="staff-field"><span>'+l+'</span><select name="'+n+'">'+opts(items,v)+'</select></label>';
  return '<form class="staff-amend-form staff-form" data-staff-form="amend-event" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'"><h3>Rettifica con storico</h3>'+
- '<p class="staff-help">La versione precedente sarà conservata; l’evento modificato torna proposto finché non viene validato.</p>'+
+ '<p class="staff-help">La versione precedente resta nello storico. La rettifica dell'admin è ufficiale; gli altri ruoli richiedono verifica.</p>'+
  (ev.payload?.counted_in_score?'<p class="data-warning">Evento conteggiato nel risultato: non cambiare tipo o squadra.</p>':'')+
  '<div class="staff-form-grid">'+
  sel('event_type','Tipo evento',types,ev.event_type)+sel('team_side','Squadra',[['team','Nostra'],['opponent','Avversaria']],ev.team_side)+
  sel('player_id','Giocatore / uscente',people,ev.player_id||'')+sel('secondary_player_id','Assist / entrante',people,ev.secondary_player_id||'')+
- inp('minute','Minuto assoluto',ev.minute??'','number','min="0" max="300" placeholder="Sconosciuto"')+
+ inp('minute','Minuto cumulativo',cumulativeEventMinute(ev,competition)??'','number','min="0" max="300" placeholder="Sconosciuto"')+
  inp('stoppage_minute','Recupero',ev.stoppage_minute??'','number','min="0" max="30"')+
  sel('substitution_reason','Motivo sostituzione',reasons,ev.substitution_reason||'')+
  inp('notes','Note',ev.payload?.notes||'','text','maxlength="400"')+
  inp('reason','Motivo rettifica','','text','required minlength="5" maxlength="500"')+
  '</div><div class="staff-event-buttons"><button class="staff-submit" type="submit">Salva rettifica</button><button class="staff-soft" type="button" data-staff-action="review-cancel-edit">Annulla</button></div></form>';
 }
-export function revisionHistory(rows=[]){
+export function revisionHistory(rows=[],competition=null){
  if(!rows.length)return '<p class="staff-help">Nessuna rettifica registrata.</p>';
- return '<div class="staff-revision-history"><h4>Storico rettifiche</h4>'+rows.map(r=>'<div class="staff-event-row"><strong>'+E(new Date(r.created_at).toLocaleString('it-IT'))+'</strong><span>'+E(r.reason)+'</span><small>Prima: '+E(r.previous_record?.event_type)+' ('+E(r.previous_record?.minute??'minuto ignoto')+') → dopo: '+E(r.next_record?.event_type)+' ('+E(r.next_record?.minute??'minuto ignoto')+')</small></div>').join('')+'</div>';
+ return '<div class="staff-revision-history"><h4>Storico rettifiche</h4>'+rows.map(r=>'<div class="staff-event-row"><strong>'+E(new Date(r.created_at).toLocaleString('it-IT'))+'</strong><span>'+E(r.reason)+'</span><small>Prima: '+E(r.previous_record?.event_type)+' ('+E(displayEventMinute(r.previous_record,competition,'minuto ignoto'))+') → dopo: '+E(r.next_record?.event_type)+' ('+E(displayEventMinute(r.next_record,competition,'minuto ignoto'))+')</small></div>').join('')+'</div>';
 }
 export function resultReconciliationHistory(rows=[]){
  if(!rows.length)return '<p class="staff-help">Nessun allineamento manuale registrato.</p>';
