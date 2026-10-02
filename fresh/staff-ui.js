@@ -1,0 +1,350 @@
+import {get,rpc,adminWrite} from './api.js';
+
+const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const attrs=(rows,key,label)=>rows.map(row=>'<option value="'+esc(row[key])+'">'+esc(row[label])+'</option>').join('');
+const option=(value,label,selected)=>'<option value="'+esc(value)+'"'+(String(value)===String(selected)?' selected':'')+'>'+esc(label)+'</option>';
+const input=(name,label,value='',type='text',extra='')=>'<label class="staff-field"><span>'+esc(label)+'</span><input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+extra+'></label>';
+const selection=(name,label,choices,current)=>'<label class="staff-field"><span>'+esc(label)+'</span><select name="'+name+'">'+choices.map(x=>option(x[0],x[1],current)).join('')+'</select></label>';
+const help=text=>'<p class="staff-help">'+esc(text)+'</p>';
+const title=(name,text)=>'<div class="staff-panel-heading"><div><span class="eyebrow">'+esc(name)+'</span><h2>'+esc(text)+'</h2></div></div>';
+const btn=(action,label)=>'<button type="button" class="staff-soft" data-staff-action="'+esc(action)+'">'+esc(label)+'</button>';
+const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</button>';
+const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:''},matchTab:'lineup',busy:false};
+const memory=initial;
+const areas=[['team','Squadra'],['seasons','Stagioni'],['competitions','Competizioni'],['opponents','Avversarie'],['players','Rosa'],['fixtures','Calendario']];
+const types=[['starter','Titolare'],['bench','Panchina'],['available','Da definire'],['absent','Non convocato']];
+const reasons=[['','Nessuno'],['injury','Infortunio'],['suspension','Squalifica'],['work','Lavoro'],['personal','Personale'],['illness','Malattia'],['travel','Viaggio'],['technical_choice','Scelta tecnica'],['physical','Condizione fisica'],['other','Altro']];
+const events=[['goal','Gol'],['own_goal','Autogol'],['penalty_scored','Rigore segnato'],['penalty_missed','Rigore sbagliato'],['yellow_card','Ammonizione'],['blue_card','Cartellino blu'],['blue_return','Rientro blu'],['red_card','Espulsione'],['substitution','Sostituzione / Uscita'],['period_end','Fine periodo'],['other','Altro']];
+const statuses=[['scheduled','Programmata'],['live','In corso'],['finished','Terminata'],['postponed','Rinviata'],['cancelled','Annullata']];
+const idOf=(list,id)=>list.find(x=>x.id===id)||null;
+const roleOf=ctx=>ctx.state.identity?.role?.role;
+export const isStaff=ctx=>['admin','manager'].includes(roleOf(ctx));
+function selectExisting(kind,records,text){return '<label class="staff-field"><span>Modifica esistente o crea nuovo</span><select data-staff-select="'+kind+'">'+option('','+ Nuovo',memory.selected[kind])+records.map(x=>option(x.id,x[text]||x.name||x.id,memory.selected[kind])).join('')+'</select></label>'}
+function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor">'+title('CONFIGURAZIONE',heading)+(description?help(description):'')+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}
+export function adminPage(ctx){
+ if(!isStaff(ctx))return '<div class="empty">Gestione riservata allo staff autorizzato.</div>';
+ const data=ctx.state.data||{},base=ctx.state.base||{},t=base.team||{};
+ const S=memory.selected,seasons=base.seasons||[],comps=data.competitions||[],opps=base.opponents||[],players=data.players||[],fixtures=data.fixtures||[];
+ let form='';
+ if(memory.area==='team'){
+  form=wrapForm('team','Identità squadra',
+   '<div class="staff-form-grid">'+input('name','Nome completo',t.name,'text','required maxlength="100"')+
+   input('short_name','Sigla',t.short_name,'text','required maxlength="12"')+
+   input('logo_url','URL stemma',t.logo_url||'','url')+
+   input('primary_color','Colore principale',t.primary_color||'#225e88','color')+
+   input('secondary_color','Colore secondario',t.secondary_color||'#f0f9ff','color')+
+   input('accent_color','Colore accento',t.accent_color||'#baeeb4','color')+
+   input('home_venue_name','Campo principale',t.home_venue_name||'')+'</div>',
+   'La modifica dei dati ufficiali è soggetta ai permessi di squadra presenti in Supabase.');
+ }
+ if(memory.area==='seasons'){
+  const selected=idOf(seasons,S.seasons);const fields=selectExisting('seasons',seasons,'name');
+  const dates=(selected?.start_date||'')+'|'+(selected?.end_date||'');
+  form=wrapForm('seasons','Stagioni',fields+
+   '<div class="staff-form-grid">'+input('name','Nome stagione',selected?.name||'','text','required')+
+   input('start_date','Inizio',selected?.start_date||'','date','required')+
+   input('end_date','Fine',selected?.end_date||'','date','required')+
+   selection('status','Stato',[['future','Futura'],['archived','Archiviata']],selected?.status==='active'?'future':selected?.status||'future')+'</div>',
+   'La stagione attiva non può essere disattivata da questo modulo. Usa «Imposta come attiva» per il passaggio atomico.')+
+   (selected&&selected.status!=='active'?'<div class="staff-after">'+btn('activate-season','Imposta come stagione attiva')+'</div>':'');
+ }
+ if(memory.area==='competitions'){
+  const c=idOf(comps,S.competitions);let settings=c?.discipline_rules||{};
+  form=wrapForm('competitions','Regolamenti delle competizioni',selectExisting('competitions',comps,'name')+
+   '<div class="staff-form-grid">'+input('name','Denominazione',c?.name||'','text','required')+
+   selection('kind','Categoria',[['league','Campionato'],['cup','Coppa'],['friendly','Amichevole'],['tournament','Torneo'],['other','Altro']],c?.kind||'league')+
+   input('format','Formato',c?.format||'round_robin','text','required maxlength="80"')+
+   input('periods','Numero tempi',c?.periods??2,'number','min="1" max="6" required')+
+   input('minutes_per_period','Minuti per tempo',c?.minutes_per_period??40,'number','min="1" max="120" required')+
+   input('win_points','Punti vittoria',c?.win_points??3,'number','min="0" max="20" required')+
+   input('draw_points','Punti pareggio',c?.draw_points??1,'number','min="0" max="20" required')+
+   input('loss_points','Punti sconfitta',c?.loss_points??0,'number','min="0" max="20" required')+
+   input('blue_duration','Blu: sospensione in minuti',settings.blue_duration_minutes||'','number','min="1" max="30"')+'</div>',
+   'Le competizioni conservano la propria durata e regole. Non vengono cancellati calendario o partite.');
+ }
+ if(memory.area==='opponents'){
+  const o=idOf(opps,S.opponents);
+  form=wrapForm('opponents','Anagrafiche avversarie',selectExisting('opponents',opps,'name')+
+   '<div class="staff-form-grid">'+input('name','Nome',o?.name||'','text','required')+
+   input('short_name','Sigla',o?.short_name||'','text','maxlength="15"')+
+   input('logo_url','Stemma (URL)',o?.logo_url||'','url')+
+   input('primary_color','Colore principale',o?.primary_color||'#567aa3','color')+
+   input('secondary_color','Colore secondario',o?.secondary_color||'#ffffff','color')+
+   input('home_venue_name','Campo',o?.home_venue_name||'')+
+   input('home_venue_address','Indirizzo campo',o?.home_venue_address||'')+'</div>',
+   'Ogni avversaria mantiene la sua identità tra stagioni e competizioni.');
+ }
+ if(memory.area==='players'){
+  const list=[...players].sort((a,b)=>String(a.last_name).localeCompare(String(b.last_name),'it'));
+  const p=idOf(players,S.players);const r=data.roster?.find(x=>x.player_id===p?.id);
+  form=wrapForm('players','Gestione anagrafica e rosa',
+   selectExisting('players',list,'last_name')+
+   '<div class="staff-form-grid">'+input('first_name','Nome',p?.first_name||'','text','required')+
+   input('last_name','Cognome',p?.last_name||'','text','required')+
+   selection('generic_role_manual','Ruolo',[['','Non specificato'],['P','Portiere'],['D','Difensore'],['C','Centrocampista'],['A','Attaccante']],p?.generic_role_manual||'')+
+   selection('preferred_foot','Piede',[['','Non indicato'],['right','Destro'],['left','Sinistro'],['both','Ambidestro']],p?.preferred_foot||'')+
+   input('height_cm','Altezza (cm)',p?.height_cm??'','number','min="100" max="245"')+
+   selection('active','Nella rosa della stagione',[['true','Sì'],['false','No']],r?.active===false?'false':'true')+'</div>',
+   'L’identità del giocatore resta invariata fra stagioni. La rimozione dalla rosa non elimina lo storico.');
+ }
+ if(memory.area==='fixtures'){
+  const own=fixtures.filter(x=>ctx.involvesTeam(x,base.team));
+  const f=idOf(own,S.fixtures);
+  const local=f?.kickoff_at?new Date(new Date(f.kickoff_at).getTime()-new Date(f.kickoff_at).getTimezoneOffset()*60000).toISOString().slice(0,16):'';
+  form=wrapForm('fixtures','Calendario e risultati',
+   selectExisting('fixtures',own.map(f=>({...f,name:f.home_team+' – '+f.away_team+' · '+(f.round_no??'')})),'name')+
+   (!f?'<p class="staff-help">Seleziona una partita esistente. La creazione di calendari massivi è gestita separatamente.</p>':
+   '<div class="staff-form-grid">'+input('kickoff_at','Data e ora',local,'datetime-local','required')+
+   input('venue_name','Campo',f.venue_name||'')+
+   input('venue_address','Indirizzo',f.venue_address||'')+
+   input('home_score','Gol casa',f.home_score??'','number','min="0" max="99"')+
+   input('away_score','Gol ospite',f.away_score??'','number','min="0" max="99"')+
+   selection('status','Stato',statuses,f.status)+'</div>'),
+   'La fixture è la fonte ufficiale di calendario e risultati. Per modifiche durante il live usa il Match Center.');
+ }
+ const tabs='<div class="staff-switch" role="tablist">'+areas.map(([key,label])=>
+ '<button type="button" role="tab" aria-selected="'+(key===memory.area)+'" data-staff-area="'+key+'" class="'+(key===memory.area?'selected':'')+'">'+label+'</button>').join('')+'</div>';
+ return ctx.heading('CENTRO DI CONTROLLO','Amministrazione','Gestione della squadra, delle competizioni e dei dati sportivi senza eliminare lo storico.')+
+ '<div class="staff-intro glass"><span class="staff-orb">✦</span><div><span class="eyebrow">PERSONALE AUTORIZZATO</span><h2>Gestione sportiva</h2><p>Le modifiche vengono validate dal database. Operazioni distruttive disabilitate per proteggere i riferimenti storici.</p></div></div>'+
+ tabs+form+'<p class="staff-footnote">Moduli operativi di partita e convocazioni: apri un incontro dal calendario e scegli «Gestione».</p>';
+}
+const playerText=p=>p?String(p.last_name||'')+' '+String(p.first_name||''):'Giocatore';
+function picker(name,label,choices,value){return selection(name,label,choices,value)}
+const statusOf=m=>String(m?.status||'scheduled');
+function displayClock(m){
+ if(!m)return '';
+ return '<div class="clockline"><span class="status '+(m.status==='live'?'live':'end')+'">'+esc(m.status==='live'?'LIVE':m.status==='finished'?'FINALE':'PREPARTITA')+'</span><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+esc(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'">00:00</strong><span>'+esc(m.live_period||'pre')+'</span></div>';
+}
+function matchLineup(ctx,m){
+ const players=ctx.state.data?.players||[],roster=(ctx.state.data?.roster||[]).filter(r=>r.active!==false),
+  current=ctx.state.matchData?.players||[];
+ const rostered=roster.map(x=>({...x,person:players.find(p=>p.id===x.player_id)})).filter(x=>x.person)
+   .sort((a,b)=>String(a.person.last_name).localeCompare(String(b.person.last_name),'it'));
+ const allowed=m.status==='scheduled';
+ const fields=rostered.map(row=>{
+  const old=current.find(x=>x.player_id===row.player_id);
+  const status=old?.started?'starter':old?.selection_status||'available';
+  const cap=Boolean(old?.is_captain);
+  const code=esc(row.player_id);
+  const columns=[
+   '<div class="lineup-name"><strong>'+esc(playerText(row.person))+'</strong><small>'+esc(row.person.generic_role_manual||'—')+'</small></div>',
+   '<select name="status" aria-label="Disponibilità '+esc(playerText(row.person))+'" '+(allowed?'':'disabled')+'>'+types.map(v=>option(v[0],v[1],status)).join('')+'</select>',
+   '<input type="number" name="shirt" aria-label="Maglia" placeholder="N°" min="1" max="99" value="'+esc(old?.shirt_number??row.shirt_number??'')+'" '+(allowed?'':'disabled')+'>',
+   '<input type="number" name="slot" aria-label="Posizione" placeholder="1–11" min="1" max="11" value="'+esc(old?.tactical_slot??'')+'" '+(allowed?'':'disabled')+'>',
+   '<label class="captain-check"><input type="radio" name="captain" value="'+code+'" '+(cap?'checked':'')+' '+(allowed?'':'disabled')+'> C</label>',
+   '<select name="reason" aria-label="Motivo indisponibilità" '+(allowed?'':'disabled')+'>'+reasons.map(x=>option(x[0],x[1],old?.unavailability_reason||'')).join('')+'</select>',
+  ];
+  return '<div class="lineup-row" data-lineup-player="'+code+'">'+columns.join('')+'</div>';
+ }).join('');
+ return '<section class="staff-subpanel">'+title('PREPARTITA','Convocazioni e undici iniziale')+
+ help('Stati disponibili, maglia storica, slot tattico da 1 a 11, capitano e indisponibilità. Squalifica attiva: blocco server; infortunio: segnalazione.')+
+ '<form data-staff-form="lineup"><div class="staff-top-fields">'+input('formation','Modulo',m.formation||'4-4-2','text','maxlength="32" '+(allowed?'':'disabled'))+'</div>'+
+ '<div class="lineup-header"><span>Giocatore</span><span>Disponibilità</span><span>N°</span><span>Slot</span><span>Cap.</span><span>Motivo</span></div>'+
+ '<div class="lineup-rows">'+fields+'</div>'+(!allowed?help('La formazione iniziale è bloccata dopo il fischio. Usa gli eventi live per le sostituzioni.'):submit('Salva convocazioni e formazione'))+'</form></section>';
+}
+function scoreForm(m){
+ return '<form data-staff-form="score" class="live-score-editor"><label>Casa<input name="home_score" type="number" min="0" max="99" required value="'+esc(m.home_score??0)+'"></label><strong>:</strong><label>Ospite<input name="away_score" type="number" min="0" max="99" required value="'+esc(m.away_score??0)+'"></label>'+submit('Aggiorna risultato')+'</form>';
+}
+function liveControls(m){
+ let controls='';
+ if(m.status==='scheduled')controls=btn('start','Avvia partita');
+ else if(m.status==='live')controls=btn(m.live_clock_running?'pause':'resume',m.live_clock_running?'Pausa cronometro':'Riprendi cronometro')+
+  btn('halftime','Intervallo')+btn('second_half','Secondo tempo')+btn('extra','Supplementari')+btn('finish','Termina e ufficializza');
+ else if(m.status==='finished')controls=btn('reopen','Riapri per correzioni');
+ return '<div class="live-action-row">'+controls+'</div>';
+}
+function matchLive(ctx,m,competition){
+ const people=ctx.state.data?.players||[],rows=ctx.state.matchData?.players||[],present=rows.filter(r=>['starter','bench'].includes(r.selection_status)||r.started);
+ const playerOpts=[['','Non indicato']].concat(present.map(x=>[x.player_id,playerText(people.find(p=>p.id===x.player_id))]));
+ const active=m.status==='live',mins=competition?.minutes_per_period||45;
+ const eventForm=active?'<form data-staff-form="event" class="staff-form live-event-form"><div class="staff-form-grid">'+
+ picker('event_type','Evento',events,'goal')+picker('team_side','Squadra',[['team','Nostra squadra'],['opponent','Avversaria']],'team')+
+ picker('player_id','Giocatore principale / uscente',playerOpts,'')+
+ picker('secondary_player_id','Assist / subentrante',playerOpts,'')+
+ input('minute','Minuto nella frazione', '','number','min="0" max="150" placeholder="Sconosciuto"')+
+ input('stoppage_minute','Recupero', '','number','min="0" max="30" placeholder="—"')+
+ picker('substitution_reason','Motivo del cambio',[['tactical','Tattico'],['injury','Infortunio'],['technical','Tecnico'],['other','Altro']],'tactical')+
+ input('notes','Note (facoltative)','','text','maxlength="400"')+'</div>'+
+ '<label class="staff-check"><input type="checkbox" name="count_score" checked> Aggiorna anche il tabellone per gol, autogol e rigori segnati</label>'+
+ help('Il minuto è riferito alla frazione selezionata ('+mins+' minuti regolamentari). Lascia vuoto se sconosciuto; il recupero resta separato.')+
+ submit('Registra evento')+'</form>':help('Gli eventi si registrano a match avviato. Una partita finalizzata richiede riapertura esplicita.');
+ return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+displayClock(m)+liveControls(m)+
+ '<div class="staff-live-grid"><div class="staff-live-panel"><h3>Risultato ufficiale</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(m))+
+ '</div><div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
+}
+function matchEvents(ctx,m){
+ const evs=(ctx.state.matchData?.events||[]).slice().sort((a,b)=>(a.minute??999)-(b.minute??999)||String(a.created_at).localeCompare(String(b.created_at)));
+ const people=ctx.state.data?.players||[];
+ return '<section class="staff-subpanel">'+title('VERIFICA','Registro eventi')+
+ help('Annullamento logico: gli eventi non vengono eliminati fisicamente. Se un gol aveva modificato il risultato, l’annullamento rettifica il tabellone nella stessa transazione.')+
+ '<div class="staff-event-list">'+evs.map(ev=>'<div class="staff-event-row"><div><strong>'+esc(ev.minute==null?'—':ev.minute+(ev.stoppage_minute?'+'+ev.stoppage_minute:'')+'′')+'</strong><span>'+esc(ev.event_type)+' · '+esc(ev.team_side)+ (ev.player_id?' · '+esc(playerText(people.find(p=>p.id===ev.player_id))):'')+'</span><small>'+esc(ev.validation_status||'—')+'</small></div>'+
+ (m.status==='live'&&ev.validation_status!=='rejected'?'<button data-staff-action="void" data-event-id="'+esc(ev.id)+'" class="staff-danger" type="button">Annulla</button>':'')+'</div>').join('')+
+ (!evs.length?'<p class="empty">Nessun evento registrato.</p>':'')+'</div></section>';
+}
+export function staffMatchPanel(ctx,f,m){
+ if(!isStaff(ctx))return '';
+ if(!m)return '<section class="glass panel staff-root"><div class="staff-panel-heading"><div><span class="eyebrow">OPERAZIONI</span><h2>Prepara il Match Center</h2></div></div>'+
+ help('Associa la partita ufficiale a un unico tabellino operativo, riutilizzando le registrazioni già esistenti quando la corrispondenza è univoca. Nessun dato storico viene duplicato.')+
+ btn('ensure','Apri gestione di questa partita')+'</section>';
+ const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===f.competition_id);
+ const tabs=[['lineup','Convocazioni'],['live','Live'],['events','Eventi']];
+ const tabNav='<div class="staff-switch small-tabs" role="tablist">'+tabs.map(([k,v])=>
+  '<button type="button" role="tab" aria-selected="'+(k===memory.matchTab)+'" class="'+(k===memory.matchTab?'selected':'')+'" data-staff-match-tab="'+k+'">'+v+'</button>').join('')+'</div>';
+ const page=memory.matchTab==='lineup'?matchLineup(ctx,m):memory.matchTab==='live'?matchLive(ctx,m,competition):matchEvents(ctx,m);
+ return '<section class="glass panel staff-root">'+tabNav+page+'<div class="staff-bottom-actions">'+btn('refresh-match','Aggiorna tabellino')+'</div></section>';
+}
+function dataForm(form){return Object.fromEntries(new FormData(form))}
+function cleaned(o,fields){return Object.fromEntries(fields.map(k=>[k,o[k]===''?null:o[k]]))}
+function numberOrNull(n){return n===''||n==null?null:Number(n)}
+function adminPayload(form){
+ const data=dataForm(form),kind=form.dataset.staffForm,blank=memory.selected;
+ if(kind==='team')return {table:'teams',id:null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','home_venue_name'])};
+ if(kind==='seasons')return {table:'app_seasons',id:blank.seasons||null,payload:cleaned(data,['name','start_date','end_date','status'])};
+ if(kind==='competitions'){
+  const rules={...window.__unused??{}}; // removed before persist
+  return {table:'app_competitions',id:blank.competitions||null,payload:{
+    ...cleaned(data,['name','kind','format']),periods:Number(data.periods),minutes_per_period:Number(data.minutes_per_period),
+    win_points:Number(data.win_points),draw_points:Number(data.draw_points),loss_points:Number(data.loss_points),
+    ... (data.blue_duration?{discipline_rules:{blue_duration_minutes:Number(data.blue_duration)}}:{})
+  }};
+ }
+ if(kind==='opponents')return {table:'app_opponents',id:blank.opponents||null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','home_venue_name','home_venue_address'])};
+ if(kind==='fixtures'){
+  const d=cleaned(data,['venue_name','venue_address','status']);
+  if(!blank.fixtures)throw Error('Seleziona una fixture');
+  if(data.kickoff_at)d.kickoff_at=new Date(data.kickoff_at).toISOString();
+  d.home_score=numberOrNull(data.home_score);d.away_score=numberOrNull(data.away_score);
+  return {table:'app_competition_fixtures',id:blank.fixtures,payload:d};
+ }
+ return {table:null,id:null,payload:data};
+}
+const pendingFn=async(form,fn)=>{const button=form.querySelector('[type="submit"]');if(button){button.disabled=true;button.textContent='Salvataggio…'}try{return await fn()}finally{if(button){button.disabled=false;button.textContent='Salva'}}};
+async function reloadMatch(ctx){
+ const m=ctx.resolveMatch().operational;
+ if(m){
+  const rows=await get('app_matches','select=*&id=eq.'+encodeURIComponent(m.id));
+  if(rows.length){const i=ctx.state.data.matches.findIndex(x=>x.id===m.id);if(i<0)ctx.state.data.matches.push(rows[0]);else ctx.state.data.matches[i]=rows[0]}
+  ctx.state.matchData=await ctx.loadMatchInfo(m.id);
+ }
+ const fixture=await get('app_competition_fixtures','select=*&id=eq.'+encodeURIComponent(ctx.state.match));
+ if(fixture.length){const index=ctx.state.data.fixtures.findIndex(x=>x.id===ctx.state.match);if(index>=0)ctx.state.data.fixtures[index]=fixture[0]}
+ ctx.render();
+}
+export async function staffClick(e,button,ctx){
+ if(!isStaff(ctx))return false;
+ if(button.dataset.staffArea){
+  memory.area=button.dataset.staffArea;ctx.render();return true;
+ }
+ if(button.dataset.staffMatchTab){
+  memory.matchTab=button.dataset.staffMatchTab;ctx.render();return true;
+ }
+ const action=button.dataset.staffAction;if(!action)return false;
+ if(memory.busy)return true;
+ memory.busy=true;button.disabled=true;
+ try{
+  const m=ctx.resolveMatch().operational;
+  if(action==='activate-season'){
+   const id=memory.selected.seasons;if(!id)throw Error('Seleziona la stagione');
+   if(!window.confirm('Attivare questa stagione? La precedente verrà archiviata.'))return true;
+   await rpc('tm_app_activate_season',{p_season_id:id});
+   await ctx.reloadAll();ctx.toast('Stagione attiva aggiornata');return true;
+  }
+  if(action==='ensure'){
+   const id=await rpc('tm_app_ensure_match',{p_fixture_id:ctx.state.match});
+   const rows=await get('app_matches','select=*&id=eq.'+encodeURIComponent(id));
+   if(!rows.length)throw Error('Tabellino creato ma non leggibile');
+   if(!ctx.state.data.matches.some(x=>x.id===id))ctx.state.data.matches.push(rows[0]);
+   ctx.state.matchData=await ctx.loadMatchInfo(id);memory.matchTab='lineup';ctx.render();ctx.toast('Tabellino operativo collegato');return true;
+  }
+  if(action==='refresh-match'){await reloadMatch(ctx);return true}
+  if(!m)throw Error('Apri prima la gestione del match');
+  if(action==='finish'&&!window.confirm('Finalizzare la partita? Risultato e cronologia saranno ufficializzati.'))return true;
+  if(action==='reopen'&&!window.confirm('Riaprire questa partita per correzioni?'))return true;
+  if(action==='void'&&!window.confirm('Annullare questo evento e rettificare l’eventuale gol?'))return true;
+  const payload=action==='void'?{event_id:button.dataset.eventId}:
+   ['halftime','second_half','extra'].includes(action)?{period:action}:{};
+  const map={halftime:'period',second_half:'period',extra:'period',void:'void_event'};
+  await rpc('tm_app_match_action',{p_match_id:m.id,p_action:map[action]||action,p_payload:payload});
+  await reloadMatch(ctx);ctx.toast('Operazione registrata');
+  return true;
+ }catch(err){ctx.toast('Errore: '+(err.message||err));return true}
+ finally{memory.busy=false;button.disabled=false}
+}
+export function staffSelect(element,ctx){
+ if(!isStaff(ctx))return false;
+ const key=element.dataset.staffSelect;if(!key)return false;
+ memory.selected[key]=element.value;ctx.render();return true;
+}
+export async function staffSubmit(e,ctx){
+ const form=e.target,kind=form.dataset.staffForm;if(!kind)return false;
+ e.preventDefault();
+ if(!isStaff(ctx))return true;
+ try{
+  if(kind==='lineup'){
+   const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
+   const rows=[...form.querySelectorAll('[data-lineup-player]')].map(el=>{
+    const query=name=>el.querySelector('[name="'+name+'"]').value;
+    const st=query('status');
+    return {player_id:el.dataset.lineupPlayer,selection_status:st,
+     shirt_number:numberOrNull(query('shirt')),tactical_slot:st==='starter'?numberOrNull(query('slot')):null,
+     is_captain:form.querySelector('[name=captain]:checked')?.value===el.dataset.lineupPlayer&&st==='starter',
+     unavailability_reason:st==='absent'?query('reason')||null:null,unavailability_note:null};
+   });
+   const num=rows.filter(x=>x.selection_status==='starter').length;
+   if(num>11)throw Error('Massimo undici titolari');
+   if(new Set(rows.filter(x=>x.tactical_slot!=null).map(x=>x.tactical_slot)).size!==rows.filter(x=>x.tactical_slot!=null).length)throw Error('Slot tattici ripetuti');
+   await pendingFn(form,()=>rpc('tm_app_save_lineup',{p_match_id:m.id,p_rows:rows,p_formation:dataForm(form).formation||null}));
+   await reloadMatch(ctx);ctx.toast('Formazione e convocazioni salvate');return true;
+  }
+  if(kind==='event'){
+   const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
+   const d=dataForm(form),c=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
+   const period=m.live_period;
+   const offset=period==='second_half'?(c?.minutes_per_period||45):period==='extra'?2*(c?.minutes_per_period||45):0;
+   const minute=numberOrNull(d.minute);
+   const payload={event_type:d.event_type,team_side:d.team_side,
+    player_id:d.team_side==='team'?d.player_id||null:null,
+    secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
+    minute:minute===null?null:minute+offset,stoppage_minute:numberOrNull(d.stoppage_minute),
+    substitution_reason:d.substitution_reason,notes:d.notes,
+    count_score:Boolean(d.count_score),request_key:crypto.randomUUID()};
+   if(payload.event_type==='substitution'&&!payload.player_id)throw Error('Indica chi esce');
+   await pendingFn(form,()=>rpc('tm_app_match_action',{p_match_id:m.id,p_action:'event',p_payload:payload}));
+   await reloadMatch(ctx);ctx.toast('Evento live registrato');return true;
+  }
+  if(kind==='score'){
+   const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
+   const d=dataForm(form);const home=numberOrNull(d.home_score),away=numberOrNull(d.away_score);
+   if(!Number.isInteger(home)||!Number.isInteger(away)||home<0||away<0)throw Error('Risultato non valido');
+   await pendingFn(form,()=>rpc('tm_app_match_action',{p_match_id:m.id,p_action:'score',p_payload:{home_score:home,away_score:away}}));
+   await reloadMatch(ctx);ctx.toast('Risultato aggiornato');return true;
+  }
+  if(kind==='players'){
+   const d=dataForm(form),payload={...d,id:memory.selected.players||null,
+    active:d.active==='true',height_cm:d.height_cm===''?null:Number(d.height_cm)};
+   await pendingFn(form,()=>rpc('tm_app_save_player',{p_season_id:ctx.state.season,p_data:payload}));
+   await ctx.reloadAll();ctx.toast('Giocatore e rosa aggiornati');return true;
+  }
+  const obj=adminPayload(form);
+  if(!obj.table)throw Error('Modulo sconosciuto');
+  if(obj.table==='teams')obj.id=ctx.state.base.team.id;
+  if(obj.table==='app_competitions'&&!obj.id)obj.payload.season_id=ctx.state.season;
+  if(obj.table==='app_seasons'&&!obj.id)obj.payload.team_id=ctx.state.base.team.id;
+  if(obj.table==='app_seasons'&&obj.id&&obj.payload.status==='future'&&
+   ctx.state.base.seasons.find(s=>s.id===obj.id)?.status==='active')
+   throw Error('La stagione attiva può essere cambiata solo con «Imposta come attiva»');
+  if(obj.table==='app_competition_fixtures'&&
+   ['live','finished'].includes(obj.payload.status))
+    throw Error('Per avviare/concludere una partita usa la console del Match Center');
+  await pendingFn(form,()=>adminWrite(obj.table,obj.id?'PATCH':'POST',obj.payload,obj.id?{id:obj.id}:{}));
+  await ctx.reloadAll();ctx.toast('Configurazione salvata');return true;
+ }catch(err){ctx.toast('Errore: '+(err.message||err));return true}
+}
+let clockInterval;
+function tickClock(){
+ const el=document.querySelector('[data-staff-clock]');if(!el)return;
+ const base=Number(el.dataset.seconds||0),anchor=Date.parse(el.dataset.anchor||'');
+ const n=base+(el.dataset.running==='true'&&Number.isFinite(anchor)?Math.max(0,Math.floor((Date.now()-anchor)/1000)):0);
+ el.textContent=String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+}
+export function startStaffClock(){if(clockInterval)return;clockInterval=setInterval(tickClock,1000);tickClock()}
