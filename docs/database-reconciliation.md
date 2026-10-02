@@ -7,3 +7,6 @@
 - `tm_app_ensure_match` è stato rafforzato: per una gara già live/finished senza collegamento non crea un nuovo record operativo, per evitare doppioni o risultati incompatibili. Sul frontend il controllo staff impedisce «Apri gestione» di quelle fixture finché il conflitto non viene risolto.
 - È richiesta una verifica umana della prima gara e degli eventi proposti: il solo punteggio finale non basta a provare la congruenza dei vecchi tabellini. **Non inventare marcatori o rettifiche.**
 - Per i collegamenti programmati è mantenuto lo storico degli ID già esistenti; nessun evento, voto o partecipazione viene eliminato.
+
+## Stato attuale 02/10/2026 — fonte unica
+Per tutte le fixture con risultato valorizzato, il punteggio compatibile dei tabellini collegati viene sincronizzato da `app_competition_fixtures`, senza doppio valore autorevole. La precedente differenza Voltesea–Caselle è stata riallineata al risultato 1–4 nel campo di compatibilità; la validazione degli eventi è rimasta separata e non è stata modificata. Tutti gli eventi sono letti da `app_match_events` (fixture_id sempre presente; match_id opzionale). Per il contratto e l'archivio storico, vedere `docs/architecture-single-event-result.md`.

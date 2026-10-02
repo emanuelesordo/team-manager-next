@@ -80,3 +80,9 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [x] UI postpartita: rettifica per evento, conferma risultato distinta dalla conclusione partita, log consultabili; browser desktop/mobile su API simulate superato.
 - [x] SQL versionato: audit append-only eventi, log allineamento punteggi, trigger invalidazione conferma e RPC protette.
 - [ ] Collaudo autenticato reale e fisico: richiede sessioni e dispositivi non disponibili negli attuali test automatici.
+
+## Stato implementazione fonte unica — ottobre 2026
+- [x] Migrazione database 22 eventi in `app_match_events`: 16 con `match_id` e 6 fixture-only con `match_id = NULL`.
+- [x] Unico punteggio autorevole sulla fixture, proiezione compatibile controllata dai trigger.
+- [x] Letture frontend delle fixture-only event dal nuovo archivio unico e rimozione del confronto di due risultati.
+- [ ] Restyling grafico timeline per la fedeltà completa allo screenshot fornito: contratto definito in `docs/architecture-single-event-result.md`, non dichiarato completato.

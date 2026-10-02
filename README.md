@@ -38,3 +38,6 @@ In Match Center → Gestione → Eventi lo staff può approvare/scartare propost
 
 ## Revisione postpartita approfondita
 La partita conclusa è distinta dal risultato confermato (`app_matches.result_review_status`). In Gestione → Eventi si possono rettificare tipo, lato, giocatori, minuti, recupero, motivo e note con giustificazione obbligatoria; lo stesso ID evento è mantenuto e lo storico append-only è visibile solo allo staff. Dopo ogni rettifica l'evento torna proposto. Il risultato può essere confermato solo con fixture/tabellino conclusi, punteggi coerenti e nessuna proposta aperta. Un cambio di risultato o evento revoca la conferma. La fixture resta fonte ufficiale; l'allineamento del solo tabellino richiede una conferma umana.
+
+### Archivio unico eventi e risultato
+[Specifica tecnica vincolante](docs/architecture-single-event-result.md): `app_match_events` è l'unico archivio attivo; `app_competition_fixtures` possiede il punteggio; `app_matches.result_review_status` stabilisce se il risultato sia confermato, indipendentemente dalla conclusione della partita. La vecchia tabella fixture-events è archiviata; resta solo una vista di compatibilità in lettura.

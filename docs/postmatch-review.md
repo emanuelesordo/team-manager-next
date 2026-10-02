@@ -17,3 +17,6 @@ La pipeline Node/build e il browser mock desktop/mobile sono stati superati sul 
 
 ## Pendenze indipendenti
 La roadmap generale contiene altre funzioni di progetto e collaudi non coperti da questa milestone (moduli PRO, attributi ruolo/comfort, fasi/gironi avanzati, test autenticato reale e dispositivi fisici). Non considerarli completati per deduzione.
+
+## Aggiornamento architetturale del 02/10/2026 (prevalente)
+La precedente discrepanza dei due punteggi è stata risolta architetturalmente: **`app_competition_fixtures` è l'unica fonte del risultato**, mentre i punteggi in `app_matches` sono proiezioni sincronizzate e non un secondo tabellino. Voltesea–Caselle mostra ora 1–4 in entrambe le strutture per compatibilità, ma conserva 16 eventi `proposed` e `result_review_status='provisional'`. Le eventuali descrizioni precedenti riferite al vecchio 0–0 sono quindi storiche. Gli eventi attivi delle fixture e dei match sono unificati in **`app_match_events`**; il precedente `app_fixture_events` è ora una vista in lettura, con archivio storico conservato. Specifica vincolante: [`architecture-single-event-result.md`](./architecture-single-event-result.md).
