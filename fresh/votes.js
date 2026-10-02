@@ -8,7 +8,7 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e}){
  if(!match)return '<div class="empty padded">Tabellino operativo non disponibile: impossibile attribuire valutazioni.</div>';
  const rows=data?.players||[],events=data?.events||[],ratings=data?.ratings||[];
  const eligible=votablePlayerIds(rows,events);
- const names=[...eligible].map(id=>people.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>String(a.last_name||'').localeCompare(String(b.last_name||'','it'));
+ const names=[...eligible].map(id=>people.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>String(a.last_name||'').localeCompare(String(b.last_name||''),'it');
  const finished=match.status==='finished';
  const intro='<div class="votes-intro"><div><span class="eyebrow">VALUTAZIONI</span><h3>Pagelle della partita</h3><p>Voti da 1 a 10, inclusi mezzi punti. SV non entra nella media.</p></div><span class="votes-pill">'+names.length+' giocatori entrati</span></div>';
  if(!names.length)return intro+'<div class="empty padded">Nessun titolare o subentrato certificato. I convocati inutilizzati non vengono valutati.</div>';
