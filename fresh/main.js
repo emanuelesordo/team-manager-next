@@ -161,17 +161,19 @@ function matchEventTimeline(events,fixture,playerName,ourTeam){
  const tracked=ordered.map(e=>{if(goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}return {event:e,score:goal(e)?home+' - '+away:null}});
  const heading=(label)=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
  const icon=e=>{const t=type(e);if(goal(e))return '<span class="mt-ball" aria-label="Gol">⚽</span>';if(['yellow_card','red_card','blue_card','second_yellow'].includes(t))return '<span class="mt-cards mt-'+(t==='red_card'?'red':t==='blue_card'?'blue':'yellow')+'" aria-label="Cartellino"></span>';if(['substitution','sub_out','sub_in'].includes(t))return '<span class="mt-change" aria-label="Cambio"><span>→</span><span>←</span></span>';return '<span class="mt-generic" aria-hidden="true">◆</span>'};
- const eventContent=(entry)=>{const e=entry.event,t=type(e),primary=e.player_id?playerName(e.player_id):side(e)==='unknown'?'Squadra':'Gol avversario',secondary=e.secondary_player_id?playerName(e.secondary_player_id):'',score=entry.score?'<span class="mt-score">'+E(entry.score)+'</span>':'';
+ const eventContent=(entry)=>{const e=entry.event,t=type(e),isChange=['substitution','sub_out','sub_in'].includes(t),primary=isChange&&e.secondary_player_id?playerName(e.secondary_player_id):e.player_id?playerName(e.player_id):goal(e)?'Gol avversario':'Squadra',secondary=isChange?(e.secondary_player_id&&e.player_id?playerName(e.player_id):''):(e.secondary_player_id?playerName(e.secondary_player_id):''),score=entry.score?'<span class="mt-score">'+E(entry.score)+'</span>':'';
  return '<span class="mt-icon">'+icon(e)+'</span>'+score+'<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+(!e.player_id&&!goal(e)?'<small>'+E(t.replaceAll('_',' '))+'</small>':'')+'</span>'};
  const minutes=e=>e.minute===null||e.minute===undefined?'—':E(String(e.minute)+(Number(e.stoppage_minute)>0?'+'+e.stoppage_minute:'')+"'"); 
  const duration=Number(fixture?.minutes_per_period)||45;
- let parts='',lastPhase=Infinity;
+ let parts='',lastPhase=Infinity,lastRecovery=false;
  for(const entry of tracked.reverse()){
  const e=entry.event,phase=time(e)>duration*2?3:time(e)>duration?2:1;
  if(lastPhase===Infinity){parts+=heading(fixture.status==='finished'?'FT '+E(fixture.home_score??'–')+' - '+E(fixture.away_score??'–'):'EVENTI');}
  if(lastPhase===3&&phase<3)parts+=heading('FINE TEMPI REGOLAMENTARI');
  if(lastPhase>=2&&phase===1)parts+=heading('HT');
- lastPhase=phase;
+ const recovery=Number(e.stoppage_minute)>0;
+ if(recovery&&!lastRecovery)parts+=heading('RECUPERO +'+E(e.stoppage_minute)+"’");
+ lastRecovery=recovery;lastPhase=phase;
  const s=side(e),left=s==='home',right=s==='away';
  const content=eventContent(entry);
  parts+='<div class="mt-row"><div class="mt-side mt-home">'+(left?content:'')+'</div><b class="mt-minute">'+minutes(e)+'</b><div class="mt-side mt-away">'+(right?content:(s==='unknown'?content:''))+'</div></div>';
