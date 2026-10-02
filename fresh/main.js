@@ -148,7 +148,7 @@ function manageCarousel(){
 async function switchSeason(id){
  if(!state.base.seasons.some(x=>x.id===id))return;
  const loadId=++state.loadId;state.season=id;state.comp=null;state.match=null;state.player=null;state.slide=0;state.loading=true;render();
- try{const data=await loadSeason(id,isStaff(staffContext()));if(loadId!==state.loadId)return;state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render()}
+ try{const data=await loadSeason(id,isStaff(staffContext()),state.identity?.role?.role==='admin');if(loadId!==state.loadId)return;state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render()}
  catch(e){state.loading=false;render();toast('Dati non disponibili: '+e.message)}
 }
 async function openMatch(id){

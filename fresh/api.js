@@ -56,7 +56,7 @@ export async function loadBase(){
  if(!current||!team)throw Error('Squadra o stagione non configurata');
  return {team,seasons:s,opponents:o};
 }
-export async function loadSeason(id,includePrivate=false){
+export async function loadSeason(id,includePrivate=false,includeAdmin=false){
  const requests={
   competitions:['app_competitions','select=*&season_id=eq.'+id],
   fixtures:['app_competition_fixtures','select=*&season_id=eq.'+id+'&order=kickoff_at.asc&limit=1000'],
@@ -71,6 +71,7 @@ export async function loadSeason(id,includePrivate=false){
   injuries:['injuries','select=*&order=injury_date.desc&limit=500'],
   suspensions:['suspensions','select=*&order=issued_date.desc&limit=500']
  });
+ if(includeAdmin)Object.assign(requests,{profiles:['profiles','select=id,username,display_name,is_active,must_change_password&limit=200'],passwordRequests:['tm_password_reset_requests','select=id,user_id,status,requested_at,reviewed_at&order=requested_at.desc&limit=200']});
  const names=Object.keys(requests),arr=await Promise.allSettled(names.map(k=>get(...requests[k])));
  const output={errors:{}};
  names.forEach((n,i)=>{const x=arr[i];output[n]=x.status==='fulfilled'?x.value:[];if(x.status==='rejected')output.errors[n]=x.reason.message});
@@ -112,4 +113,14 @@ export async function adminWrite(table,method,values,where={}){
  for(const [k,v] of Object.entries(where))q.set(k,'eq.'+String(v));
  const path='/rest/v1/'+table+(q.size?'?'+q.toString():'');
  return authorized(path,{method,body:values,extraHeaders:{Prefer:'return=representation'}});
+}
+
+/** Edge action: admin auth validated by the deployed server function. */
+export async function reviewPasswordRequest(request_id,decision){
+ if(!hasSession())throw new Error('Accesso richiesto');
+ if(!['resolve','reject'].includes(decision))throw new Error('Decisione non valida');
+ const response=await authorized('/functions/v1/tm-password-admin',
+  {method:'POST',body:{request_id,decision}});
+ if(!response?.ok)throw new Error(response?.error||'Richiesta non gestita');
+ return response;
 }
