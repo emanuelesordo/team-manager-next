@@ -15,16 +15,14 @@ for (const directory of ['src','assets']) {
 }
 // The mockups are a design reference, not a runtime asset.
 await rm(new URL('assets/reference-design.webp',output),{force:true});
-const files=['index.html','src/app.js','src/data.js','src/domain.js','src/config.js','src/visuals.js','src/styles.css','src/layout-compact.css'];
+const files=['index.html','src/app.js','src/data.js','src/domain.js','src/config.js','src/styles.css'];
 let total=0;
 for(const file of files){ const bytes=await readFile(new URL(file,output)); total+=bytes.byteLength; }
 const htmlPath = new URL('index.html',output);
 let html = await readFile(htmlPath,'utf8');
-// Fingerprint both CSS layers to avoid stale styles after deploy.
-for (const stylesheet of ['src/styles.css','src/layout-compact.css']) {
-  const css = await readFile(new URL(stylesheet,output));
-  const hash = createHash('sha256').update(css).digest('hex').slice(0,10);
-  html=html.replace('./'+stylesheet,'./'+stylesheet+'?v='+hash);
-}
+// Hash the stylesheet to invalidate caches without changing the module tree.
+const css = await readFile(new URL('src/styles.css',output));
+const shortHash = createHash('sha256').update(css).digest('hex').slice(0,10);
+html=html.replace('./src/styles.css','./src/styles.css?v='+shortHash);
 await writeFile(htmlPath,html);
-console.log(`Built dist/: ${files.length} core assets; ${total.toLocaleString('it-IT')} B of core code; stylesheet revisions embedded`);
+console.log(`Built dist/: ${files.length} core assets; ${total.toLocaleString('it-IT')} B of core code; CSS revision ${shortHash}`);
