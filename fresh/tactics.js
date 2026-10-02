@@ -37,7 +37,7 @@ export function staffTacticsPanel(ctx,m){
  const forms=['4-4-2','4-3-3','3-5-2','4-2-3-1','3-4-3','4-5-1','5-3-2'];
  const opts=[...new Set([...forms,formation])];
  const form='<form data-staff-form="tactics"><div class="staff-form-grid">'+
-  '<label class="staff-field"><span>Minuto assoluto</span><input name="minute" type="number" min="0" max="300" required'+(m.status!=='live'?' disabled':'')+'></label>'+
+  '<label class="staff-field"><span>Minuto cumulativo</span><input name="minute" type="number" min="0" max="300" required'+(m.status!=='live'?' disabled':'')+'></label>'+
   '<label class="staff-field"><span>Nuovo modulo</span><select name="formation_to"'+(m.status!=='live'?' disabled':'')+'>'+
   opts.map(x=>'<option value="'+E(x)+'"'+(x===formation?' selected':'')+'>'+E(x)+'</option>').join('')+'</select></label>'+
   '</div><div class="tactic-slots">'+slotFields+'</div>'+
