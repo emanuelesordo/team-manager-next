@@ -2,7 +2,7 @@
 
 ## Direzione visiva
 
-L'immagine `assets/reference-design.png` costituisce il riferimento iniziale di **composizione**: card morbide e sovrapposte, informazioni sportive a rilievo lieve, superfici traslucide, navigazione mobile dedicata e schede match enfatizzate. La palette è intenzionalmente modificata rispetto all'immagine: le tonalità verdine vengono reinterpretate come nero grafite e le zone chiare diventano bianco tenue / giallo acido controllato.
+L'immagine `assets/reference-design.webp` costituisce il riferimento iniziale di **composizione**: card morbide e sovrapposte, informazioni sportive a rilievo lieve, superfici traslucide, navigazione mobile dedicata e schede match enfatizzate. La palette è intenzionalmente modificata rispetto all'immagine: le tonalità verdine vengono reinterpretate come nero grafite e le zone chiare diventano bianco tenue / giallo acido controllato.
 
 | Token | Valore | Uso |
 |---|---|---|
