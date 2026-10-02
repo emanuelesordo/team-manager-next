@@ -17,6 +17,7 @@ const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</
 const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'lineup',busy:false};
 const memory=initial;
 let reviewEditEvent=null,reviewHistoryEvent=null,reviewHistoryEntries=[];
+let scoreAuditRows=[],scoreAuditOpen=false;
 let integrityData=null,integrityError='';
 function integrityPanel(){
  const count=Number(integrityData?.issue_count||0);
@@ -272,7 +273,7 @@ function liveControls(m){
  let controls='';
  if(m.status==='scheduled')controls=btn('start','Avvia partita');
  else if(m.status==='live')controls=btn(m.live_clock_running?'pause':'resume',m.live_clock_running?'Pausa cronometro':'Riprendi cronometro')+
-  btn('halftime','Intervallo')+btn('second_half','Secondo tempo')+btn('extra','Supplementari')+btn('penalties','Rigori')+btn('finish','Termina e ufficializza');
+  btn('halftime','Intervallo')+btn('second_half','Secondo tempo')+btn('extra','Supplementari')+btn('penalties','Rigori')+btn('finish','Termina partita');
  else if(m.status==='finished')controls=btn('reopen','Riapri per correzioni');
  return '<div class="live-action-row">'+controls+'</div>';
 }
@@ -292,10 +293,10 @@ function matchLive(ctx,m,competition){
  help('Il minuto è riferito alla frazione selezionata ('+mins+' minuti regolamentari). Lascia vuoto se sconosciuto; il recupero resta separato.')+
  submit('Registra evento')+'</form>':help('Gli eventi si registrano a match avviato. Una partita finalizzata richiede riapertura esplicita.');
  return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+displayClock(m,competition)+liveControls(m)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':'')+
- '<div class="staff-live-grid"><div class="staff-live-panel"><h3>Risultato ufficiale</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(m))+
+ '<div class="staff-live-grid"><div class="staff-live-panel"><h3>Risultato operativo / live</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(m))+
  '</div><div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
 }
-function matchEvents(ctx,m){return reviewPanel({match:m,fixture:ctx.resolveMatch().fixture,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries});}
+function matchEvents(ctx,m){return reviewPanel({match:m,fixture:ctx.resolveMatch().fixture,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
 
 export function staffMatchPanel(ctx,f,m){
  if(!isStaff(ctx))return '';
@@ -428,6 +429,11 @@ export async function staffClick(e,button,ctx){
    const eventId=button.dataset.eventId;
    reviewHistoryEntries=await get('tm_app_event_revisions','select=id,reason,previous_record,next_record,created_at&match_id=eq.'+encodeURIComponent(m.id)+'&event_id=eq.'+encodeURIComponent(eventId)+'&order=created_at.desc&limit=100');
    reviewHistoryEvent=eventId;reviewEditEvent=null;ctx.render();return true;
+  }
+  if(action==='review-result-history'){
+   if(!m)throw Error('Tabellino non disponibile');
+   scoreAuditRows=await get('tm_app_result_reconciliations','select=id,old_home_score,old_away_score,new_home_score,new_away_score,created_at&match_id=eq.'+encodeURIComponent(m.id)+'&order=created_at.desc&limit=100');
+   scoreAuditOpen=true;ctx.render();return true;
   }
   if(['review-result-confirm','review-result-reopen','review-result-align'].includes(action)){
    if(!m)throw Error('Tabellino non disponibile');
