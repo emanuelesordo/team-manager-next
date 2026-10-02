@@ -56,7 +56,7 @@ export async function loadBase(){
  if(!current||!team)throw Error('Squadra o stagione non configurata');
  return {team,seasons:s,opponents:o};
 }
-export async function loadSeason(id){
+export async function loadSeason(id,includePrivate=false){
  const requests={
   competitions:['app_competitions','select=*&season_id=eq.'+id],
   fixtures:['app_competition_fixtures','select=*&season_id=eq.'+id+'&order=kickoff_at.asc&limit=1000'],
@@ -66,6 +66,11 @@ export async function loadSeason(id){
   matches:['app_matches','select=*&season_id=eq.'+id],
   players:['players','select=id,team_id,first_name,last_name,photo_url,generic_role_manual,preferred_foot,height_cm,birth_date,nationality_code&limit=1000']
  };
+ if(includePrivate)Object.assign(requests,{
+  generalSeasons:['seasons','select=id,team_id,name,start_date,end_date&order=start_date.desc'],
+  injuries:['injuries','select=*&order=injury_date.desc&limit=500'],
+  suspensions:['suspensions','select=*&order=issued_date.desc&limit=500']
+ });
  const names=Object.keys(requests),arr=await Promise.allSettled(names.map(k=>get(...requests[k])));
  const output={errors:{}};
  names.forEach((n,i)=>{const x=arr[i];output[n]=x.status==='fulfilled'?x.value:[];if(x.status==='rejected')output.errors[n]=x.reason.message});
