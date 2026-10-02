@@ -9,7 +9,7 @@ export function amendEventForm(ev,players=[],competition=null){
  const inp=(n,l,v='',t='text',a='')=>'<label class="staff-field"><span>'+l+'</span><input name="'+n+'" type="'+t+'" value="'+E(v)+'" '+a+'></label>';
  const sel=(n,l,items,v)=>'<label class="staff-field"><span>'+l+'</span><select name="'+n+'">'+opts(items,v)+'</select></label>';
  return '<form class="staff-amend-form staff-form" data-staff-form="amend-event" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'"><h3>Rettifica con storico</h3>'+
- '<p class="staff-help">La versione precedente resta nello storico. La rettifica dell'admin è ufficiale; gli altri ruoli richiedono verifica.</p>'+
+ '<p class="staff-help">La versione precedente resta nello storico. La rettifica dell’amministratore è ufficiale; gli altri ruoli richiedono verifica.</p>'+
  (ev.payload?.counted_in_score?'<p class="data-warning">Evento conteggiato nel risultato: non cambiare tipo o squadra.</p>':'')+
  '<div class="staff-form-grid">'+
  sel('event_type','Tipo evento',types,ev.event_type)+sel('team_side','Squadra',[['team','Nostra'],['opponent','Avversaria']],ev.team_side)+
