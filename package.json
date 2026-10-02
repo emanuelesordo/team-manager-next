@@ -7,6 +7,6 @@
   "scripts":{
     "dev":"python3 -m http.server 8080",
     "build":"node scripts/build.mjs",
-    "check":"node --check fresh/main.js && node --check fresh/api.js && node --check fresh/ui-extensions.js && node --check fresh/domain.js && node --check fresh/config.js && node --test tests/fresh-domain.test.mjs && npm run build"
+    "check":"node --check fresh/main.js && node --check fresh/api.js && node --check fresh/ui-extensions.js && node --check fresh/staff-ui.js && node --check fresh/domain.js && node --check fresh/config.js && node --test tests/fresh-domain.test.mjs && npm run build"
   }
 }

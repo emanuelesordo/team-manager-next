@@ -39,8 +39,7 @@ export function adminPage(ctx){
  }
  if(memory.area==='seasons'){
   const selected=idOf(seasons,S.seasons);const fields=selectExisting('seasons',seasons,'name');
-  const dates=(selected?.start_date||'')+'|'+(selected?.end_date||'');
-  form=wrapForm('seasons','Stagioni',fields+
+   form=wrapForm('seasons','Stagioni',fields+
    '<div class="staff-form-grid">'+input('name','Nome stagione',selected?.name||'','text','required')+
    input('start_date','Inizio',selected?.start_date||'','date','required')+
    input('end_date','Fine',selected?.end_date||'','date','required')+
@@ -183,7 +182,7 @@ function matchEvents(ctx,m){
 }
 export function staffMatchPanel(ctx,f,m){
  if(!isStaff(ctx))return '';
- if(!m)return '<section class="glass panel staff-root"><div class="staff-panel-heading"><div><span class="eyebrow">OPERAZIONI</span><h2>Prepara il Match Center</h2></div></div>'+
+ if(!m||!m.fixture_id)return '<section class="glass panel staff-root"><div class="staff-panel-heading"><div><span class="eyebrow">OPERAZIONI</span><h2>Prepara il Match Center</h2></div></div>'+
  help('Associa la partita ufficiale a un unico tabellino operativo, riutilizzando le registrazioni già esistenti quando la corrispondenza è univoca. Nessun dato storico viene duplicato.')+
  btn('ensure','Apri gestione di questa partita')+'</section>';
  const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===f.competition_id);
@@ -201,7 +200,6 @@ function adminPayload(form){
  if(kind==='team')return {table:'teams',id:null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','home_venue_name'])};
  if(kind==='seasons')return {table:'app_seasons',id:blank.seasons||null,payload:cleaned(data,['name','start_date','end_date','status'])};
  if(kind==='competitions'){
-  const rules={...window.__unused??{}}; // removed before persist
   return {table:'app_competitions',id:blank.competitions||null,payload:{
     ...cleaned(data,['name','kind','format']),periods:Number(data.periods),minutes_per_period:Number(data.minutes_per_period),
     win_points:Number(data.win_points),draw_points:Number(data.draw_points),loss_points:Number(data.loss_points),

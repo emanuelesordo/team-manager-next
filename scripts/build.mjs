@@ -4,8 +4,8 @@ const base=new URL('../',import.meta.url),out=new URL('../dist/',import.meta.url
 await rm(out,{force:true,recursive:true});await mkdir(out,{recursive:true});
 for(const file of ['index.html','.nojekyll'])await cp(new URL(file,base),new URL(file,out));
 for(const dir of ['fresh','assets'])await cp(new URL(dir+'/',base),new URL(dir+'/',out),{recursive:true});
-const hash=createHash('sha256').update(await readFile(new URL('fresh/main.js',out))).update(await readFile(new URL('fresh/style.css',out))).update(await readFile(new URL('fresh/vista.css',out))).digest('hex').slice(0,12);
+const hash=createHash('sha256').update(await readFile(new URL('fresh/main.js',out))).update(await readFile(new URL('fresh/style.css',out))).update(await readFile(new URL('fresh/vista.css',out))).update(await readFile(new URL('fresh/staff.css',out))).digest('hex').slice(0,12);
 let html=await readFile(new URL('index.html',out),'utf8');
-html=html.replace('./fresh/style.css','./fresh/style.css?v='+hash).replace('./fresh/main.js','./fresh/main.js?v='+hash).replace('./fresh/vista.css','./fresh/vista.css?v='+hash);
+html=html.replace('./fresh/style.css','./fresh/style.css?v='+hash).replace('./fresh/main.js','./fresh/main.js?v='+hash).replace('./fresh/vista.css','./fresh/vista.css?v='+hash).replace('./fresh/staff.css','./fresh/staff.css?v='+hash);
 await writeFile(new URL('index.html',out),html);
 console.log('Fresh frontend build:',hash);
