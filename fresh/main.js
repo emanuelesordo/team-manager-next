@@ -157,7 +157,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam){
  const goal=e=>['goal','penalty_goal','own_goal'].includes(type(e));
  const duration=Number(fixture?.minutes_per_period)||45;
  const period=e=>{const p=norm(e.payload?.period);if(p==='second_half'||p==='first_half')return p;return Number(e.minute)>duration?'second_half':'first_half'};
- const absoluteMinute=e=>{if(e.minute==null||e.minute==='')return null;const n=Number(e.minute);if(!Number.isFinite(n))return null;return period(e)==='second_half'&&n<=duration?duration+n:n};
+ const localSecondHalf=(events||[]).some(e=>norm(e.payload?.period)==='second_half'&&e.minute!=null&&Number(e.minute)<duration);
+ const absoluteMinute=e=>{if(e.minute==null||e.minute==='')return null;const n=Number(e.minute);if(!Number.isFinite(n))return null;const explicit=norm(e.payload?.period)==='second_half';return period(e)==='second_half'&&(n<=duration||(explicit&&(localSecondHalf||n<=duration+10)))?duration+n:n};
  const recovery=e=>Math.max(0,Number(e.stoppage_minute)||0);
  const order=e=>{const n=absoluteMinute(e);return n===null?Infinity:n+recovery(e)/100};
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
