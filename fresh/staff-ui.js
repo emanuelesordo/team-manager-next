@@ -28,7 +28,7 @@ function findGeneralSeason(available,app,teamId){
   (Math.min(Date.parse(g.end_date),Date.parse(app.end_date))-Math.max(Date.parse(g.start_date),Date.parse(app.start_date)))>=180*86400000);
  return options.length===1?options[0]:null;
 }
-const roleOf=ctx=>ctx.state.identity?.role?.role;
+const roleOf=ctx=>ctx.state.identity?.profile?.is_active===false?null:ctx.state.identity?.role?.role;
 export const isStaff=ctx=>['admin','manager'].includes(roleOf(ctx));
 function selectExisting(kind,records,text){return '<label class="staff-field"><span>Modifica esistente o crea nuovo</span><select data-staff-select="'+kind+'">'+option('','+ Nuovo',memory.selected[kind])+records.map(x=>option(x.id,x[text]||x.name||x.id,memory.selected[kind])).join('')+'</select></label>'}
 function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor">'+title('CONFIGURAZIONE',heading)+(description?help(description):'')+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}

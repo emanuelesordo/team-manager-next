@@ -65,3 +65,5 @@ Documento prevalente sui requisiti di dominio: `docs/specification-original.txt`
 - [x] Riconciliati 11/12 tabellini `app_matches` programmaticamente con corrispondenza 1:1 verificata.
 - [x] Bloccata la creazione automatica di tabellini per fixture concluse/live prive di collegamento, a protezione degli storici.
 - [ ] Conflitto storico giornata 1 Voltesea: tabellino 0–0, fixture 1–4. Richiede confronto documentale prima di collegare.
+
+- [x] Sessioni di account disattivati: la UI revoca la sessione alla rilettura del profilo e non mostra più controlli staff; il backend blocca comunque l'autorizzazione tramite `private.is_staff/is_admin`.

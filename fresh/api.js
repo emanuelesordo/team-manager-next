@@ -46,7 +46,10 @@ export async function loadIdentity(){
  if(!hasSession())return {user:null,role:null,profile:null};
  const id=userId();if(!id)return {user:null,role:null,profile:null};
  const rows=await Promise.allSettled([get('app_user_roles','select=user_id,role,player_id&user_id=eq.'+id),get('profiles','select=id,display_name,username,is_active,must_change_password&id=eq.'+id).catch(()=>[])]);
- return {user:id,role:rows[0].status==='fulfilled'?rows[0].value[0]||null:null,profile:rows[1].status==='fulfilled'?rows[1].value[0]||null:null};
+ const role=rows[0].status==='fulfilled'?rows[0].value[0]||null:null;
+ const profile=rows[1].status==='fulfilled'?rows[1].value[0]||null:null;
+ if(profile?.is_active===false){await logout();return {user:null,role:null,profile:null,disabled:true}}
+ return {user:id,role,profile};
 }
 export async function loadBase(){
  const query='select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,home_venue_name&limit=10';
