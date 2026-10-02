@@ -85,6 +85,15 @@ async def test_view(browser, width, height):
  await page.locator('[data-staff-match-tab="events"]').click()
  await page.locator('[data-staff-action="review-approve"]').first.wait_for()
  assert await page.locator('[data-staff-action="review-approve"]').count()==16
+ assert await page.locator('[data-staff-action="review-result-align"]').is_visible()
+ assert await page.locator('[data-staff-action="review-result-confirm"]').is_disabled()
+ await page.locator('[data-staff-action="review-edit"]').first.click()
+ await page.locator('form[data-staff-form="amend-event"]').wait_for(timeout=10000)
+ assert await page.locator('form[data-staff-form="amend-event"] input[name="reason"]').count()==1
+ await page.locator('[data-staff-action="review-cancel-edit"]').click()
+ await page.locator('[data-staff-action="review-result-history"]').click()
+ assert "Nessun allineamento" in (await page.locator('.staff-subpanel').inner_text())
+
  assert "non modifica automaticamente" in (await page.locator('.staff-subpanel').inner_text()).lower()
  # Browser refresh must reconstruct the selected fixture and fetch match data.
  await page.reload(wait_until="domcontentloaded")
