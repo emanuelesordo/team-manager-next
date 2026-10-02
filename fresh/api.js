@@ -89,3 +89,22 @@ export async function saveFixture(id,fields){
  if(!Array.isArray(result)||result.length!==1)throw Error('Nessuna partita aggiornata. Controlla i permessi.');
  return result[0];
 }
+
+/** RPC server-side: autorizzazioni verificate da Supabase, non dal frontend. */
+export async function rpc(functionName,args={}){
+ if(!/^[a-z_]+$/.test(functionName))throw new Error('Funzione non valida');
+ if(!hasSession())throw new Error('Effettua l’accesso per modificare i dati');
+ return authorized('/rest/v1/rpc/'+functionName,{method:'POST',body:args});
+}
+/** Mutazioni RLS su tabelle esplicitamente consentite alla console admin. */
+const EDIT_TABLES=new Set(['teams','app_seasons','app_competitions','app_opponents',
+ 'players','app_roster','app_competition_fixtures','injuries','suspensions']);
+export async function adminWrite(table,method,values,where={}){
+ if(!EDIT_TABLES.has(table)||!['POST','PATCH'].includes(method))throw new Error('Operazione non prevista');
+ if(!hasSession())throw new Error('Accesso richiesto');
+ if(method==='PATCH'&&(!Object.keys(where).length||!where.id))throw new Error('ID mancante');
+ const q=new URLSearchParams();
+ for(const [k,v] of Object.entries(where))q.set(k,'eq.'+String(v));
+ const path='/rest/v1/'+table+(q.size?'?'+q.toString():'');
+ return authorized(path,{method,body:values,extraHeaders:{Prefer:'return=representation'}});
+}
