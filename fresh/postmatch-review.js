@@ -1,4 +1,5 @@
 /** Post-match review. The official fixture score and proposed event history are independent. */
+import {amendEventForm,revisionHistory,resultReviewSection} from './postmatch-controls.js';
 const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const reviewable=new Set(['proposed','community_confirmed','disputed']);
 const goalTypes=new Set(['goal','own_goal','penalty_scored']);
@@ -20,7 +21,7 @@ export function reviewSummary(match,fixture,events=[]){
   scoreMismatch:fixtureHasScore&&matchHasScore&&(fixture.home_score!==match.home_score||fixture.away_score!==match.away_score),
   knownGoalMismatch:fixtureHasScore&&(goals.home!==fixture.home_score||goals.away!==fixture.away_score)};
 }
-export function reviewPanel({match,fixture,events=[],players=[]}={}){
+export function reviewPanel({match,fixture,events=[],players=[],editingEventId=null,historyEventId=null,historyEntries=[]}={}){
  const summary=reviewSummary(match,fixture,events);
  const names=new Map(players.map(p=>[p.id,[p.first_name,p.last_name].filter(Boolean).join(' ')]));
  const sorted=[...events].sort((a,b)=>(a.minute??999)-(b.minute??999)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
@@ -35,12 +36,14 @@ export function reviewPanel({match,fixture,events=[],players=[]}={}){
   const secondary=ev.secondary_player_id?names.get(ev.secondary_player_id)||'Giocatore non censito':'';
   const minute=ev.minute==null?'Minuto non noto':String(ev.minute)+(ev.stoppage_minute?'+'+ev.stoppage_minute:'')+'′';
   const counted=ev.payload?.counted_in_score===true;
-  const actions=isPending&&['live','finished'].includes(match?.status)?
+  const editable=['live','finished'].includes(match?.status);
+  const actions=isPending&&editable?
    '<div class="staff-event-buttons"><button type="button" class="staff-soft" data-staff-action="review-approve" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Approva</button>'+
    (counted?'<small>Per scartare: rettificare prima il risultato</small>':'<button type="button" class="staff-danger" data-staff-action="review-reject" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Scarta</button>')+'</div>':'';
-  return '<div class="staff-event-row"><div><strong>'+E(minute)+' · '+E(label(ev.event_type))+'</strong><span>'+E(ev.team_side==='team'?'Nostra squadra':ev.team_side==='opponent'?'Avversaria':'Squadra non specificata')+' · '+E(n)+(secondary?' · '+E(secondary):'')+'</span><small>'+E(statusLabel(ev.validation_status))+'</small></div>'+actions+'</div>';
+  const extra=editable?'<button type="button" class="staff-soft" data-staff-action="review-edit" data-event-id="'+E(ev.id)+'">Rettifica</button><button type="button" class="staff-soft" data-staff-action="review-history" data-event-id="'+E(ev.id)+'">Storico</button>':'';
+  return '<div class="staff-event-row"><div><strong>'+E(minute)+' · '+E(label(ev.event_type))+'</strong><span>'+E(ev.team_side==='team'?'Nostra squadra':ev.team_side==='opponent'?'Avversaria':'Squadra non specificata')+' · '+E(n)+(secondary?' · '+E(secondary):'')+'</span><small>'+E(statusLabel(ev.validation_status))+'</small></div>'+actions+extra+'</div>'+(editingEventId===ev.id?amendEventForm(ev,players):'')+(historyEventId===ev.id?revisionHistory(historyEntries):'');
  }).join('');
  return '<section class="staff-subpanel"><div class="staff-panel-heading"><div><span class="eyebrow">POSTPARTITA</span><h2>Revisione eventi</h2></div></div>'+
  '<p class="staff-help">Lo staff può ufficializzare o scartare le proposte una per volta. Gli eventi scartati rimangono nello storico. La revisione non assegna minuti, marcatori o assist sconosciuti e non riscrive i punteggi.</p>'+
- summaryText+discrepancy+coverage+'<div class="staff-event-list">'+(items||'<p class="empty">Nessun evento. Un risultato ufficiale può essere registrato anche senza eventi o marcatori noti.</p>')+'</div></section>';
+ summaryText+resultReviewSection(match,fixture,summary)+discrepancy+coverage+'<div class="staff-event-list">'+(items||'<p class="empty">Nessun evento. Un risultato ufficiale può essere registrato anche senza eventi o marcatori noti.</p>')+'</div></section>';
 }
