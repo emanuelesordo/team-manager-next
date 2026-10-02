@@ -220,7 +220,7 @@ function liveControls(m){
  let controls='';
  if(m.status==='scheduled')controls=btn('start','Avvia partita');
  else if(m.status==='live')controls=btn(m.live_clock_running?'pause':'resume',m.live_clock_running?'Pausa cronometro':'Riprendi cronometro')+
-  btn('halftime','Intervallo')+btn('second_half','Secondo tempo')+btn('extra','Supplementari')+btn('finish','Termina e ufficializza');
+  btn('halftime','Intervallo')+btn('second_half','Secondo tempo')+btn('extra','Supplementari')+btn('penalties','Rigori')+btn('finish','Termina e ufficializza');
  else if(m.status==='finished')controls=btn('reopen','Riapri per correzioni');
  return '<div class="live-action-row">'+controls+'</div>';
 }
@@ -363,12 +363,12 @@ export async function staffClick(e,button,ctx){
       return (delta< -30*60000||delta>4*3600000)?
         window.confirm('Partita fuori dall’orario previsto. Confermi l’avvio forzato del LIVE?'):false})()}:
 
-   ['halftime','second_half','extra'].includes(action)?{period:action}:{};
+   ['halftime','second_half','extra','penalties'].includes(action)?{period:action}:{};
   if(action==='start'){
    const kickoff=Date.parse(ctx.resolveMatch().fixture?.kickoff_at||'');
    if((Date.now()-kickoff< -30*60000||Date.now()-kickoff>4*3600000)&&!payload.force_start)return true;
   }
-  const map={halftime:'period',second_half:'period',extra:'period',void:'void_event',approve:'approve_event'};
+  const map={halftime:'period',second_half:'period',extra:'period',penalties:'period',void:'void_event',approve:'approve_event'};
   if(action==='sync-blue'){const count=await rpc('tm_app_sync_blue',{p_match_id:m.id});await reloadMatch(ctx);ctx.toast(count>0?count+' rientri blu registrati':'Nessun rientro necessario');return true;}
   await rpc('tm_app_match_action',{p_match_id:m.id,p_action:map[action]||action,p_payload:payload});
   await reloadMatch(ctx);ctx.toast('Operazione registrata');
