@@ -4,6 +4,7 @@ import {pitchMarkup} from './lineup-pitch.js';
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js';
+import {storedEventMinute} from './match-minutes.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const attrs=(rows,key,label)=>rows.map(row=>'<option value="'+esc(row[key])+'">'+esc(row[label])+'</option>').join('');
@@ -285,18 +286,18 @@ function matchLive(ctx,m,competition){
  picker('event_type','Evento',events,'goal')+picker('team_side','Squadra',[['team','Nostra squadra'],['opponent','Avversaria']],'team')+
  picker('player_id','Giocatore principale / uscente',playerOpts,'')+
  picker('secondary_player_id','Assist / subentrante',playerOpts,'')+
- input('minute','Minuto nella frazione', '','number','min="0" max="150" placeholder="Sconosciuto"')+
+ input('minute','Minuto cumulativo', '','number','min="0" max="300" placeholder="Es. 63"')+
  input('stoppage_minute','Recupero', '','number','min="0" max="30" placeholder="—"')+
  picker('substitution_reason','Motivo del cambio',[['tactical','Tattico'],['injury','Infortunio'],['technical','Tecnico'],['other','Altro']],'tactical')+
  input('notes','Note (facoltative)','','text','maxlength="400"')+'</div>'+
  '<label class="staff-check"><input type="checkbox" name="count_score" checked> Aggiorna anche il tabellone per gol, autogol e rigori segnati</label>'+
- help(mins?'Il minuto è riferito alla frazione selezionata ('+mins+' minuti regolamentari). Lascia vuoto se sconosciuto; il recupero resta separato.':'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
+ help(mins?'Minuto cumulativo dall’inizio partita. Durata per tempo: '+mins+' minuti; secondo tempo dal '+mins+'′. Recupero separato.':'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
  submit('Registra evento')+'</form>':help('Gli eventi si registrano a match avviato. Una partita finalizzata richiede riapertura esplicita.');
  return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+displayClock(m,competition)+liveControls(m)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':'')+
  '<div class="staff-live-grid"><div class="staff-live-panel"><h3>Risultato della partita</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(ctx.resolveMatch().fixture||m))+
  '</div><div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
 }
-function matchEvents(ctx,m){return reviewPanel({match:m,fixture:ctx.resolveMatch().fixture,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
+function matchEvents(ctx,m){const fixture=ctx.resolveMatch().fixture,competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id);return reviewPanel({match:m,fixture,competition,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
 
 export function staffMatchPanel(ctx,f,m){
  if(!isStaff(ctx))return '';
@@ -496,12 +497,12 @@ export async function staffSubmit(e,ctx){
    const changes={event_type:d.event_type,team_side:d.team_side,
     player_id:d.team_side==='team'?d.player_id||null:null,
     secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
-    minute:numberOrNull(d.minute),stoppage_minute:numberOrNull(d.stoppage_minute),
+    minute:storedEventMinute(ev,numberOrNull(d.minute),(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id)),stoppage_minute:numberOrNull(d.stoppage_minute),
     substitution_reason:d.substitution_reason||null,notes:d.notes||''};
    await pendingFn(form,()=>rpc('tm_app_amend_event',{p_match_id:m.id,p_event_id:ev.id,
     p_expected_status:ev.validation_status,p_changes:changes,p_reason:d.reason||''}));
    reviewEditEvent=null;reviewHistoryEvent=null;await reloadMatch(ctx);
-   ctx.toast('Rettifica salvata nello storico, da riapprovare');return true;
+   ctx.toast(roleOf(ctx)==='admin'?'Rettifica salvata e ufficializzata':'Rettifica salvata nello storico, da verificare');return true;
   }
   if(kind==='tactics'){
    const match=ctx.resolveMatch().operational;
@@ -535,12 +536,14 @@ export async function staffSubmit(e,ctx){
    const period=m.live_period;
    const configuredMinutes=Number(c?.minutes_per_period);
     if(!Number.isFinite(configuredMinutes)||configuredMinutes<=0)throw Error('Durata dei tempi non configurata nella competizione: controlla Setup → Competizioni');
-    const offset=period==='second_half'?configuredMinutes:period==='extra'?2*configuredMinutes:0;
+    // Il minuto inserito è già cumulativo: nessun offset.
    const minute=numberOrNull(d.minute);
+    if(minute!==null&&period==='second_half'&&minute<configuredMinutes)throw Error('Nel secondo tempo usa il minuto cumulativo da '+configuredMinutes+'′');
+    if(minute!==null&&period==='extra'&&minute<2*configuredMinutes)throw Error('Nei supplementari usa il minuto cumulativo');
    const payload={event_type:d.event_type,team_side:d.team_side,
     player_id:d.team_side==='team'?d.player_id||null:null,
     secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
-    minute:minute===null?null:minute+offset,stoppage_minute:numberOrNull(d.stoppage_minute),
+    minute,stoppage_minute:numberOrNull(d.stoppage_minute),
     substitution_reason:d.substitution_reason,notes:d.notes,
     count_score:Boolean(d.count_score),request_key:crypto.randomUUID()};
    if(payload.event_type==='substitution'&&!payload.player_id)throw Error('Indica chi esce');
