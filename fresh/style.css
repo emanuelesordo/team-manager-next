@@ -35,3 +35,15 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 .mt-divider{display:flex;align-items:center;gap:15px;justify-content:center;margin:13px 0 6px;font-weight:900;font-size:11px;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
 .mt-divider:before,.mt-divider:after{content:'';height:1px;background:var(--border);flex:1}
 @media(max-width:550px){.match-timeline{padding:4px 0}.mt-row{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);gap:5px;min-height:48px}.mt-side{gap:4px}.mt-icon{width:19px;flex-basis:19px;font-size:15px}.mt-score{font-size:10px;padding:3px 5px}.mt-names{gap:3px}.mt-names strong{font-size:10px}.mt-names small{font-size:9px}.mt-minute{font-size:11px}.mt-divider{font-size:10px}}
+
+/* Cronologia: minuto centrale, casa a sinistra, ospiti a destra. */
+.mt-row{grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr)}
+.mt-home{flex-direction:row-reverse;text-align:right}
+.mt-away{flex-direction:row;text-align:left}
+.mt-icon{order:0}.mt-score{order:1}.mt-names{order:2}
+.mt-home .mt-icon{order:2}.mt-home .mt-score{order:1}.mt-home .mt-names{order:0}
+.mt-card-stack{display:inline-flex;align-items:center;min-width:19px;height:23px}
+.mt-card-stack i{display:block;flex:0 0 10px;width:10px;height:22px;border-radius:2px;margin-right:-2px;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.mt-card-yellow{background:#edc93c}.mt-card-blue{background:#4a91f6}.mt-card-red{background:#d95461}
+.mt-change span:first-child{transform:none}.mt-change span:last-child{transform:rotate(180deg)}
+@media(max-width:550px){.mt-row{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr)}.mt-card-stack i{width:8px;flex-basis:8px;height:17px}}
