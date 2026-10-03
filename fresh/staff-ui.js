@@ -45,7 +45,7 @@ function findGeneralSeason(available,app,teamId){
 const roleOf=ctx=>ctx.state.identity?.profile?.is_active===false?null:ctx.state.identity?.role?.role;
 export const isStaff=ctx=>['admin','manager'].includes(roleOf(ctx));
 function selectExisting(kind,records,text){return '<label class="staff-field"><span>Modifica esistente o crea nuovo</span><select data-staff-select="'+kind+'">'+option('','+ Nuovo',memory.selected[kind])+records.map(x=>option(x.id,x[text]||x.name||x.id,memory.selected[kind])).join('')+'</select></label>'}
-function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor">'+title('CONFIGURAZIONE',heading)+(description?help(description):'')+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}
+function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor'+(id==='team'?' staff-editor-team':'')+'">'+title('CONFIGURAZIONE',heading)+(description?help(description):'')+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}
 export function adminPage(ctx){
  if(!isStaff(ctx))return '<div class="empty">Gestione riservata allo staff autorizzato.</div>';
  const data=ctx.state.data||{},base=ctx.state.base||{},t=base.team||{};
@@ -54,11 +54,16 @@ export function adminPage(ctx){
  let form='';
  if(memory.area==='team'){
   form=wrapForm('team','Identità squadra',
-   '<div class="staff-form-grid">'+input('name','Nome completo',t.name,'text','required maxlength="100"')+
-   input('short_name','Sigla',t.short_name,'text','required maxlength="12"')+
-   input('logo_url','URL stemma (alternativa)',t.logo_url||'','url')+
-   logoPicker(t.logo_url||'',[t.primary_color,t.secondary_color,t.accent_color],t.logo_shape||'rounded',true,t.logo_background_color)+
-   input('home_venue_name','Campo principale',t.home_venue_name||'')+'</div>',
+   '<div class="staff-team-layout">'+
+    '<div class="staff-team-details">'+
+     input('name','Nome completo',t.name,'text','required maxlength="100"')+
+     input('short_name','Sigla',t.short_name,'text','required maxlength="12"')+
+     input('home_venue_name','Campo principale',t.home_venue_name||'')+
+     input('logo_url','URL stemma (alternativa)',t.logo_url||'','url')+
+    '</div>'+
+    '<div class="staff-team-brand">'+
+     logoPicker(t.logo_url||'',[t.primary_color,t.secondary_color,t.accent_color],t.logo_shape||'rounded',true,t.logo_background_color)+
+    '</div></div>',
    'La modifica dei dati ufficiali è soggetta ai permessi di squadra presenti in Supabase.');
  }
  if(memory.area==='seasons'){
