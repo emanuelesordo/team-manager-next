@@ -88,6 +88,7 @@ test('opponent and team administration render the identical bounded club editor 
  await staffClick({},{dataset:{staffArea:'opponents'}},ctx);
  const opponents=adminPage(ctx);
  assert.match(opponents,/staff-editor-club staff-editor-opponents/);
+ assert.doesNotMatch(opponents,/<h2>Anagrafiche avversarie<\/h2>/);
  assert.match(opponents,/staff-club-selector/);
  assert.match(opponents,/staff-team-layout/);
  assert.match(opponents,/staff-team-details/);
