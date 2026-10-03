@@ -86,6 +86,12 @@ export function adminPage(ctx){
    '<div class="staff-form-grid">'+input('name','Denominazione',c?.name||'','text','required')+
    selection('kind','Categoria',[['league','Campionato'],['cup','Coppa'],['friendly','Amichevole'],['tournament','Torneo'],['other','Altro']],c?.kind||'league')+
    input('format','Formato',c?.format||'round_robin','text','required maxlength="80"')+
+   input('tier_level','Livello (A1=1, A2=2, B=3; avanzamenti 3.1, 3.2)',c?.tier_level??'','number','step="0.001" min="0.001" max="999"')+
+   input('group_code','Girone della prima fase (es. D / E)',c?.group_code||'','text','maxlength="12"')+
+   selection('postseason_mode','Formula della fase successiva',[
+    ['none','Nessuna prosecuzione'],['knockout','Eliminazione diretta'],
+    ['league_then_final','Nuovo girone a 0 punti, poi eventuale finale']
+   ],c?.postseason_mode||'none')+
    input('periods','Numero tempi',c?.periods??2,'number','min="1" max="6" required')+
    input('minutes_per_period','Minuti per tempo',c?.minutes_per_period??40,'number','min="1" max="120" required')+
    input('win_points','Punti vittoria',c?.win_points??3,'number','min="0" max="20" required')+
@@ -108,6 +114,36 @@ export function adminPage(ctx){
    const choices=opps.map(o=>'<label class="staff-check staff-participant">'+
     '<input type="checkbox" name="opponent_ids" value="'+esc(o.id)+'" '+(linked.has(o.id)?'checked disabled':'')+'>'+
     '<span>'+esc(o.name)+(linked.has(o.id)?' · già associata':'')+'</span></label>').join('');
+
+   const parent=c.parent_competition_id?comps.find(x=>x.id===c.parent_competition_id)||c:c;
+   const children=comps.filter(x=>x.parent_competition_id===parent.id);
+   const chosenPhase=idOf(children,S.phases);
+   const configured=(data.phaseSources||[]).filter(x=>x.phase_competition_id===chosenPhase?.id);
+   const sourceChoices=comps.filter(x=>x.season_id===ctx.state.season&&(!x.parent_competition_id||x.id===parent.id))
+    .map(x=>[x.id,(x.tier_level!=null?x.tier_level+' · ':'')+x.name+(x.group_code?' · Girone '+x.group_code:'')]);
+   const suggestedRole=chosenPhase?.phase_role||'playoff';
+   const targetRank=suggestedRole==='consolation'||suggestedRole==='playout'?6:1;
+   const sourceA=configured[0]?.source_competition_id||parent.id;
+   const sourceB=configured[1]?.source_competition_id||'';
+   const usedLevels=new Set(children.map(x=>Number(x.tier_level)));
+   let suggestedLevel=Number(parent.tier_level??3)+0.1;
+   while(usedLevels.has(Number(suggestedLevel.toFixed(3))))suggestedLevel+=0.1;
+   const phaseEditor=selectExisting('phases',children,'name')+
+    '<div class="staff-form-grid">'+
+    input('phase_name','Nome sottocompetizione',chosenPhase?.name||'', 'text','required maxlength="100"')+
+    selection('phase_role','Tipo',[['playoff','Play Off'],['consolation','Torneo Primavera / consolazione'],
+     ['playout','Play Out'],['final','Finale']],suggestedRole)+
+    selection('phase_format','Formula',[['league','Girone nuovo: tutti da 0'],
+     ['knockout','Eliminazione diretta'],['league_then_final','Girone nuovo + finale']],chosenPhase?.phase_format||'league_then_final')+
+    input('phase_tier','Livello modificabile (es. 3.1, 3.2)',chosenPhase?.tier_level??suggestedLevel.toFixed(1),'number','step="0.001" min="0.001" max="999" required')+
+    selection('phase_source_a','Girone di origine 1',sourceChoices,sourceA)+
+    selection('phase_source_b','Girone di origine 2',[['','Da indicare quando censito'],...sourceChoices],sourceB)+
+    input('phase_min_rank','Dalla posizione',configured[0]?.min_rank??targetRank,'number','min="1" max="100" required')+
+    input('phase_max_rank','Alla posizione (vuoto = tutte le restanti)',configured[0]?.max_rank??(targetRank===1?5:''),'number','min="1" max="100"')+
+    '</div>'+
+    '<p class="staff-help">Ogni sottocompetizione ha ID, calendario e classifica propri. Si riparte da zero: nessun punto o risultato della stagione regolare viene trasferito. Imposta entrambi i gironi sorgente prima di qualificare le squadre.</p>';
+   form+=wrapForm('phase','Fasi collegate · Play Off / Primavera',phaseEditor,
+    'Una fase può iniziare con un girone oppure direttamente a eliminazione; le fasi sono sempre collegate alla competizione madre.');
    form+=wrapForm('participants','Squadre partecipanti', 
     '<p class="staff-help">Le associazioni esistenti restano nello storico. Seleziona nuove avversarie da aggiungere senza rimuovere quelle già collegate.</p>'+
     '<div class="participant-grid">'+choices+'</div>',
@@ -338,7 +374,8 @@ function adminPayload(form,ctx){
    if(rules.yellow_thresholds.some(x=>x<1||x>30))throw Error('Soglie diffida non valide');
   }
   return {table:'app_competitions',id:blank.competitions||null,payload:{
-    ...cleaned(data,['name','kind','format']),periods:Number(data.periods),minutes_per_period:Number(data.minutes_per_period),
+    ...cleaned(data,['name','kind','format','group_code','postseason_mode']),
+    tier_level:numberOrNull(data.tier_level),periods:Number(data.periods),minutes_per_period:Number(data.minutes_per_period),
     win_points:Number(data.win_points),draw_points:Number(data.draw_points),loss_points:Number(data.loss_points),
     knockout_two_legged:data.knockout_two_legged==='true',
     extra_time_enabled:data.extra_time_enabled==='true',
@@ -611,6 +648,29 @@ export async function staffSubmit(e,ctx){
     p_player_id:d.player_id||null,p_set_player:true,p_active:d.active==='true'
    }));
    await ctx.reloadAll();ctx.toast('Permessi e collegamento giocatore aggiornati');return true;
+  }
+  if(kind==='phase'){
+   const d=dataForm(form);
+   const selected=(ctx.state.data?.competitions||[]).find(c=>c.id===memory.selected.competitions);
+   if(!selected)throw Error('Seleziona prima una competizione madre');
+   const parentId=selected.parent_competition_id||selected.id;
+   const role=d.phase_role,format=d.phase_format,sourceA=d.phase_source_a,sourceB=d.phase_source_b||null;
+   const rankMin=Number(d.phase_min_rank),rankMax=numberOrNull(d.phase_max_rank);
+   const tier=Number(d.phase_tier);
+   if(!d.phase_name?.trim()||!Number.isInteger(rankMin)||rankMin<1||
+    (rankMax!==null&&(!Number.isInteger(rankMax)||rankMax<rankMin))||
+    !Number.isFinite(tier)||tier<=0||!sourceA||sourceA===sourceB)
+     throw Error('Dati fase non validi: verifica livello, gironi e posizioni');
+   const all=ctx.state.data?.competitions||[];
+   const existing=all.find(x=>x.id===memory.selected.phases&&x.parent_competition_id===parentId);
+   const phaseId=await pendingFn(form,()=>rpc('tm_app_save_subcompetition',{
+     p_parent_id:parentId,p_phase_id:existing?.id||null,p_name:d.phase_name.trim(),
+     p_phase_role:role,p_phase_format:format,p_tier_level:tier,
+     p_source_a:sourceA,p_source_b:sourceB,p_rank_min:rankMin,p_rank_max:rankMax
+   }));
+   memory.selected.phases=phaseId;
+   await ctx.reloadAll();ctx.toast('Sottocompetizione salvata: calendario e punteggi partono da zero');
+   return true;
   }
   if(kind==='players'){
    const d=dataForm(form),payload={...d,id:memory.selected.players||null,
