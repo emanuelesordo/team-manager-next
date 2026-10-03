@@ -463,13 +463,13 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  display:flex;
  flex-direction:row;
  align-items:center;
- justify-content:flex-end;
+ justify-content:flex-start;
  gap:clamp(6px,.9vw,12px);
  min-width:0;
 }
 .match-detail-head.is-compact .match-header-team-away{
  flex-direction:row-reverse;
- justify-content:flex-end;
+ justify-content:flex-start;
 }
 .match-detail-head.is-compact .match-header-team .crest.xl{
  width:clamp(32px,3.3vw,46px);
