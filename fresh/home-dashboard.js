@@ -20,7 +20,7 @@ export function dateKey(value,timezone='Europe/Rome'){
  const p=key=>pts.find(x=>x.type===key)?.value||'';
  return p('year')+'-'+p('month')+'-'+p('day');
 }
-export function renderMonthCalendar(fixtures,teamId,month,crest,onMonthLabel){
+export function renderMonthCalendar(fixtures,teamId,month,crest,detailAction=''){
  const year=Math.floor(month/12),m=(month%12+12)%12;
  const first=new Date(Date.UTC(year,m,1,12));
  const count=new Date(Date.UTC(year,m+1,0)).getUTCDate();
@@ -40,7 +40,7 @@ export function renderMonthCalendar(fixtures,teamId,month,crest,onMonthLabel){
  const markup='<div class="month-nav"><h2>'+escapeText(title.charAt(0).toUpperCase()+title.slice(1))+'</h2>'+
   '<div class="month-nav-actions"><button data-home-month="-1" aria-label="Mese precedente" title="Mese precedente">‹</button>'+
   '<button data-home-month="0" aria-label="Mese corrente" title="Torna al mese corrente">Oggi</button>'+
-  '<button data-home-month="1" aria-label="Mese successivo" title="Mese successivo">›</button></div></div>'+
+  '<button data-home-month="1" aria-label="Mese successivo" title="Mese successivo">›</button></div>'+detailAction+'</div>'+
   '<div class="month-days" role="grid" aria-label="Partite '+escapeText(title)+'">'+
   days.map(d=>'<span class="month-weekday">'+d+'</span>').join('')+
   Array.from({length:cells},(_,index)=>{
