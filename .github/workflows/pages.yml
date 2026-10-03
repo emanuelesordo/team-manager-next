@@ -21,7 +21,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm run check
+      - name: Validate tests and generate site
+        run: npm run check
+      - name: Verify deployed Home assets
+        shell: bash
+        run: |
+          test -s dist/index.html
+          test -s dist/fresh/main.js
+          test -s dist/fresh/home-dashboard.js
+          test -s dist/fresh/style.css
+          grep -q 'home-side-stack' dist/fresh/main.js
+          grep -q 'home-month-section' dist/fresh/style.css
+          grep -q 'renderMonthCalendar' dist/fresh/home-dashboard.js
+          grep -qE 'fresh/main.js\\?v=[0-9a-f]{12}' dist/index.html
+          ! grep -qE '\\?v=[^" ]+\\?v=' dist/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
