@@ -1,5 +1,6 @@
 import {matchPlayerLabel} from './match-player-label.js';
 import {roundRobinDraft} from './phase-scheduler.js';
+import {openKitConfigurator} from './kit-editor.js';
 import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge} from './api.js?phases=20261003a';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup} from './lineup-pitch.js';
@@ -60,7 +61,11 @@ export function adminPage(ctx){
     '<div class="staff-team-details">'+
      input('name','Nome completo',t.name,'text','required maxlength="100"')+
      input('short_name','Sigla',t.short_name,'text','required maxlength="12"')+
-     input('home_venue_name','Campo principale',t.home_venue_name||'')+
+     input('home_venue_name','Nome campo',t.home_venue_name||'')+
+     input('home_venue_street','Via / viale / strada',t.home_venue_street||'')+
+     input('home_venue_city','Comune / località',t.home_venue_city||'')+
+     input('home_venue_province','Provincia (sigla)',t.home_venue_province||'','text','maxlength="2" pattern="[a-zA-Z]{2}"')+
+     btn('configure-kits','Configura maglie')+
      input('logo_url','URL stemma (alternativa)',t.logo_url||'','url')+
     '</div>'+
     '<div class="staff-team-brand">'+
@@ -188,8 +193,11 @@ export function adminPage(ctx){
     '<div class="staff-team-details">'+
      input('name','Nome',o?.name||'','text','required')+
      input('short_name','Sigla',o?.short_name||'','text','maxlength="15"')+
-     input('home_venue_name','Campo',o?.home_venue_name||'')+
-     input('home_venue_address','Indirizzo campo',o?.home_venue_address||'')+
+     input('home_venue_name','Nome campo',o?.home_venue_name||'')+
+     input('home_venue_street','Via / viale / strada',o?.home_venue_street||'')+
+     input('home_venue_city','Comune / località',o?.home_venue_city||'')+
+     input('home_venue_province','Provincia (sigla)',o?.home_venue_province||'','text','maxlength="2" pattern="[a-zA-Z]{2}"')+
+     btn('configure-kits','Configura maglie')+
      input('logo_url','Stemma (URL alternativo)',o?.logo_url||'','url')+
     '</div>'+
     '<div class="staff-team-brand">'+
@@ -390,9 +398,17 @@ export function staffMatchPanel(ctx,f,m){
 function dataForm(form){return Object.fromEntries(new FormData(form))}
 function cleaned(o,fields){return Object.fromEntries(fields.map(k=>[k,o[k]===''?null:o[k]]))}
 function numberOrNull(n){return n===''||n==null?null:Number(n)}
+function clubVenuePayload(data){
+ const province=String(data.home_venue_province||'').trim().toUpperCase();
+ if(province&&!/^[A-Z]{2}$/.test(province))throw Error('Inserisci la sigla della provincia (due lettere)');
+ const street=String(data.home_venue_street||'').trim();
+ const city=String(data.home_venue_city||'').trim();
+ return {home_venue_street:street||null,home_venue_city:city||null,
+  home_venue_province:province||null,home_venue_address:[street,city+(province?' ('+province+')':'')].filter(Boolean).join(', ')||null};
+}
 function adminPayload(form,ctx){
  const data=dataForm(form),kind=form.dataset.staffForm,blank=memory.selected;
- if(kind==='team')return {table:'teams',id:null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_shape','logo_background_color','home_venue_name'])};
+ if(kind==='team')return {table:'teams',id:null,payload:{...cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_shape','logo_background_color','home_venue_name']),...clubVenuePayload(data)}};
  if(kind==='seasons')return {table:'app_seasons',id:blank.seasons||null,payload:cleaned(data,['name','start_date','end_date','status'])};
  if(kind==='competitions'){
   const rules={};
@@ -417,7 +433,7 @@ function adminPayload(form,ctx){
     ... (Object.keys(rules).length?{discipline_rules:rules}:{})
   }};
  }
- if(kind==='opponents')return {table:'app_opponents',id:blank.opponents||null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_background_color','home_venue_name','home_venue_address'])};
+ if(kind==='opponents')return {table:'app_opponents',id:blank.opponents||null,payload:{...cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_background_color','home_venue_name']),...clubVenuePayload(data)}};
  if(kind==='fixtures'){
   if(!blank.fixtures){
    const round=Number(data.round_no);
@@ -469,6 +485,20 @@ export async function staffClick(e,button,ctx){
  memory.busy=true;button.disabled=true;
  try{
   const m=ctx.resolveMatch().operational;
+  if(action==='configure-kits'){
+   const own=memory.area==='team';
+   const club=own?ctx.state.base?.team:(ctx.state.base?.opponents||[]).find(o=>o.id===memory.selected.opponents);
+   if(!club?.id)throw Error('Salva prima la nuova avversaria, poi configura le maglie.');
+   openKitConfigurator(club,async kits=>{
+    const payload={kits};
+    // Keep the existing first-team jersey consumers compatible with home kit.
+    if(own){payload.kit_style=kits.home.style;payload.kit_primary_color=kits.home.primary;
+     payload.kit_secondary_color=kits.home.secondary;payload.kit_number_color=kits.home.number;}
+    await adminWrite(own?'teams':'app_opponents','PATCH',payload,{id:club.id});
+    await ctx.reloadAll();ctx.toast('Divise salvate per '+club.name);
+   });
+   return true;
+  }
   if(action==='password-resolve'||action==='password-reject'){
    if(roleOf(ctx)!=='admin')throw Error('Operazione riservata agli amministratori');
    const approved=action==='password-resolve';
