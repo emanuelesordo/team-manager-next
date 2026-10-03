@@ -1,4 +1,5 @@
 import {matchPlayerLabel} from './match-player-label.js';
+import {roundRobinDraft} from './phase-scheduler.js';
 import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge} from './api.js';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup} from './lineup-pitch.js';
@@ -23,6 +24,7 @@ const memory=initial;
 let reviewEditEvent=null,reviewHistoryEvent=null,reviewHistoryEntries=[];
 let scoreAuditRows=[],scoreAuditOpen=false;
 let integrityData=null,integrityError='';
+let phaseDraft=null;
 function integrityPanel(){
  const count=Number(integrityData?.issue_count||0);
  const entries=(integrityData?.issues||[]).map(x=>'<div class="staff-event-row"><div><strong>'+esc(x.kind)+'</strong><span>'+esc(x.message)+'</span><small>Match: '+esc(x.match_id||'—')+' / Fixture: '+esc(x.fixture_id||'—')+'</small></div></div>').join('');
@@ -144,6 +146,33 @@ export function adminPage(ctx){
     '<p class="staff-help">Ogni sottocompetizione ha ID, calendario e classifica propri. Si riparte da zero: nessun punto o risultato della stagione regolare viene trasferito. Imposta entrambi i gironi sorgente prima di qualificare le squadre.</p>';
    form+=wrapForm('phase','Fasi collegate · Play Off / Primavera',phaseEditor,
     'Una fase può iniziare con un girone oppure direttamente a eliminazione; le fasi sono sempre collegate alla competizione madre.');
+   if(chosenPhase){
+    const entries=(data.phaseEntries||[]).filter(x=>x.phase_competition_id===chosenPhase.id);
+    const sourceStatus=configured.map(source=>{
+     const comp=comps.find(c=>c.id===source.source_competition_id);
+     const matches=(data.fixtures||[]).filter(f=>f.competition_id===source.source_competition_id);
+     const finished=matches.filter(f=>f.status==='finished'&&f.home_score!=null&&f.away_score!=null).length;
+     return '<span>'+esc(comp?.name||'Girone sconosciuto')+': '+finished+'/'+matches.length+' partite concluse</span>';
+    }).join('');
+    const clubName=x=>x.team_id===t.id?t.name:(opps.find(o=>o.id===x.opponent_id)?.name||'Squadra non censita');
+    const nameFromId=(tid,oid)=>clubName({team_id:tid,opponent_id:oid});
+    const draft=phaseDraft?.phaseId===chosenPhase.id?phaseDraft.rows:null;
+    const preview=draft?'<details class="phase-preview" open><summary>Bozza: '+draft.length+
+     ' partite, '+new Set(draft.map(x=>x.round_no)).size+' giornate. Date non assegnate.</summary>'+
+     '<div class="phase-draft-scroll">'+draft.map(x=>'<div class="staff-event-row">'+
+      '<small>G'+x.round_no+'</small><span>'+esc(nameFromId(x.home_team_id,x.home_opponent_id))+
+      ' — '+esc(nameFromId(x.away_team_id,x.away_opponent_id))+
+      (x.previous_fixture_id?' · campo invertito':'')+'</span></div>').join('')+'</div></details>':'';
+    form+='<section class="glass panel staff-phase-summary"><h3>Qualificazioni e calendario 2.0</h3>'+
+     '<p class="staff-help">Qualificati confermati: <strong>'+entries.length+'</strong>. '+
+     (configured.length<2&&chosenPhase.phase_role!=='final'?'Manca ancora il secondo girone sorgente. ':'')+
+     'La classifica riparte da 0; nessuna gara viene ripresa dalla fase precedente.</p>'+
+     '<div class="phase-sources-status">'+sourceStatus+'</div>'+
+     '<div class="staff-after">'+btn('qualify-phase','Conferma qualificati dopo la Regular Season')+
+     (chosenPhase.phase_format!=='knockout'?btn('draft-phase','Anteprima girone 2.0'):'')+'</div>'+
+     (entries.length?'<p class="staff-help">Squadre: '+entries.map(clubName).map(esc).join(', ')+'</p>':'')+
+     preview+'</section>';
+   }
    form+=wrapForm('participants','Squadre partecipanti', 
     '<p class="staff-help">Le associazioni esistenti restano nello storico. Seleziona nuove avversarie da aggiungere senza rimuovere quelle già collegate.</p>'+
     '<div class="participant-grid">'+choices+'</div>',
@@ -473,6 +502,26 @@ export async function staffClick(e,button,ctx){
    if(!rows.length)throw Error('Tabellino creato ma non leggibile');
    const index=ctx.state.data.matches.findIndex(x=>x.id===id);if(index>=0)ctx.state.data.matches[index]=rows[0];else ctx.state.data.matches.push(rows[0]);
    ctx.state.matchData=await ctx.loadMatchInfo(id);memory.matchTab='lineup';ctx.render();ctx.toast('Tabellino operativo collegato');return true;
+  }
+  if(action==='qualify-phase'){
+   const phaseId=memory.selected.phases;
+   if(!phaseId)throw Error('Seleziona una sottocompetizione');
+   if(!window.confirm('Confermare i qualificati? Serve la Regular Season definitiva di entrambi i gironi, senza parità irrisolte.'))return true;
+   const count=await rpc('tm_app_apply_phase_qualifiers',{p_phase_id:phaseId});
+   phaseDraft=null;
+   await ctx.reloadAll();ctx.toast('Qualificazioni registrate: '+count+' squadre, senza risultati ereditati');
+   return true;
+  }
+  if(action==='draft-phase'){
+   const phaseId=memory.selected.phases;
+   const data=ctx.state.data||{};
+   const phase=(data.competitions||[]).find(x=>x.id===phaseId);
+   if(!phase||phase.phase_format==='knockout')throw Error('La fase selezionata non è un girone');
+   const entries=(data.phaseEntries||[]).filter(x=>x.phase_competition_id===phaseId);
+   const sources=(data.phaseSources||[]).filter(x=>x.phase_competition_id===phaseId).map(x=>x.source_competition_id);
+   if(!entries.length||sources.length<2)throw Error('Completa entrambi i gironi e conferma prima i qualificati');
+   const draw=roundRobinDraft(entries,data.fixtures||[],sources);
+   phaseDraft={phaseId,rows:draw};ctx.render();return true;
   }
   if(action==='audit-integrity'){integrityError='';try{integrityData=await rpc('tm_app_integrity_report')}catch(e){integrityError=e.message||String(e)}ctx.render();return true}
   if(action==='refresh-match'){await reloadMatch(ctx);return true}
