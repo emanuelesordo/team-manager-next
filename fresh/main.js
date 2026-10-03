@@ -248,7 +248,7 @@ function match(){
   '<div class="empty">Formazione non disponibile: partita senza tabellino operativo.</div>';
  const tabs=[['overview','Overview'],['events','Eventi'],['lineup','Formazioni'],['ratings','Voti'],...(isStaff(staffContext())?[['staff','Gestione']]:[])];
  const selectedTab=state.matchTab==='summary'?'overview':state.matchTab;
- const titleInfo=(label,value)=>value?'<span class="match-meta-item"><small>'+E(label)+'</small><strong>'+E(value)+'</strong></span>':'';
+ const titleInfo=(label,value)=>value?'<span class="match-meta-item" title="'+E(label)+'"><small class="sr-only">'+E(label)+'</small><strong>'+E(value)+'</strong></span>':'';
  const venue=f.venue_name||f.venue||(isOurs(f.home_team,team())?team()?.home_venue_name:
   findClubIdentity(f.home_team,team(),state.base?.opponents||[])?.home_venue_name)||null;
  const address=f.venue_address||(!isOurs(f.home_team,team())?
@@ -268,7 +268,7 @@ function match(){
  const header='<div class="match-detail-head glass">'+matchMeta+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl')+
   '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
-  '<div class="match-big-score"><div class="match-score-status">'+status(f)+'</div><b>'+headerScore+'</b></div>'+
+  '<div class="match-big-score"><b>'+headerScore+'</b><div class="match-score-status">'+status(f)+'</div></div>'+
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl')+
   '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>';
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato da verificare'):'';
