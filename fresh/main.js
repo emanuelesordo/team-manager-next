@@ -301,26 +301,12 @@ function overlay(){
  if(state.overlay==='menu')return `<div class="overlay" data-dismiss><section class="overlay-card menu-sheet" role="dialog" aria-modal="true" aria-label="Menu"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><h2>Esplora Team Manager</h2><label class="season-box dark"><span>Stagione</span><select data-season>${state.base.seasons.map(s=>`<option value="${E(s.id)}" ${s.id===state.season?'selected':''}>${E(s.name)}</option>`).join('')}</select></label>${nav.map(([id,ic,l])=>`<button class="menu-link" data-page="${id}">${ico(ic)} ${l} ${ico('chevron',16)}</button>`).join('')}<button class="menu-link" data-page="club">${ico('settings')} Squadra e avversarie ${ico('chevron',16)}</button>${isStaff(staffContext())?`<button class="menu-link" data-page="admin">${ico('settings')} Amministrazione ${ico('chevron',16)}</button>`:''}<button class="menu-link" data-page="account">${ico('user')} Profilo ${ico('chevron',16)}</button></section></div>`;
  return '';
 }
-function fitTeamSetupViewport(){
- const panel=document.querySelector('.staff-editor-club');
- if(!panel)return;
- if(window.innerWidth<=760){
-  panel.style.removeProperty('--staff-club-available-height');
-  return;
- }
- // Measure beneath the visible setup tabs, for both Squadra and Avversarie.
- const top=panel.getBoundingClientRect().top;
- const viewport=window.visualViewport?.height||window.innerHeight;
- const remaining=Math.max(160,Math.round(viewport-top-12));
- panel.style.setProperty('--staff-club-available-height',remaining+'px');
-}
 function render(){
  if(!state.base)return;
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
  document.body.dataset.theme=state.theme;
  document.body.dataset.logoShape=['circle','rounded','square'].includes(state.base.team?.logo_shape)?state.base.team.logo_shape:'rounded';
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
- if(state.page==='admin'&&!state.loading)fitTeamSetupViewport();
  manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
@@ -485,4 +471,4 @@ installAccountUI(()=>staffContext());
 installNotifications(()=>staffContext());
 bootstrap();
 
-window.addEventListener('resize',fitTeamSetupViewport);
+
