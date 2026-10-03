@@ -11,12 +11,12 @@ function logoPicker(url=''){
  return '<div class="staff-logo-picker" data-logo-picker tabindex="0" aria-label="Incolla qui un logo con Ctrl+V o Cmd+V">'+
   '<img data-logo-preview alt="Anteprima dello stemma" src="'+esc(url||'')+'"'+(!url?' hidden':'')+'>'+
   '<label class="staff-soft">Scegli immagine<input type="file" accept="image/png,image/jpeg,image/webp" data-logo-file hidden></label>'+
-  '<span class="staff-help">PNG, JPG o WebP · massimo 3 MB. Puoi anche incollare una foto dagli appunti in questa area.</span>'+
+  '<span class="staff-help">PNG, JPG o WebP · massimo 8 MB. Conversione automatica in PNG. Puoi incollare una foto dagli appunti in questa area.</span>'+
   '</div>';
 }
 function previewBadge(picker,file){
  if(!file)return;
- if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>3*1024*1024)throw Error('Scegli un’immagine PNG, JPG o WebP fino a 3 MB');
+ if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024)throw Error('Scegli un’immagine PNG, JPG o WebP fino a 8 MB');
  const form=picker.closest('form');if(!form)throw Error('Modulo non disponibile');
  const previous=form._badgePreviewUrl;if(previous)URL.revokeObjectURL(previous);
  form._badgeFile=file;form._badgePreviewUrl=URL.createObjectURL(file);
