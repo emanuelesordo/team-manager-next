@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import{resultSplit,eventCoverage}from '../fresh/analytics.js';
-const team={name:'Calcio Caselle',short_name:'CAS'};
-const f=(home,away,hs,as,status='finished',id='f')=>({id,home_team:home,away_team:away,home_score:hs,away_score:as,status});
+const team={id:'T',name:'Calcio Caselle',short_name:'CAS'};
+const f=(home,away,hs,as,status='finished',id='f')=>({id,home_team:home,away_team:away,home_team_id:home==='Calcio Caselle'?'T':null,away_team_id:away==='Calcio Caselle'?'T':null,home_opponent_id:home==='Calcio Caselle'?null:'O',away_opponent_id:away==='Calcio Caselle'?null:'O',home_score:hs,away_score:as,status});
 test('zero-zero counts as clean sheet, incomplete score ignored',()=>{
  const r=resultSplit([f('Calcio Caselle','A',0,0),f('B','Calcio Caselle',1,2,'finished','x'),f('C','Calcio Caselle',null,2,'finished','z')],team);
  assert.deepEqual([r.played,r.wins,r.draws,r.cleanSheets,r.gf,r.ga],[2,1,1,1,2,1]);
@@ -23,3 +23,5 @@ test('fully verified timeline detects comeback without inferring causality',()=>
  assert.equal(r.complete,1);assert.equal(r.comebacks,1);assert.equal(r.comebackWins,1);
  assert.equal(r.goalSituations.behind,1);assert.equal(r.goalSituations.equal,1);
 });
+
+test('analytics uses UUID even when labels differ',()=>{const game={...f('Calcio Caselle','A',1,0),home_team:'Renamed club'};assert.equal(resultSplit([game],team).wins,1)});
