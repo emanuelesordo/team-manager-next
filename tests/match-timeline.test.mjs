@@ -96,7 +96,7 @@ test('goal shows only partial score, without football icon',()=>{
  const output=render([{minute:20,event_type:'goal',team_side:'home',player_id:'Scorer',payload:{period:'first_half'}}],fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
  assert.match(output,/mt-score[^>]*>1 - 0<\/span>/);
  assert.doesNotMatch(output,/mt-ball|⚽/);
- const row=output.match(/<div class="mt-group-item">([\\s\\S]*?)<\/div>/)?.[1]||'';
+ const row=output.match(/<div class="mt-group-item">([\s\S]*?)<\/div>/)?.[1]||'';
  assert.ok(row.indexOf('mt-score')<row.indexOf('mt-names'));
 });
 test('substitution puts green incoming arrow above red outgoing arrow',()=>{
