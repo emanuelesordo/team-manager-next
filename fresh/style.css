@@ -237,3 +237,110 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  .match-score-status .status{font-size:9px;padding:4px 7px}
  .match-score-separator{margin:0}
 }
+
+
+/* Compact Match Center hero — metadata, score and scorers form one contiguous unit. */
+.match-detail-head.glass{
+ padding:16px clamp(14px,2.5vw,29px) 18px;
+ margin-bottom:12px;
+ min-height:0;
+}
+.match-detail-head .match-header-meta{
+ position:relative;
+ display:grid;
+ grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+ align-items:start;
+ gap:10px;
+ padding:0;
+ margin:0 0 13px;
+ border:0;
+}
+.match-detail-head .match-header-meta .match-meta-group{gap:3px}
+.match-detail-head .match-header-meta .match-meta-item{gap:1px;line-height:1.22}
+.match-detail-head .match-header-meta .match-meta-item small{font-size:9px;line-height:1.15;letter-spacing:.04em}
+.match-detail-head .match-header-meta .match-meta-item strong{font-size:clamp(11px,1.03vw,14px);line-height:1.28}
+.match-detail-head .match-detail-score{
+ position:relative;
+ display:grid;
+ grid-template-columns:minmax(0,1fr) minmax(95px,.62fr) minmax(0,1fr);
+ gap:clamp(6px,1.5vw,18px);
+ align-items:start;
+ margin:0;
+}
+.match-detail-head .match-header-team{
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ gap:4px;
+ min-width:0;
+}
+.match-detail-head .match-header-team .crest.xl{
+ width:clamp(62px,7.5vw,90px);
+ height:clamp(62px,7.5vw,90px);
+ flex:0 0 auto;
+ box-shadow:none;
+}
+.match-detail-head .match-header-team>strong{
+ font-size:clamp(12px,1.25vw,16px);
+ line-height:1.18;
+ margin:0;
+}
+.match-detail-head .match-big-score{
+ align-self:start;
+ min-height:0;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ justify-content:flex-start;
+ gap:4px;
+ padding:0;
+}
+.match-detail-head .match-big-score b{
+ font-size:clamp(38px,5.5vw,68px);
+ line-height:1;
+ font-weight:900;
+ white-space:nowrap;
+ font-variant-numeric:tabular-nums;
+}
+.match-detail-head .match-score-status{
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ min-height:24px;
+}
+.match-detail-head .match-score-status .status{
+ margin:0;
+ padding:4px 9px;
+ font-size:10px;
+ white-space:nowrap;
+}
+.match-detail-head .match-header-scorers{
+ display:flex;
+ flex-direction:column;
+ gap:2px;
+ align-self:stretch;
+ min-height:0;
+ margin-top:3px;
+ width:100%;
+}
+.match-detail-head .match-header-scorer{
+ font-size:clamp(10px,1vw,12px);
+ line-height:1.15;
+ gap:5px;
+ min-width:0;
+}
+.match-detail-head .match-scorer-minute{font-size:inherit}
+.match-detail-head .match-scorer-name{font-size:inherit;line-height:1.15}
+@media(max-width:650px){
+ .match-detail-head.glass{padding:12px 10px 14px}
+ .match-detail-head .match-header-meta{gap:6px;margin-bottom:10px}
+ .match-detail-head .match-header-meta .match-meta-item small{font-size:8px}
+ .match-detail-head .match-header-meta .match-meta-item strong{font-size:10px}
+ .match-detail-head .match-detail-score{grid-template-columns:minmax(0,1fr) minmax(76px,.65fr) minmax(0,1fr);gap:5px}
+ .match-detail-head .match-header-team .crest.xl{width:clamp(52px,13vw,66px);height:clamp(52px,13vw,66px)}
+ .match-detail-head .match-header-team>strong{font-size:11px}
+ .match-detail-head .match-big-score b{font-size:clamp(32px,8.2vw,48px)}
+ .match-detail-head .match-score-status{min-height:22px}
+ .match-detail-head .match-score-status .status{font-size:9px;padding:3px 6px}
+ .match-detail-head .match-header-scorer{font-size:9px;gap:3px}
+}
