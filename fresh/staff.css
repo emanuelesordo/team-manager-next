@@ -93,3 +93,32 @@
 .staff-event-row{flex-wrap:wrap;min-width:0;overflow-wrap:anywhere}
 .staff-event-buttons{flex-wrap:wrap;gap:8px}
 @media(max-width:720px){.staff-result-review,.staff-amend-form{padding:10px}.staff-result-review button{width:100%;justify-self:stretch}}
+
+
+/* Squadra setup: fill the viewport area remaining below the administration navigation. */
+.staff-editor-team{
+ display:flex;flex-direction:column;min-width:0;
+ min-height:var(--staff-team-available-height,auto);
+}
+.staff-editor-team>.staff-help{flex:0 0 auto}
+.staff-editor-team>.staff-form{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;gap:14px}
+.staff-team-layout{display:grid;grid-template-columns:minmax(225px,min(32%,380px)) minmax(0,1fr);gap:clamp(14px,2vw,26px);flex:1 1 auto;min-height:0;align-items:stretch}
+.staff-team-details{display:flex;flex-direction:column;gap:14px;min-width:0}
+.staff-team-details .staff-field{flex:0 0 auto}
+.staff-team-brand{min-width:0;min-height:0;display:flex;flex-direction:column}
+.staff-team-brand>.staff-logo-picker{height:100%;min-width:0;flex:1 1 auto;align-items:stretch}
+.staff-team-brand .logo-editor-main{align-items:start;gap:clamp(12px,1.6vw,24px)}
+.staff-team-brand .logo-editor-tools{min-width:160px}
+.staff-editor-team .staff-form>.staff-submit{margin-top:auto;flex:0 0 auto}
+@media(max-width:1000px){
+ .staff-team-layout{grid-template-columns:minmax(210px,.75fr) minmax(0,1.25fr);gap:16px}
+ .staff-team-brand .logo-frame{width:170px;height:170px;flex-basis:170px}
+}
+@media(max-width:760px){
+ .staff-editor-team{min-height:0}
+ .staff-team-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+ .staff-team-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:12px}
+ .staff-team-brand>.staff-logo-picker{height:auto}
+ .staff-editor-team .staff-form>.staff-submit{margin-top:4px}
+}
+@media(max-width:460px){.staff-team-details{grid-template-columns:minmax(0,1fr)}}
