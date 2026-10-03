@@ -1,3 +1,4 @@
+import {matchPlayerLabel} from './match-player-label.js';
 import {rpc} from './api.js';
 import {votablePlayerIds,ratingSummary,parseVote} from './vote-domain.js';
 export async function saveVote(matchId,playerId,value){
@@ -19,7 +20,7 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e}){
   const stats=agg?{count:Number(agg.votes||0),sv:Number(agg.sv||0),average:agg.avg_rating==null?null:Number(agg.avg_rating)}:ratingSummary(group);
   const personal=loggedIn?group.find(row=>row.voter_id===userId):undefined;
   const display=stats.count?stats.average.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
-  const fullName=String(player.first_name||'')+' '+String(player.last_name||'');
+  const fullName=matchPlayerLabel(player);
   const options=['<option value="" disabled'+(personal?'':' selected')+'>Seleziona</option>'];
   for(let n=1;n<=10;n+=0.5)options.push('<option value="'+n+'"'+(personal&&personal.rating!==null&&Number(personal.rating)===n?' selected':'')+'>'+n.toLocaleString('it-IT')+'</option>');
   options.push('<option value="SV"'+(personal&&personal.rating===null?' selected':'')+'>SV · Senza voto</option>');
