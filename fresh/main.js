@@ -16,7 +16,7 @@ import {loadFixtureEvents} from './api.js?venues=20261003kits';
 
 import {matchScorerRows,renderMatchScorers} from './match-scorers.js?clubs=20261003id';
 import {matchPlayerLabel} from './match-player-label.js';
-import {fixtureVenueDetails} from './venue-format.js';
+import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
