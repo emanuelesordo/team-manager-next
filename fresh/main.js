@@ -13,7 +13,7 @@ import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './accoun
 import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {loadFixtureEvents} from './api.js';
-import {findClubIdentity} from './club-identity.js';
+import {findClubIdentity} from './club-identity.js?aliases=20261003a';
 import {matchScorerRows,renderMatchScorers} from './match-scorers.js';
 import {matchPlayerLabel} from './match-player-label.js';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
