@@ -124,3 +124,45 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 .ov-lineup .subnote{margin-top:12px}
 @media(max-width:960px){.match-overview-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:550px){.match-header-meta{gap:11px 13px;padding:12px}.match-meta-item{flex:1 1 110px;min-width:0}.ov-pitch{min-height:340px;gap:10px;padding:15px 5px}.ov-pitch-line .ov-player-name{font-size:9px}.ov-pitch-line .ov-shirt{min-width:22px;height:22px;font-size:10px}.ov-rating{font-size:10px;padding:2px 4px}.ov-rating small{font-size:8px}.ov-bench{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Shared team identity: one saved geometry for every crest in the application. */
+body[data-logo-shape="rounded"] .crest{border-radius:25%}
+body[data-logo-shape="circle"] .crest{border-radius:50%}
+body[data-logo-shape="square"] .crest{border-radius:0}
+.crest{aspect-ratio:1}
+.crest img{display:block;width:100%;height:100%;object-fit:contain}
+
+/* Inline image cropper, reusable in team and opponent management. */
+.staff-logo-picker{display:flex;flex-direction:column;align-items:stretch;gap:14px}
+.logo-picker-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo-picker-controls .staff-help{margin:0}
+.logo-editor-main{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.logo-frame{width:208px;height:208px;flex:0 0 208px;overflow:hidden;position:relative;background-color:rgba(130,150,150,.13);background-image:linear-gradient(45deg,rgba(150,150,150,.08) 25%,transparent 25%),linear-gradient(-45deg,rgba(150,150,150,.08) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,rgba(150,150,150,.08) 75%),linear-gradient(-45deg,transparent 75%,rgba(150,150,150,.08) 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0;border:2px solid var(--border);transition:border-radius .15s}
+.logo-frame[data-shape="rounded"]{border-radius:25%}
+.logo-frame[data-shape="circle"]{border-radius:50%}
+.logo-frame[data-shape="square"]{border-radius:0}
+.logo-frame canvas,.logo-frame img{display:block;width:100%;height:100%;object-fit:contain}
+.logo-frame [hidden]{display:none}
+.logo-frame canvas{cursor:grab;touch-action:none;user-select:none}
+.logo-frame canvas:active{cursor:grabbing}
+.logo-placeholder{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:12px}
+.logo-editor-tools{display:flex;flex-direction:column;gap:11px;flex:1 1 200px;min-width:0}
+.logo-editor-tools label:not(.staff-field){display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700}
+.logo-editor-tools input[type="range"]{flex:1;min-width:90px;accent-color:var(--accent)}
+.logo-editor-tools>button{align-self:flex-start;border:1px solid var(--border);background:transparent;color:var(--ink);border-radius:8px;padding:8px 10px;font-size:11px;font-weight:700}
+.logo-editor-tools .staff-help{margin:0;line-height:1.5}
+.logo-shape-field select{width:100%}
+.logo-colors{width:100%;display:flex;flex-direction:column;gap:10px}
+.logo-colors-heading{display:flex;gap:8px;justify-content:space-between;align-items:baseline;flex-wrap:wrap}
+.logo-colors-heading strong{font-size:12px}.logo-colors-heading small{font-size:10px;color:var(--muted)}
+.logo-palette{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.logo-palette-slot{display:flex;align-items:center;gap:6px;padding:8px;border:1px solid var(--border);border-radius:9px;min-width:0;flex-wrap:wrap;background:rgba(115,135,146,.06);cursor:grab}
+.logo-palette-slot:active{cursor:grabbing}
+.logo-palette-grip{color:var(--muted);font-size:16px}
+.logo-palette-title{font-size:11px;font-weight:800}
+.logo-palette-slot input[type="color"]{width:37px;height:32px;padding:1px;border:0;background:transparent;cursor:pointer;touch-action:auto}
+.logo-palette-value{font-size:10px;letter-spacing:.02em;color:var(--muted);font-variant-numeric:tabular-nums}
+.logo-palette-actions{display:inline-flex;gap:4px;margin-left:auto}
+.logo-palette-actions button{width:26px;height:26px;border:1px solid var(--border);border-radius:5px;background:transparent;color:var(--ink);font-weight:900;font-size:18px}
+@media(max-width:670px){.logo-palette{grid-template-columns:minmax(0,1fr)}.logo-editor-main{justify-content:center}.logo-frame{width:190px;height:190px;flex-basis:190px}.logo-editor-tools{flex:1 1 100%}}
