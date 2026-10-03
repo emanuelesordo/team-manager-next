@@ -36,7 +36,8 @@ export function extractLogoColors(imageData){
  for(const fallback of defaults){if(unique.length>=3)break;if(!unique.includes(fallback))unique.push(fallback)}
  return unique.slice(0,3);
 }
-export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false){
+export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false,background=''){
+ const savedBackground=validHex(background)?background.toLowerCase():'';
  const selected=['circle','rounded','square'].includes(shape)?shape:'rounded';
  const palette=slots.map((slot,i)=>{
   const color=validHex(colors[i])?colors[i]:defaults[i];
@@ -58,7 +59,7 @@ export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false){
   '<div class="logo-picker-controls">'+
    '<label class="staff-soft logo-upload">Seleziona file<input type="file" data-logo-file accept="image/png,image/jpeg,image/webp" hidden></label>'+ (url?'<button type="button" class="staff-soft logo-edit-existing" data-logo-edit-existing>Ritaglia logo attuale</button>':'')+
    '<span class="staff-help">Oppure incolla qui con Ctrl+V / Cmd+V. PNG, JPG o WebP, massimo 8 MB.</span></div>'+
-  '<div class="logo-editor-main"><div class="logo-frame" data-logo-frame data-shape="'+selected+'">'+
+  '<div class="logo-editor-main"><div class="logo-frame" data-logo-frame data-shape="'+selected+'" style="background-color:'+(savedBackground||'transparent')+'">'+
    (url?'<img src="'+E(url)+'" alt="Stemma attuale" data-logo-existing>':'<span class="logo-placeholder" data-logo-placeholder>Anteprima</span>')+
    '<canvas width="256" height="256" data-logo-canvas aria-label="Trascina l’immagine per regolare il ritaglio" hidden></canvas></div>'+
    '<div class="logo-editor-tools"><label>Zoom <input type="range" data-logo-zoom min="0.5" max="3" step="0.05" value="1" disabled></label>'+
@@ -67,7 +68,12 @@ export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false){
     '<p class="staff-help">Sposta l’immagine nel riquadro per scegliere il ritaglio. Il file salvato manterrà questo ritaglio.</p>'+
     shapeSelect+'</div></div>'+
    '<div class="logo-colors"><div class="logo-colors-heading"><strong>Palette estratta dal logo</strong><small>Trascina i colori per riordinarli, oppure modificali a mano.</small></div>'+
-    '<div class="logo-palette" data-logo-palette>'+palette+'</div></div></div>';
+    '<div class="logo-palette" data-logo-palette>'+palette+'</div></div>'+ 
+   '<div class="logo-background"><div class="logo-colors-heading"><strong>Sfondo del logo (opzionale)</strong><small>Visibile dietro le zone trasparenti, in tutte le schermate.</small></div>'+
+    '<input type="hidden" name="logo_background_color" data-logo-bg-value value="'+savedBackground+'">'+
+    '<div class="logo-background-options"><button type="button" data-logo-bg-clear>Trasparente</button>'+
+    slots.map((slot,i)=>'<button type="button" data-logo-bg-copy="'+i+'" title="Copia il colore '+(i+1)+' nello sfondo">Usa colore '+(i+1)+'</button>').join('')+
+    '<label class="logo-background-custom">Personalizzato <input type="color" data-logo-bg-picker value="'+(savedBackground||'#ffffff')+'" aria-label="Colore di sfondo personalizzato"></label></div></div></div>';
 }
 function editorState(picker){
  const form=picker.closest('form');
@@ -80,6 +86,17 @@ function updatePalette(picker,values,markManual=false){
  const fields=slots.map(x=>picker.querySelector('input[name="'+x+'"]'));
  values.forEach((v,i)=>{if(!fields[i]||!validHex(v))return;fields[i].value=v;const display=fields[i].closest('.logo-palette-slot')?.querySelector('.logo-palette-value');if(display)display.textContent=v.toUpperCase()});
  if(markManual)state.manualColors=true;
+}
+export const normalizeLogoBackgroundColor=value=>validHex(value)?value.toLowerCase():null;
+function applyLogoBackground(picker,value){
+ const normalized=normalizeLogoBackgroundColor(value)||'';
+ const field=picker.querySelector('[data-logo-bg-value]'),frame=picker.querySelector('[data-logo-frame]');
+ if(field)field.value=normalized;
+ if(frame)frame.style.backgroundColor=normalized||'transparent';
+ const pickerInput=picker.querySelector('[data-logo-bg-picker]');
+ if(pickerInput&&normalized)pickerInput.value=normalized;
+ const clear=picker.querySelector('[data-logo-bg-clear]');
+ if(clear)clear.setAttribute('aria-pressed',String(!normalized));
 }
 function currentColors(picker){return slots.map(x=>picker.querySelector('input[name="'+x+'"]')?.value||defaults[slots.indexOf(x)])}
 function drawCrop(picker,extract=false){
@@ -150,6 +167,9 @@ export function handleLogoEditorEvent(event){
   if(event.type==='input'&&target.matches('[data-logo-zoom]')){
    state.scale=Number(target.value)||1;drawCrop(picker,true);return true;
   }
+  if(event.type==='input'&&target.matches('[data-logo-bg-picker]')){
+   applyLogoBackground(picker,target.value);return true;
+  }
   if(event.type==='input'&&target.matches('input[type="color"]')){
    state.manualColors=true;picker.querySelector('.logo-palette-value');updatePalette(picker,currentColors(picker),true);return true;
   }
@@ -157,6 +177,9 @@ export function handleLogoEditorEvent(event){
    picker.dataset.shape=target.value;picker.querySelector('[data-logo-frame]').dataset.shape=target.value;return true;
   }
   if(event.type==='click'){
+   if(target.closest('[data-logo-bg-clear]')){applyLogoBackground(picker,'');return true}
+   const colorCopy=target.closest('[data-logo-bg-copy]');
+   if(colorCopy){const i=Number(colorCopy.dataset.logoBgCopy);applyLogoBackground(picker,currentColors(picker)[i]);return true}
    if(target.closest('[data-logo-edit-existing]')){
     const image=picker.querySelector('[data-logo-existing]'),url=image?.src;
     if(url){
