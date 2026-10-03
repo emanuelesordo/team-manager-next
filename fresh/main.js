@@ -4,7 +4,7 @@ import {normalized,isOurs,involvesTeam,isFinished,isLive,hasScore,scoreOf,summar
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js';
 import {clubPage,personalPanel} from './ui-extensions.js';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock} from './staff-ui.js?layout=20261003c';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock} from './staff-ui.js?layout=20261003d';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch} from './lineup-pitch.js';
