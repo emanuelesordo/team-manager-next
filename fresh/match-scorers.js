@@ -1,10 +1,10 @@
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
-import {isOurs} from './domain.js';
+
 
 const goalTypes=new Set(['goal','own_goal','penalty_scored','penalty_goal']);
 /** Return actual scorers as recorded; do not infer any missing scorer from the final score. */
 export function matchScorerRows(events=[],fixture={},team={},playerName=()=>null,competition=null){
- const ownHome=isOurs(fixture.home_team,team);
+ const ownHome=Boolean(team?.id&&fixture.home_team_id===team.id);
  const rows={home:[],away:[]};
  for(const event of events){
   if(!goalTypes.has(String(event.event_type||'').toLowerCase())||event.validation_status==='rejected')continue;
