@@ -545,3 +545,93 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  .match-detail-head .match-expanded,
  .match-compact-bar.glass{will-change:auto;transform:none!important;transition:none}
 }
+
+
+/* Home October-style calendar: dense two-column dashboard, without KPI tiles. */
+.home-feature{
+ display:grid;
+ grid-template-columns:minmax(0,1.09fr) minmax(320px,.91fr);
+ align-items:start;
+ gap:clamp(12px,1.45vw,22px);
+}
+.home-feature>.feature-primary{
+ display:flex;flex-direction:column;min-width:0;min-height:0;gap:14px;
+}
+.home-feature [data-home-hero]{width:100%;min-width:0}
+.home-feature .hero-panel{width:100%;height:auto;min-height:345px;max-height:none}
+.home-feature .hero-content{padding:clamp(16px,2vw,25px)}
+.home-feature .hero-panel h2{margin:3px 0 5px}
+.home-feature .hero-score{margin:19px 0 16px;gap:clamp(6px,1vw,13px)}
+.home-feature .hero-club .crest.xl{width:clamp(67px,7vw,110px);height:clamp(67px,7vw,110px)}
+.home-feature .hero-mid b{font-size:clamp(30px,3.5vw,48px)}
+.home-feature .hero-club strong{font-size:clamp(11px,1vw,14px)}
+.home-side-stack{display:flex;flex-direction:column;gap:14px;min-width:0}
+.home-month-section,.home-standing-section,.home-player-section,.home-expectation-section{
+ min-width:0;padding:clamp(13px,1.5vw,20px);
+}
+.home-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;min-width:0}
+.home-panel-head h2{margin:0;font-size:clamp(15px,1.3vw,19px);letter-spacing:-.025em}
+.home-plain-link{display:inline-flex;align-items:center;gap:5px;background:transparent;border:0;color:var(--accent);font-size:11px;font-weight:800;padding:6px;white-space:nowrap;cursor:pointer}
+.month-nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:11px 0 9px}
+.month-nav h2{font-size:clamp(12px,1.15vw,16px);margin:0;text-transform:capitalize;letter-spacing:0}
+.month-nav-actions{display:flex;align-items:center;gap:4px}
+.month-nav-actions button{min-width:26px;height:27px;padding:0 7px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--ink);font-size:15px;cursor:pointer}
+.month-nav-actions button[data-home-month="0"]{font-size:9px;font-weight:700}
+.month-nav-actions button:hover{background:var(--surface)}
+.month-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;min-width:0}
+.month-weekday{height:23px;display:grid;place-items:center;color:var(--muted);font-size:10px;font-weight:700}
+.month-cell{position:relative;min-width:0;min-height:clamp(44px,3.9vw,59px);padding:4px 3px 2px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;border:1px solid transparent;border-radius:9px}
+.month-cell.outside{visibility:hidden}
+.month-cell.with-game{background:color-mix(in srgb,var(--accent) 8%,transparent);border-color:var(--border)}
+.month-number{font-size:11px;color:var(--ink);font-weight:700}
+.month-matches{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px;min-width:0;margin-top:3px}
+.month-matches button{border:0;padding:0;background:transparent;display:grid;place-items:center;min-width:22px;cursor:pointer}
+.month-matches .crest.tiny{height:clamp(22px,2.3vw,31px);width:clamp(22px,2.3vw,31px);border-radius:6px}
+.month-matches button:focus-visible,.home-plain-link:focus-visible,.month-nav-actions button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.home-competition-name{margin:5px 0 9px;color:var(--muted);font-size:11px}
+.home-rankings{display:flex;flex-direction:column;gap:2px}
+.home-rank{display:grid;grid-template-columns:18px 29px minmax(0,1fr) 32px 26px;gap:7px;align-items:center;border-radius:8px;padding:5px 7px;min-width:0;font-size:11px}
+.home-rank.ours{background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.home-rank .crest.tiny{height:26px;width:26px;border-radius:6px}
+.home-rank .rank-team{min-width:0}
+.home-rank b{font-size:11px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-rank small{font-size:9px;color:var(--muted);text-align:right}
+.home-rank strong{text-align:right;font-size:12px}
+.home-analytics-grid{display:flex;flex-direction:column;gap:14px;min-width:0}
+.home-personal-card .my-dashboard,.home-player-section .my-dashboard{
+ max-width:none;width:100%;padding:10px 0;background:transparent;box-shadow:none;border:0;border-radius:0;
+}
+.home-player-section .my-dashboard h2{font-size:18px}
+.home-player-section .my-values{gap:12px;flex-wrap:wrap}
+.home-chart-title{font-size:12px;margin:16px 0 4px}
+.home-trend-svg{display:block;width:100%;max-height:200px;height:auto;min-width:0;overflow:visible;color:var(--muted)}
+.home-trend-legend{display:flex;flex-wrap:wrap;gap:9px 15px;margin:0 0 5px;font-size:10px;color:var(--muted)}
+.home-trend-legend span{display:inline-flex;align-items:center;gap:5px}
+.home-trend-legend i{display:inline-block;width:14px;height:4px;border-radius:3px}
+.home-trend-legend .actual{background:#b8ff9a}
+.home-trend-legend .expected{background:#9bceff}
+.home-expectation-section .subnote,.home-player-section .subnote{font-size:10px;line-height:1.5}
+@media(max-width:1180px) and (min-width:761px){
+ .home-feature{grid-template-columns:minmax(0,1fr) minmax(295px,.86fr)}
+ .home-feature .hero-panel{min-height:325px}
+ .month-cell{min-height:46px}
+ .home-month-section,.home-standing-section{padding:13px}
+}
+@media(max-width:960px){
+ .home-feature{grid-template-columns:minmax(0,1fr)}
+ .home-side-stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+ .home-analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .home-feature .hero-panel{min-height:315px}
+}
+@media(max-width:650px){
+ .home-feature{display:flex;flex-direction:column;gap:13px}
+ .home-feature>.feature-primary,.home-side-stack{width:100%}
+ .home-side-stack,.home-analytics-grid{display:flex;flex-direction:column;gap:13px}
+ .home-feature .hero-panel{min-height:335px}
+ .home-feature .hero-content{padding:19px}
+ .home-feature .hero-score{margin:19px 0}
+ .home-month-section,.home-standing-section,.home-player-section,.home-expectation-section{width:100%;padding:16px}
+ .month-cell{min-height:53px}
+ .month-matches .crest.tiny{height:28px;width:28px}
+ .home-analytics-grid .home-trend-svg{max-height:210px}
+}
