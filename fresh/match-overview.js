@@ -1,3 +1,4 @@
+import {matchPlayerLabel} from './match-player-label.js';
 import {displayEventMinute,cumulativeEventMinute} from './match-minutes.js';
 
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -49,7 +50,7 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
  const byId=new Map((people||[]).map(p=>[p.id,p]));
  const renderPlayer=row=>{
   const p=byId.get(row.player_id);
-  const name=[p?.first_name,p?.last_name].filter(Boolean).join(' ')||'Giocatore';
+  const name=matchPlayerLabel(p);
   const rating=relativeRating(row.player_id,matchData,seasonStats);
   const events=playerMatchEvents(row.player_id,matchData?.events||[],competition);
   const eventMarkup=events.map(x=>'<span class="ov-event ov-'+escapeHtml(x.kind)+'" title="'+escapeHtml(x.name+' · '+x.time)+'" aria-label="'+escapeHtml(x.name+' '+x.time)+'">'+
