@@ -3,10 +3,10 @@ function safeColor(c,fallback){return /^(#[0-9a-f]{3}|#[0-9a-f]{6})$/i.test(Stri
 export function clubPage({team,seasons,season,opponents,E,crest,heading,ico}){
  const chosen=seasons.find(s=>s.id===season);
  const bands=[safeColor(team.primary_color,'#356b98'),safeColor(team.secondary_color,'#d5e6ff'),safeColor(team.accent_color,'#bce7a3')];
- const opponentsHtml=opponents.map(o=>'<div class="opponent-card">'+crest(o.name,'sm')+'<span><b>'+E(o.name)+'</b><small>'+E(o.home_venue_name||'Campo non indicato')+'</small></span></div>').join('');
+ const opponentsHtml=opponents.map(o=>'<div class="opponent-card">'+crest(o.name,'sm',{opponent_id:o.id})+'<span><b>'+E(o.name)+'</b><small>'+E(o.home_venue_name||'Campo non indicato')+'</small></span></div>').join('');
  const seasonsHtml=seasons.map(s=>'<div class="season-card'+(s.id===season?' selected':'')+'"><b>'+E(s.name)+'</b><small>'+E(s.status||'')+'</small></div>').join('');
  return heading('IL CLUB','Squadra e avversarie','Identità sportiva, stagioni e squadre del calendario.')+
- '<section class="glass club-banner">'+crest(team.name,'xl')+'<div><span class="eyebrow">SQUADRA PRINCIPALE</span><h2>'+E(team.name)+'</h2><p>'+E(team.short_name||'')+' · '+E(chosen?.name||'')+'</p><div class="club-bands">'+bands.map(c=>'<i style="background:'+E(c)+'"></i>').join('')+'</div></div></section>'+
+ '<section class="glass club-banner">'+crest(team.name,'xl',{team_id:team.id})+'<div><span class="eyebrow">SQUADRA PRINCIPALE</span><h2>'+E(team.name)+'</h2><p>'+E(team.short_name||'')+' · '+E(chosen?.name||'')+'</p><div class="club-bands">'+bands.map(c=>'<i style="background:'+E(c)+'"></i>').join('')+'</div></div></section>'+
  '<div class="club-columns"><section class="glass panel"><div class="panel-heading"><h2>Avversarie</h2><span class="muted small">'+opponents.length+' squadre</span></div><div class="opponent-grid">'+(opponentsHtml||'<p class="empty">Nessuna avversaria disponibile.</p>')+'</div></section>'+
  '<section class="glass panel"><div class="panel-heading"><h2>Stagioni</h2></div><div class="season-cards">'+seasonsHtml+'</div><p class="subnote">Cambia stagione dal selettore nel menu.</p></section></div>';
 }
