@@ -354,3 +354,42 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 .logo-background-options button[aria-pressed="true"]{border-color:var(--accent);outline:1px solid var(--accent)}
 .logo-background-custom{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700}
 .logo-background-custom input{height:31px;width:40px;border:1px solid var(--border);border-radius:5px;background:transparent;padding:2px;cursor:pointer}
+
+
+/* Global layout: headings live in the topbar; sidebar must fit within viewport. */
+.sidebar{
+ height:100dvh;max-height:100dvh;min-height:0;overflow:hidden;
+ display:flex;flex-direction:column;padding:16px 12px 13px;
+}
+.sidebar .identity-brand{flex:0 0 auto;padding:6px 5px 15px;min-height:0}
+.sidebar-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;overscroll-behavior:contain;padding-right:3px}
+.sidebar-scroll .side-label{margin-top:7px;padding:8px 12px 5px}
+.sidebar-scroll .side-nav{gap:3px}
+.sidebar-scroll .side-item{padding:10px 12px;gap:12px;min-height:41px}
+.sidebar-bottom{flex:0 0 auto;min-height:0;padding-top:8px;border-top:1px solid var(--border)}
+.sidebar-bottom .side-label{padding:4px 10px 6px}
+.sidebar-bottom .season-box{margin:0 2px 8px;padding:9px;gap:6px}
+.sidebar-bottom .account-card{padding:9px}
+.topbar{flex:0 0 auto;min-height:65px;height:auto;padding-block:9px;gap:14px}
+.topbar-page{display:flex;flex:1 1 auto;min-width:0;align-items:baseline;gap:12px}
+.topbar-kicker{font-size:10px;letter-spacing:.12em;color:var(--subtle);font-weight:800;white-space:nowrap}
+.topbar-page h1{margin:0;color:var(--ink);font-size:clamp(15px,1.5vw,20px);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+.topbar .top-actions{flex:0 0 auto}
+.content{padding-top:clamp(12px,1.3vw,19px)}
+/* Menu sheet on small screens: never overflow the visual viewport. */
+.overlay .menu-sheet{max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+@media(max-height:760px) and (min-width:761px){
+ .sidebar{padding-top:9px;padding-bottom:8px}
+ .sidebar .identity-brand{padding-bottom:7px}
+ .sidebar-scroll .side-item{padding:7px 10px;min-height:36px}
+ .sidebar-bottom .season-box{padding:6px}
+ .sidebar-bottom .account-card{padding:7px}
+}
+@media(max-width:760px){
+ .topbar{height:62px;min-height:62px;padding:7px 12px}
+ .topbar-page{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;margin-right:auto}
+ .topbar-kicker{font-size:8px}
+ .topbar-page h1{font-size:13px;max-width:40vw}
+ .content{padding-top:12px}
+ .overlay .menu-sheet{max-height:calc(100dvh - 22px);padding:26px 18px}
+}
