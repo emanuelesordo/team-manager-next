@@ -655,3 +655,55 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 .home-feature .month-cell.with-game .month-matches{margin-top:0;flex:1;align-content:center;justify-content:center;width:100%}
 @media(min-width:961px) and (max-width:1180px){.home-feature{--home-first-row-height:345px}.home-feature .hero-club .crest.xl{width:75px;height:75px}}
 @media(max-width:650px){.home-feature .hero-score{margin:12px 0}.home-feature .hero-panel{min-height:290px}}
+
+/* Home: two independent vertical scroll regions instead of scrolling both stacks together. */
+@media(min-width:961px){
+ .home-feature{
+  --home-first-row-height:330px;
+  height:calc(100dvh - 122px);
+  min-height:380px;
+  overflow:hidden;
+  align-items:stretch;
+ }
+ .home-feature>.feature-primary,.home-feature>.home-side-stack{
+  height:100%;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  scrollbar-width:thin;
+  scrollbar-color:var(--border) transparent;
+  padding-bottom:12px;
+ }
+ .home-feature .hero-content{
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  gap:5px;
+  padding:15px 20px;
+ }
+ .home-feature .hero-score{align-self:center;margin:0;min-height:0}
+ .home-feature .hero-bottom{align-self:end;margin:0}
+ .home-feature .hero-club .crest.xl{width:clamp(65px,6vw,90px);height:clamp(65px,6vw,90px)}
+ .home-feature .home-month-section{flex-shrink:0}
+ .home-feature .month-days{grid-template-rows:19px repeat(5,minmax(0,1fr))}
+}
+@media(min-width:961px) and (max-width:1180px){
+ .home-feature{--home-first-row-height:330px}
+}
+/* No extra box behind fixture crests: preserve crest geometry configured in setup. */
+.home-feature .month-cell.with-game{
+ background:transparent;
+ border-color:transparent;
+ border-radius:0;
+}
+.home-feature .month-matches button,.home-feature .month-matches .crest.tiny{
+ border-radius:inherit;
+ box-shadow:none;
+}
+.home-feature .month-matches button{border-radius:0}
+.home-feature .month-matches .crest.tiny{border-radius:var(--crest-radius,6px)}
+.home-feature .month-cell.with-game .month-number{
+ right:0;
+ bottom:0;
+ box-shadow:none;
+}
