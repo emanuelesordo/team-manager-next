@@ -4,7 +4,7 @@ export const isFinished=f=>['finished','completed','finalized','final','ft'].inc
 export const isLive=f=>['live','in_progress','playing'].includes(String(f?.status??'').toLowerCase());
 export const hasScore=f=>Number.isFinite(f?.home_score)&&Number.isFinite(f?.away_score);
 export const scoreOf=f=>hasScore(f)?String(f.home_score)+' : '+String(f.away_score):'– : –';
-export const isOurs=(name,team)=>normalized(name)===normalized(team?.name)||Boolean(team?.short_name&&normalized(name)===normalized(team.short_name));
+export const isOurs=(teamId,team)=>Boolean(team?.id&&teamId===team.id);
 export const involvesTeam=(f,team)=>Boolean(team?.id&&(f?.home_team_id===team.id||f?.away_team_id===team.id));
 export function summary(fixtures,team){
  const result={played:0,wins:0,draws:0,losses:0,gf:0,ga:0,form:[]};
