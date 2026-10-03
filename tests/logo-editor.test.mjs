@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {extractLogoColors,logoPicker} from '../fresh/logo-editor.js';
+import {extractLogoColors,logoPicker,reorderLogoColors} from '../fresh/logo-editor.js';
 
 test('the logo color extractor returns 3 distinct dominant colors from opaque pixels',()=>{
  const data=new Uint8ClampedArray(64*4);
@@ -35,4 +35,12 @@ test('opponent editor reuses the same shared shape without editing team-wide set
  assert.match(html,/data-shape="rounded"/);
  assert.doesNotMatch(html,/data-logo-shape-select/);
  assert.equal((html.match(/data-color-slot=/g)||[]).length,3);
+});
+
+test('drag reorder changes priority without changing actual swatch colors',()=>{
+ const a=['#112233','#445566','#778899'];
+ assert.deepEqual(reorderLogoColors(a,2,0),['#778899','#112233','#445566']);
+ assert.deepEqual(reorderLogoColors(a,0,2),['#445566','#778899','#112233']);
+ assert.deepEqual(a,['#112233','#445566','#778899']);
+ assert.deepEqual(reorderLogoColors(a,-1,9),a);
 });
