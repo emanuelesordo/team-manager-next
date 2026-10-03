@@ -166,3 +166,37 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 .logo-palette-actions{display:inline-flex;gap:4px;margin-left:auto}
 .logo-palette-actions button{width:26px;height:26px;border:1px solid var(--border);border-radius:5px;background:transparent;color:var(--ink);font-weight:900;font-size:18px}
 @media(max-width:670px){.logo-palette{grid-template-columns:minmax(0,1fr)}.logo-editor-main{justify-content:center}.logo-frame{width:190px;height:190px;flex-basis:190px}.logo-editor-tools{flex:1 1 100%}}
+
+
+/* Match heading: metadata first, scorers immediately below the two clubs. */
+.match-detail-head .match-header-meta{margin:11px 0 0;padding:15px 8px 10px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.match-detail-head .match-detail-score{align-items:start;grid-template-columns:minmax(0,1fr) minmax(100px,.62fr) minmax(0,1fr);margin-top:20px;gap:10px}
+.match-detail-head .match-header-team{display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0}
+.match-detail-head .match-header-team>strong{margin:0;text-align:center;overflow-wrap:anywhere}
+.match-detail-head .match-big-score{align-self:start;display:flex;align-items:center;justify-content:center;min-height:90px}
+.match-header-scorers{display:flex;flex-direction:column;gap:4px;align-self:stretch;width:100%;margin-top:2px;min-height:2px}
+.match-header-scorer{display:flex;gap:7px;align-items:baseline;min-width:0;line-height:1.2;font-size:12px}
+.match-header-scorers-home .match-header-scorer{flex-direction:row-reverse;justify-content:flex-start;text-align:right}
+.match-header-scorers-away .match-header-scorer{flex-direction:row;justify-content:flex-start;text-align:left}
+.match-header-scorers-home{align-items:flex-end}.match-header-scorers-away{align-items:flex-start}
+.match-scorer-minute{font-size:11px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.match-scorer-name{font-weight:750;color:var(--ink);min-width:0;overflow-wrap:anywhere}
+/* A personal event stays one tight visual unit: primary and secondary name stacked. */
+.match-timeline .mt-names{display:flex;flex-direction:column;flex-wrap:nowrap;align-items:flex-start;gap:1px;line-height:1.12;min-width:0}
+.match-timeline .mt-names strong,.match-timeline .mt-names small{display:block;line-height:1.12;margin:0}
+.match-timeline .mt-home .mt-names,.match-timeline .mt-home .mt-group-item .mt-names{flex-direction:column;align-items:flex-end;text-align:right}
+.match-timeline .mt-away .mt-names{align-items:flex-start;text-align:left}
+.match-timeline .mt-group-item{align-items:center}
+.match-timeline .mt-stack{gap:5px}
+/* Render saved square PNGs with the same crop viewport as the editor. */
+.crest{overflow:hidden;isolation:isolate}
+.crest img{width:100%;height:100%;object-fit:cover;object-position:center;border-radius:inherit}
+@media(max-width:550px){
+ .match-detail-head .match-header-meta{padding:12px 3px 9px}
+ .match-detail-head .match-detail-score{grid-template-columns:minmax(0,1fr) minmax(70px,.55fr) minmax(0,1fr);gap:5px}
+ .match-detail-head .match-big-score{min-height:72px}
+ .match-header-scorer{gap:4px;font-size:10px}
+ .match-scorer-minute{font-size:10px}
+ .match-header-team>strong{font-size:11px}
+ .match-timeline .mt-names{gap:0;line-height:1.1}
+}
