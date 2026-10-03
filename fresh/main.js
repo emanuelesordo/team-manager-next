@@ -8,7 +8,7 @@ import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,sta
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch} from './lineup-pitch.js';
-import {projectionContainer,updateProjection} from './projection-ui.js';
+import {projectionContainer,updateProjection} from './projection-ui.js?clubs=20261003id';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?clubs=20261003id';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
