@@ -50,3 +50,16 @@ test('club editor keeps independent scroll with no giant grid row',()=>{
  assert.match(staffCss,/\.staff-editor-club \.logo-editor-main\{[\s\S]*?display:grid/);
  assert.match(staffCss,/@media\(max-width:760px\)/);
 });
+
+
+test('home carousel has no top labels, uses Dettagli match, and shares desktop card height',()=>{
+ const hero=main.slice(main.indexOf('function hero(){'),main.indexOf('function kpis(){'));
+ assert.doesNotMatch(hero,/class="hero-title"/);
+ assert.doesNotMatch(hero,/class="hero-season"/);
+ assert.doesNotMatch(hero,/MATCH CENTER/);
+ assert.match(hero,/Dettagli match/);
+ assert.match(css,/@media\(min-width:961px\)\{\s*\.home-feature\{align-items:stretch\}/);
+ assert.match(css,/\.home-feature>\.feature-primary\{\s*display:flex;flex-direction:column;align-self:stretch/);
+ assert.match(css,/\.home-feature>\.feature-primary>\.hero-panel\{\s*display:flex;flex:1 1 auto;align-self:stretch/);
+ assert.match(css,/\.home-feature>\.feature-aside\{align-self:stretch;height:100%;min-height:0\}/);
+});
