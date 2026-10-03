@@ -86,7 +86,7 @@ test('Home scrolls each desktop column separately without resetting other pages'
 
 test('Home hides the unlinked player panel and uses saved crest geometry without calendar tiles',()=>{
  const home=main.slice(main.indexOf('function home(){'),main.indexOf('async function hydrateHomeRatings(){'));
- assert.ok(home.includes("(associated?'<section class=\"glass panel home-player-section\"'"));
+ assert.ok(home.includes("(associated?'<section class=\"glass panel home-player-section\">'"));
  assert.ok(!home.includes('Nessun giocatore associato all’account.'));
  assert.ok(css.includes('.home-feature .month-cell.with-game{\n background:transparent;'));
  for(const [shape,radius] of [['rounded','25%'],['circle','50%'],['square','0']])
