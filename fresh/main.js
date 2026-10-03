@@ -292,6 +292,7 @@ function render(){
  if(!state.base)return;
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
  document.body.dataset.theme=state.theme;
+ document.body.dataset.logoShape=['circle','rounded','square'].includes(state.base.team?.logo_shape)?state.base.team.logo_shape:'rounded';
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
  manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
@@ -372,6 +373,7 @@ async function reloadAll(){
  await switchSeason(chosen);
 }
 document.addEventListener('click',async e=>{
+ if(staffLogoEvent(e))return;
  const staffTarget=e.target.closest('[data-staff-action],[data-staff-area],[data-staff-match-tab]');
  if(staffTarget&&await staffClick(e,staffTarget,staffContext()))return;
  const x=e.target.closest('button,[data-dismiss]');if(!x)return;
@@ -403,7 +405,11 @@ document.addEventListener('change',e=>{
  if(e.target.matches('[data-comp-select]')){state.comp=e.target.value||null;render()}
 });
 document.addEventListener('paste',e=>{staffLogoEvent(e)});
+for(const type of ['pointerdown','pointermove','pointerup','pointercancel','dragstart','dragover','drop']){
+ document.addEventListener(type,e=>{staffLogoEvent(e)});
+}
 document.addEventListener('input',e=>{
+ if(staffLogoEvent(e))return;
  if(e.target.id==='player-search'){
   state.q=e.target.value;const query=normalized(state.q);let visible=0;
   document.querySelectorAll('.player-card').forEach(el=>{const show=el.dataset.searchName.includes(query);el.hidden=!show;if(show)visible++});
