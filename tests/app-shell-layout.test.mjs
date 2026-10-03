@@ -44,3 +44,13 @@ test('shared club editor has three compact panes and follows responsive containe
  assert.match(staffCss,/@media\(max-width:760px\)/);
  assert.doesNotMatch(staffCss,/grid-template-areas:"upload upload" "crop colors" "crop background"/);
 });
+
+
+test('club editor uses two independently scrolling panes without stretched logo rows',()=>{
+ assert.match(main,/function sizeClubEditor\(\)/);
+ assert.match(main,/window\.addEventListener\('resize',sizeClubEditor\)/);
+ assert.match(staffCss,/\.staff-editor-club \.staff-team-details,\s*\.staff-editor-club \.staff-team-brand\{[^}]*overflow-y:auto;overflow-x:hidden/);
+ assert.match(staffCss,/\.staff-editor-club \.staff-team-layout\{[^}]*overflow:hidden;align-items:stretch/);
+ assert.match(staffCss,/\.staff-editor-club \.logo-editor-main\{[^}]*grid-auto-rows:max-content;align-content:start/);
+ assert.match(staffCss,/@media\(max-width:760px\)\{\s*\.staff-editor-club\{display:block;height:auto/);
+});
