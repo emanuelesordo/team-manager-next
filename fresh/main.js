@@ -16,6 +16,7 @@ import {loadFixtureEvents} from './api.js?phases=20261003a';
 
 import {matchScorerRows,renderMatchScorers} from './match-scorers.js?clubs=20261003id';
 import {matchPlayerLabel} from './match-player-label.js';
+import {fixtureVenueDetails} from './venue-format.js';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
@@ -86,6 +87,7 @@ function competitionLabel(c){return (c.tier_level!=null?c.tier_level+' · ':'')+
  (c.parent_competition_id?'↳ ':'')+c.name+(c.group_code?' · Girone '+c.group_code:'')}
 function fixtures(){return(state.data?.fixtures||[])}
 function team(){return state.base?.team||{name:'Team Manager'}}
+function fixtureHomeClub(f){return f?.home_team_id===team()?.id?team():(state.base?.opponents||[]).find(o=>o.id===f?.home_opponent_id)||null}
 function ownFixtures(){return fixtures().filter(f=>involvesTeam(f,team())).sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))}
 function next(){const n=Date.now();return ownFixtures().filter(f=>isLive(f)||(!isFinished(f)&&new Date(f.kickoff_at).getTime()>=n-3600000)).sort((a,b)=>Number(isLive(b))-Number(isLive(a))||new Date(a.kickoff_at)-new Date(b.kickoff_at))[0]||null}
 function previous(){return [...ownFixtures()].filter(f=>isFinished(f)).sort((a,b)=>new Date(b.kickoff_at)-new Date(a.kickoff_at))[0]||null}
@@ -109,7 +111,7 @@ function sidebar(){return `<aside class="sidebar"><button class="identity-brand"
 function mobileNav(){return `<nav class="mobile-nav" aria-label="Navigazione principale">${nav.map(([id,ic,label])=>`<button type="button" data-page="${id}" class="${state.page===id?'active':''}" aria-label="${label}">${ico(ic,21)}<span>${label}</span></button>`).join('')}</nav>`}
 function panelTitle(title,action,label='Vedi tutto'){return `<div class="panel-heading"><h2>${E(title)}</h2>${action?`<button class="plain-link" data-page="${action}">${label} ${ico('chevron',15)}</button>`:''}</div>`}
 function scorecard(f,compact=false){if(!f)return '<div class="empty">Nessun incontro disponibile.</div>';
- return `<button class="scorecard ${compact?'compact':''}" data-match="${E(f.id)}"><div class="scorecard-top">${status(f)}<span>${E(competition(f.competition_id)?.name||'Partita')} · ${f.round_no!=null?'Giornata '+E(f.round_no):'Calendario'}</span></div><div class="scorecard-main"><div class="scoreclub">${club(f.home_team,compact?'sm':'lg',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong></div><div class="scorecentre"><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="scoreclub">${club(f.away_team,compact?'sm':'lg',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}<strong>${E(f.away_team)}</strong></div></div><div class="scorecard-foot">${ico('pin',14)} <span>${E(f.venue_name||f.venue||'Campo da definire')}</span><span class="match-cta">Dettagli ${ico('chevron',15)}</span></div></button>`
+ return `<button class="scorecard ${compact?'compact':''}" data-match="${E(f.id)}"><div class="scorecard-top">${status(f)}<span>${E(competition(f.competition_id)?.name||'Partita')} · ${f.round_no!=null?'Giornata '+E(f.round_no):'Calendario'}</span></div><div class="scorecard-main"><div class="scoreclub">${club(f.home_team,compact?'sm':'lg',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong></div><div class="scorecentre"><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="scoreclub">${club(f.away_team,compact?'sm':'lg',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}<strong>${E(f.away_team)}</strong></div></div><div class="scorecard-foot">${ico('pin',14)} <span>${E(fixtureVenueDetails(f,fixtureHomeClub(f)).name||'Campo da definire')}</span><span class="match-cta">Dettagli ${ico('chevron',15)}</span></div></button>`
 }
 function fixtureRow(f,short=false){return `<button class="fixture-row" data-match="${E(f.id)}"><span class="fixture-date"><b>${date(f.kickoff_at).split(' ')[0]}</b><small>${date(f.kickoff_at).split(' ').slice(1).join(' ')}</small></span><div class="fixture-main"><div class="fixture-clubs">${club(f.home_team,'tiny',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong><span class="fixture-separator">—</span><strong>${E(f.away_team)}</strong>${club(f.away_team,'tiny',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}</div><small>${E(competition(f.competition_id)?.name||'Partita')} ${f.round_no!=null?' · G'+E(f.round_no):''}${short?'':' · '+E(f.venue_name||f.venue||'Campo da definire')}</small></div><span class="fixture-result ${hasScore(f)?'played':''}">${hasScore(f)?E(f.home_score)+'–'+E(f.away_score):time(f.kickoff_at)}</span>${ico('chevron',15)}</button>`}
 function standings(comp,limit=0){
@@ -266,10 +268,7 @@ function match(){
  const tabs=[['overview','Overview'],['events','Eventi'],['lineup','Formazioni'],['ratings','Voti'],...(isStaff(staffContext())?[['staff','Gestione']]:[])];
  const selectedTab=state.matchTab==='summary'?'overview':state.matchTab;
  const titleInfo=(label,value)=>value?'<span class="match-meta-item" title="'+E(label)+'"><small class="sr-only">'+E(label)+'</small><strong>'+E(value)+'</strong></span>':'';
- const venue=f.venue_name||f.venue||(f.home_team_id===team()?.id?team()?.home_venue_name:
-  (f.home_team_id===team()?.id?team():(state.base?.opponents||[]).find(o=>o.id===f.home_opponent_id))?.home_venue_name)||null;
- const address=f.venue_address||(!(f.home_team_id===team()?.id)?
-  (f.home_team_id===team()?.id?team():(state.base?.opponents||[]).find(o=>o.id===f.home_opponent_id))?.home_venue_address:null);
+ const {name:venue,address}=fixtureVenueDetails(f,fixtureHomeClub(f));
  const matchMeta='<div class="match-header-meta" aria-label="Dettagli partita">'+
   '<div class="match-meta-group match-meta-left">'+
    titleInfo('Competizione',comp?.name||'—')+
