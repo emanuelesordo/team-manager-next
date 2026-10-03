@@ -1,3 +1,4 @@
+import {matchPlayerLabel} from './match-player-label.js';
 import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge} from './api.js';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup} from './lineup-pitch.js';
@@ -227,7 +228,7 @@ export function adminPage(ctx){
  '<div class="staff-intro glass"><span class="staff-orb">✦</span><div><span class="eyebrow">PERSONALE AUTORIZZATO</span><h2>Gestione sportiva</h2><p>Le modifiche vengono validate dal database. Operazioni distruttive disabilitate per proteggere i riferimenti storici.</p></div></div>'+
  tabs+(unlinked.length?'<div class="staff-link-warning" role="status"><strong>'+unlinked.length+' tabellino/i senza fixture collegata</strong><p>Le partite programmate vengono associate solo se dati e avversaria sono univoci. Quelle concluse con risultati discordanti richiedono revisione prima del collegamento.</p>'+unlinked.map(m=>'<div>'+esc(m.round_label||'Giornata non indicata')+' · '+esc(m.status)+' · '+esc(m.kickoff_at?.slice(0,10)||'Data assente')+'</div>').join('')+'</div>':'')+form+'<p class="staff-footnote">Moduli operativi di partita e convocazioni: apri un incontro dal calendario e scegli «Gestione».</p>';
 }
-const playerText=p=>p?String(p.last_name||'')+' '+String(p.first_name||''):'Giocatore';
+const playerText=p=>matchPlayerLabel(p);
 function picker(name,label,choices,value){return selection(name,label,choices,value)}
 const statusOf=m=>String(m?.status||'scheduled');
 function displayClock(m,competition){
