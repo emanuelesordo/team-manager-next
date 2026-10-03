@@ -2,6 +2,7 @@ import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,g
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261003id';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js';
+import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock} from './staff-ui.js?layout=20261003kits';
@@ -47,7 +48,7 @@ const ico=(n,size=20)=>{const paths={
  spark:'<path d="m2 16 6-6 4 3 9-9m-6 0h6v6"/>'
  };return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[n]||paths.home}</svg>`};
 const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar','calendar','Calendario'],['roster','users','Rosa'],['stats','chart','Numeri']];
-const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'overview',matchData:null,player:null,slide:0,filter:'all',mineOnly:false,role:'all',q:'',theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
+const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'overview',matchData:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,role:'all',q:'',theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
 let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
 let verifiedEventCache=null,analyticsBusy=false;
 async function pollLive(){
@@ -119,21 +120,66 @@ function standings(comp,limit=0){
  if(!rows.length)return '<div class="empty">Classifica non disponibile per questa competizione.</div>';
  return `<div class="table-scroller"><table class="standing-table"><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>DR</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.team_id===team()?.id?'ours':''}"><td>${i+1}</td><td><span class="standing-team">${club(r.team,'tiny',{team_id:r.team_id,opponent_id:r.opponent_id})}<span>${E(r.team)}</span></span></td><td>${r.played??'—'}</td><td>${r.won??'—'}</td><td>${r.drawn??'—'}</td><td>${r.lost??'—'}</td><td>${r.goal_difference??'—'}</td><td class="points">${r.points??'—'}</td></tr>`).join('')}</tbody></table></div>`
 }
-function carouselFixtures(){const a=[...ownFixtures().filter(f=>isLive(f)),...ownFixtures().filter(f=>!isLive(f)&&!isFinished(f)&&new Date(f.kickoff_at)>=Date.now()-3600000).slice(0,2),...ownFixtures().filter(isFinished).reverse().slice(0,2)];return a.slice(0,5)}
+function carouselFixtures(){const a=[previous(),next()].filter(Boolean);return a.filter((f,i)=>a.findIndex(x=>x.id===f.id)===i)}
 function hero(){
  const slides=carouselFixtures();if(!slides.length)return '<div class="hero-panel"><div class="empty light">Non ci sono ancora partite in calendario.</div></div>';
  state.slide=Math.min(state.slide,slides.length-1);const f=slides[state.slide];
  return `<section class="hero-panel"><div class="hero-bg"></div><div class="hero-content"><h2>${isLive(f)?'In campo, adesso.':isFinished(f)?'L’ultimo risultato.':'Il prossimo appuntamento.'}</h2><p>${E(competition(f.competition_id)?.name||'Competizione')} ${f.round_no!=null?'· Giornata '+E(f.round_no):''}</p><div class="hero-score"><div class="hero-club">${club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong></div><div class="hero-mid"><span class="hero-live">${status(f)}</span><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="hero-club">${club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}<strong>${E(f.away_team)}</strong></div></div><div class="hero-bottom"><div class="dots">${slides.map((_,i)=>`<button data-slide="${i}" class="${i===state.slide?'on':''}" aria-label="Mostra partita ${i+1}"></button>`).join('')}</div><div class="hero-arrows"><button data-action="prevslide" aria-label="Precedente">${ico('back',17)}</button><button data-action="nextslide" aria-label="Successiva">${ico('chevron',17)}</button></div><button class="primary-btn" data-match="${E(f.id)}">Dettagli match ${ico('arrow',17)}</button></div></div></section>`;
 }
-function kpis(){const s=summary(fixtures(),team());return `<div class="kpi-strip">${[['played','Partite giocate','calendar'],['wins','Vittorie','trophy'],['draws','Pareggi','clock'],['losses','Sconfitte','chart'],['gf','Gol fatti','spark'],['ga','Gol subiti','chart']].map(([key,label,ic])=>`<article class="kpi"><span class="kpi-icon">${ico(ic,19)}</span><strong>${s[key]}</strong><small>${label}</small></article>`).join('')}</div>`}
-function miniForm(){const a=summary(fixtures(),team()).form;return a.length?`<span class="form-strip">${a.map(x=>`<b class="form-${x}">${x}</b>`).join('')}</span>`:'<span class="muted">Ancora nessuna partita.</span>'}
-function home(){
- const latest=previous(),future=ownFixtures().filter(f=>!isFinished(f)&&!isLive(f)&&new Date(f.kickoff_at)>=Date.now()-3600000).slice(0,4);
- return `${heading('WELCOME TO MATCHDAY',team().name,'Risultati, calendario e protagonisti della tua squadra.') }
- <div class="home-feature"><div class="feature-primary">${hero()}</div><aside class="feature-aside glass"><div class="aside-top"><span class="eyebrow">IL CAMPO RACCONTA</span><span class="aside-icon">${ico('spark',20)}</span></div>${panelTitle('Ultima partita')}${latest?scorecard(latest,true):'<div class="empty">Nessun risultato registrato.</div>'}<div class="aside-divider"></div><div class="aside-form"><div><span class="eyebrow">ULTIMI INCONTRI</span><h3>La nostra forma</h3></div>${miniForm()}</div><button class="outline-btn" data-page="calendar">Esplora il calendario ${ico('arrow',17)}</button></aside></div>
- ${kpis()}${personalPanel(state.identity,state.data,E,ico)}
- <div class="home-bottom"><section class="glass panel schedule-panel">${panelTitle('Prossime partite','calendar')}<div class="fixture-list">${future.length?future.map(x=>fixtureRow(x,true)).join(''):'<div class="empty">Nessun incontro futuro programmato.</div>'}</div></section><section class="glass panel standings-panel">${panelTitle('Classifica','competitions')}${standings(currentComp(),6)}<p class="subnote">Parità di punti: ordine indicativo finché non sono applicati gli spareggi del regolamento.</p></section></div>`;
+
+const ratingsHomeCache=new Map();
+function monthOnHome(){return Number.isInteger(state.homeMonth)?state.homeMonth:monthIndex(new Date(),TIME_ZONE)}
+function monthMarkup(){return renderMonthCalendar(ownFixtures(),team().id,monthOnHome(),club)}
+function homeCompetition(){return competition(next()?.competition_id||previous()?.competition_id)||currentComp()}
+function homeRankings(c){
+ const ranked=rankRows((state.data?.standings||[]).filter(x=>x.competition_id===c?.id));
+ if(!ranked.length)return '<p class="empty">Nessuna classifica disponibile.</p>';
+ const ourPlace=ranked.findIndex(x=>x.team_id===team()?.id);
+ const start=ranked.length<=7?0:Math.max(0,Math.min(ranked.length-7,ourPlace<0?0:ourPlace-3));
+ return '<div class="home-rankings">'+ranked.slice(start,start+7).map((x,i)=>
+  '<div class="home-rank'+(x.team_id===team()?.id?' ours':'')+'"><span>'+Number(start+i+1)+'</span>'+
+  club(x.team,'tiny',{team_id:x.team_id,opponent_id:x.opponent_id})+
+  '<b>'+E(x.team)+'</b><small>'+E(x.played??0)+' G</small><strong>'+E(x.points??0)+'</strong></div>').join('')+'</div>';
 }
+function home(){
+ const comp=homeCompetition(),playerId=state.identity?.role?.player_id;
+ const associated=(state.data?.players||[]).some(p=>p.id===playerId);
+ const comparisons=opponentAdjustedResults(fixtures().filter(f=>f.competition_id===comp?.id),team()?.id,5);
+ return '<div class="home-feature"><div class="feature-primary" data-home-hero>'+hero()+'</div>'+
+ '<aside class="home-side-stack">'+
+ '<section class="glass panel home-month-section"><div class="home-panel-head"><h2>Calendario</h2>'+
+ '<button class="home-plain-link" data-page="calendar">Dettagli '+ico('arrow',14)+'</button></div>'+
+ '<div class="home-right-calendar">'+monthMarkup()+'</div></section>'+
+ '<section class="glass panel home-standing-section"><div class="home-panel-head"><h2>Classifica</h2>'+
+ '<button class="home-plain-link" data-page="competitions">'+ico('arrow',15)+'</button></div>'+
+ '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+homeRankings(comp)+'</section></aside></div>'+
+ '<div class="home-analytics-grid"><section class="glass panel home-player-section">'+
+ '<div class="home-panel-head"><h2>Il mio giocatore</h2></div>'+
+ (associated?personalPanel(state.identity,state.data,E,ico):'<p class="empty">Nessun giocatore associato all’account.</p>')+
+ (associated?'<h3 class="home-chart-title">Rating delle ultime partite</h3><div class="home-player-rating" data-home-ratings="'+E(playerId)+'">'+
+ '<p class="muted small">Caricamento valutazioni…</p></div>':'')+'</section>'+
+ '<section class="glass panel home-expectation-section"><div class="home-panel-head"><h2>Risultati e aspettative</h2></div>'+
+ '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+
+ renderPointsTrend(comparisons)+'</section></div>';
+}
+async function hydrateHomeRatings(){
+ const id=state.identity?.role?.player_id,box=document.querySelector('[data-home-ratings]');
+ if(!id||!box||state.loading||state.page!=='home')return;
+ const key=state.season+'|'+id;
+ if(ratingsHomeCache.has(key)){box.innerHTML=renderPlayerRatingTrend(ratingsHomeCache.get(key));return}
+ if(box.dataset.loading==='true')return;
+ box.dataset.loading='true';
+ try{
+  const q='select=season_id,match_id,kickoff_at,player_id,opponent,avg_rating,votes,sv&season_id=eq.'+
+   encodeURIComponent(state.season)+'&player_id=eq.'+encodeURIComponent(id)+'&order=kickoff_at.desc&limit=5';
+  const rows=await get('tm_player_recent_votes',q);
+  ratingsHomeCache.set(key,rows);
+  const el=document.querySelector('[data-home-ratings="'+id+'"]');
+  if(el&&state.season+'|'+state.identity?.role?.player_id===key)el.innerHTML=renderPlayerRatingTrend(rows);
+ }catch(err){const el=document.querySelector('[data-home-ratings="'+id+'"]');if(el)el.textContent='Valutazioni non disponibili: '+err.message}
+ finally{const el=document.querySelector('[data-home-ratings="'+id+'"]');if(el)el.dataset.loading='false'}
+}
+
 function competitions(){
  const c=currentComp(),all=fixtures().filter(f=>f.competition_id===c?.id);
  const rounds=[...new Set(all.map(f=>f.round_no).filter(x=>x!=null))].sort((a,b)=>a-b),shown=state.mineOnly?all.filter(f=>involvesTeam(f,team())):all;
@@ -393,6 +439,7 @@ function render(){
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading)paintMatchHeaderCompact();
+ if(state.page==='home'&&!state.loading)void hydrateHomeRatings();
  manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
@@ -402,7 +449,7 @@ function navigate(page){
  history.replaceState(null,'',page==='match'&&state.match?matchRoute(state.match):'#'+page);
  render();window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
 }
-function changeSlide(nextIndex){const a=carouselFixtures();if(!a.length)return;state.slide=(nextIndex+a.length)%a.length;render()}
+function changeSlide(nextIndex){const a=carouselFixtures();if(!a.length)return;state.slide=(nextIndex+a.length)%a.length;const slot=document.querySelector('[data-home-hero]');if(state.page==='home'&&slot){slot.innerHTML=hero();return}render()}
 let gesture=null;
 document.addEventListener('touchstart',e=>{if(e.target.closest('.hero-panel'))gesture={x:e.changedTouches[0].clientX,y:e.changedTouches[0].clientY}},{passive:true});
 document.addEventListener('touchend',e=>{if(!gesture||!e.target.closest('.hero-panel')){gesture=null;return}const dx=e.changedTouches[0].clientX-gesture.x,dy=e.changedTouches[0].clientY-gesture.y;gesture=null;if(Math.abs(dx)>54&&Math.abs(dx)>Math.abs(dy)*1.3)changeSlide(state.slide+(dx<0?1:-1))},{passive:true});
@@ -481,6 +528,7 @@ document.addEventListener('click',async e=>{
  if(x.dataset.match){openMatch(x.dataset.match);return}
  if(x.dataset.player){state.player=x.dataset.player;navigate('player');return}
  if(x.dataset.slide!==undefined){changeSlide(Number(x.dataset.slide));return}
+ if(x.dataset.homeMonth!==undefined){state.homeMonth=x.dataset.homeMonth==='0'?monthIndex(new Date(),TIME_ZONE):monthOnHome()+Number(x.dataset.homeMonth);const el=document.querySelector('.home-right-calendar');if(el)el.innerHTML=monthMarkup();return}
  if(x.dataset.comp){state.comp=x.dataset.comp;render();return}
  if(x.dataset.filter){state.filter=x.dataset.filter;render();return}
  if(x.dataset.role){state.role=x.dataset.role;render();return}
