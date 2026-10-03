@@ -45,7 +45,7 @@ function findGeneralSeason(available,app,teamId){
 const roleOf=ctx=>ctx.state.identity?.profile?.is_active===false?null:ctx.state.identity?.role?.role;
 export const isStaff=ctx=>['admin','manager'].includes(roleOf(ctx));
 function selectExisting(kind,records,text){return '<label class="staff-field"><span>Modifica esistente o crea nuovo</span><select data-staff-select="'+kind+'">'+option('','+ Nuovo',memory.selected[kind])+records.map(x=>option(x.id,x[text]||x.name||x.id,memory.selected[kind])).join('')+'</select></label>'}
-function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor'+(['team','opponents'].includes(id)?' staff-editor-club staff-editor-'+id:'')+'">'+title('CONFIGURAZIONE',heading)+(description?help(description):'')+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}
+function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor'+(['team','opponents'].includes(id)?' staff-editor-club staff-editor-'+id:'')+'">'+(id==='opponents'?'':title('CONFIGURAZIONE',heading)+(description?help(description):''))+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}
 export function adminPage(ctx){
  if(!isStaff(ctx))return '<div class="empty">Gestione riservata allo staff autorizzato.</div>';
  const data=ctx.state.data||{},base=ctx.state.base||{},t=base.team||{};
