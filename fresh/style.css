@@ -635,3 +635,23 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  .month-matches .crest.tiny{height:28px;width:28px}
  .home-analytics-grid .home-trend-svg{max-height:210px}
 }
+
+/* Home dashboard: compact, equally tall first-row panels on desktop. */
+@media(min-width:961px){
+ .home-feature{--home-first-row-height:365px;align-items:start}
+ .home-feature [data-home-hero],
+ .home-feature [data-home-hero]>.hero-panel,
+ .home-feature .home-month-section{height:var(--home-first-row-height);min-height:0;max-height:var(--home-first-row-height);box-sizing:border-box}
+ .home-feature .hero-content{height:100%;box-sizing:border-box;justify-content:space-between;padding:18px 23px}
+ .home-feature .hero-score{margin:9px 0;align-items:center}
+ .home-feature .home-month-section{display:flex;flex-direction:column;overflow:hidden}
+ .home-feature .home-right-calendar{display:flex;flex:1;min-height:0;flex-direction:column}
+ .home-feature .month-days{flex:1;grid-template-rows:20px repeat(5,minmax(0,1fr));align-content:stretch}
+ .home-feature .month-cell{min-height:0}
+}
+/* Date badge goes into the corner only when a fixture logo is present. */
+.home-feature .month-cell.with-game{padding-bottom:14px}
+.home-feature .month-cell.with-game .month-number{position:absolute;right:3px;bottom:2px;z-index:1;font-size:10px;line-height:1;padding:3px 5px;border-radius:20px;background:var(--surface-solid);box-shadow:0 1px 4px #0002}
+.home-feature .month-cell.with-game .month-matches{margin-top:0;flex:1;align-content:center;justify-content:center;width:100%}
+@media(min-width:961px) and (max-width:1180px){.home-feature{--home-first-row-height:345px}.home-feature .hero-club .crest.xl{width:75px;height:75px}}
+@media(max-width:650px){.home-feature .hero-score{margin:12px 0}.home-feature .hero-panel{min-height:290px}}
