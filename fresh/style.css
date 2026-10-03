@@ -416,3 +416,20 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 .phase-trail strong{font-weight:800;color:var(--ink)}
 .phase-trail small{width:100%;font-size:11px;color:var(--muted)}
 .segmented button{white-space:nowrap}
+
+
+/* Home feature: the carousel and adjacent insights panel share one grid-row height.
+   Flex on the primary cell ensures the carousel stretches with its sibling. */
+@media(min-width:961px){
+ .home-feature{align-items:stretch}
+ .home-feature>.feature-primary{
+  display:flex;flex-direction:column;align-self:stretch;min-width:0;min-height:0;
+ }
+ .home-feature>.feature-primary>.hero-panel{
+  display:flex;flex:1 1 auto;align-self:stretch;
+  width:100%;height:100%;min-height:425px;
+ }
+ .home-feature .hero-content{display:flex;flex:1 1 auto;flex-direction:column;min-width:0}
+ .home-feature>.feature-aside{align-self:stretch;height:100%;min-height:0}
+}
+.hero-panel>.hero-content>h2{margin-top:0}
