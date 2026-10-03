@@ -60,6 +60,7 @@ export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false,ba
    (url?'<button type="button" class="staff-soft logo-edit-existing" data-logo-edit-existing>Ritaglia logo attuale</button>':'')+
    '<span class="staff-help">Oppure incolla con Ctrl+V / Cmd+V · PNG, JPG, WebP · 8 MB</span></div>'+
   '<div class="logo-editor-main">'+
+    '<div class="logo-crop-column">'+
     '<div class="logo-frame" data-logo-frame data-shape="'+selected+'" style="background-color:'+(savedBackground||'transparent')+'">'+
      (url?'<img src="'+E(url)+'" alt="Stemma attuale" data-logo-existing>':'<span class="logo-placeholder" data-logo-placeholder>Anteprima</span>')+
      '<canvas width="256" height="256" data-logo-canvas aria-label="Trascina l’immagine per regolare il ritaglio" hidden></canvas>'+
@@ -71,6 +72,7 @@ export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false,ba
       '<p class="staff-help">Trascina l’immagine per ritagliarla.</p>'+
       shapeSelect+
     '</div>'+
+    '</div>'+ // close crop column before color column
     '<div class="logo-palette-side">'+
       '<div class="logo-colors">'+
         '<div class="logo-colors-heading"><strong>Colori squadra</strong><small>Trascina per riordinare</small></div>'+
