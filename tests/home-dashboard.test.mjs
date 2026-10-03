@@ -54,7 +54,8 @@ test('projections use only games played before a fixture, never its eventual out
  ];
  const early=opponentAdjustedResults(past,teamId);
  assert.equal(early.length,3);
- assert.ok(early.every(r=>r.expected===null),'opponents lack two earlier results');
+ assert.equal(early.filter(r=>r.expected===null).length,2,'first two fixtures have insufficient prior data');
+ assert.ok(early.some(r=>r.expected!==null),'estimate starts only after two prior games per club');
  const result=renderPointsTrend(early);
  assert.match(result,/Punti ottenuti/);
  assert.match(result,/Punti attesi \(stima\)/);
