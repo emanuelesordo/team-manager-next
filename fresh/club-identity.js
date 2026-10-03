@@ -5,8 +5,19 @@
 export const canonicalClubName=value=>{
  const words=String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
   .replace(/[^a-z0-9]+/g,' ').trim().split(/\s+/).filter(Boolean);
- const generic=new Set(['asd','a','s','d','calcio','football','club','fc','ac','societa','sportiva','dilettantistica']);
- while(words.length>1&&generic.has(words[words.length-1]))words.pop();
+ // Competition calendars use historical prefixes and legal suffixes that are
+ // deliberately omitted in the opponent registry (e.g. "Amatori Cadoneghe"
+ // versus "Cadoneghe", or "Union Rubano A.S.D." versus "Union Rubano").
+ // Strip ONLY known whole-word football descriptors, never partial names.
+ const suffix=new Set(['asd','a','s','d','calcio','football','club','fc','ac','societa','sportiva','dilettantistica']);
+ while(words.length>1&&suffix.has(words[words.length-1]))words.pop();
+ const prefix=new Set(['amatori','amatoriale','calcio','football','fc','asd','spd','polisportiva']);
+ while(words.length>1){
+  if(words.length>2&&words[0]==='d'&&words[1]==='g'){words.splice(0,2);continue}
+  if(words.length>3&&words[0]==='s'&&words[1]==='p'&&words[2]==='d'){words.splice(0,3);continue}
+  if(prefix.has(words[0])){words.shift();continue}
+  break;
+ }
  return words.join(' ');
 };
 export function findClubIdentity(name,team,opponents=[]){
