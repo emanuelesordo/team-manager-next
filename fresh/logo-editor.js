@@ -106,10 +106,16 @@ async function acceptImage(picker,file){
  picker.querySelector('[data-logo-zoom]').value='1';
  drawCrop(picker,true);
 }
+export function reorderLogoColors(colors,from,to){
+ const values=[...colors];
+ if(!Number.isInteger(from)||!Number.isInteger(to)||from===to||from<0||to<0||from>=values.length||to>=values.length)return values;
+ const [moved]=values.splice(from,1);
+ values.splice(to,0,moved);
+ return values;
+}
 function reorder(picker,from,to){
- if(!Number.isInteger(from)||!Number.isInteger(to)||from===to||from<0||to<0||from>2||to>2)return;
- const values=currentColors(picker),[moved]=values.splice(from,1);values.splice(to,0,moved);
- updatePalette(picker,values,true);
+ if(from===to)return;
+ updatePalette(picker,reorderLogoColors(currentColors(picker),from,to),true);
 }
 export async function prepareLogoForUpload(form){
  if(form._logoEditorLoading)await form._logoEditorLoading;
