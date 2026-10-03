@@ -25,7 +25,11 @@ export function formatClubAddress(club){
 }
 export function fixtureVenueDetails(fixture={},homeClub=null){
  const parsed=parseFixtureVenue(fixture.venue);
- const name=fixture.venue_name||parsed?.name||homeClub?.home_venue_name||'';
+ // Imports can mistakenly put the entire CSI stadium string in venue_name.
+ // Always normalize that field before displaying it; otherwise use the
+ // explicit per-match venue, then the club's registered stadium.
+ const named=parseFixtureVenue(fixture.venue_name);
+ const name=named?.name||parsed?.name||homeClub?.home_venue_name||'';
  const location=fixture.venue_address||(
   parsed?.street?[parsed.street,parsed.city+(parsed.province?' ('+parsed.province+')':'')].filter(Boolean).join(', '):''
  )||formatClubAddress(homeClub);
