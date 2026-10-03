@@ -183,13 +183,13 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   if(cumulative&&colors.length===1)colors.unshift('yellow');
   return '<span class="mt-card-stack" aria-label="Cartellino">'+colors.map(c=>'<i class="mt-card-'+c+'"></i>').join('')+'</span>';
  };
- const icon=e=>{const t=type(e);if(goal(e))return '<span class="mt-ball" aria-label="Gol">⚽</span>';if(['yellow_card','red_card','blue_card','second_yellow'].includes(t))return cards(e);if(['substitution','sub_out','sub_in'].includes(t))return '<span class="mt-change" aria-label="Sostituzione"><span>→</span><span>←</span></span>';if(t==='blue_return')return '<span class="mt-generic">↩</span>';return '<span class="mt-generic">◆</span>'};
+ const icon=e=>{const t=type(e);if(goal(e))return '';if(['yellow_card','red_card','blue_card','second_yellow'].includes(t))return cards(e);if(['substitution','sub_out','sub_in'].includes(t))return '<span class="mt-change" aria-label="Sostituzione"><span class="mt-sub-in">→</span><span class="mt-sub-out">←</span></span>';if(t==='blue_return')return '<span class="mt-generic">↩</span>';return '<span class="mt-generic">◆</span>'};
  const eventContent=entry=>{const e=entry.event,t=type(e),isChange=['substitution','sub_out','sub_in'].includes(t);
   const primary=isChange&&e.secondary_player_id?playerName(e.secondary_player_id):e.player_id?playerName(e.player_id):goal(e)?'Gol avversario':e.payload?.opponent_shirt_number?'#'+e.payload.opponent_shirt_number:'Squadra';
   const secondary=isChange?(e.secondary_player_id&&e.player_id?playerName(e.player_id):''):(goal(e)&&e.secondary_player_id?playerName(e.secondary_player_id):'');
   const score=entry.score?'<span class="mt-score">'+E(entry.score)+'</span>':'';
   const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+'</span>';
-  return '<span class="mt-icon">'+icon(e)+'</span>'+score+names;
+  return (goal(e)?'':'<span class="mt-icon">'+icon(e)+'</span>')+score+names;
  };
  const minutes=e=>E(displayEventMinute(e,competitionSettings).replace('′',"'"));
  const recoveryByPeriod=new Map();
