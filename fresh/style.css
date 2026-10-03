@@ -393,3 +393,19 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  .content{padding-top:12px}
  .overlay .menu-sheet{max-height:calc(100dvh - 22px);padding:26px 18px}
 }
+
+
+/* Share drawer's available free vertical space across navigation groups. */
+@media(min-width:761px){
+ .sidebar-scroll{display:flex;flex-direction:column;justify-content:stretch}
+ .sidebar-scroll .side-label{flex:0 0 auto}
+ .sidebar-scroll .side-nav{
+  display:flex;flex-direction:column;justify-content:space-around;
+  flex:1 0 auto;min-height:max-content;
+  gap:clamp(5px,1vh,16px);
+ }
+ .sidebar-scroll .side-nav:first-of-type{flex-grow:2}
+}
+@media(min-width:761px) and (max-height:690px){
+ .sidebar-scroll .side-nav{gap:3px;justify-content:flex-start}
+}
