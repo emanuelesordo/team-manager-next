@@ -282,20 +282,20 @@ function match(){
    titleInfo('Campo',venue||'—')+'</div></div>';
  const scorers=matchScorerRows(activeEvents,f,team(),playerName,comp);
  const headerScore=hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
- const compactHeader='<div class="match-compact-bar" aria-hidden="true">'+
+ const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
   '<b class="match-compact-score">'+headerScore+'</b>'+
   '<div class="match-compact-club match-compact-away"><strong>'+E(f.away_team)+'</strong>'+
   club(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+'</div></div>';
- const header='<div class="match-detail-head glass" style="--match-collapse:0">'+
+ const header='<div class="match-detail-head glass">'+
   '<div class="match-expanded">'+matchMeta+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
   '<div class="match-big-score"><div class="match-score-status">'+status(f)+'</div><b>'+headerScore+'</b></div>'+
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+
   '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>'+
-  compactHeader+'</div>';
+  '</div>';
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato da verificare'):'';
  const notice=(pending?'<p class="data-warning">'+pending+' eventi ancora da ufficializzare.</p>':'')+
   (resultStatus?'<p class="staff-help">'+E(resultStatus)+'</p>':'');
@@ -307,7 +307,7 @@ function match(){
  else body='<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
   '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>';
  return '<button class="back-link" data-page="calendar">'+ico('back')+' Torna al calendario</button>'+
-  '<div class="match-header-sentinel" aria-hidden="true"></div>'+header+'<section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">'+
+  '<div class="match-header-sentinel" aria-hidden="true"></div>'+header+compactHeader+'<section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">'+
   tabs.map(([id,label])=>'<button role="tab" aria-selected="'+(selectedTab===id)+'" data-tab="'+id+
    '" class="'+(selectedTab===id?'active':'')+'">'+label+'</button>').join('')+
   '</div><div class="match-tab-body">'+notice+body+(selectedTab==='lineup'?
@@ -326,33 +326,53 @@ function overlay(){
  if(state.overlay==='menu')return `<div class="overlay" data-dismiss><section class="overlay-card menu-sheet" role="dialog" aria-modal="true" aria-label="Menu"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><h2>Esplora Team Manager</h2><label class="season-box dark"><span>Stagione</span><select data-season>${state.base.seasons.map(s=>`<option value="${E(s.id)}" ${s.id===state.season?'selected':''}>${E(s.name)}</option>`).join('')}</select></label>${nav.map(([id,ic,l])=>`<button class="menu-link" data-page="${id}">${ico(ic)} ${l} ${ico('chevron',16)}</button>`).join('')}<button class="menu-link" data-page="club">${ico('settings')} Squadra e avversarie ${ico('chevron',16)}</button>${isStaff(staffContext())?`<button class="menu-link" data-page="admin">${ico('settings')} Amministrazione ${ico('chevron',16)}</button>`:''}<button class="menu-link" data-page="account">${ico('user')} Profilo ${ico('chevron',16)}</button></section></div>`;
  return '';
 }
-function syncMatchHeaderCompact(){
+// The expanded header keeps its natural size. Its separate compact sibling is
+// sticky but occupies ZERO additional flow height (cancelled by CSS margins).
+// Only compositor-friendly opacity and transform change while scrolling: resizing
+// the sticky header on each scroll frame caused reflow and scroll-anchor jitter.
+let matchHeaderFrame=0;
+let matchHeaderLastElement=null;
+let matchHeaderLastProgress=-1;
+function paintMatchHeaderCompact(){
+ if(state.page!=='match')return;
  const head=document.querySelector('.match-detail-head');
- if(!head||state.page!=='match')return;
- const marker=document.querySelector('.match-header-sentinel');
+ const compact=document.querySelector('.match-compact-bar');
+ const expanded=head?.querySelector('.match-expanded');
  const topbar=document.querySelector('.topbar');
- const expanded=head.querySelector('.match-expanded');
- if(!marker||!topbar||!expanded)return;
- const dock=Math.ceil(topbar.getBoundingClientRect().bottom);
- head.style.setProperty('--match-sticky-top',dock+'px');
+ if(!head||!compact||!expanded||!topbar)return;
+ const top=Math.ceil(topbar.getBoundingClientRect().bottom);
  const mobile=window.innerWidth<=650;
- const targetHeight=mobile?64:74;
- // The expanded content retains its natural height; the parent shrinks instead.
- const needsMeasure=!head.dataset.expandedHeight||
-  head.dataset.measureWidth!==String(Math.round(head.getBoundingClientRect().width));
- if(needsMeasure){
-  const measured=Math.ceil(expanded.getBoundingClientRect().height);
-  head.dataset.expandedHeight=String(Math.max(targetHeight,measured));
-  head.dataset.measureWidth=String(Math.round(head.getBoundingClientRect().width));
+ const compactHeight=mobile?64:74;
+ const range=mobile?120:170;
+ const bottom=head.getBoundingClientRect().bottom;
+ const raw=Math.max(0,Math.min(1,(top+compactHeight+range-bottom)/range));
+ const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const progress=reduced?(raw>=0.5?1:0):raw;
+ // Top offset and compact size change on resize only, not during normal scroll.
+ if(compact.dataset.dock!==String(top)){
+  compact.style.setProperty('--match-sticky-top',top+'px');
+  compact.dataset.dock=String(top);
  }
- const natural=Number(head.dataset.expandedHeight);
- // The marker is outside the sticky element, so scrolling cannot move the
- // threshold as the panel itself changes height.
- const distance=mobile?135:180;
- const progress=Math.max(0,Math.min(1,(dock+10-marker.getBoundingClientRect().bottom)/distance));
- head.style.setProperty('--match-collapse',progress.toFixed(4));
- head.style.height=Math.round(natural-(natural-targetHeight)*progress)+'px';
- head.classList.toggle('is-compact',progress>=.999);
+ if(compact.dataset.size!==String(compactHeight)){
+  compact.style.setProperty('--match-compact-height',compactHeight+'px');
+  compact.dataset.size=String(compactHeight);
+ }
+ if(matchHeaderLastElement===compact&&Math.abs(matchHeaderLastProgress-progress)<0.003)return;
+ matchHeaderLastElement=compact;
+ matchHeaderLastProgress=progress;
+ compact.style.opacity=progress.toFixed(3);
+ expanded.style.opacity=(1-progress).toFixed(3);
+ compact.style.transform=reduced?'none':
+  'translate3d(0,'+(10*(1-progress)).toFixed(2)+'px,0) scale('+(0.985+0.015*progress).toFixed(4)+')';
+ expanded.style.transform=reduced?'none':
+  'translate3d(0,'+(-10*progress).toFixed(2)+'px,0)';
+}
+function syncMatchHeaderCompact(){
+ if(state.page!=='match'||matchHeaderFrame)return;
+ matchHeaderFrame=window.requestAnimationFrame(()=>{
+  matchHeaderFrame=0;
+  paintMatchHeaderCompact();
+ });
 }
 function sizeClubEditor(){
  const el=document.querySelector('.staff-editor-club');
@@ -373,7 +393,7 @@ function render(){
  document.body.dataset.logoShape=['circle','rounded','square'].includes(state.base.team?.logo_shape)?state.base.team.logo_shape:'rounded';
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
- if(state.page==='match'&&!state.loading)syncMatchHeaderCompact();
+ if(state.page==='match'&&!state.loading)paintMatchHeaderCompact();
  manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
@@ -539,6 +559,7 @@ installNotifications(()=>staffContext());
 window.addEventListener('resize',sizeClubEditor);
 window.addEventListener('scroll',syncMatchHeaderCompact,{passive:true});
 window.addEventListener('resize',syncMatchHeaderCompact);
+window.visualViewport?.addEventListener('resize',syncMatchHeaderCompact);
 window.visualViewport?.addEventListener('resize',sizeClubEditor);
 bootstrap();
 
