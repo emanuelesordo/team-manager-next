@@ -16,11 +16,10 @@ export function matchScorerRows(events=[],fixture={},team={},playerName=()=>null
   const named=event.player_id?playerName(event.player_id):null;
   const shirt=event.payload?.opponent_shirt_number||event.payload?.shirt_number;
   const name=named&&named!=='Giocatore non censito'?named:shirt?'#'+shirt:'Marcatore non indicato';
-  const ownGoal=event.event_type==='own_goal'||event.payload?.goal_type==='own_goal';
   rows[side].push({
    id:event.id||null,minute:cumulativeEventMinute(event,competition),
    minuteText:displayEventMinute(event,competition,'—'),
-   name:(ownGoal?'Aut. ':'')+name
+   name
   });
  }
  for(const side of ['home','away'])rows[side].sort((a,b)=>(a.minute??999)-(b.minute??999));
