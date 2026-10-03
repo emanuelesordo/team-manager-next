@@ -268,7 +268,7 @@ function match(){
  const header='<div class="match-detail-head glass">'+matchMeta+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl')+
   '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
-  '<div class="match-big-score"><b>'+headerScore+'</b><div class="match-score-status">'+status(f)+'</div></div>'+
+  '<div class="match-big-score"><div class="match-score-status">'+status(f)+'</div><b>'+headerScore+'</b></div>'+
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl')+
   '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>';
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato da verificare'):'';
