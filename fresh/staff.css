@@ -189,3 +189,73 @@
 @media(max-width:490px){
  .staff-editor-club .staff-team-details{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* Independent editor scrolling: no shared tall implicit grid rows. */
+@media(min-width:761px){
+ .staff-editor-club{
+  display:flex;flex-direction:column;overflow:hidden;
+  height:var(--club-editor-height,calc(100dvh - 190px));
+  max-height:var(--club-editor-height,calc(100dvh - 190px));
+  min-height:290px;
+ }
+ .staff-editor-club>.staff-form{
+  display:flex;flex-direction:column;flex:1 1 auto;
+  min-height:0;min-width:0;overflow:hidden;
+ }
+ .staff-editor-club .staff-club-selector{flex:0 0 auto}
+ .staff-editor-club .staff-team-layout{
+  flex:1 1 auto;min-height:0;height:100%;
+  overflow:hidden;align-items:stretch;align-content:stretch;
+  grid-template-rows:minmax(0,1fr);
+ }
+ .staff-editor-club .staff-team-details,
+ .staff-editor-club .staff-team-brand{
+  height:100%;min-height:0;max-height:100%;
+  overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  padding-right:7px;padding-bottom:10px;
+ }
+ .staff-editor-club .staff-team-details{
+  display:grid;align-content:start;
+  grid-auto-rows:max-content;
+ }
+ .staff-editor-club .staff-team-brand{
+  display:block;container-type:inline-size;
+  overflow-anchor:none;
+ }
+ .staff-editor-club .staff-team-brand>.staff-logo-picker{
+  height:max-content;min-height:0;max-height:none;
+  display:flex;flex-direction:column;gap:9px;
+ }
+ .staff-editor-club .logo-editor-main{
+  display:grid;grid-template-rows:max-content;
+  grid-auto-rows:max-content;align-content:start;
+  align-items:start;height:max-content;min-height:0;
+  flex:none;
+ }
+ .staff-editor-club .logo-palette-side{
+  display:flex;flex-direction:column;justify-content:flex-start;
+  align-content:start;align-self:start;gap:9px;
+  min-height:0;height:max-content;
+ }
+ .staff-editor-club .logo-colors,.staff-editor-club .logo-background{
+  height:auto;min-height:0;flex:none;margin:0;
+ }
+ .staff-editor-club .staff-form>.staff-submit{
+  flex:0 0 auto;align-self:flex-start;
+  margin-top:7px;
+ }
+}
+@media(max-width:760px){
+ .staff-editor-club{display:block;height:auto;max-height:none;min-height:0;overflow:visible}
+ .staff-editor-club>.staff-form{display:flex;flex-direction:column;overflow:visible}
+ .staff-editor-club .staff-team-layout{
+  display:grid;grid-template-rows:auto;height:auto;overflow:visible;
+ }
+ .staff-editor-club .staff-team-details,
+ .staff-editor-club .staff-team-brand{
+  height:auto;max-height:none;min-height:0;overflow:visible;
+ }
+}
