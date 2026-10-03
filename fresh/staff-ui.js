@@ -221,8 +221,8 @@ export function adminPage(ctx){
    '<div class="staff-form-grid">'+
     selection('competition_id','Competizione',comps.map(c=>[c.id,c.name]),comps[0]?.id)+
     input('round_no','Giornata',1,'number','min="1" max="250" required')+
-    selection('home_team','Squadra di casa',[[t.name,t.name],...opps.map(o=>[o.name,o.name])],t.name)+
-    selection('away_team','Ospite',[[t.name,t.name],...opps.map(o=>[o.name,o.name])],opps[0]?.name)+
+    selection('home_club_id','Squadra di casa',[[t.id,t.name],...opps.map(o=>[o.id,o.name])],t.id)+
+    selection('away_club_id','Ospite',[[t.id,t.name],...opps.map(o=>[o.id,o.name])],opps[0]?.id)+
     input('kickoff_at','Data e ora (Italia)','', 'datetime-local','required')+
     input('venue_name','Campo','')+input('venue_address','Indirizzo','')+'</div>':
    '<div class="staff-form-grid">'+input('kickoff_at','Data e ora',local,'datetime-local','required')+
@@ -353,12 +353,19 @@ function adminPayload(form){
   if(!blank.fixtures){
    const round=Number(data.round_no);
    if(!Number.isInteger(round)||round<1||round>250||!data.competition_id)throw Error('Competizione e giornata obbligatorie');
-   if(!data.home_team||!data.away_team||data.home_team===data.away_team)throw Error('Le due squadre devono essere diverse');
+   const t=ctx.state.base.team,opponents=ctx.state.base.opponents||[];
+   const allowed=[t,...opponents];
+   const home=allowed.find(x=>x.id===data.home_club_id),away=allowed.find(x=>x.id===data.away_club_id);
+   if(!home||!away||home.id===away.id)throw Error('Scegli due squadre diverse tramite gli identificativi registrati');
+   const clubFields=(club,side)=>club.id===t.id?
+    {[side+'_team_id']:club.id,[side+'_opponent_id']:null}:
+    {[side+'_team_id']:null,[side+'_opponent_id']:club.id};
    return {table:'new-fixture',payload:{
     competition_id:data.competition_id,round_no:round,
-    kickoff_at:parseKickoff(data.kickoff_at),home_team:data.home_team,
-    away_team:data.away_team,venue_name:data.venue_name||null,
-    venue_address:data.venue_address||null
+    kickoff_at:parseKickoff(data.kickoff_at),home_team:home.name,
+    away_team:away.name,
+    ...clubFields(home,'home'),...clubFields(away,'away'),
+    venue_name:data.venue_name||null,venue_address:data.venue_address||null
    }};
   }
   const d=cleaned(data,['venue_name','venue_address','status']);
