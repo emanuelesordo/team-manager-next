@@ -26,6 +26,25 @@ async function authorized(path,options){
   return call(path,options)
  }
 }
+/** Store a club badge in team-assets. The existing staff-only storage policy checks the team folder. */
+export async function uploadClubBadge(file,teamId){
+ if(!hasSession())throw Error('Accedi come membro autorizzato prima di caricare uno stemma');
+ const allowed={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'};
+ const ext=allowed[file?.type];
+ if(!ext)throw Error('Formato non supportato. Usa PNG, JPG o WebP.');
+ if(file.size>3*1024*1024)throw Error('Lo stemma non può superare 3 MB.');
+ if(!/^[0-9a-f-]{36}$/i.test(String(teamId||'')))throw Error('Identificativo squadra non valido');
+ const path=teamId+'/club-logos/'+crypto.randomUUID()+'.'+ext;
+ const endpoint='/storage/v1/object/team-assets/'+path;
+ const send=()=>fetch(API_URL+endpoint,{method:'POST',headers:{...headers(),'Content-Type':file.type,'x-upsert':'false'},body:file});
+ let response=await send();
+ if(response.status===401&&await refresh())response=await send();
+ if(!response.ok){
+  const details=await response.json().catch(()=>null);
+  throw Error(details?.message||details?.error||'Caricamento stemma non riuscito');
+ }
+ return API_URL+'/storage/v1/object/public/team-assets/'+path;
+}
 export const hasSession=()=>Boolean(session?.access_token);
 export const userId=()=>{try{return JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub}catch{return null}};
 export async function get(table,query='',signal){
