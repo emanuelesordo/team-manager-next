@@ -15,6 +15,7 @@ import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {loadFixtureEvents} from './api.js';
 import {findClubIdentity} from './club-identity.js';
 import {matchScorerRows,renderMatchScorers} from './match-scorers.js';
+import {matchPlayerLabel} from './match-player-label.js';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
@@ -238,7 +239,7 @@ function match(){
  const data=state.matchData||{players:[],events:[],ratings:[],ratingMeans:[]};
  const comp=competition(f.competition_id);
  const people=id=>(state.data?.players||[]).find(p=>p.id===id);
- const playerName=id=>{const p=people(id);return p?[p.first_name,p.last_name].filter(Boolean).join(' '):'Giocatore non censito'};
+ const playerName=id=>matchPlayerLabel(people(id));
  const activeEvents=(data.events||[]).filter(e=>e.validation_status!=='rejected');
  const pending=activeEvents.filter(e=>['proposed','community_confirmed','disputed'].includes(e.validation_status)).length;
  const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),comp):
@@ -253,15 +254,21 @@ function match(){
  const address=f.venue_address||(!isOurs(f.home_team,team())?
   findClubIdentity(f.home_team,team(),state.base?.opponents||[])?.home_venue_address:null);
  const matchMeta='<div class="match-header-meta" aria-label="Dettagli partita">'+
-  titleInfo('Competizione',comp?.name||'—')+titleInfo('Turno',f.round_no!=null?'Giornata '+f.round_no:'—')+
-  titleInfo('Data',weekday(f.kickoff_at))+titleInfo('Ora',time(f.kickoff_at))+
-  titleInfo('Campo',venue||'—')+titleInfo('Luogo',address||'—')+'</div>';
+  '<div class="match-meta-group match-meta-left">'+
+   titleInfo('Competizione',comp?.name||'—')+
+   titleInfo('Giornata',f.round_no!=null?f.round_no:'—')+'</div>'+
+  '<div class="match-meta-group match-meta-center">'+
+   titleInfo('Data',weekday(f.kickoff_at))+
+   titleInfo('Ora',time(f.kickoff_at))+'</div>'+
+  '<div class="match-meta-group match-meta-right">'+
+   titleInfo('Luogo',address||'—')+
+   titleInfo('Campo',venue||'—')+'</div></div>';
  const scorers=matchScorerRows(activeEvents,f,team(),playerName,comp);
- const header='<div class="match-detail-head glass"><div class="match-detail-top">'+status(f)+
-  '<span>Match Center</span></div>'+matchMeta+
+ const headerScore=hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
+ const header='<div class="match-detail-head glass">'+matchMeta+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl')+
   '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
-  '<div class="match-big-score"><b>'+score(f)+'</b></div>'+
+  '<div class="match-big-score"><div class="match-score-status">'+status(f)+'</div><b>'+headerScore+'</b></div>'+
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl')+
   '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>';
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato da verificare'):'';
