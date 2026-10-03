@@ -95,7 +95,8 @@ test('opponent and team administration render the identical bounded club editor 
  assert.match(opponents,/staff-team-details/);
  assert.match(opponents,/staff-team-brand/);
  assert.match(opponents,/data-logo-picker/);
- assert.match(opponents,/name="home_venue_address"/);
+ for(const field of ['home_venue_name','home_venue_street','home_venue_city','home_venue_province'])
+  assert.match(opponents,new RegExp('name="'+field+'"'));
  await staffClick({},{dataset:{staffArea:'team'}},ctx);
  const team=adminPage(ctx);
  assert.match(team,/staff-editor-club staff-editor-team/);
