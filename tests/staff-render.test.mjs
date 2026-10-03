@@ -35,7 +35,8 @@ test('admin navigation exposes configuration and editable roster without mock da
  const ctx=context('admin');
  assert.equal(isStaff(ctx),true);
  const page=adminPage(ctx);
- assert.match(page,/Amministrazione/);
+ assert.doesNotMatch(page,/class="page-heading"/);
+ assert.doesNotMatch(page,/staff-intro glass/);
  assert.match(page,/Squadra/);
  assert.match(page,/Disponibilità/);
  assert.match(page,/Utenti/);
