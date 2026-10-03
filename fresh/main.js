@@ -78,7 +78,12 @@ function manageLivePolling(){
  if(!fixtures().some(f=>isLive(f)))return;
  livePollTimer=setInterval(pollLive,20000);
 }
-function comps(){return(state.data?.competitions||[])}
+function comps(){return [...(state.data?.competitions||[])].sort((a,b)=>
+ Number(a.tier_level??999)-Number(b.tier_level??999)||
+ Number(Boolean(a.parent_competition_id))-Number(Boolean(b.parent_competition_id))||
+ String(a.name).localeCompare(String(b.name),'it'))}
+function competitionLabel(c){return (c.tier_level!=null?c.tier_level+' · ':'')+
+ (c.parent_competition_id?'↳ ':'')+c.name+(c.group_code?' · Girone '+c.group_code:'')}
 function fixtures(){return(state.data?.fixtures||[])}
 function team(){return state.base?.team||{name:'Team Manager'}}
 function ownFixtures(){return fixtures().filter(f=>involvesTeam(f,team())).sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))}
@@ -130,12 +135,19 @@ function home(){
 function competitions(){
  const c=currentComp(),all=fixtures().filter(f=>f.competition_id===c?.id);
  const rounds=[...new Set(all.map(f=>f.round_no).filter(x=>x!=null))].sort((a,b)=>a-b),shown=state.mineOnly?all.filter(f=>involvesTeam(f,team())):all;
- return `${heading('IL CAMPIONATO','Competizioni','Classifiche e incontri ufficiali, giornata per giornata.')}<div class="filters"><div class="segmented">${comps().map(x=>`<button data-comp="${E(x.id)}" class="${c?.id===x.id?'active':''}">${E(x.name)}</button>`).join('')}</div><label class="toggle"><input type="checkbox" data-mine ${state.mineOnly?'checked':''}><span>Solo ${E(team().short_name||'la squadra')}</span></label></div><div class="competition-grid"><section class="glass panel comp-stand">${panelTitle('Classifica completa')}${standings(c)}<p class="subnote">La classifica ufficiale usa i punti configurati per la competizione. Gli spareggi seguono il regolamento.</p>${projectionContainer(c)}</section><section class="glass panel comp-rounds">${panelTitle('Calendario del torneo')}${rounds.length?rounds.map(no=>`<div class="round-block"><div class="round-heading">GIORNATA ${no}<span>${shown.filter(x=>x.round_no===no).length} partite</span></div>${shown.filter(x=>x.round_no===no).map(x=>fixtureRow(x,true)).join('')||'<div class="empty small">Nessuna partita della squadra in questa giornata.</div>'}</div>`).join(''):shown.map(x=>fixtureRow(x,true)).join('')||'<div class="empty">Nessun incontro registrato.</div>'}</section></div>`;
+ const parent=c?.parent_competition_id?competition(c.parent_competition_id):null;
+ const phaseInfo=c?.parent_competition_id?'<div class="phase-trail"><span>'+E(parent?.name||'Competizione madre')+
+  '</span><span>›</span><strong>'+E(c.name)+'</strong>'+
+  '<small>Fase autonoma · tutti partono da 0 · nessun risultato ereditato</small></div>':
+  (c?.group_code?'<div class="phase-trail"><strong>Regular Season · Girone '+E(c.group_code)+
+  '</strong><small>Livello '+E(c.tier_level??'—')+
+  ' · Le fasi successive hanno classifiche separate</small></div>':'');
+ return `${heading('IL CAMPIONATO','Competizioni','Classifiche e incontri ufficiali, giornata per giornata.')}${phaseInfo}<div class="filters"><div class="segmented">${comps().map(x=>`<button data-comp="${E(x.id)}" class="${c?.id===x.id?'active':''}">${E(competitionLabel(x))}</button>`).join('')}</div><label class="toggle"><input type="checkbox" data-mine ${state.mineOnly?'checked':''}><span>Solo ${E(team().short_name||'la squadra')}</span></label></div><div class="competition-grid"><section class="glass panel comp-stand">${panelTitle('Classifica completa')}${standings(c)}<p class="subnote">La classifica ufficiale usa i punti configurati per la competizione. Gli spareggi seguono il regolamento.</p>${projectionContainer(c)}</section><section class="glass panel comp-rounds">${panelTitle('Calendario del torneo')}${rounds.length?rounds.map(no=>`<div class="round-block"><div class="round-heading">GIORNATA ${no}<span>${shown.filter(x=>x.round_no===no).length} partite</span></div>${shown.filter(x=>x.round_no===no).map(x=>fixtureRow(x,true)).join('')||'<div class="empty small">Nessuna partita della squadra in questa giornata.</div>'}</div>`).join(''):shown.map(x=>fixtureRow(x,true)).join('')||'<div class="empty">Nessun incontro registrato.</div>'}</section></div>`;
 }
 function calendar(){
  const rows=ownFixtures().filter(f=>state.filter==='all'||(state.filter==='upcoming'?!isFinished(f):isFinished(f))).filter(f=>!state.comp||f.competition_id===state.comp);
  const grouped={};for(const f of rows){const key=new Intl.DateTimeFormat(LOCALE,{month:'long',year:'numeric',timeZone:TIME_ZONE}).format(new Date(f.kickoff_at));(grouped[key]??=[]).push(f)}
- return `${heading('MATCH SCHEDULE','Calendario','Le gare della squadra, dalle prossime date ai risultati passati.')}<div class="filters"><div class="segmented">${[['all','Tutte'],['upcoming','Da giocare'],['results','Risultati']].map(([k,v])=>`<button data-filter="${k}" class="${state.filter===k?'active':''}">${v}</button>`).join('')}</div><select aria-label="Competizione" class="filter-select" data-comp-select><option value="">Tutte le competizioni</option>${comps().map(c=>`<option value="${E(c.id)}" ${state.comp===c.id?'selected':''}>${E(c.name)}</option>`).join('')}</select></div><div class="calendar-groups">${Object.entries(grouped).map(([month,a])=>`<section class="glass panel month-card"><div class="month-heading"><h2>${E(month)}</h2><span>${a.length} ${a.length===1?'gara':'gare'}</span></div><div class="fixture-list">${a.map(f=>fixtureRow(f)).join('')}</div></section>`).join('')||'<div class="glass panel empty">Nessuna partita per questo filtro.</div>'}</div>`
+ return `${heading('MATCH SCHEDULE','Calendario','Le gare della squadra, dalle prossime date ai risultati passati.')}<div class="filters"><div class="segmented">${[['all','Tutte'],['upcoming','Da giocare'],['results','Risultati']].map(([k,v])=>`<button data-filter="${k}" class="${state.filter===k?'active':''}">${v}</button>`).join('')}</div><select aria-label="Competizione" class="filter-select" data-comp-select><option value="">Tutte le competizioni</option>${comps().map(c=>`<option value="${E(c.id)}" ${state.comp===c.id?'selected':''}>${E(competitionLabel(c))}</option>`).join('')}</select></div><div class="calendar-groups">${Object.entries(grouped).map(([month,a])=>`<section class="glass panel month-card"><div class="month-heading"><h2>${E(month)}</h2><span>${a.length} ${a.length===1?'gara':'gare'}</span></div><div class="fixture-list">${a.map(f=>fixtureRow(f)).join('')}</div></section>`).join('')||'<div class="glass panel empty">Nessuna partita per questo filtro.</div>'}</div>`
 }
 function roster(){
  const roster=(state.data?.roster||[]).filter(r=>r.active!==false),all=(state.data?.players||[]),stats=state.data?.playerStats||[];
