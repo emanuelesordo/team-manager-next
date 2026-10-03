@@ -50,30 +50,45 @@ export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false,ba
    '<button type="button" data-logo-shift="1" data-color-index="'+i+'" aria-label="Sposta colore '+(i+1)+' a destra">›</button></span></div>';
  }).join('');
  const shapeSelect=chooseShape?
-  '<label class="staff-field logo-shape-field"><span>Forma comune di tutti gli stemmi</span>'+
+  '<label class="staff-field logo-shape-field"><span>Forma comune</span>'+
    '<select name="logo_shape" data-logo-shape-select>'+
    [['rounded','Quadrato arrotondato'],['circle','Cerchio'],['square','Quadrato']].map(([v,n])=>'<option value="'+v+'"'+(selected===v?' selected':'')+'>'+n+'</option>').join('')+
    '</select></label>':
-   '<small class="staff-help">Forma comune della squadra: '+E(selected==='circle'?'cerchio':selected==='square'?'quadrato':'quadrato arrotondato')+'</small>';
+   '<small class="staff-help logo-shape-note">Forma: '+E(selected==='circle'?'cerchio':selected==='square'?'quadrato':'quadrato arrotondato')+'</small>';
  return '<div class="staff-logo-picker" data-logo-picker data-shape="'+selected+'" tabindex="0" aria-label="Editor logo, incolla un’immagine o seleziona un file">'+
   '<div class="logo-picker-controls">'+
-   '<label class="staff-soft logo-upload">Seleziona file<input type="file" data-logo-file accept="image/png,image/jpeg,image/webp" hidden></label>'+ (url?'<button type="button" class="staff-soft logo-edit-existing" data-logo-edit-existing>Ritaglia logo attuale</button>':'')+
-   '<span class="staff-help">Oppure incolla qui con Ctrl+V / Cmd+V. PNG, JPG o WebP, massimo 8 MB.</span></div>'+
-  '<div class="logo-editor-main"><div class="logo-frame" data-logo-frame data-shape="'+selected+'" style="background-color:'+(savedBackground||'transparent')+'">'+
-   (url?'<img src="'+E(url)+'" alt="Stemma attuale" data-logo-existing>':'<span class="logo-placeholder" data-logo-placeholder>Anteprima</span>')+
-   '<canvas width="256" height="256" data-logo-canvas aria-label="Trascina l’immagine per regolare il ritaglio" hidden></canvas></div>'+
-   '<div class="logo-editor-tools"><label>Zoom <input type="range" data-logo-zoom min="0.5" max="3" step="0.05" value="1" disabled></label>'+
-    '<button type="button" data-logo-reset disabled>Centra immagine</button>'+
-    '<button type="button" data-logo-extract disabled>Rileva colori</button>'+
-    '<p class="staff-help">Sposta l’immagine nel riquadro per scegliere il ritaglio. Il file salvato manterrà questo ritaglio.</p>'+
-    shapeSelect+'</div></div>'+
-   '<div class="logo-colors"><div class="logo-colors-heading"><strong>Palette estratta dal logo</strong><small>Trascina i colori per riordinarli, oppure modificali a mano.</small></div>'+
-    '<div class="logo-palette" data-logo-palette>'+palette+'</div></div>'+ 
-   '<div class="logo-background"><div class="logo-colors-heading"><strong>Sfondo del logo (opzionale)</strong><small>Visibile dietro le zone trasparenti, in tutte le schermate.</small></div>'+
-    '<input type="hidden" name="logo_background_color" data-logo-bg-value value="'+savedBackground+'">'+
-    '<div class="logo-background-options"><button type="button" data-logo-bg-clear>Trasparente</button>'+
-    slots.map((slot,i)=>'<button type="button" data-logo-bg-copy="'+i+'" title="Copia il colore '+(i+1)+' nello sfondo">Usa colore '+(i+1)+'</button>').join('')+
-    '<label class="logo-background-custom">Personalizzato <input type="color" data-logo-bg-picker value="'+(savedBackground||'#ffffff')+'" aria-label="Colore di sfondo personalizzato"></label></div></div></div>';
+   '<label class="staff-soft logo-upload">Seleziona file<input type="file" data-logo-file accept="image/png,image/jpeg,image/webp" hidden></label>'+
+   (url?'<button type="button" class="staff-soft logo-edit-existing" data-logo-edit-existing>Ritaglia logo attuale</button>':'')+
+   '<span class="staff-help">Oppure incolla con Ctrl+V / Cmd+V · PNG, JPG, WebP · 8 MB</span></div>'+
+  '<div class="logo-editor-main">'+
+    '<div class="logo-frame" data-logo-frame data-shape="'+selected+'" style="background-color:'+(savedBackground||'transparent')+'">'+
+     (url?'<img src="'+E(url)+'" alt="Stemma attuale" data-logo-existing>':'<span class="logo-placeholder" data-logo-placeholder>Anteprima</span>')+
+     '<canvas width="256" height="256" data-logo-canvas aria-label="Trascina l’immagine per regolare il ritaglio" hidden></canvas>'+
+    '</div>'+
+    '<div class="logo-editor-tools">'+
+      '<label>Zoom <input type="range" data-logo-zoom min="0.5" max="3" step="0.05" value="1" disabled></label>'+
+      '<button type="button" data-logo-reset disabled>Centra immagine</button>'+
+      '<button type="button" data-logo-extract disabled>Rileva colori</button>'+
+      '<p class="staff-help">Trascina l’immagine per ritagliarla.</p>'+
+      shapeSelect+
+    '</div>'+
+    '<div class="logo-palette-side">'+
+      '<div class="logo-colors">'+
+        '<div class="logo-colors-heading"><strong>Colori squadra</strong><small>Trascina per riordinare</small></div>'+
+        '<div class="logo-palette" data-logo-palette>'+palette+'</div>'+
+      '</div>'+
+      '<div class="logo-background">'+
+        '<div class="logo-colors-heading"><strong>Sfondo logo</strong><small>Facoltativo</small></div>'+
+        '<input type="hidden" name="logo_background_color" data-logo-bg-value value="'+savedBackground+'">'+
+        '<div class="logo-background-options">'+
+          '<button type="button" data-logo-bg-clear>Trasparente</button>'+
+          slots.map((slot,i)=>'<button type="button" data-logo-bg-copy="'+i+'" title="Copia il colore '+(i+1)+' nello sfondo">Colore '+(i+1)+'</button>').join('')+
+          '<label class="logo-background-custom">Altro <input type="color" data-logo-bg-picker value="'+(savedBackground||'#ffffff')+'" aria-label="Colore di sfondo personalizzato"></label>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>'+
+ '</div>';
 }
 function editorState(picker){
  const form=picker.closest('form');
