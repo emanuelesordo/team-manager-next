@@ -1,3 +1,4 @@
+import {matchPlayerLabel} from './match-player-label.js';
 /** Post-match review. The official fixture score and proposed event history are independent. */
 import {amendEventForm,revisionHistory,resultReviewSection,resultReconciliationHistory} from './postmatch-controls.js';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
@@ -24,7 +25,7 @@ export function reviewSummary(match,fixture,events=[]){
 }
 export function reviewPanel({match,fixture,competition,events=[],players=[],editingEventId=null,historyEventId=null,historyEntries=[],resultHistoryEntries=null}={}){
  const summary=reviewSummary(match,fixture,events);
- const names=new Map(players.map(p=>[p.id,[p.first_name,p.last_name].filter(Boolean).join(' ')]));
+ const names=new Map(players.map(p=>[p.id,matchPlayerLabel(p)]));
  const sorted=[...events].sort((a,b)=>(cumulativeEventMinute(a,competition)??999)-(cumulativeEventMinute(b,competition)??999)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  const score=fixture&&summary.fixtureHasScore?fixture.home_score+'–'+fixture.away_score:'Non disponibile';
  const summaryText='<div class="staff-review-summary"><div><b>'+summary.pending+'</b><small>Da verificare</small></div><div><b>'+summary.official+'</b><small>Ufficiali</small></div><div><b>'+summary.rejected+'</b><small>Scartati</small></div></div>';
