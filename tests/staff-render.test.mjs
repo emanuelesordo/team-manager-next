@@ -66,3 +66,18 @@ test('unlinked finished fixture cannot create duplicate operational match',()=>{
  assert.match(html,/riconciliare manualmente/i);
  assert.doesNotMatch(html,/data-staff-action="ensure"/);
 });
+
+
+test('team setup occupies remaining viewport with separate flexible details and crest editor',()=>{
+ const html=adminPage(context('admin'));
+ assert.match(html,/staff-editor-team/);
+ assert.match(html,/staff-team-layout/);
+ assert.match(html,/staff-team-details/);
+ assert.match(html,/staff-team-brand/);
+ assert.match(html,/data-logo-picker/);
+ assert.match(html,/name="logo_background_color"/);
+ const detailPart=html.slice(html.indexOf('staff-team-details'),html.indexOf('staff-team-brand'));
+ assert.match(detailPart,/name="name"/);
+ assert.match(detailPart,/name="short_name"/);
+ assert.match(detailPart,/name="home_venue_name"/);
+});
