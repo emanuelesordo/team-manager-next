@@ -29,14 +29,25 @@ async function authorized(path,options){
 /** Store a club badge in team-assets. The existing staff-only storage policy checks the team folder. */
 export async function uploadClubBadge(file,teamId){
  if(!hasSession())throw Error('Accedi come membro autorizzato prima di caricare uno stemma');
- const allowed={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'};
- const ext=allowed[file?.type];
- if(!ext)throw Error('Formato non supportato. Usa PNG, JPG o WebP.');
- if(file.size>3*1024*1024)throw Error('Lo stemma non può superare 3 MB.');
+ if(!['image/png','image/jpeg','image/webp'].includes(file?.type))throw Error('Formato non supportato. Usa PNG, JPG o WebP.');
+ if(file.size>8*1024*1024)throw Error('Il file originale non può superare 8 MB.');
  if(!/^[0-9a-f-]{36}$/i.test(String(teamId||'')))throw Error('Identificativo squadra non valido');
- const path=teamId+'/club-logos/'+crypto.randomUUID()+'.'+ext;
+ // team-assets allows image/png only. Normalise clipboard JPEG/WebP and bound dimensions.
+ const bitmap=await createImageBitmap(file);
+ const scale=Math.min(1,512/Math.max(bitmap.width,bitmap.height));
+ const canvas=document.createElement('canvas');
+ canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+ canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+ const ctx=canvas.getContext('2d');
+ if(!ctx){bitmap.close?.();throw Error('Impossibile preparare lo stemma');}
+ ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+ bitmap.close?.();
+ const output=await new Promise((resolve,reject)=>
+  canvas.toBlob(x=>x?resolve(x):reject(Error('Conversione immagine non riuscita')),'image/png'));
+ if(output.size>3*1024*1024)throw Error('L’immagine PNG supera il limite previsto');
+ const path=teamId+'/club-logos/'+crypto.randomUUID()+'.png';
  const endpoint='/storage/v1/object/team-assets/'+path;
- const send=()=>fetch(API_URL+endpoint,{method:'POST',headers:{...headers(),'Content-Type':file.type,'x-upsert':'false'},body:file});
+ const send=()=>fetch(API_URL+endpoint,{method:'POST',headers:{...headers(),'Content-Type':'image/png','x-upsert':'false'},body:output});
  let response=await send();
  if(response.status===401&&await refresh())response=await send();
  if(!response.ok){
