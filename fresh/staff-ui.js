@@ -6,7 +6,7 @@ import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js';
 import {storedEventMinute} from './match-minutes.js';
-import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js';
+import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003b';
 
 export const staffLogoEvent=handleLogoEditorEvent;
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
