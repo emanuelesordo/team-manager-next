@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {extractLogoColors,logoPicker,reorderLogoColors} from '../fresh/logo-editor.js';
+import {extractLogoColors,logoPicker,reorderLogoColors,normalizeLogoBackgroundColor} from '../fresh/logo-editor.js';
 
 test('the logo color extractor returns 3 distinct dominant colors from opaque pixels',()=>{
  const data=new Uint8ClampedArray(64*4);
@@ -43,4 +43,19 @@ test('drag reorder changes priority without changing actual swatch colors',()=>{
  assert.deepEqual(reorderLogoColors(a,0,2),['#445566','#778899','#112233']);
  assert.deepEqual(a,['#112233','#445566','#778899']);
  assert.deepEqual(reorderLogoColors(a,-1,9),a);
+});
+
+test('background color stays optional and is a separate saved value from the PNG',()=>{
+ const html=logoPicker('https://example.org/crest.png',['#112233','#445566','#778899'],'rounded',true,'#123abc');
+ assert.match(html,/name="logo_background_color"/);
+ assert.match(html,/data-logo-bg-value value="#123abc"/);
+ assert.match(html,/data-logo-frame[^>]*background-color:#123abc/);
+ for(const index of [0,1,2])assert.ok(html.includes('data-logo-bg-copy="'+index+'"'));
+ assert.match(html,/data-logo-bg-picker/);
+ assert.match(html,/data-logo-bg-clear/);
+ assert.equal(normalizeLogoBackgroundColor('#AABBCC'),'#aabbcc');
+ assert.equal(normalizeLogoBackgroundColor('#invalid'),null);
+ const transparent=logoPicker('',[],'circle',false);
+ assert.match(transparent,/data-logo-bg-value value=""/);
+ assert.match(transparent,/background-color:transparent/);
 });
