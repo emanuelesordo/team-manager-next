@@ -94,6 +94,7 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
  const requests={
   competitions:['app_competitions','select=*&season_id=eq.'+id],
   competitionOpponents:['app_competition_opponents','select=competition_id,opponent_id&limit=1000'],
+  phaseSources:['app_competition_phase_sources','select=phase_competition_id,source_competition_id,min_rank,max_rank&limit=1000'],
   fixtures:['app_competition_fixtures','select=*&season_id=eq.'+id+'&order=kickoff_at.asc&limit=1000'],
   standings:['app_competition_standings','select=*&season_id=eq.'+id],
   roster:['app_roster','select=*&season_id=eq.'+id],
