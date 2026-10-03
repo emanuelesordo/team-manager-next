@@ -123,25 +123,26 @@ export function adminPage(ctx){
    const configured=(data.phaseSources||[]).filter(x=>x.phase_competition_id===chosenPhase?.id);
    const sourceChoices=comps.filter(x=>x.season_id===ctx.state.season&&(!x.parent_competition_id||x.id===parent.id))
     .map(x=>[x.id,(x.tier_level!=null?x.tier_level+' · ':'')+x.name+(x.group_code?' · Girone '+x.group_code:'')]);
-   const suggestedRole=chosenPhase?.phase_role||'playoff';
+   const suggestedRole=chosenPhase?.phase_role||(parent.phase_format==='league_then_final'?'final':'playoff');
    const targetRank=suggestedRole==='consolation'||suggestedRole==='playout'?6:1;
    const sourceA=configured[0]?.source_competition_id||parent.id;
    const sourceB=configured[1]?.source_competition_id||'';
    const usedLevels=new Set(children.map(x=>Number(x.tier_level)));
-   let suggestedLevel=Number(parent.tier_level??3)+0.1;
-   while(usedLevels.has(Number(suggestedLevel.toFixed(3))))suggestedLevel+=0.1;
+   const levelStep=parent.parent_competition_id?0.01:0.1;
+   let suggestedLevel=Number(parent.tier_level??3)+levelStep;
+   while(usedLevels.has(Number(suggestedLevel.toFixed(3))))suggestedLevel+=levelStep;
    const phaseEditor=selectExisting('phases',children,'name')+
     '<div class="staff-form-grid">'+
     input('phase_name','Nome sottocompetizione',chosenPhase?.name||'', 'text','required maxlength="100"')+
     selection('phase_role','Tipo',[['playoff','Play Off'],['consolation','Torneo Primavera / consolazione'],
      ['playout','Play Out'],['final','Finale']],suggestedRole)+
     selection('phase_format','Formula',[['league','Girone nuovo: tutti da 0'],
-     ['knockout','Eliminazione diretta'],['league_then_final','Girone nuovo + finale']],chosenPhase?.phase_format||'league_then_final')+
+     ['knockout','Eliminazione diretta'],['league_then_final','Girone nuovo + finale']],chosenPhase?.phase_format||(suggestedRole==='final'?'knockout':'league_then_final'))+
     input('phase_tier','Livello modificabile (es. 3.1, 3.2)',chosenPhase?.tier_level??suggestedLevel.toFixed(1),'number','step="0.001" min="0.001" max="999" required')+
     selection('phase_source_a','Girone di origine 1',sourceChoices,sourceA)+
     selection('phase_source_b','Girone di origine 2',[['','Da indicare quando censito'],...sourceChoices],sourceB)+
     input('phase_min_rank','Dalla posizione',configured[0]?.min_rank??targetRank,'number','min="1" max="100" required')+
-    input('phase_max_rank','Alla posizione (vuoto = tutte le restanti)',configured[0]?.max_rank??(targetRank===1?5:''),'number','min="1" max="100"')+
+    input('phase_max_rank','Alla posizione (vuoto = tutte le restanti)',configured[0]?.max_rank??(suggestedRole==='final'?2:targetRank===1?5:''),'number','min="1" max="100"')+
     '</div>'+
     '<p class="staff-help">Ogni sottocompetizione ha ID, calendario e classifica propri. Si riparte da zero: nessun punto o risultato della stagione regolare viene trasferito. Imposta entrambi i gironi sorgente prima di qualificare le squadre.</p>';
    form+=wrapForm('phase','Fasi collegate · Play Off / Primavera',phaseEditor,
