@@ -18,8 +18,8 @@ test('overview includes starters and bench, individual events, not invented oppo
  const html=overviewLineup({formation:'4-4-2'},game,people,season,competition);
  assert.match(html,/Formazione titolare/);
  assert.match(html,/Panchina/);
- assert.match(html,/Mario Rossi/);
- assert.match(html,/Luca Verdi/);
+ assert.match(html,/M\\. Rossi/);
+ assert.match(html,/L\\. Verdi/);
  assert.match(html,/ov-pitch/);
  assert.match(html,/ov-bench/);
  assert.match(html,/ov-goal/);
