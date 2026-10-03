@@ -696,12 +696,7 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  border-color:transparent;
  border-radius:0;
 }
-.home-feature .month-matches button,.home-feature .month-matches .crest.tiny{
- border-radius:inherit;
- box-shadow:none;
-}
-.home-feature .month-matches button{border-radius:0}
-.home-feature .month-matches .crest.tiny{border-radius:var(--crest-radius,6px)}
+.home-feature .month-matches button{box-shadow:none}
 .home-feature .month-cell.with-game .month-number{
  right:0;
  bottom:0;
