@@ -282,12 +282,20 @@ function match(){
    titleInfo('Campo',venue||'—')+'</div></div>';
  const scorers=matchScorerRows(activeEvents,f,team(),playerName,comp);
  const headerScore=hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
- const header='<div class="match-detail-head glass">'+matchMeta+
+ const compactHeader='<div class="match-compact-bar" aria-hidden="true">'+
+  '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
+  '<strong>'+E(f.home_team)+'</strong></div>'+
+  '<b class="match-compact-score">'+headerScore+'</b>'+
+  '<div class="match-compact-club match-compact-away"><strong>'+E(f.away_team)+'</strong>'+
+  club(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+'</div></div>';
+ const header='<div class="match-detail-head glass" style="--match-collapse:0">'+
+  '<div class="match-expanded">'+matchMeta+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
   '<div class="match-big-score"><div class="match-score-status">'+status(f)+'</div><b>'+headerScore+'</b></div>'+
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+
-  '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>';
+  '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>'+
+  compactHeader+'</div>';
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato da verificare'):'';
  const notice=(pending?'<p class="data-warning">'+pending+' eventi ancora da ufficializzare.</p>':'')+
   (resultStatus?'<p class="staff-help">'+E(resultStatus)+'</p>':'');
@@ -323,11 +331,28 @@ function syncMatchHeaderCompact(){
  if(!head||state.page!=='match')return;
  const marker=document.querySelector('.match-header-sentinel');
  const topbar=document.querySelector('.topbar');
- if(!marker||!topbar)return;
- const topbarHeight=Math.ceil(topbar.getBoundingClientRect().height);
- head.style.setProperty('--match-sticky-top',topbarHeight+'px');
- const compact=marker.getBoundingClientRect().bottom <=topbar.getBoundingClientRect().bottom+4;
- head.classList.toggle('is-compact',compact);
+ const expanded=head.querySelector('.match-expanded');
+ if(!marker||!topbar||!expanded)return;
+ const dock=Math.ceil(topbar.getBoundingClientRect().bottom);
+ head.style.setProperty('--match-sticky-top',dock+'px');
+ const mobile=window.innerWidth<=650;
+ const targetHeight=mobile?64:74;
+ // The expanded content retains its natural height; the parent shrinks instead.
+ const needsMeasure=!head.dataset.expandedHeight||
+  head.dataset.measureWidth!==String(Math.round(head.getBoundingClientRect().width));
+ if(needsMeasure){
+  const measured=Math.ceil(expanded.getBoundingClientRect().height);
+  head.dataset.expandedHeight=String(Math.max(targetHeight,measured));
+  head.dataset.measureWidth=String(Math.round(head.getBoundingClientRect().width));
+ }
+ const natural=Number(head.dataset.expandedHeight);
+ // The marker is outside the sticky element, so scrolling cannot move the
+ // threshold as the panel itself changes height.
+ const distance=mobile?135:180;
+ const progress=Math.max(0,Math.min(1,(dock+10-marker.getBoundingClientRect().bottom)/distance));
+ head.style.setProperty('--match-collapse',progress.toFixed(4));
+ head.style.height=Math.round(natural-(natural-targetHeight)*progress)+'px';
+ head.classList.toggle('is-compact',progress>=.999);
 }
 function sizeClubEditor(){
  const el=document.querySelector('.staff-editor-club');
