@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 // No network, credentials or localStorage dependency in the UI rendering checks.
 globalThis.localStorage={getItem(){return null},setItem(){},removeItem(){}};
-const {adminPage,staffMatchPanel,isStaff} = await import('../fresh/staff-ui.js');
+const {adminPage,staffMatchPanel,isStaff,staffClick} = await import('../fresh/staff-ui.js');
 const teamId='team',seasonId='season',compId='comp',fixtureId='fix',matchId='match',playerId='player';
 const fixture={id:fixtureId,competition_id:compId,home_team:'Test Club',away_team:'Visitors',status:'scheduled'};
 const player={id:playerId,first_name:'Giulia',last_name:'Rossi',generic_role_manual:'C'};
@@ -80,4 +80,25 @@ test('team setup occupies remaining viewport with separate flexible details and 
  assert.match(detailPart,/name="name"/);
  assert.match(detailPart,/name="short_name"/);
  assert.match(detailPart,/name="home_venue_name"/);
+});
+
+test('opponent and team administration render the identical bounded club editor structure',async()=>{
+ const ctx=context('admin');
+ ctx.render=()=>{};
+ await staffClick({},{dataset:{staffArea:'opponents'}},ctx);
+ const opponents=adminPage(ctx);
+ assert.match(opponents,/staff-editor-club staff-editor-opponents/);
+ assert.match(opponents,/staff-club-selector/);
+ assert.match(opponents,/staff-team-layout/);
+ assert.match(opponents,/staff-team-details/);
+ assert.match(opponents,/staff-team-brand/);
+ assert.match(opponents,/data-logo-picker/);
+ assert.match(opponents,/name="home_venue_address"/);
+ await staffClick({},{dataset:{staffArea:'team'}},ctx);
+ const team=adminPage(ctx);
+ assert.match(team,/staff-editor-club staff-editor-team/);
+ assert.match(team,/staff-team-layout/);
+ assert.match(team,/staff-team-details/);
+ assert.match(team,/staff-team-brand/);
+ assert.match(team,/data-logo-picker/);
 });
