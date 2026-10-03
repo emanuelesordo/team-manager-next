@@ -83,8 +83,8 @@ export async function loadIdentity(){
  return {user:id,role,profile};
 }
 export async function loadBase(){
- const query='select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,home_venue_name,logo_shape,logo_background_color&limit=10';
- const [publicTeams,s,o]=await Promise.all([get('tm_public_teams',query),get('app_seasons','select=id,team_id,name,status,start_date,end_date&order=start_date.desc'),get('app_opponents','select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,logo_background_color,home_venue_name,home_venue_address')]);
+ const query='select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,home_venue_name,logo_shape,logo_background_color,home_venue_address,home_venue_street,home_venue_city,home_venue_province,kits&limit=10';
+ const [publicTeams,s,o]=await Promise.all([get('tm_public_teams',query),get('app_seasons','select=id,team_id,name,status,start_date,end_date&order=start_date.desc'),get('app_opponents','select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,logo_background_color,home_venue_name,home_venue_address,home_venue_street,home_venue_city,home_venue_province,kits')]);
  const t=publicTeams.length?publicTeams:hasSession()?await get('teams',query):[];
  const current=s.find(x=>x.status==='active')||s[0],team=t.find(x=>x.id===current?.team_id)||t[0];
  if(!current||!team)throw Error('Squadra o stagione non configurata');
