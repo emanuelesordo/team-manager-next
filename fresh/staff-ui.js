@@ -324,7 +324,7 @@ export function staffMatchPanel(ctx,f,m){
 function dataForm(form){return Object.fromEntries(new FormData(form))}
 function cleaned(o,fields){return Object.fromEntries(fields.map(k=>[k,o[k]===''?null:o[k]]))}
 function numberOrNull(n){return n===''||n==null?null:Number(n)}
-function adminPayload(form){
+function adminPayload(form,ctx){
  const data=dataForm(form),kind=form.dataset.staffForm,blank=memory.selected;
  if(kind==='team')return {table:'teams',id:null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_shape','logo_background_color','home_venue_name'])};
  if(kind==='seasons')return {table:'app_seasons',id:blank.seasons||null,payload:cleaned(data,['name','start_date','end_date','status'])};
@@ -618,7 +618,7 @@ export async function staffSubmit(e,ctx){
    await pendingFn(form,()=>rpc('tm_app_save_player',{p_season_id:ctx.state.season,p_data:payload}));
    await ctx.reloadAll();ctx.toast('Giocatore e rosa aggiornati');return true;
   }
-  const obj=adminPayload(form);
+  const obj=adminPayload(form,ctx);
   if(!obj.table)throw Error('Modulo sconosciuto');
   if(obj.table==='new-fixture'){
    if(!(ctx.state.data?.competitions||[]).some(c=>c.id===obj.payload.competition_id))throw Error('Competizione non appartenente alla stagione');
