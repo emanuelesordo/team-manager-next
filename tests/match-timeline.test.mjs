@@ -91,3 +91,17 @@ test('red card with accumulated yellow reproduces the original card stack',()=>{
  const output=render(cards,fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
  assert.ok(output.includes('mt-card-yellow"></i><i class="mt-card-red'));
 });
+
+test('goal shows only partial score, without football icon',()=>{
+ const output=render([{minute:20,event_type:'goal',team_side:'home',player_id:'Scorer',payload:{period:'first_half'}}],fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
+ assert.match(output,/mt-score[^>]*>1 - 0<\/span>/);
+ assert.doesNotMatch(output,/mt-ball|⚽/);
+ const row=output.match(/<div class="mt-group-item">([\\s\\S]*?)<\/div>/)?.[1]||'';
+ assert.ok(row.indexOf('mt-score')<row.indexOf('mt-names'));
+});
+test('substitution puts green incoming arrow above red outgoing arrow',()=>{
+ const output=render([{minute:10,event_type:'substitution',team_side:'home',player_id:'Out',secondary_player_id:'In',payload:{period:'second_half'}}],fixture,id=>id,{name:'Caselle'},{minutes_per_period:40});
+ assert.match(output,/mt-sub-in[^>]*>→<\/span><span class="mt-sub-out">←<\/span>/);
+ assert.ok(output.indexOf('mt-icon')<output.indexOf('>In<'));
+ assert.ok(output.indexOf('>In<')<output.indexOf('>Out<'));
+});
