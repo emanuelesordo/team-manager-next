@@ -1,4 +1,4 @@
-import {projectLeague,projectionSignature} from './projection.js';
+import {projectLeague,projectionSignature} from './projection.js?clubs=20261003id';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let lastKey='',busyKey='';
 export function projectionContainer(competition){
