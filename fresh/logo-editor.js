@@ -53,8 +53,7 @@ export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false,ba
   '<label class="staff-field logo-shape-field"><span>Forma comune</span>'+
    '<select name="logo_shape" data-logo-shape-select>'+
    [['rounded','Quadrato arrotondato'],['circle','Cerchio'],['square','Quadrato']].map(([v,n])=>'<option value="'+v+'"'+(selected===v?' selected':'')+'>'+n+'</option>').join('')+
-   '</select></label>':
-   '<small class="staff-help logo-shape-note">Forma: '+E(selected==='circle'?'cerchio':selected==='square'?'quadrato':'quadrato arrotondato')+'</small>';
+   '</select></label>':'';
  return '<div class="staff-logo-picker" data-logo-picker data-shape="'+selected+'" tabindex="0" aria-label="Editor logo, incolla un’immagine o seleziona un file">'+
   '<div class="logo-picker-controls">'+
    '<label class="staff-soft logo-upload">Seleziona file<input type="file" data-logo-file accept="image/png,image/jpeg,image/webp" hidden></label>'+
