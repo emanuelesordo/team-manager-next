@@ -433,3 +433,89 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  .home-feature>.feature-aside{align-self:stretch;height:100%;min-height:0}
 }
 .hero-panel>.hero-content>h2{margin-top:0}
+
+
+/* Match Center: header docks below the persistent topbar, then compresses
+   into crest / club | score | club / crest without leaving the viewport. */
+.match-header-sentinel{height:1px;pointer-events:none}
+.match-detail-head.glass{
+ position:sticky;
+ top:var(--match-sticky-top,65px);
+ z-index:21;
+ transition:padding .19s ease,border-radius .19s ease,box-shadow .19s ease;
+}
+.match-detail-head.is-compact.glass{
+ padding:8px clamp(10px,1.8vw,22px);
+ border-radius:0 0 14px 14px;
+ box-shadow:0 10px 25px #001b2466;
+}
+.match-detail-head.is-compact .match-header-meta,
+.match-detail-head.is-compact .match-header-scorers,
+.match-detail-head.is-compact .match-score-status{display:none}
+.match-detail-head.is-compact .match-detail-score{
+ display:grid;
+ grid-template-columns:minmax(0,1fr) minmax(66px,max-content) minmax(0,1fr);
+ gap:clamp(8px,1.8vw,24px);
+ align-items:center;
+ margin:0;
+}
+.match-detail-head.is-compact .match-header-team{
+ display:flex;
+ flex-direction:row;
+ align-items:center;
+ justify-content:flex-end;
+ gap:clamp(6px,.9vw,12px);
+ min-width:0;
+}
+.match-detail-head.is-compact .match-header-team-away{
+ flex-direction:row-reverse;
+ justify-content:flex-end;
+}
+.match-detail-head.is-compact .match-header-team .crest.xl{
+ width:clamp(32px,3.3vw,46px);
+ height:clamp(32px,3.3vw,46px);
+ border-radius:10px;
+ flex:0 0 auto;
+}
+.match-detail-head.is-compact .match-header-team>strong{
+ min-width:0;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+ overflow-wrap:normal;
+ font-size:clamp(10px,1.05vw,14px);
+ line-height:1.15;
+ text-align:left;
+}
+.match-detail-head.is-compact .match-big-score{
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ align-self:center;
+ min-height:0;
+ margin:0;
+}
+.match-detail-head.is-compact .match-big-score b{
+ font-size:clamp(21px,2.6vw,34px);
+ line-height:1.1;
+ letter-spacing:-.045em;
+ white-space:nowrap;
+}
+@media(max-width:650px){
+ .match-detail-head.is-compact.glass{padding:7px 8px;border-radius:0 0 10px 10px}
+ .match-detail-head.is-compact .match-detail-score{
+  grid-template-columns:minmax(0,1fr) minmax(52px,max-content) minmax(0,1fr);
+  gap:5px;
+ }
+ .match-detail-head.is-compact .match-header-team{gap:4px}
+ .match-detail-head.is-compact .match-header-team .crest.xl{
+  width:clamp(26px,8vw,36px);height:clamp(26px,8vw,36px);border-radius:8px;
+ }
+ .match-detail-head.is-compact .match-header-team>strong{
+  font-size:clamp(9px,2.5vw,12px);
+ }
+ .match-detail-head.is-compact .match-big-score b{font-size:clamp(19px,5.1vw,26px)}
+}
+@media(prefers-reduced-motion:reduce){
+ .match-detail-head.glass{transition:none}
+}
