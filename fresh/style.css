@@ -724,7 +724,8 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 .home-feature .month-nav-detail{grid-column:3;justify-self:end}
 /* Display only saved crest geometry, never a secondary rectangle around matches. */
 .home-feature .month-cell.with-game{
- background:transparent;border-color:transparent;border-radius:0;padding-bottom:0
+ background:transparent;
+ border-color:transparent;border-radius:0;padding-bottom:0
 }
 .home-feature .month-cell.with-game .month-number{
  position:absolute;right:0;bottom:0;z-index:1;
