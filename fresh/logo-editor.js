@@ -55,7 +55,7 @@ export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false){
    '<small class="staff-help">Forma comune della squadra: '+E(selected==='circle'?'cerchio':selected==='square'?'quadrato':'quadrato arrotondato')+'</small>';
  return '<div class="staff-logo-picker" data-logo-picker data-shape="'+selected+'" tabindex="0" aria-label="Editor logo, incolla un’immagine o seleziona un file">'+
   '<div class="logo-picker-controls">'+
-   '<label class="staff-soft logo-upload">Seleziona file<input type="file" data-logo-file accept="image/png,image/jpeg,image/webp" hidden></label>'+
+   '<label class="staff-soft logo-upload">Seleziona file<input type="file" data-logo-file accept="image/png,image/jpeg,image/webp" hidden></label>'+ (url?'<button type="button" class="staff-soft logo-edit-existing" data-logo-edit-existing>Ritaglia logo attuale</button>':'')+
    '<span class="staff-help">Oppure incolla qui con Ctrl+V / Cmd+V. PNG, JPG o WebP, massimo 8 MB.</span></div>'+
   '<div class="logo-editor-main"><div class="logo-frame" data-logo-frame data-shape="'+selected+'">'+
    (url?'<img src="'+E(url)+'" alt="Stemma attuale" data-logo-existing>':'<span class="logo-placeholder" data-logo-placeholder>Anteprima</span>')+
@@ -111,11 +111,19 @@ function reorder(picker,from,to){
  updatePalette(picker,values,true);
 }
 export async function prepareLogoForUpload(form){
+ if(form._logoEditorLoading)await form._logoEditorLoading;
  const picker=form.querySelector('[data-logo-picker]'),state=picker?editorState(picker):null;
  if(!state?.image)return null;
  drawCrop(picker,false);
  const canvas=picker.querySelector('[data-logo-canvas]');
  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(Error('Ritaglio del logo non riuscito')),'image/png'));
+}
+function queueLogoImage(picker,file){
+ const promise=acceptImage(picker,file);
+ const form=picker.closest('form');
+ if(form)form._logoEditorLoading=promise;
+ promise.catch(e=>window.alert(e.message));
+ return promise;
 }
 /** Delegated DOM event handler; use on document change,input,paste,pointer*,drag* and click. */
 export function handleLogoEditorEvent(event){
@@ -125,12 +133,12 @@ export function handleLogoEditorEvent(event){
  const state=editorState(picker);
  try{
   if(event.type==='change'&&target.matches('[data-logo-file]')){
-   acceptImage(picker,target.files?.[0]).catch(e=>window.alert(e.message));
+   queueLogoImage(picker,target.files?.[0]);
    return true;
   }
   if(event.type==='paste'){
    const item=[...(event.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'));
-   if(item){event.preventDefault();acceptImage(picker,item.getAsFile()).catch(e=>window.alert(e.message));return true}
+   if(item){event.preventDefault();queueLogoImage(picker,item.getAsFile());return true}
   }
   if(event.type==='input'&&target.matches('[data-logo-zoom]')){
    state.scale=Number(target.value)||1;drawCrop(picker,true);return true;
@@ -142,6 +150,18 @@ export function handleLogoEditorEvent(event){
    picker.dataset.shape=target.value;picker.querySelector('[data-logo-frame]').dataset.shape=target.value;return true;
   }
   if(event.type==='click'){
+   if(target.closest('[data-logo-edit-existing]')){
+    const image=picker.querySelector('[data-logo-existing]'),url=image?.src;
+    if(url){
+     const task=fetch(url,{mode:'cors'}).then(response=>{
+      if(!response.ok)throw Error('Logo esistente non accessibile: seleziona nuovamente il file.');
+      return response.blob();
+     }).then(blob=>acceptImage(picker,new File([blob],'logo.png',{type:blob.type||'image/png'})));
+     picker.closest('form')._logoEditorLoading=task;
+     task.catch(e=>window.alert(e.message));
+    }
+    return true;
+   }
    const shift=target.closest('[data-logo-shift]');
    if(shift){reorder(picker,Number(shift.dataset.colorIndex),Number(shift.dataset.logoShift)+Number(shift.dataset.colorIndex));return true}
    if(target.closest('[data-logo-reset]')){
@@ -176,7 +196,7 @@ export function handleLogoEditorEvent(event){
     event.preventDefault();reorder(picker,Number(event.dataTransfer.getData('text/plain')),Number(slot.dataset.colorSlot));return true;
    }
    const file=[...(event.dataTransfer?.files||[])].find(f=>f.type.startsWith('image/'));
-   if(file){event.preventDefault();acceptImage(picker,file).catch(e=>window.alert(e.message));return true}
+   if(file){event.preventDefault();queueLogoImage(picker,file);return true}
   }
  }catch(e){window.alert(e.message);return true}
  return false;
