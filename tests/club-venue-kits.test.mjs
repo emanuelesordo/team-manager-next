@@ -34,6 +34,15 @@ test('single-game alternative field always overrides registered default',()=>{
  assert.deepEqual(fixtureVenueDetails(fixture,club),{name:'C.S. San Paolo',address:'Via Canestrini, 72, Padova (PD)'});
  assert.deepEqual(fixtureVenueDetails({},club),{name:'Impianti Scalabrin',address:'Via Luigi Dottesio 3, Padova (PD)'});
 });
+test('CSI full venue mistakenly stored in venue_name is rendered as field name only',()=>{
+ const fixture={
+  venue_name:'Stadio Pianiga Viale Giulio Onesti 1 - 30030 Pianiga Ve (C11BD14)',
+  venue:'Stadio Pianiga Viale Giulio Onesti 1 - 30030 Pianiga Ve (C11BD14)'
+ };
+ assert.deepEqual(fixtureVenueDetails(fixture,null),{
+  name:'Stadio Pianiga',address:'Viale Giulio Onesti 1, Pianiga (VE)'
+ });
+});
 test('team and opponents have editable name, street, municipality, province fields and kit controls',()=>{
  for(const key of ['home_venue_name','home_venue_street','home_venue_city','home_venue_province']){
   assert.equal((staff.match(new RegExp("input\\('"+key+"'","g"))||[]).length,2);
