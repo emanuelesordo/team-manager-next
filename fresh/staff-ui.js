@@ -117,7 +117,7 @@ export function adminPage(ctx){
     '<input type="checkbox" name="opponent_ids" value="'+esc(o.id)+'" '+(linked.has(o.id)?'checked disabled':'')+'>'+
     '<span>'+esc(o.name)+(linked.has(o.id)?' · già associata':'')+'</span></label>').join('');
 
-   const parent=c.parent_competition_id?comps.find(x=>x.id===c.parent_competition_id)||c:c;
+   const parent=c;
    const children=comps.filter(x=>x.parent_competition_id===parent.id);
    const chosenPhase=idOf(children,S.phases);
    const configured=(data.phaseSources||[]).filter(x=>x.phase_competition_id===chosenPhase?.id);
@@ -402,6 +402,8 @@ function adminPayload(form,ctx){
    rules.yellow_thresholds=String(data.yellow_thresholds).split(',').map(x=>Number(x.trim()));
    if(rules.yellow_thresholds.some(x=>x<1||x>30))throw Error('Soglie diffida non valide');
   }
+  if(data.playoff_playout_enabled==='true'&&data.postseason_mode==='none')
+   throw Error('Se abiliti playoff/playout devi scegliere una formula: eliminazione diretta o girone nuovo');
   return {table:'app_competitions',id:blank.competitions||null,payload:{
     ...cleaned(data,['name','kind','format','group_code','postseason_mode']),
     tier_level:numberOrNull(data.tier_level),periods:Number(data.periods),minutes_per_period:Number(data.minutes_per_period),
@@ -702,7 +704,7 @@ export async function staffSubmit(e,ctx){
    const d=dataForm(form);
    const selected=(ctx.state.data?.competitions||[]).find(c=>c.id===memory.selected.competitions);
    if(!selected)throw Error('Seleziona prima una competizione madre');
-   const parentId=selected.parent_competition_id||selected.id;
+   const parentId=selected.id;
    const role=d.phase_role,format=d.phase_format,sourceA=d.phase_source_a,sourceB=d.phase_source_b||null;
    const rankMin=Number(d.phase_min_rank),rankMax=numberOrNull(d.phase_max_rank);
    const tier=Number(d.phase_tier);
