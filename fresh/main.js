@@ -145,14 +145,7 @@ function home(){
  const comp=homeCompetition(),playerId=state.identity?.role?.player_id;
  const associated=(state.data?.players||[]).some(p=>p.id===playerId);
  const comparisons=opponentAdjustedResults(fixtures().filter(f=>f.competition_id===comp?.id),team()?.id,5);
- return '<div class="home-feature"><div class="feature-primary" data-home-hero>'+hero()+'</div>'+
- '<aside class="home-side-stack">'+
- '<section class="glass panel home-month-section"><div class="home-panel-head"><h2>Calendario</h2>'+
- '<button class="home-plain-link" data-page="calendar">Dettagli '+ico('arrow',14)+'</button></div>'+
- '<div class="home-right-calendar">'+monthMarkup()+'</div></section>'+
- '<section class="glass panel home-standing-section"><div class="home-panel-head"><h2>Classifica</h2>'+
- '<button class="home-plain-link" data-page="competitions">'+ico('arrow',15)+'</button></div>'+
- '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+homeRankings(comp)+'</section></aside></div>'+
+ return '<div class="home-feature"><div class="feature-primary"><div data-home-hero>'+hero()+'</div>'+
  '<div class="home-analytics-grid"><section class="glass panel home-player-section">'+
  '<div class="home-panel-head"><h2>Il mio giocatore</h2></div>'+
  (associated?personalPanel(state.identity,state.data,E,ico):'<p class="empty">Nessun giocatore associato all’account.</p>')+
@@ -160,7 +153,14 @@ function home(){
  '<p class="muted small">Caricamento valutazioni…</p></div>':'')+'</section>'+
  '<section class="glass panel home-expectation-section"><div class="home-panel-head"><h2>Risultati e aspettative</h2></div>'+
  '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+
- renderPointsTrend(comparisons)+'</section></div>';
+ renderPointsTrend(comparisons)+'</section></div></div>'+ '<aside class="home-side-stack">'+
+ '<section class="glass panel home-month-section"><div class="home-panel-head"><h2>Calendario</h2>'+
+ '<button class="home-plain-link" data-page="calendar">Dettagli '+ico('arrow',14)+'</button></div>'+
+ '<div class="home-right-calendar">'+monthMarkup()+'</div></section>'+
+ '<section class="glass panel home-standing-section"><div class="home-panel-head"><h2>Classifica</h2>'+
+ '<button class="home-plain-link" data-page="competitions">'+ico('arrow',15)+'</button></div>'+
+ '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+homeRankings(comp)+'</section></aside></div>';
+
 }
 async function hydrateHomeRatings(){
  const id=state.identity?.role?.player_id,box=document.querySelector('[data-home-ratings]');
