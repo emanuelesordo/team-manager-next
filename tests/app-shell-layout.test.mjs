@@ -35,20 +35,18 @@ test('drawer distributes excess viewport space without moving season and account
  assert.match(css,/max-height:690px/);
  assert.match(css,/\.sidebar-bottom\{flex:0 0 auto/);
 });
-test('logo editor uses sibling flex columns, not implicit CSS grid rows',()=>{
- assert.match(staffCss,/\.staff-editor-club \.logo-editor-main\{[\s\S]*?display:flex;flex-direction:row;align-items:flex-start;flex-wrap:nowrap/);
- assert.match(staffCss,/\.staff-editor-club \.logo-crop-column\{[\s\S]*?flex:0 0 44%/);
- assert.match(staffCss,/\.staff-editor-club \.logo-palette-side\{[\s\S]*?flex:1 1 0;flex-direction:column/);
- assert.doesNotMatch(staffCss,/grid-template-areas/);
- assert.doesNotMatch(staffCss,/grid-template-columns:minmax\(125px/);
- assert.match(staffCss,/@container \(max-width:650px\)/);
- assert.match(staffCss,/@media\(max-width:760px\)/);
+test('logo crop and palette occupy adjacent explicit tracks, never a tall implicit row',()=>{
+ assert.match(staffCss,/\.staff-editor-club \.logo-editor-main\{[\s\S]*?display:grid;[\s\S]*?grid-template-rows:max-content/);
+ assert.match(staffCss,/\.staff-editor-club \.logo-crop-column\{[\s\S]*?grid-area:1\/1\/2\/2/);
+ assert.match(staffCss,/\.staff-editor-club \.logo-palette-side\{[\s\S]*?grid-area:1\/2\/2\/3/);
+ assert.match(staffCss,/@container \(max-width:620px\)\{/);
+ assert.match(staffCss,/grid-area:2\/1\/3\/2/);
+ assert.doesNotMatch(staffCss,/@container \(max-width:650px\)/);
 });
-
 test('club editor keeps independent scroll with no giant grid row',()=>{
  assert.match(main,/function sizeClubEditor\(\)/);
  assert.match(main,/window\.addEventListener\('resize',sizeClubEditor\)/);
  assert.match(staffCss,/\.staff-editor-club \.staff-team-details,\.staff-editor-club \.staff-team-brand\{[^}]*overflow-x:hidden;overflow-y:auto/);
- assert.match(staffCss,/\.staff-editor-club \.logo-editor-main\{[\s\S]*?display:flex;flex-direction:row/);
+ assert.match(staffCss,/\.staff-editor-club \.logo-editor-main\{[\s\S]*?display:grid/);
  assert.match(staffCss,/@media\(max-width:760px\)/);
 });
