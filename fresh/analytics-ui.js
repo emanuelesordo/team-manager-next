@@ -1,5 +1,5 @@
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
-import {resultSplit,eventCoverage,verifiedEvents} from './analytics.js';
+import {resultSplit,eventCoverage,verifiedEvents} from './analytics.js?clubs=20261003id';
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&#39;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=value=>Number(value).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
 const cell=(label,value)=>'<div class="team-metric"><b>'+E(value)+'</b><small>'+E(label)+'</small></div>';
