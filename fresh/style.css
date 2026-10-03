@@ -61,12 +61,13 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 .mt-minute-group{padding-block:12px}
 @media(max-width:550px){.mt-group-item{gap:4px}.mt-side .mt-stack{gap:7px}}
 
-/* Match timeline: home events read left to right: event icon/score, primary, secondary. */
-.match-timeline .mt-home .mt-group-item{flex-direction:row;text-align:left}
+/* Home: from the middle of the pitch towards the left edge:
+   event icon/score, primary player, secondary player. */
+.match-timeline .mt-home .mt-group-item{flex-direction:row-reverse;text-align:right}
 .match-timeline .mt-home .mt-group-item .mt-icon{order:0}
 .match-timeline .mt-home .mt-group-item .mt-score{order:1}
-.match-timeline .mt-home .mt-group-item .mt-names{order:2;justify-content:flex-start}
-.match-timeline .mt-home .mt-names{justify-content:flex-start}
+.match-timeline .mt-home .mt-group-item .mt-names{order:2;flex-direction:row-reverse;justify-content:flex-start;text-align:right}
+.match-timeline .mt-home .mt-names{flex-direction:row-reverse;justify-content:flex-start;text-align:right}
 /* Incoming = green on top; outgoing = red below. */
 .match-timeline .mt-change{display:flex;flex-direction:column;align-items:center;line-height:1}
 .match-timeline .mt-change .mt-sub-in{color:#36bd81;transform:none}
