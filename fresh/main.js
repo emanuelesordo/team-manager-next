@@ -433,10 +433,15 @@ function sizeClubEditor(){
 }
 function render(){
  if(!state.base)return;
+ const previousHomeScroll=state.page==='home'?Array.from(document.querySelectorAll('.home-feature>.feature-primary,.home-feature>.home-side-stack'),column=>column.scrollTop):[];
  const section={home,competitions,calendar,roster,stats,match,player,club:clubScreen,admin,account:settings}[state.page]||home;
+ document.body.dataset.page=state.page;
  document.body.dataset.theme=state.theme;
  document.body.dataset.logoShape=['circle','rounded','square'].includes(state.base.team?.logo_shape)?state.base.team.logo_shape:'rounded';
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
+ if(state.page==='home'&&previousHomeScroll.length===2){
+  document.querySelectorAll('.home-feature>.feature-primary,.home-feature>.home-side-stack').forEach((column,index)=>{column.scrollTop=previousHomeScroll[index]||0});
+ }
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading)paintMatchHeaderCompact();
  if(state.page==='home'&&!state.loading)void hydrateHomeRatings();
