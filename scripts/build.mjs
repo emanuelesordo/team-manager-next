@@ -6,6 +6,6 @@ for(const file of ['index.html','.nojekyll'])await cp(new URL(file,base),new URL
 for(const dir of ['fresh','assets'])await cp(new URL(dir+'/',base),new URL(dir+'/',out),{recursive:true});
 const hash=createHash('sha256').update(await readFile(new URL('fresh/main.js',out))).update(await readFile(new URL('fresh/style.css',out))).update(await readFile(new URL('fresh/vista.css',out))).update(await readFile(new URL('fresh/staff.css',out))).update(await readFile(new URL('fresh/votes.css',out))).update(await readFile(new URL('fresh/operations.css',out))).digest('hex').slice(0,12);
 let html=await readFile(new URL('index.html',out),'utf8');
-html=html.replace('./fresh/style.css','./fresh/style.css?v='+hash).replace('./fresh/main.js','./fresh/main.js?v='+hash).replace('./fresh/vista.css','./fresh/vista.css?v='+hash).replace('./fresh/staff.css','./fresh/staff.css?v='+hash).replace('./fresh/votes.css','./fresh/votes.css?v='+hash).replace('./fresh/operations.css','./fresh/operations.css?v='+hash);
+html=html.replace(/(\.\/fresh\/(?:style|main|vista|staff|votes|operations)\.(?:css|js))(?:\?[^"']*)?/g,(_,path)=>path+'?v='+hash);
 await writeFile(new URL('index.html',out),html);
 console.log('Fresh frontend build:',hash);
