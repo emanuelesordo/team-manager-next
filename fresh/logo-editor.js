@@ -40,13 +40,13 @@ export function logoPicker(url='',colors=[],shape='rounded',chooseShape=false){
  const selected=['circle','rounded','square'].includes(shape)?shape:'rounded';
  const palette=slots.map((slot,i)=>{
   const color=validHex(colors[i])?colors[i]:defaults[i];
-  return '<label class="logo-palette-slot" draggable="true" data-color-slot="'+i+'" title="Trascina per cambiare ordine">'+
+  return '<div class="logo-palette-slot" draggable="true" data-color-slot="'+i+'" title="Trascina per cambiare ordine">'+
    '<span class="logo-palette-grip" aria-hidden="true">⠿</span>'+
    '<span class="logo-palette-title">Colore '+(i+1)+'</span>'+
    '<input type="color" name="'+slot+'" value="'+color+'" aria-label="Colore '+(i+1)+'">'+
    '<span class="logo-palette-value">'+E(color.toUpperCase())+'</span>'+
    '<span class="logo-palette-actions"><button type="button" data-logo-shift="-1" data-color-index="'+i+'" aria-label="Sposta colore '+(i+1)+' a sinistra">‹</button>'+
-   '<button type="button" data-logo-shift="1" data-color-index="'+i+'" aria-label="Sposta colore '+(i+1)+' a destra">›</button></span></label>';
+   '<button type="button" data-logo-shift="1" data-color-index="'+i+'" aria-label="Sposta colore '+(i+1)+' a destra">›</button></span></div>';
  }).join('');
  const shapeSelect=chooseShape?
   '<label class="staff-field logo-shape-field"><span>Forma comune di tutti gli stemmi</span>'+
