@@ -81,7 +81,6 @@ function manageLivePolling(){
 function comps(){return(state.data?.competitions||[])}
 function fixtures(){return(state.data?.fixtures||[])}
 function team(){return state.base?.team||{name:'Team Manager'}}
-function ours(n){return isOurs(n,team())}
 function ownFixtures(){return fixtures().filter(f=>involvesTeam(f,team())).sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))}
 function next(){const n=Date.now();return ownFixtures().filter(f=>isLive(f)||(!isFinished(f)&&new Date(f.kickoff_at).getTime()>=n-3600000)).sort((a,b)=>Number(isLive(b))-Number(isLive(a))||new Date(a.kickoff_at)-new Date(b.kickoff_at))[0]||null}
 function previous(){return [...ownFixtures()].filter(f=>isFinished(f)).sort((a,b)=>new Date(b.kickoff_at)-new Date(a.kickoff_at))[0]||null}
@@ -111,7 +110,7 @@ function fixtureRow(f,short=false){return `<button class="fixture-row" data-matc
 function standings(comp,limit=0){
  const all=rankRows((state.data?.standings||[]).filter(x=>x.competition_id===comp?.id));const rows=limit?all.slice(0,limit):all;
  if(!rows.length)return '<div class="empty">Classifica non disponibile per questa competizione.</div>';
- return `<div class="table-scroller"><table class="standing-table"><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>DR</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${ours(r.team)?'ours':''}"><td>${i+1}</td><td><span class="standing-team">${club(r.team,'tiny',{team_id:r.team_id,opponent_id:r.opponent_id})}<span>${E(r.team)}</span></span></td><td>${r.played??'—'}</td><td>${r.won??'—'}</td><td>${r.drawn??'—'}</td><td>${r.lost??'—'}</td><td>${r.goal_difference??'—'}</td><td class="points">${r.points??'—'}</td></tr>`).join('')}</tbody></table></div>`
+ return `<div class="table-scroller"><table class="standing-table"><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>DR</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.team_id===team()?.id?'ours':''}"><td>${i+1}</td><td><span class="standing-team">${club(r.team,'tiny',{team_id:r.team_id,opponent_id:r.opponent_id})}<span>${E(r.team)}</span></span></td><td>${r.played??'—'}</td><td>${r.won??'—'}</td><td>${r.drawn??'—'}</td><td>${r.lost??'—'}</td><td>${r.goal_difference??'—'}</td><td class="points">${r.points??'—'}</td></tr>`).join('')}</tbody></table></div>`
 }
 function carouselFixtures(){const a=[...ownFixtures().filter(f=>isLive(f)),...ownFixtures().filter(f=>!isLive(f)&&!isFinished(f)&&new Date(f.kickoff_at)>=Date.now()-3600000).slice(0,2),...ownFixtures().filter(isFinished).reverse().slice(0,2)];return a.slice(0,5)}
 function hero(){
@@ -162,8 +161,7 @@ function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involve
 function admin(){return adminPage(staffContext())}
 function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSettings){
  const norm=v=>String(v??'').trim().toLocaleLowerCase('it');
- const ownNames=[ourTeam?.name,ourTeam?.short_name,ourTeam?.abbreviation].map(norm);
- const homeIsOurs=ownNames.includes(norm(fixture.home_team));
+ const homeIsOurs=Boolean(ourTeam?.id&&fixture.home_team_id===ourTeam.id);
  const side=e=>{const s=norm(e.team_side||e.side);if(['home','casa'].includes(s))return 'home';if(['away','ospite'].includes(s))return 'away';if(['team','ours','own'].includes(s))return homeIsOurs?'home':'away';if(['opponent','opposition'].includes(s))return homeIsOurs?'away':'home';return 'unknown'};
  const type=e=>norm(e.event_type);
  const goal=e=>['goal','penalty_goal','penalty_scored','own_goal'].includes(type(e));
@@ -256,9 +254,9 @@ function match(){
  const tabs=[['overview','Overview'],['events','Eventi'],['lineup','Formazioni'],['ratings','Voti'],...(isStaff(staffContext())?[['staff','Gestione']]:[])];
  const selectedTab=state.matchTab==='summary'?'overview':state.matchTab;
  const titleInfo=(label,value)=>value?'<span class="match-meta-item" title="'+E(label)+'"><small class="sr-only">'+E(label)+'</small><strong>'+E(value)+'</strong></span>':'';
- const venue=f.venue_name||f.venue||(isOurs(f.home_team,team())?team()?.home_venue_name:
+ const venue=f.venue_name||f.venue||(f.home_team_id===team()?.id?team()?.home_venue_name:
   (f.home_team_id===team()?.id?team():(state.base?.opponents||[]).find(o=>o.id===f.home_opponent_id))?.home_venue_name)||null;
- const address=f.venue_address||(!isOurs(f.home_team,team())?
+ const address=f.venue_address||(!(f.home_team_id===team()?.id)?
   (f.home_team_id===team()?.id?team():(state.base?.opponents||[]).find(o=>o.id===f.home_opponent_id))?.home_venue_address:null);
  const matchMeta='<div class="match-header-meta" aria-label="Dettagli partita">'+
   '<div class="match-meta-group match-meta-left">'+
