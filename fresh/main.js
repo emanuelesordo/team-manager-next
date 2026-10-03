@@ -87,7 +87,7 @@ function next(){const n=Date.now();return ownFixtures().filter(f=>isLive(f)||(!i
 function previous(){return [...ownFixtures()].filter(f=>isFinished(f)).sort((a,b)=>new Date(b.kickoff_at)-new Date(a.kickoff_at))[0]||null}
 function competition(id){return comps().find(c=>c.id===id)}
 function currentComp(){return competition(state.comp)||comps()[0]}
-function club(n,sz='md'){const o=findClubIdentity(n,team(),state.base?.opponents||[]);const img=safeUrl(o?.logo_url);return `<span class="crest ${sz}">${img?`<img alt="" src="${img}" loading="lazy" decoding="async">`:`<span>${E(String(n||'?').slice(0,2)).toUpperCase()}</span>`}</span>`}
+function club(n,sz='md'){const o=findClubIdentity(n,team(),state.base?.opponents||[]);const img=safeUrl(o?.logo_url);const bg=/^#[0-9a-f]{6}$/i.test(o?.logo_background_color||'')?o.logo_background_color:'';return `<span class="crest ${sz}"${bg?` style="background-color:${E(bg)}"`:''}>${img?`<img alt="" src="${img}" loading="lazy" decoding="async">`:`<span>${E(String(n||'?').slice(0,2)).toUpperCase()}</span>`}</span>`}
 function status(f){return isLive(f)?'<span class="status live"><i></i>LIVE</span>':isFinished(f)?'<span class="status end">Terminata</span>':'<span class="status upcoming">In programma</span>'}
 function score(f){return hasScore(f)?`${E(f.home_score)} <span>–</span> ${E(f.away_score)}`:'<span class="vs">VS</span>'}
 function heading(k,title,caption=''){return `<div class="page-heading"><div><p class="eyebrow">${E(k)}</p><h1>${E(title)}</h1>${caption?`<p class="subtitle">${E(caption)}</p>`:''}</div></div>`}
