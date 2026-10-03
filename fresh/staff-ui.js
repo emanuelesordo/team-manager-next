@@ -45,7 +45,7 @@ function findGeneralSeason(available,app,teamId){
 const roleOf=ctx=>ctx.state.identity?.profile?.is_active===false?null:ctx.state.identity?.role?.role;
 export const isStaff=ctx=>['admin','manager'].includes(roleOf(ctx));
 function selectExisting(kind,records,text){return '<label class="staff-field"><span>Modifica esistente o crea nuovo</span><select data-staff-select="'+kind+'">'+option('','+ Nuovo',memory.selected[kind])+records.map(x=>option(x.id,x[text]||x.name||x.id,memory.selected[kind])).join('')+'</select></label>'}
-function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor'+(id==='team'?' staff-editor-team':'')+'">'+title('CONFIGURAZIONE',heading)+(description?help(description):'')+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}
+function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor'+(['team','opponents'].includes(id)?' staff-editor-club staff-editor-'+id:'')+'">'+title('CONFIGURAZIONE',heading)+(description?help(description):'')+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}
 export function adminPage(ctx){
  if(!isStaff(ctx))return '<div class="empty">Gestione riservata allo staff autorizzato.</div>';
  const data=ctx.state.data||{},base=ctx.state.base||{},t=base.team||{};
@@ -116,13 +116,19 @@ export function adminPage(ctx){
  }
  if(memory.area==='opponents'){
   const o=idOf(opps,S.opponents);
-  form=wrapForm('opponents','Anagrafiche avversarie',selectExisting('opponents',opps,'name')+
-   '<div class="staff-form-grid">'+input('name','Nome',o?.name||'','text','required')+
-   input('short_name','Sigla',o?.short_name||'','text','maxlength="15"')+
-   input('logo_url','Stemma (URL alternativo)',o?.logo_url||'','url')+
-   logoPicker(o?.logo_url||'',[o?.primary_color,o?.secondary_color,o?.accent_color],t.logo_shape||'rounded',false,o?.logo_background_color)+
-   input('home_venue_name','Campo',o?.home_venue_name||'')+
-   input('home_venue_address','Indirizzo campo',o?.home_venue_address||'')+'</div>',
+  form=wrapForm('opponents','Anagrafiche avversarie',
+   '<div class="staff-club-selector">'+selectExisting('opponents',opps,'name')+'</div>'+
+   '<div class="staff-team-layout">'+
+    '<div class="staff-team-details">'+
+     input('name','Nome',o?.name||'','text','required')+
+     input('short_name','Sigla',o?.short_name||'','text','maxlength="15"')+
+     input('home_venue_name','Campo',o?.home_venue_name||'')+
+     input('home_venue_address','Indirizzo campo',o?.home_venue_address||'')+
+     input('logo_url','Stemma (URL alternativo)',o?.logo_url||'','url')+
+    '</div>'+
+    '<div class="staff-team-brand">'+
+     logoPicker(o?.logo_url||'',[o?.primary_color,o?.secondary_color,o?.accent_color],t.logo_shape||'rounded',false,o?.logo_background_color)+
+    '</div></div>',
    'Ogni avversaria mantiene la sua identità tra stagioni e competizioni.');
  }
  if(memory.area==='players'){
