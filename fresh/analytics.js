@@ -1,12 +1,11 @@
 import {cumulativeEventMinute} from './match-minutes.js';
-import {normalized} from './domain.js';
-const isTeam=(name,team)=>normalized(name)===normalized(team.name)||normalized(name)===normalized(team.short_name);
+const isTeam=(f,side,team)=>Boolean(team?.id&&f?.[side+'_team_id']===team.id);
 export const isPlayed=f=>f?.status==='finished'&&Number.isInteger(f.home_score)&&Number.isInteger(f.away_score);
 export function resultSplit(fixtures,team){
  const result={played:0,wins:0,draws:0,losses:0,gf:0,ga:0,cleanSheets:0,home:{played:0,wins:0,draws:0,losses:0,gf:0,ga:0},away:{played:0,wins:0,draws:0,losses:0,gf:0,ga:0}};
  for(const f of fixtures){
   if(!isPlayed(f))continue;
-  const atHome=isTeam(f.home_team,team),atAway=isTeam(f.away_team,team);
+  const atHome=isTeam(f,'home',team),atAway=isTeam(f,'away',team);
   if(atHome===atAway)continue;
   const gf=atHome?f.home_score:f.away_score,ga=atHome?f.away_score:f.home_score;
   const part=atHome?result.home:result.away;
@@ -30,7 +29,7 @@ export function eventCoverage(fixtures,matches,events,team,competitions=[]){
  let complete=0,possible=0,unverified=0,withoutMinutes=0,comebacks=0,concededComebacks=0,comebackWins=0;
  const location={equal:0,ahead:0,behind:0},conceded={equal:0,ahead:0,behind:0};
  for(const f of fixtures){
-  if(!isPlayed(f)||(!isTeam(f.home_team,team)&&!isTeam(f.away_team,team)))continue;
+  if(!isPlayed(f)||(!isTeam(f,'home',team)&&!isTeam(f,'away',team)))continue;
   const m=matches.find(x=>x.fixture_id===f.id&&map.get(x.id)===x);
   if(!m)continue;
   possible++;
@@ -54,8 +53,8 @@ export function eventCoverage(fixtures,matches,events,team,competitions=[]){
    if(wasBehind&&after>=0)positive=true;
    if(wasAhead&&after<=0)negative=true;
   }
-  const officialFor=isTeam(f.home_team,team)?f.home_score:f.away_score;
-  const officialAgainst=isTeam(f.home_team,team)?f.away_score:f.home_score;
+  const officialFor=isTeam(f,'home',team)?f.home_score:f.away_score;
+  const officialAgainst=isTeam(f,'home',team)?f.away_score:f.home_score;
   if(ambiguousSide||teamGoals!==officialFor||oppGoals!==officialAgainst){unverified++;continue}
   for(const k of ['equal','ahead','behind']){location[k]+=localFor[k];conceded[k]+=localAgainst[k]}
   complete++;if(positive)comebacks++;if(negative)concededComebacks++;
