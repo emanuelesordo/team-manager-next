@@ -243,3 +243,17 @@
  .staff-editor-club .staff-form>.staff-submit{width:100%;align-self:stretch}
 }
 @media(max-width:490px){.staff-editor-club .staff-team-details{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Phase 2.0 configuration and read-only pairings preview. */
+.staff-phase-summary{min-width:0;display:flex;flex-direction:column;gap:10px}
+.staff-phase-summary h3{margin:0;font-size:16px}
+.staff-phase-summary>.staff-help{margin:0}
+.phase-sources-status{display:flex;gap:7px 18px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+.phase-preview{min-width:0;border:1px solid var(--border);border-radius:8px;padding:9px}
+.phase-preview summary{font-size:12px;font-weight:800;cursor:pointer}
+.phase-draft-scroll{display:grid;gap:3px;max-height:320px;overflow-y:auto;overflow-x:hidden;padding:10px 2px 2px}
+.phase-draft-scroll .staff-event-row{padding:6px 9px;display:flex;align-items:center;gap:12px}
+.phase-draft-scroll .staff-event-row small{flex:0 0 24px}
+.phase-draft-scroll .staff-event-row span{flex:1;overflow-wrap:anywhere;font-size:11px}
+@media(max-width:760px){.staff-phase-summary .staff-after{flex-wrap:wrap}}
