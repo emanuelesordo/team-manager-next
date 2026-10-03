@@ -129,7 +129,7 @@ function hero(){
 
 const ratingsHomeCache=new Map();
 function monthOnHome(){return Number.isInteger(state.homeMonth)?state.homeMonth:monthIndex(new Date(),TIME_ZONE)}
-function monthMarkup(){return renderMonthCalendar(ownFixtures(),team().id,monthOnHome(),club)}
+function monthMarkup(){return renderMonthCalendar(ownFixtures(),team().id,monthOnHome(),club,'<button class="home-plain-link month-nav-detail" data-page="calendar">Dettagli '+ico('arrow',14)+'</button>')}
 function homeCompetition(){return competition(next()?.competition_id||previous()?.competition_id)||currentComp()}
 function homeRankings(c){
  const ranked=rankRows((state.data?.standings||[]).filter(x=>x.competition_id===c?.id));
@@ -154,9 +154,7 @@ function home(){
  '<section class="glass panel home-expectation-section"><div class="home-panel-head"><h2>Risultati e aspettative</h2></div>'+
  '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+
  renderPointsTrend(comparisons)+'</section></div></div>'+ '<aside class="home-side-stack">'+
- '<section class="glass panel home-month-section"><div class="home-panel-head"><h2>Calendario</h2>'+
- '<button class="home-plain-link" data-page="calendar">Dettagli '+ico('arrow',14)+'</button></div>'+
- '<div class="home-right-calendar">'+monthMarkup()+'</div></section>'+
+ '<section class="glass panel home-month-section"><div class="home-right-calendar">'+monthMarkup()+'</div></section>'+
  '<section class="glass panel home-standing-section"><div class="home-panel-head"><h2>Classifica</h2>'+
  '<button class="home-plain-link" data-page="competitions">'+ico('arrow',15)+'</button></div>'+
  '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+homeRankings(comp)+'</section></aside></div>';
