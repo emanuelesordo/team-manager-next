@@ -636,8 +636,8 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  .home-analytics-grid .home-trend-svg{max-height:210px}
 }
 
-/* Home dashboard: equal-height compact cards with independent column scrolling.
-   Keep viewport locking limited to the Home on desktop; other pages use normal scrolling. */
+/* Home dashboard: the two columns scroll independently on desktop.
+   The match panel keeps its controls INSIDE its fixed-height box. */
 @media(min-width:961px){
  body[data-page="home"] .workspace{height:100dvh;min-height:0;overflow:hidden}
  body[data-page="home"] .content{
@@ -646,7 +646,7 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  }
  body[data-page="home"] .footer{display:none}
  .home-feature{
-  --home-first-row-height:318px;
+  --home-first-row-height:340px;
   flex:1 1 auto;height:auto;min-height:0;overflow:hidden;align-items:stretch
  }
  .home-feature>.feature-primary,.home-feature>.home-side-stack{
@@ -655,45 +655,74 @@ body[data-logo-shape="square"] .crest{border-radius:0}
   scrollbar-width:thin;scrollbar-color:var(--border) transparent;
   padding-bottom:10px
  }
- .home-feature [data-home-hero],
- .home-feature [data-home-hero]>.hero-panel,
- .home-feature .home-month-section{
-  height:var(--home-first-row-height);
-  min-height:0;max-height:var(--home-first-row-height);box-sizing:border-box
+ .home-feature [data-home-hero]{
+  display:block;flex:0 0 var(--home-first-row-height);
+  height:var(--home-first-row-height);min-height:0;
+ }
+ .home-feature [data-home-hero]>.hero-panel{
+  display:flex;flex-direction:column;
+  width:100%;height:100%;min-height:0;max-height:none;
  }
  .home-feature .hero-content{
-  display:grid;grid-template-rows:max-content max-content max-content;
-  align-content:space-around;gap:6px;min-height:0;padding:12px 18px
+  display:flex;flex:1 1 auto;flex-direction:column;
+  justify-content:space-between;align-items:stretch;
+  width:100%;height:100%;min-height:0;min-width:0;
+  padding:15px 19px;gap:8px
  }
- .home-feature .hero-content>p{margin:0}
- .home-feature .hero-score{margin:0;align-self:center;min-height:0;gap:8px}
- .home-feature .hero-bottom{margin:0;align-self:center}
- .home-feature .hero-club .crest.xl{width:clamp(62px,5.6vw,87px);height:clamp(62px,5.6vw,87px)}
- .home-feature .hero-mid b{font-size:clamp(28px,3vw,42px)}
+ .home-feature .hero-content>p{
+  flex:0 0 auto;margin:0;line-height:1.35
+ }
+ .home-feature .hero-score{
+  flex:1 1 auto;min-height:0;min-width:0;
+  margin:0;gap:9px;align-content:center;align-items:center;
+  grid-template-columns:minmax(0,1fr) minmax(103px,.8fr) minmax(0,1fr)
+ }
+ .home-feature .hero-club{gap:6px}
+ .home-feature .hero-club .crest.xl{width:clamp(65px,5.4vw,84px);height:clamp(65px,5.4vw,84px)}
+ .home-feature .hero-club strong{line-height:1.2}
+ .home-feature .hero-mid{gap:5px}
+ .home-feature .hero-mid b{font-size:clamp(29px,3vw,43px);line-height:1.15}
+ .home-feature .hero-bottom{
+  flex:0 0 auto;align-self:stretch;margin:0;min-height:38px
+ }
+ .home-feature .hero-bottom .primary-btn{padding:10px 14px}
  .home-feature .home-month-section{
-  display:flex;flex-direction:column;flex-shrink:0;overflow:hidden
+  display:flex;flex-direction:column;flex:0 0 var(--home-first-row-height);
+  height:var(--home-first-row-height);
+  min-height:0;max-height:var(--home-first-row-height);
+  overflow:hidden
  }
  .home-feature .home-right-calendar{
-  display:flex;flex:1;min-height:0;flex-direction:column
+  display:flex;flex:1 1 auto;min-height:0;flex-direction:column
  }
- .home-feature .month-nav{margin:6px 0 5px}
+ .home-feature .month-nav{flex:0 0 auto;margin:5px 0 10px}
  .home-feature .month-days{
-  flex:1;min-height:0;grid-template-rows:19px;grid-auto-rows:minmax(0,1fr)
+  flex:1 1 auto;min-height:0;
+  grid-template-rows:19px;grid-auto-rows:minmax(0,1fr)
  }
  .home-feature .month-weekday{height:auto}
  .home-feature .month-cell{min-height:0;padding:1px}
  .home-feature .month-matches .crest.tiny{
-  height:clamp(21px,2vw,27px);width:clamp(21px,2vw,27px)
+  height:clamp(21px,2vw,28px);width:clamp(21px,2vw,28px)
  }
 }
 @media(min-width:961px) and (max-width:1180px){
- .home-feature{--home-first-row-height:305px}
+ .home-feature{--home-first-row-height:325px}
 }
 @media(max-width:650px){
  .home-feature .hero-score{margin:12px 0}
  .home-feature .hero-panel{min-height:290px}
 }
-/* A match day is not a tile: only the real crest and unobtrusive date remain. */
+/* Calendar controls share one row: month left, cursor centered, details right. */
+.home-feature .month-nav{
+ display:grid;
+ grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+ align-items:center;column-gap:7px
+}
+.home-feature .month-nav h2{grid-column:1;justify-self:start;min-width:0}
+.home-feature .month-nav-actions{grid-column:2;justify-self:center}
+.home-feature .month-nav-detail{grid-column:3;justify-self:end}
+/* Display only saved crest geometry, never a secondary rectangle around matches. */
 .home-feature .month-cell.with-game{
  background:transparent;border-color:transparent;border-radius:0;padding-bottom:0
 }
@@ -712,7 +741,7 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 .home-feature .month-matches .crest{
  border:0;background:transparent;box-shadow:none
 }
-/* Override the old calendar-only radius: the setup's logo geometry always wins. */
+/* The logo setting, not the calendar, determines the crest shape. */
 body[data-logo-shape="rounded"] .home-feature .month-matches .crest{border-radius:25%}
 body[data-logo-shape="circle"] .home-feature .month-matches .crest{border-radius:50%}
 body[data-logo-shape="square"] .home-feature .month-matches .crest{border-radius:0}
