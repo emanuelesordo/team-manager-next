@@ -57,7 +57,7 @@ export function adminPage(ctx){
    '<div class="staff-form-grid">'+input('name','Nome completo',t.name,'text','required maxlength="100"')+
    input('short_name','Sigla',t.short_name,'text','required maxlength="12"')+
    input('logo_url','URL stemma (alternativa)',t.logo_url||'','url')+
-   logoPicker(t.logo_url||'',[t.primary_color,t.secondary_color,t.accent_color],t.logo_shape||'rounded',true)+
+   logoPicker(t.logo_url||'',[t.primary_color,t.secondary_color,t.accent_color],t.logo_shape||'rounded',true,t.logo_background_color)+
    input('home_venue_name','Campo principale',t.home_venue_name||'')+'</div>',
    'La modifica dei dati ufficiali è soggetta ai permessi di squadra presenti in Supabase.');
  }
@@ -115,7 +115,7 @@ export function adminPage(ctx){
    '<div class="staff-form-grid">'+input('name','Nome',o?.name||'','text','required')+
    input('short_name','Sigla',o?.short_name||'','text','maxlength="15"')+
    input('logo_url','Stemma (URL alternativo)',o?.logo_url||'','url')+
-   logoPicker(o?.logo_url||'',[o?.primary_color,o?.secondary_color,o?.accent_color],t.logo_shape||'rounded',false)+
+   logoPicker(o?.logo_url||'',[o?.primary_color,o?.secondary_color,o?.accent_color],t.logo_shape||'rounded',false,o?.logo_background_color)+
    input('home_venue_name','Campo',o?.home_venue_name||'')+
    input('home_venue_address','Indirizzo campo',o?.home_venue_address||'')+'</div>',
    'Ogni avversaria mantiene la sua identità tra stagioni e competizioni.');
@@ -317,7 +317,7 @@ function cleaned(o,fields){return Object.fromEntries(fields.map(k=>[k,o[k]===''?
 function numberOrNull(n){return n===''||n==null?null:Number(n)}
 function adminPayload(form){
  const data=dataForm(form),kind=form.dataset.staffForm,blank=memory.selected;
- if(kind==='team')return {table:'teams',id:null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_shape','home_venue_name'])};
+ if(kind==='team')return {table:'teams',id:null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_shape','logo_background_color','home_venue_name'])};
  if(kind==='seasons')return {table:'app_seasons',id:blank.seasons||null,payload:cleaned(data,['name','start_date','end_date','status'])};
  if(kind==='competitions'){
   const rules={};
@@ -339,7 +339,7 @@ function adminPayload(form){
     ... (Object.keys(rules).length?{discipline_rules:rules}:{})
   }};
  }
- if(kind==='opponents')return {table:'app_opponents',id:blank.opponents||null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','home_venue_name','home_venue_address'])};
+ if(kind==='opponents')return {table:'app_opponents',id:blank.opponents||null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_background_color','home_venue_name','home_venue_address'])};
  if(kind==='fixtures'){
   if(!blank.fixtures){
    const round=Number(data.round_no);
