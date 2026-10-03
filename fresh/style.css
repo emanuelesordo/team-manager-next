@@ -200,3 +200,6 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  .match-header-team>strong{font-size:11px}
  .match-timeline .mt-names{gap:0;line-height:1.1}
 }
+
+/* The setup preview of existing logos must use the very same mask and crop as public crests. */
+.logo-frame [data-logo-existing]{object-fit:cover;object-position:center}
