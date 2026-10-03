@@ -302,12 +302,17 @@ function overlay(){
  return '';
 }
 function fitTeamSetupViewport(){
- const panel=document.querySelector('.staff-editor-team');
+ const panel=document.querySelector('.staff-editor-club');
  if(!panel)return;
- if(window.innerWidth<=760){panel.style.removeProperty('--staff-team-available-height');return}
- // The panel's actual top accounts for the current title, header and setup tabs.
- const available=Math.max(0,window.innerHeight-panel.getBoundingClientRect().top-20);
- panel.style.setProperty('--staff-team-available-height',Math.round(available)+'px');
+ if(window.innerWidth<=760){
+  panel.style.removeProperty('--staff-club-available-height');
+  return;
+ }
+ // Measure beneath the visible setup tabs, for both Squadra and Avversarie.
+ const top=panel.getBoundingClientRect().top;
+ const viewport=window.visualViewport?.height||window.innerHeight;
+ const remaining=Math.max(160,Math.round(viewport-top-12));
+ panel.style.setProperty('--staff-club-available-height',remaining+'px');
 }
 function render(){
  if(!state.base)return;
