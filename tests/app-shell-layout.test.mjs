@@ -35,9 +35,12 @@ test('drawer distributes excess viewport space without moving season and account
  assert.match(css,/max-height:690px/);
  assert.match(css,/\.sidebar-bottom\{flex:0 0 auto/);
 });
-test('team and opponent crest editor put palette beside crop on large desktop',()=>{
- assert.match(staffCss,/grid-template-areas:"upload upload" "crop colors" "crop background"/);
- assert.match(staffCss,/\.staff-editor-club \.logo-colors\{grid-area:colors/);
- assert.match(staffCss,/\.staff-editor-club \.logo-background\{grid-area:background/);
- assert.match(staffCss,/max-width:1080px/);
+test('shared club editor has three compact panes and follows responsive container widths',()=>{
+ assert.match(staffCss,/grid-template-columns:minmax\(125px,\.95fr\) minmax\(140px,1\.05fr\) minmax\(215px,1\.9fr\)/);
+ assert.match(staffCss,/\.staff-editor-club \.logo-palette-side\{/);
+ assert.match(staffCss,/display:flex;flex-direction:column;gap:11px/);
+ assert.match(staffCss,/@container \(max-width:700px\)/);
+ assert.match(staffCss,/@container \(max-width:460px\)/);
+ assert.match(staffCss,/@media\(max-width:760px\)/);
+ assert.doesNotMatch(staffCss,/grid-template-areas:"upload upload" "crop colors" "crop background"/);
 });
