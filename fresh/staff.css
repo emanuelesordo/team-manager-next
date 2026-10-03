@@ -236,3 +236,47 @@
  .staff-editor-club{height:auto;max-height:none;overflow:visible}
  .staff-editor-club .staff-team-layout{overflow:visible}
 }
+
+
+/* Logo layout: place the colors and backdrop beside the crop tools, not below
+   a tall auto-stretched preview. Both Squadra and Avversarie use the same grid. */
+@media(min-width:1081px){
+ .staff-editor-club .staff-team-brand>.staff-logo-picker{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.03fr);
+  grid-template-areas:"upload upload" "crop colors" "crop background";
+  grid-template-rows:auto auto auto;grid-auto-rows:max-content;
+  align-items:start;align-content:start;gap:11px 16px;
+  height:auto;min-height:0;
+ }
+ .staff-editor-club .logo-picker-controls{grid-area:upload}
+ .staff-editor-club .logo-editor-main{
+  grid-area:crop;align-self:start;
+  grid-template-columns:minmax(112px,43%) minmax(0,1fr);
+  grid-template-rows:max-content;
+  align-items:start;align-content:start;
+  gap:9px;min-height:0;height:auto;
+ }
+ .staff-editor-club .logo-editor-tools{
+  align-self:start;flex:0 1 auto;min-height:0;height:auto;
+  justify-content:flex-start;
+ }
+ .staff-editor-club .logo-colors{grid-area:colors;min-height:0;align-self:start}
+ .staff-editor-club .logo-background{grid-area:background;min-height:0;align-self:start}
+ .staff-editor-club .logo-palette{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:start;
+ }
+ .staff-editor-club .logo-palette-slot{align-content:start}
+}
+@media(min-width:761px) and (max-width:1080px){
+ .staff-editor-club .staff-team-brand>.staff-logo-picker{
+  display:grid;grid-template-columns:minmax(0,1fr);
+  grid-auto-rows:max-content;align-content:start;align-items:start;
+  height:auto;min-height:0;
+ }
+ .staff-editor-club .logo-editor-main{
+  grid-template-rows:max-content;align-content:start;align-items:start;
+  height:auto;min-height:0;
+ }
+ .staff-editor-club .logo-editor-tools{flex:0 1 auto;height:auto;min-height:0}
+}
