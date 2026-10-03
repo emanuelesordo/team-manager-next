@@ -435,87 +435,95 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 .hero-panel>.hero-content>h2{margin-top:0}
 
 
-/* Match Center: header docks below the persistent topbar, then compresses
-   into crest / club | score | club / crest without leaving the viewport. */
+/* Match Center: scroll-linked collapse. No binary layout switching: two layers
+   cross-fade while the sticky container's height is interpolated by JS. */
 .match-header-sentinel{height:1px;pointer-events:none}
 .match-detail-head.glass{
  position:sticky;
  top:var(--match-sticky-top,65px);
  z-index:21;
- transition:padding .19s ease,border-radius .19s ease,box-shadow .19s ease;
+ padding:0;
+ overflow:hidden;
+ isolation:isolate;
+ transition:border-radius .18s linear,box-shadow .18s linear;
+}
+.match-detail-head .match-expanded{
+ padding:24px 35px 35px;
+ opacity:calc(1 - var(--match-collapse,0));
+ transform:translateY(calc(var(--match-collapse,0) * -12px));
+ transform-origin:center top;
+ pointer-events:auto;
 }
 .match-detail-head.is-compact.glass{
- padding:8px clamp(10px,1.8vw,22px);
- border-radius:0 0 14px 14px;
+ border-radius:0 0 13px 13px;
  box-shadow:0 10px 25px #001b2466;
 }
-.match-detail-head.is-compact .match-header-meta,
-.match-detail-head.is-compact .match-header-scorers,
-.match-detail-head.is-compact .match-score-status{display:none}
-.match-detail-head.is-compact .match-detail-score{
+.match-detail-head.is-compact .match-expanded{pointer-events:none}
+.match-detail-head .match-compact-bar{
+ position:absolute;
+ inset:0;
  display:grid;
  grid-template-columns:minmax(0,1fr) minmax(66px,max-content) minmax(0,1fr);
+ align-items:center;
  gap:clamp(8px,1.8vw,24px);
- align-items:center;
- margin:0;
+ padding:7px clamp(10px,1.8vw,22px);
+ opacity:var(--match-collapse,0);
+ pointer-events:none;
 }
-.match-detail-head.is-compact .match-header-team{
+.match-compact-club{
  display:flex;
- flex-direction:row;
  align-items:center;
- justify-content:flex-start;
- gap:clamp(6px,.9vw,12px);
  min-width:0;
+ gap:clamp(5px,.9vw,12px);
 }
-.match-detail-head.is-compact .match-header-team-away{
- flex-direction:row-reverse;
- justify-content:flex-start;
-}
-.match-detail-head.is-compact .match-header-team .crest.xl{
+.match-compact-home{justify-content:flex-start}
+.match-compact-away{justify-content:flex-end}
+.match-compact-club .crest{
+ flex:0 0 auto;
  width:clamp(32px,3.3vw,46px);
  height:clamp(32px,3.3vw,46px);
  border-radius:10px;
- flex:0 0 auto;
 }
-.match-detail-head.is-compact .match-header-team>strong{
+.match-compact-club>strong{
+ font-size:clamp(10px,1.05vw,14px);
+ font-weight:800;
+ line-height:1.15;
  min-width:0;
+ white-space:nowrap;
  overflow:hidden;
  text-overflow:ellipsis;
- white-space:nowrap;
- overflow-wrap:normal;
- font-size:clamp(10px,1.05vw,14px);
- line-height:1.15;
- text-align:left;
 }
-.match-detail-head.is-compact .match-big-score{
- display:flex;
+.match-compact-home>strong{text-align:left}
+.match-compact-away>strong{text-align:right}
+.match-compact-score{
+ display:inline-flex;
  align-items:center;
  justify-content:center;
- align-self:center;
- min-height:0;
- margin:0;
-}
-.match-detail-head.is-compact .match-big-score b{
- font-size:clamp(21px,2.6vw,34px);
- line-height:1.1;
- letter-spacing:-.045em;
  white-space:nowrap;
+ font-size:clamp(21px,2.6vw,34px);
+ letter-spacing:-.045em;
+ line-height:1.05;
+ font-variant-numeric:tabular-nums;
 }
+.match-compact-score .match-score-separator{padding-inline:.16em}
 @media(max-width:650px){
- .match-detail-head.is-compact.glass{padding:7px 8px;border-radius:0 0 10px 10px}
- .match-detail-head.is-compact .match-detail-score{
-  grid-template-columns:minmax(0,1fr) minmax(52px,max-content) minmax(0,1fr);
+ .match-detail-head .match-expanded{padding:12px 10px 14px}
+ .match-detail-head .match-compact-bar{
+  grid-template-columns:minmax(0,1fr) minmax(48px,max-content) minmax(0,1fr);
   gap:5px;
+  padding:6px 8px;
  }
- .match-detail-head.is-compact .match-header-team{gap:4px}
- .match-detail-head.is-compact .match-header-team .crest.xl{
-  width:clamp(26px,8vw,36px);height:clamp(26px,8vw,36px);border-radius:8px;
+ .match-compact-club{gap:4px}
+ .match-compact-club .crest{
+  width:clamp(26px,8vw,36px);
+  height:clamp(26px,8vw,36px);
+  border-radius:8px;
  }
- .match-detail-head.is-compact .match-header-team>strong{
-  font-size:clamp(9px,2.5vw,12px);
- }
- .match-detail-head.is-compact .match-big-score b{font-size:clamp(19px,5.1vw,26px)}
+ .match-compact-club>strong{font-size:clamp(9px,2.5vw,12px)}
+ .match-compact-score{font-size:clamp(19px,5.1vw,26px)}
+ .match-detail-head.is-compact.glass{border-radius:0 0 10px 10px}
 }
 @media(prefers-reduced-motion:reduce){
  .match-detail-head.glass{transition:none}
+ .match-detail-head .match-expanded{transform:none}
 }
