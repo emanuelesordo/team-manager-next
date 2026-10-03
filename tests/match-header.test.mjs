@@ -49,3 +49,33 @@ test('rejected and non-goal events are excluded without inferred scorers',()=>{
  fixture,home,id=>names[id],competition);
  assert.equal(rows.away.length,4);
 });
+
+test('every current 2026/27 competition fixture resolves its stored club logo',()=>{
+ const club={name:'Calcio Caselle',logo_url:'https://example.test/caselle.png'};
+ const opponents=[
+  'Armistizio','Bronzola','Cadoneghe','Campodoro','Cavinese Airone',
+  'Justinense','Quadrato Meticcio','San Bastian','San Marco Stigliano',
+  'Straelle','Union Rubano','Voltesea'
+ ].map(name=>({name,logo_url:'https://example.test/'+name+'.png'}));
+ const fixtures={
+  'Amatori Armistizio':'Armistizio',
+  'Amatori Bronzola':'Bronzola',
+  'Amatori Cadoneghe':'Cadoneghe',
+  'Calcio Caselle':'Calcio Caselle',
+  'Calcio Cavinese Airone':'Cavinese Airone',
+  'D.G. San Bastian':'San Bastian',
+  'Justinense':'Justinense',
+  'Quadrato Meticcio':'Quadrato Meticcio',
+  'San Marco Stigliano':'San Marco Stigliano',
+  'Spd Campodoro':'Campodoro',
+  'Straelle':'Straelle',
+  'Union Rubano A.S.D.':'Union Rubano',
+  'Voltesea Calcio':'Voltesea'
+ };
+ for(const [fixtureName,registryName] of Object.entries(fixtures)){
+  const identity=findClubIdentity(fixtureName,club,opponents);
+  assert.ok(identity, 'Cannot resolve '+fixtureName);
+  assert.equal(identity.name,registryName);
+  assert.ok(identity.logo_url);
+ }
+});
