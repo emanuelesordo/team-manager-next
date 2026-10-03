@@ -344,3 +344,13 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  .match-detail-head .match-score-status .status{font-size:9px;padding:3px 6px}
  .match-detail-head .match-header-scorer{font-size:9px;gap:3px}
 }
+
+
+/* Logo transparency background choices. Saved color is behind the PNG, not baked into the file. */
+.logo-background{display:flex;flex-direction:column;gap:10px;min-width:0;width:100%;padding-top:10px;border-top:1px solid var(--border)}
+.logo-background-options{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.logo-background-options button{display:inline-flex;align-items:center;justify-content:center;min-height:33px;padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--ink);font-size:11px;font-weight:700}
+.logo-background-options button:hover,.logo-background-options button:focus-visible{border-color:var(--accent)}
+.logo-background-options button[aria-pressed="true"]{border-color:var(--accent);outline:1px solid var(--accent)}
+.logo-background-custom{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700}
+.logo-background-custom input{height:31px;width:40px;border:1px solid var(--border);border-radius:5px;background:transparent;padding:2px;cursor:pointer}
