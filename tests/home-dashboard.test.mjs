@@ -38,7 +38,7 @@ test('October 2026 calendar has Monday-first seven columns and opponent logo on 
  const markup=renderMonthCalendar(fixtures,teamId,2026*12+9,crest);
  assert.match(markup,/Ottobre 2026/);
  assert.equal((markup.match(/class="month-weekday"/g)||[]).length,7);
- assert.equal((markup.match(/class="month-cell(?! outside)/g)||[]).length,35);
+ assert.equal((markup.match(/class="month-cell(?! outside)/g)||[]).length,31);
  assert.match(markup,/data-match="cadoneghe"/);
  assert.match(markup,/data-ref="opponent-1"/);
  assert.match(markup,/data-match="union"/);
@@ -72,5 +72,5 @@ test('home layout has month calendar, standings, linked player and trends instea
  assert.doesNotMatch(home,/\bkpis\(\)|fixture-list|home-bottom/);
  assert.match(css,/\.home-feature\{\s*display:grid;\s*grid-template-columns:minmax\(0,1\.09fr\) minmax\(320px,\.91fr\)/);
  assert.match(css,/\.month-days\{display:grid;grid-template-columns:repeat\(7,minmax\(0,1fr\)\)/);
- assert.match(main,/data-home-month/);
+ assert.match(main,/dataset\.homeMonth/);
 });
