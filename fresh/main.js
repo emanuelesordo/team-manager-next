@@ -146,11 +146,11 @@ function home(){
  const associated=(state.data?.players||[]).some(p=>p.id===playerId);
  const comparisons=opponentAdjustedResults(fixtures().filter(f=>f.competition_id===comp?.id),team()?.id,5);
  return '<div class="home-feature"><div class="feature-primary"><div data-home-hero>'+hero()+'</div>'+
- '<div class="home-analytics-grid"><section class="glass panel home-player-section">'+
+ '<div class="home-analytics-grid">'+(associated?'<section class="glass panel home-player-section">'+
  '<div class="home-panel-head"><h2>Il mio giocatore</h2></div>'+
- (associated?personalPanel(state.identity,state.data,E,ico):'<p class="empty">Nessun giocatore associato all’account.</p>')+
- (associated?'<h3 class="home-chart-title">Rating delle ultime partite</h3><div class="home-player-rating" data-home-ratings="'+E(playerId)+'">'+
- '<p class="muted small">Caricamento valutazioni…</p></div>':'')+'</section>'+
+ personalPanel(state.identity,state.data,E,ico)+
+ '<h3 class="home-chart-title">Rating delle ultime partite</h3><div class="home-player-rating" data-home-ratings="'+E(playerId)+'">'+
+ '<p class="muted small">Caricamento valutazioni…</p></div></section>':'')+
  '<section class="glass panel home-expectation-section"><div class="home-panel-head"><h2>Risultati e aspettative</h2></div>'+
  '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+
  renderPointsTrend(comparisons)+'</section></div></div>'+ '<aside class="home-side-stack">'+
