@@ -32,67 +32,59 @@ test('status is above result with explicit dash; substitutions are tight',()=>{
 });
 
 
-test('match header gradually crossfades metadata into outward crest / name / score / name / crest order',()=>{
+test('compact layout preserves crest, name, result, name, crest order',()=>{
  assert.match(matchSource,/class="match-expanded"/);
- assert.match(matchSource,/class="match-compact-bar"/);
- assert.match(matchSource,/class="match-compact-club match-compact-home"/);
- assert.match(matchSource,/class="match-compact-club match-compact-away"/);
- assert.match(matchSource,/class="match-compact-score"/);
+ assert.match(matchSource,/class="match-compact-bar glass"/);
  const compact=matchSource.slice(matchSource.indexOf("const compactHeader="),matchSource.indexOf(" const header=",matchSource.indexOf("const compactHeader=")));
  assert.ok(compact.indexOf("club(f.home_team")<compact.indexOf("E(f.home_team)"));
  assert.ok(compact.indexOf("E(f.home_team)")<compact.indexOf("headerScore"));
  assert.ok(compact.indexOf("headerScore")<compact.indexOf("E(f.away_team)"));
  assert.ok(compact.indexOf("E(f.away_team)")<compact.indexOf("club(f.away_team"));
- assert.match(css,/\.match-detail-head\.glass\{\s*position:sticky/);
- assert.match(css,/opacity:calc\(1 - var\(--match-collapse,0\)\)/);
- assert.match(css,/opacity:var\(--match-collapse,0\)/);
- assert.match(css,/\.match-compact-bar\{[\s\S]*?grid-template-columns/);
+ assert.match(css,/\.match-compact-bar\.glass\{\s*position:sticky/);
+ assert.match(css,/margin-top:calc\(0px - var\(--match-compact-height,74px\) - 12px\)/);
+ assert.match(css,/\.match-detail-head\.glass\{\s*position:relative/);
  assert.match(css,/@media\(max-width:650px\)/);
- assert.match(main,/window\.addEventListener\('scroll',syncMatchHeaderCompact,\{passive:true\}\)/);
 });
-test('scroll compression is proportional, reversible and does not regenerate the match',()=>{
- const start=main.indexOf('function syncMatchHeaderCompact(){');
+test('scroll animation is gradual, reversible and touches only opacity/transform',()=>{
+ const start=main.indexOf('let matchHeaderFrame=0;');
  const end=main.indexOf('function sizeClubEditor(){',start);
  assert.ok(start>=0&&end>start);
- let markerBottom=420,compact=false;
- const vars=new Map();
- const expanded={getBoundingClientRect(){return {height:320}}};
- const head={
-  dataset:{},style:{height:'',setProperty(k,v){vars.set(k,v)}},
-  getBoundingClientRect(){return {width:900}},
-  querySelector(selector){assert.equal(selector,'.match-expanded');return expanded},
-  classList:{toggle(k,on){assert.equal(k,'is-compact');compact=on}}
- };
- const dom={
-  '.match-detail-head':head,
-  '.match-header-sentinel':{getBoundingClientRect(){return {bottom:markerBottom}}},
-  '.topbar':{getBoundingClientRect(){return {height:68,bottom:68}}}
- };
- const document={querySelector:s=>dom[s]};
+ let bottom=400,reduced=false,frames=0;
+ const tasks=[],properties=new Map();
+ const compact={dataset:{},style:{setProperty(k,v){properties.set(k,v)}}};
+ const expanded={style:{}};
+ const head={style:{},getBoundingClientRect(){return {bottom}},
+  querySelector(x){assert.equal(x,'.match-expanded');return expanded}};
+ const document={querySelector:s=>({
+  '.match-detail-head':head,'.match-compact-bar':compact,
+  '.topbar':{getBoundingClientRect(){return {bottom:68}}}
+ })[s]};
  const state={page:'match'};
- const win={innerWidth:1100};
- const handler=new Function('document','state','window',main.slice(start,end)+';return syncMatchHeaderCompact;')(document,state,win);
- handler();
- assert.equal(vars.get('--match-sticky-top'),'68px');
- assert.equal(vars.get('--match-collapse'),'0.0000');
- assert.equal(head.style.height,'320px');
- markerBottom=78-90;handler();
- assert.equal(vars.get('--match-collapse'),'0.5000');
- assert.equal(head.style.height,'197px');
- assert.equal(compact,false);
- markerBottom=-150;handler();
- assert.equal(vars.get('--match-collapse'),'1.0000');
- assert.equal(head.style.height,'74px');
- assert.equal(compact,true);
- markerBottom=420;handler();
- assert.equal(vars.get('--match-collapse'),'0.0000');
- assert.equal(head.style.height,'320px');
- assert.equal(compact,false);
- win.innerWidth=400;delete head.dataset.expandedHeight;
- markerBottom=-200;handler();
- assert.equal(head.style.height,'64px');
- assert.equal(compact,true);
- state.page='calendar';markerBottom=420;handler();
- assert.equal(head.style.height,'64px');
+ const window={innerWidth:1100,matchMedia:()=>({matches:reduced}),
+  requestAnimationFrame(fn){frames++;tasks.push(fn);return frames}};
+ const controller=new Function('document','state','window',
+  main.slice(start,end)+';return {paintMatchHeaderCompact,syncMatchHeaderCompact};')(document,state,window);
+ controller.paintMatchHeaderCompact();
+ assert.equal(compact.style.opacity,'0.000');
+ assert.equal(properties.get('--match-sticky-top'),'68px');
+ bottom=227;
+ controller.syncMatchHeaderCompact();controller.syncMatchHeaderCompact();
+ assert.equal(tasks.length,1);
+ tasks.shift()();
+ assert.equal(compact.style.opacity,'0.500');
+ assert.equal(expanded.style.opacity,'0.500');
+ bottom=130;controller.syncMatchHeaderCompact();tasks.shift()();
+ assert.equal(compact.style.opacity,'1.000');
+ bottom=400;controller.syncMatchHeaderCompact();tasks.shift()();
+ assert.equal(compact.style.opacity,'0.000');
+ window.innerWidth=390;bottom=0;
+ controller.syncMatchHeaderCompact();tasks.shift()();
+ assert.equal(properties.get('--match-compact-height'),'64px');
+ reduced=true;bottom=252;
+ controller.syncMatchHeaderCompact();tasks.shift()();
+ assert.equal(compact.style.opacity,'0.000');
+ assert.equal(compact.style.transform,'none');
+ assert.equal(head.style.height,undefined,'No layout-changing height updates');
+ state.page='calendar';controller.syncMatchHeaderCompact();
+ assert.equal(tasks.length,0);
 });
-
