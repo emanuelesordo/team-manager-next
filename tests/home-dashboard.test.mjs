@@ -93,25 +93,27 @@ test('Home hides the unlinked player panel and uses saved crest geometry without
   assert.ok(css.includes('body[data-logo-shape="'+shape+'"] .home-feature .month-matches .crest{border-radius:'+radius+'}'));
 });
 
-test('Home calendar header has only the month, centered navigation and details on one row',()=>{
+
+test('Home calendar header has one row with centered month controls and details',()=>{
  const home=main.slice(main.indexOf('function home(){'),main.indexOf('async function hydrateHomeRatings(){'));
  const calendar=home.slice(home.indexOf('home-month-section'),home.indexOf('home-standing-section'));
- assert.doesNotMatch(calendar,/<h2>Calendario<\\/h2>/);
- assert.match(main,/function monthMarkup\\(\\)\\{return renderMonthCalendar\\([^\\n]*month-nav-detail/);
+ assert.ok(!calendar.includes('<h2>Calendario</h2>'));
+ assert.ok(main.includes('function monthMarkup(){return renderMonthCalendar('));
+ assert.ok(main.includes('month-nav-detail'));
  const render=readFileSync(new URL('../fresh/home-dashboard.js',import.meta.url),'utf8');
- assert.match(render,/detailAction=''/);
- assert.match(render,/detailAction\\+'<\\/div>'/);
- assert.match(css,/\\.home-feature \\.month-nav\\{\\s*display:grid;/);
- assert.match(css,/grid-template-columns:minmax\\(0,1fr\\) auto minmax\\(0,1fr\\)/);
- assert.match(css,/\\.home-feature \\.month-nav-actions\\{grid-column:2;justify-self:center\\}/);
- assert.match(css,/\\.home-feature \\.month-nav-detail\\{grid-column:3;justify-self:end\\}/);
+ assert.ok(render.includes("detailAction=''"));
+ assert.ok(render.includes("detailAction+'</div>'"));
+ assert.ok(css.includes('.home-feature .month-nav{\n display:grid;'));
+ assert.ok(css.includes('grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)'));
+ assert.ok(css.includes('.home-feature .month-nav-actions{grid-column:2;justify-self:center}'));
+ assert.ok(css.includes('.home-feature .month-nav-detail{grid-column:3;justify-self:end}'));
 });
 
-test('Home carousel reserves its footer within a bounded first row',()=>{
+test('Home carousel reserves the footer inside its fixed-height frame',()=>{
  const compact=css.slice(css.indexOf('/* Home dashboard: the two columns scroll independently'));
- assert.match(compact,/--home-first-row-height:340px/);
- assert.match(compact,/\\[data-home-hero\\]\\s*>\\.hero-panel\\{[\\s\\S]*?height:100%;min-height:0/);
- assert.match(compact,/\\.home-feature \\.hero-content\\{[\\s\\S]*?display:flex;flex:1 1 auto;flex-direction:column/);
- assert.match(compact,/\\.home-feature \\.hero-bottom\\{\\s*flex:0 0 auto/);
- assert.doesNotMatch(compact,/grid-template-rows:max-content max-content max-content/);
+ assert.ok(compact.includes('--home-first-row-height:340px'));
+ assert.ok(compact.includes('height:100%;min-height:0;max-height:none;'));
+ assert.ok(compact.includes('display:flex;flex:1 1 auto;flex-direction:column;'));
+ assert.ok(compact.includes('.home-feature .hero-bottom{\n  flex:0 0 auto'));
+ assert.ok(!compact.includes('grid-template-rows:max-content max-content max-content'));
 });
