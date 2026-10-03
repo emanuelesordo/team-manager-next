@@ -72,3 +72,55 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 .match-timeline .mt-change{display:flex;flex-direction:column;align-items:center;line-height:1}
 .match-timeline .mt-change .mt-sub-in{color:#36bd81;transform:none}
 .match-timeline .mt-change .mt-sub-out{color:#ed6464;transform:none}
+
+
+/* Setup: file/paste badge control (team and opponents). */
+.staff-logo-picker{grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap;min-width:0;padding:12px;border:1px dashed var(--border);border-radius:12px;outline-offset:3px}
+.staff-logo-picker:focus-visible,.staff-logo-picker:focus-within{outline:2px solid var(--accent,#6da8c5)}
+.staff-logo-picker [data-logo-preview]{height:66px;width:66px;object-fit:contain;border-radius:8px;background:rgba(128,145,152,.09);padding:5px}
+.staff-logo-picker [data-logo-preview][hidden]{display:none}
+.staff-logo-picker label{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:9px 12px}
+.staff-logo-picker .staff-help{flex:1 1 200px;margin:0}
+
+/* Match header includes all event-neutral match metadata; tabs contain football data. */
+.match-header-meta{display:flex;flex-wrap:wrap;gap:10px 22px;padding:15px 18px 18px;border-top:1px solid var(--border);margin-top:12px;justify-content:center}
+.match-meta-item{display:inline-flex;flex-direction:column;align-items:center;gap:3px;min-width:84px;max-width:100%;text-align:center;overflow-wrap:anywhere}
+.match-meta-item small{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.match-meta-item strong{font-size:12px;font-weight:750;color:var(--ink);line-height:1.4}
+.match-overview-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:14px;align-items:start}
+.match-overview-events,.match-overview-formation{min-width:0}
+
+/* Overview: original starters placed by the configured formation, goalkeeper low. */
+.ov-lineup{min-width:0}
+.ov-section-heading{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.ov-section-heading h3{margin:0}.ov-section-heading small{font-size:11px;color:var(--muted)}
+.ov-pitch{display:flex;flex-direction:column;justify-content:space-around;gap:13px;min-height:380px;padding:20px 8px 17px;border:1px solid rgba(79,159,109,.36);border-radius:11px;background:repeating-linear-gradient(0deg,rgba(62,128,92,.12) 0,rgba(62,128,92,.12) 63px,rgba(62,128,92,.2) 63px,rgba(62,128,92,.2) 126px);position:relative;overflow:hidden}
+.ov-pitch:after{content:'';position:absolute;inset:8px;border:1px solid rgba(222,255,225,.28);border-radius:5px;pointer-events:none}
+.ov-pitch-line{display:flex;align-items:flex-start;justify-content:space-around;gap:5px;position:relative;z-index:1}
+.ov-pitch-line .ov-player{display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center;flex:1 1 0;min-width:0;max-width:125px}
+.ov-pitch-line .ov-player-name{line-height:1.15;overflow-wrap:anywhere}
+.ov-shirt{background:rgba(23,51,65,.94);color:#fff;display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;border-radius:6px;padding:0 4px;font-weight:900;font-size:12px}
+.ov-player-name{font-weight:800;font-size:11px;min-width:0;color:var(--ink)}
+.ov-captain{font-size:9px;vertical-align:middle;color:var(--muted)}
+.ov-personal-events{display:flex;gap:3px;justify-content:center;align-items:center;flex-wrap:wrap;min-height:14px}
+.ov-event{font-size:10px;line-height:15px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;border-radius:3px;color:var(--ink);background:rgba(255,255,255,.15)}
+.ov-event.ov-yellow_card i,.ov-event.ov-red_card i,.ov-event.ov-blue_card i{display:block;width:9px;height:13px;border-radius:2px;background:#edc93c}
+.ov-event.ov-red_card i{background:#dd4e56}.ov-event.ov-blue_card i{background:#488ee9}
+.ov-event.ov-sub_in{color:#2cb779}.ov-event.ov-sub_out{color:#ec6069}.ov-event.ov-assist{font-size:9px}
+.ov-rating{display:inline-flex;gap:4px;align-items:center;justify-content:center;border-radius:5px;padding:2px 6px;font-size:11px;font-weight:900;white-space:nowrap;border:1px solid transparent;background:rgba(120,135,150,.16)}
+.ov-rating small{font-size:9px;font-weight:700}
+.ov-rating-high{background:rgba(48,183,119,.31);border-color:rgba(48,183,119,.56)}
+.ov-rating-above{background:rgba(74,179,124,.17);border-color:rgba(74,179,124,.30)}
+.ov-rating-even{background:rgba(133,143,162,.18)}
+.ov-rating-below{background:rgba(232,160,67,.2);border-color:rgba(232,160,67,.36)}
+.ov-rating-low{background:rgba(217,79,87,.27);border-color:rgba(217,79,87,.44)}
+.ov-rating-unrated,.ov-no-rating{color:var(--muted)}
+.ov-bench-heading{margin:20px 0 11px}
+.ov-bench{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:7px}
+.ov-bench .ov-player{display:flex;align-items:center;gap:7px;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px}
+.ov-bench .ov-player-name{flex:1 1 auto}
+.ov-bench .ov-personal-events{justify-content:flex-start}
+.ov-bench .ov-rating{margin-left:auto}
+.ov-lineup .subnote{margin-top:12px}
+@media(max-width:960px){.match-overview-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:550px){.match-header-meta{gap:11px 13px;padding:12px}.match-meta-item{flex:1 1 110px;min-width:0}.ov-pitch{min-height:340px;gap:10px;padding:15px 5px}.ov-pitch-line .ov-player-name{font-size:9px}.ov-pitch-line .ov-shirt{min-width:22px;height:22px;font-size:10px}.ov-rating{font-size:10px;padding:2px 4px}.ov-rating small{font-size:8px}.ov-bench{grid-template-columns:minmax(0,1fr)}}
