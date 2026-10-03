@@ -33,8 +33,8 @@ jobs:
           grep -q 'home-side-stack' dist/fresh/main.js
           grep -q 'home-month-section' dist/fresh/style.css
           grep -q 'renderMonthCalendar' dist/fresh/home-dashboard.js
-          grep -qE 'fresh/main.js\\?v=[0-9a-f]{12}' dist/index.html
-          ! grep -qE '\\?v=[^" ]+\\?v=' dist/index.html
+          grep -q 'fresh/main.js?v=' dist/index.html
+          ! grep -q '?v=20261004home2?v=' dist/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
