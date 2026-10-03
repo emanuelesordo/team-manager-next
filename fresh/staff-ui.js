@@ -1,6 +1,6 @@
 import {matchPlayerLabel} from './match-player-label.js';
 import {roundRobinDraft} from './phase-scheduler.js';
-import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge} from './api.js';
+import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge} from './api.js?phases=20261003a';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup} from './lineup-pitch.js';
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
