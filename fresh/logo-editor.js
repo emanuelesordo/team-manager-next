@@ -10,7 +10,8 @@ const rgbToHex=rgb=>'#'+rgb.map(n=>clamp(Math.round(n),0,255).toString(16).padSt
 export function extractLogoColors(imageData){
  const {data}=imageData;
  const bins=new Map();
- for(let i=0;i<data.length;i+=16){ // Sample 1/4 of the pixels.
+ const pixelStride=Math.max(1,Math.ceil((data.length/4)/20000));
+ for(let i=0;i<data.length;i+=4*pixelStride){ // Adaptive stride avoids dropping colors from small logos.
   const alpha=data[i+3];
   if(alpha<100)continue;
   const r=data[i],g=data[i+1],b=data[i+2];
