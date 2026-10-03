@@ -437,38 +437,56 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 
 /* Match Center: scroll-linked collapse. No binary layout switching: two layers
    cross-fade while the sticky container's height is interpolated by JS. */
+/* Fixed-flow match header + independent sticky compact bar.
+   The header NEVER changes height during scrolling. The compact bar cancels
+   its own flow height with margins; opacity/transform are GPU-composited. */
 .match-header-sentinel{height:1px;pointer-events:none}
 .match-detail-head.glass{
- position:sticky;
- top:var(--match-sticky-top,65px);
- z-index:21;
+ position:relative;
+ top:auto;
+ z-index:auto;
+ height:auto;
+ max-height:none;
+ min-height:0;
  padding:0;
+ margin-bottom:12px;
  overflow:hidden;
  isolation:isolate;
- transition:border-radius .18s linear,box-shadow .18s linear;
+ transition:none;
 }
 .match-detail-head .match-expanded{
  padding:24px 35px 35px;
- opacity:calc(1 - var(--match-collapse,0));
- transform:translateY(calc(var(--match-collapse,0) * -12px));
- transform-origin:center top;
+ opacity:1;
+ transform:translate3d(0,0,0);
  pointer-events:auto;
+ will-change:opacity,transform;
 }
-.match-detail-head.is-compact.glass{
- border-radius:0 0 13px 13px;
- box-shadow:0 10px 25px #001b2466;
-}
-.match-detail-head.is-compact .match-expanded{pointer-events:none}
-.match-detail-head .match-compact-bar{
- position:absolute;
- inset:0;
+.match-compact-bar.glass{
+ position:sticky;
+ top:var(--match-sticky-top,65px);
+ z-index:21;
+ height:var(--match-compact-height,74px);
+ min-height:0;
+ max-height:none;
+ /* No extra space before the tabs, and no changing layout while scrolling. */
+ margin-top:calc(0px - var(--match-compact-height,74px) - 12px);
+ margin-bottom:12px;
  display:grid;
  grid-template-columns:minmax(0,1fr) minmax(66px,max-content) minmax(0,1fr);
  align-items:center;
  gap:clamp(8px,1.8vw,24px);
  padding:7px clamp(10px,1.8vw,22px);
- opacity:var(--match-collapse,0);
+ opacity:0;
+ transform:translate3d(0,10px,0) scale(.985);
+ transform-origin:center top;
+ will-change:opacity,transform;
  pointer-events:none;
+ overflow:hidden;
+ background:var(--surface-solid);
+ border-radius:13px;
+ box-shadow:0 10px 25px #001b2466;
+ backdrop-filter:none;
+ -webkit-backdrop-filter:none;
 }
 .match-compact-club{
  display:flex;
@@ -508,10 +526,11 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 .match-compact-score .match-score-separator{padding-inline:.16em}
 @media(max-width:650px){
  .match-detail-head .match-expanded{padding:12px 10px 14px}
- .match-detail-head .match-compact-bar{
+ .match-compact-bar.glass{
   grid-template-columns:minmax(0,1fr) minmax(48px,max-content) minmax(0,1fr);
   gap:5px;
   padding:6px 8px;
+  border-radius:0 0 10px 10px;
  }
  .match-compact-club{gap:4px}
  .match-compact-club .crest{
@@ -521,9 +540,8 @@ body[data-logo-shape="square"] .crest{border-radius:0}
  }
  .match-compact-club>strong{font-size:clamp(9px,2.5vw,12px)}
  .match-compact-score{font-size:clamp(19px,5.1vw,26px)}
- .match-detail-head.is-compact.glass{border-radius:0 0 10px 10px}
 }
 @media(prefers-reduced-motion:reduce){
- .match-detail-head.glass{transition:none}
- .match-detail-head .match-expanded{transform:none}
+ .match-detail-head .match-expanded,
+ .match-compact-bar.glass{will-change:auto;transform:none!important;transition:none}
 }
