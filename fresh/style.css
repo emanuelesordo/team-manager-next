@@ -203,3 +203,37 @@ body[data-logo-shape="square"] .crest{border-radius:0}
 
 /* The setup preview of existing logos must use the very same mask and crop as public crests. */
 .logo-frame [data-logo-existing]{object-fit:cover;object-position:center}
+
+
+/* Match header: three deliberately stacked pairs without divider rules. */
+.match-detail-head .match-header-meta{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+ align-items:start;gap:12px 22px;margin:0;padding:2px 0 8px;
+ border:0;border-top:0;border-bottom:0
+}
+.match-header-meta .match-meta-group{display:flex;flex-direction:column;gap:10px;min-width:0}
+.match-header-meta .match-meta-item{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.match-header-meta .match-meta-left,.match-header-meta .match-meta-left .match-meta-item{align-items:flex-start;text-align:left}
+.match-header-meta .match-meta-center,.match-header-meta .match-meta-center .match-meta-item{align-items:center;text-align:center}
+.match-header-meta .match-meta-right,.match-header-meta .match-meta-right .match-meta-item{align-items:flex-end;text-align:right}
+.match-detail-head .match-detail-score{margin-top:19px}
+.match-detail-head .match-big-score{align-self:start;display:flex;flex-direction:column;gap:8px;justify-content:flex-start;align-items:center;min-height:0}
+.match-score-status{display:flex;justify-content:center;align-items:center;min-height:33px}
+.match-score-status .status{display:inline-flex;white-space:nowrap}
+.match-score-separator{font-size:.46em;vertical-align:middle;font-weight:500;opacity:.65;margin:0 .08em}
+/* Two substitution arrows are one icon with very tight vertical leading. */
+.match-timeline .mt-change{display:inline-flex;flex-direction:column;justify-content:center;align-items:center;gap:0;line-height:10px;font-size:17px}
+.match-timeline .mt-change .mt-sub-in,.match-timeline .mt-change .mt-sub-out{
+ display:block;line-height:10px;height:10px;min-height:0;margin:0;padding:0;transform:none
+}
+@media(max-width:550px){
+ .match-detail-head .match-header-meta{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:8px;padding:0 0 8px}
+ .match-header-meta .match-meta-group{gap:8px}
+ .match-header-meta .match-meta-item{min-width:0}
+ .match-header-meta .match-meta-item small{font-size:8px}
+ .match-header-meta .match-meta-item strong{font-size:10px;line-height:1.2}
+ .match-detail-head .match-big-score{gap:5px}
+ .match-score-status{min-height:28px}
+ .match-score-status .status{font-size:9px;padding:4px 7px}
+ .match-score-separator{margin:0}
+}
