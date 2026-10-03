@@ -59,3 +59,20 @@ test('background color stays optional and is a separate saved value from the PNG
  assert.match(transparent,/data-logo-bg-value value=""/);
  assert.match(transparent,/background-color:transparent/);
 });
+
+test('logo workbench puts preview, controls, palette and backdrop in one balanced block',()=>{
+ const html=logoPicker('https://example.org/crest.png',['#112233','#445566','#778899'],'rounded',true,'#223344');
+ const crop=html.indexOf('data-logo-frame'),controls=html.indexOf('logo-editor-tools');
+ const side=html.indexOf('logo-palette-side'),palette=html.indexOf('class="logo-colors"');
+ const bg=html.indexOf('class="logo-background"');
+ assert.ok(crop>=0&&crop<controls&&controls<side&&side<palette&&palette<bg);
+ const voidTags=new Set(['img','input','br','hr','meta']);
+ const stack=[];
+ for(const tag of html.matchAll(/<\/?([a-z][a-z0-9-]*)\b[^>]*>/gi)){
+  const name=tag[1].toLowerCase();
+  if(voidTags.has(name))continue;
+  if(tag[0].startsWith('</'))assert.equal(stack.pop(),name);
+  else stack.push(name);
+ }
+ assert.deepEqual(stack,[]);
+});
