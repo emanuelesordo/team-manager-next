@@ -13,6 +13,8 @@ import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './accoun
 import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {loadFixtureEvents} from './api.js';
+import {findClubIdentity} from './club-identity.js';
+import {matchScorerRows,renderMatchScorers} from './match-scorers.js';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
@@ -84,7 +86,7 @@ function next(){const n=Date.now();return ownFixtures().filter(f=>isLive(f)||(!i
 function previous(){return [...ownFixtures()].filter(f=>isFinished(f)).sort((a,b)=>new Date(b.kickoff_at)-new Date(a.kickoff_at))[0]||null}
 function competition(id){return comps().find(c=>c.id===id)}
 function currentComp(){return competition(state.comp)||comps()[0]}
-function club(n,sz='md'){const o=ours(n)?team():state.base?.opponents.find(x=>normalized(x.name)===normalized(n)||normalized(x.short_name)===normalized(n));const img=safeUrl(o?.logo_url);return `<span class="crest ${sz}">${img?`<img alt="" src="${img}" loading="lazy">`:`<span>${E(String(n||'?').slice(0,2)).toUpperCase()}</span>`}</span>`}
+function club(n,sz='md'){const o=findClubIdentity(n,team(),state.base?.opponents||[]);const img=safeUrl(o?.logo_url);return `<span class="crest ${sz}">${img?`<img alt="" src="${img}" loading="lazy" decoding="async">`:`<span>${E(String(n||'?').slice(0,2)).toUpperCase()}</span>`}</span>`}
 function status(f){return isLive(f)?'<span class="status live"><i></i>LIVE</span>':isFinished(f)?'<span class="status end">Terminata</span>':'<span class="status upcoming">In programma</span>'}
 function score(f){return hasScore(f)?`${E(f.home_score)} <span>–</span> ${E(f.away_score)}`:'<span class="vs">VS</span>'}
 function heading(k,title,caption=''){return `<div class="page-heading"><div><p class="eyebrow">${E(k)}</p><h1>${E(title)}</h1>${caption?`<p class="subtitle">${E(caption)}</p>`:''}</div></div>`}
@@ -247,17 +249,21 @@ function match(){
  const selectedTab=state.matchTab==='summary'?'overview':state.matchTab;
  const titleInfo=(label,value)=>value?'<span class="match-meta-item"><small>'+E(label)+'</small><strong>'+E(value)+'</strong></span>':'';
  const venue=f.venue_name||f.venue||(isOurs(f.home_team,team())?team()?.home_venue_name:
-  state.base?.opponents?.find(o=>normalized(o.name)===normalized(f.home_team))?.home_venue_name)||null;
+  findClubIdentity(f.home_team,team(),state.base?.opponents||[])?.home_venue_name)||null;
  const address=f.venue_address||(!isOurs(f.home_team,team())?
-  state.base?.opponents?.find(o=>normalized(o.name)===normalized(f.home_team))?.home_venue_address:null);
+  findClubIdentity(f.home_team,team(),state.base?.opponents||[])?.home_venue_address:null);
  const matchMeta='<div class="match-header-meta" aria-label="Dettagli partita">'+
   titleInfo('Competizione',comp?.name||'—')+titleInfo('Turno',f.round_no!=null?'Giornata '+f.round_no:'—')+
   titleInfo('Data',weekday(f.kickoff_at))+titleInfo('Ora',time(f.kickoff_at))+
   titleInfo('Campo',venue||'—')+titleInfo('Luogo',address||'—')+'</div>';
+ const scorers=matchScorerRows(activeEvents,f,team(),playerName,comp);
  const header='<div class="match-detail-head glass"><div class="match-detail-top">'+status(f)+
-  '<span>Match Center</span></div><div class="match-detail-score"><div>'+club(f.home_team,'xl')+
-  '<strong>'+E(f.home_team)+'</strong></div><div class="match-big-score"><b>'+score(f)+'</b></div>'+
-  '<div>'+club(f.away_team,'xl')+'<strong>'+E(f.away_team)+'</strong></div></div>'+matchMeta+'</div>';
+  '<span>Match Center</span></div>'+matchMeta+
+  '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl')+
+  '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
+  '<div class="match-big-score"><b>'+score(f)+'</b></div>'+
+  '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl')+
+  '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>';
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato da verificare'):'';
  const notice=(pending?'<p class="data-warning">'+pending+' eventi ancora da ufficializzare.</p>':'')+
   (resultStatus?'<p class="staff-help">'+E(resultStatus)+'</p>':'');
