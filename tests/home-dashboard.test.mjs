@@ -74,3 +74,21 @@ test('home layout has month calendar, standings, linked player and trends instea
  assert.match(css,/\.month-days\{display:grid;grid-template-columns:repeat\(7,minmax\(0,1fr\)\)/);
  assert.match(main,/dataset\.homeMonth/);
 });
+
+test('Home scrolls each desktop column separately without resetting other pages',()=>{
+ assert.match(main,/document\.body\.dataset\.page=state\.page/);
+ assert.match(main,/previousHomeScroll\.length===2/);
+ assert.ok(css.includes('body[data-page="home"] .workspace{height:100dvh'));
+ assert.ok(css.includes('.home-feature>.feature-primary,.home-feature>.home-side-stack{'));
+ assert.match(css,/overflow-x:hidden;overflow-y:auto/);
+ assert.ok(css.includes('grid-auto-rows:minmax(0,1fr)'),'calendar supports five- and six-week months');
+});
+
+test('Home hides the unlinked player panel and uses saved crest geometry without calendar tiles',()=>{
+ const home=main.slice(main.indexOf('function home(){'),main.indexOf('async function hydrateHomeRatings(){'));
+ assert.ok(home.includes("(associated?'<section class=\"glass panel home-player-section\"'"));
+ assert.ok(!home.includes('Nessun giocatore associato all’account.'));
+ assert.ok(css.includes('.home-feature .month-cell.with-game{\n background:transparent;'));
+ for(const [shape,radius] of [['rounded','25%'],['circle','50%'],['square','0']])
+  assert.ok(css.includes('body[data-logo-shape="'+shape+'"] .home-feature .month-matches .crest{border-radius:'+radius+'}'));
+});
