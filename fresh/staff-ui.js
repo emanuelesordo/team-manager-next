@@ -5,36 +5,9 @@ import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js';
 import {storedEventMinute} from './match-minutes.js';
+import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js';
 
-/** Badge picker accepts local files and images pasted from the clipboard. */
-function logoPicker(url=''){
- return '<div class="staff-logo-picker" data-logo-picker tabindex="0" aria-label="Incolla qui un logo con Ctrl+V o Cmd+V">'+
-  '<img data-logo-preview alt="Anteprima dello stemma" src="'+esc(url||'')+'"'+(!url?' hidden':'')+'>'+
-  '<label class="staff-soft">Scegli immagine<input type="file" accept="image/png,image/jpeg,image/webp" data-logo-file hidden></label>'+
-  '<span class="staff-help">PNG, JPG o WebP · massimo 8 MB. Conversione automatica in PNG. Puoi incollare una foto dagli appunti in questa area.</span>'+
-  '</div>';
-}
-function previewBadge(picker,file){
- if(!file)return;
- if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024)throw Error('Scegli un’immagine PNG, JPG o WebP fino a 8 MB');
- const form=picker.closest('form');if(!form)throw Error('Modulo non disponibile');
- const previous=form._badgePreviewUrl;if(previous)URL.revokeObjectURL(previous);
- form._badgeFile=file;form._badgePreviewUrl=URL.createObjectURL(file);
- const image=picker.querySelector('[data-logo-preview]');image.src=form._badgePreviewUrl;image.hidden=false;
-}
-export function staffLogoEvent(event){
- const picker=event.target.closest?.('[data-logo-picker]');
- if(!picker)return false;
- if(event.type==='change'&&event.target.matches('[data-logo-file]')){
-  try{previewBadge(picker,event.target.files?.[0])}catch(e){window.alert(e.message)}
-  return true;
- }
- if(event.type==='paste'){
-  const item=[...(event.clipboardData?.items||[])].find(x=>x.type.startsWith('image/'));
-  if(item){event.preventDefault();try{previewBadge(picker,item.getAsFile())}catch(e){window.alert(e.message)}return true}
- }
- return false;
-}
+export const staffLogoEvent=handleLogoEditorEvent;
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const attrs=(rows,key,label)=>rows.map(row=>'<option value="'+esc(row[key])+'">'+esc(row[label])+'</option>').join('');
 const option=(value,label,selected)=>'<option value="'+esc(value)+'"'+(String(value)===String(selected)?' selected':'')+'>'+esc(label)+'</option>';
@@ -82,10 +55,8 @@ export function adminPage(ctx){
   form=wrapForm('team','Identità squadra',
    '<div class="staff-form-grid">'+input('name','Nome completo',t.name,'text','required maxlength="100"')+
    input('short_name','Sigla',t.short_name,'text','required maxlength="12"')+
-   input('logo_url','URL stemma (alternativa)',t.logo_url||'','url')+logoPicker(t.logo_url||'')+
-   input('primary_color','Colore principale',t.primary_color||'#225e88','color')+
-   input('secondary_color','Colore secondario',t.secondary_color||'#f0f9ff','color')+
-   input('accent_color','Colore accento',t.accent_color||'#baeeb4','color')+
+   input('logo_url','URL stemma (alternativa)',t.logo_url||'','url')+
+   logoPicker(t.logo_url||'',[t.primary_color,t.secondary_color,t.accent_color],t.logo_shape||'rounded',true)+
    input('home_venue_name','Campo principale',t.home_venue_name||'')+'</div>',
    'La modifica dei dati ufficiali è soggetta ai permessi di squadra presenti in Supabase.');
  }
@@ -142,9 +113,8 @@ export function adminPage(ctx){
   form=wrapForm('opponents','Anagrafiche avversarie',selectExisting('opponents',opps,'name')+
    '<div class="staff-form-grid">'+input('name','Nome',o?.name||'','text','required')+
    input('short_name','Sigla',o?.short_name||'','text','maxlength="15"')+
-   input('logo_url','Stemma (URL alternativo)',o?.logo_url||'','url')+logoPicker(o?.logo_url||'')+
-   input('primary_color','Colore principale',o?.primary_color||'#567aa3','color')+
-   input('secondary_color','Colore secondario',o?.secondary_color||'#ffffff','color')+
+   input('logo_url','Stemma (URL alternativo)',o?.logo_url||'','url')+
+   logoPicker(o?.logo_url||'',[o?.primary_color,o?.secondary_color,o?.accent_color],t.logo_shape||'rounded',false)+
    input('home_venue_name','Campo',o?.home_venue_name||'')+
    input('home_venue_address','Indirizzo campo',o?.home_venue_address||'')+'</div>',
    'Ogni avversaria mantiene la sua identità tra stagioni e competizioni.');
@@ -346,7 +316,7 @@ function cleaned(o,fields){return Object.fromEntries(fields.map(k=>[k,o[k]===''?
 function numberOrNull(n){return n===''||n==null?null:Number(n)}
 function adminPayload(form){
  const data=dataForm(form),kind=form.dataset.staffForm,blank=memory.selected;
- if(kind==='team')return {table:'teams',id:null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','home_venue_name'])};
+ if(kind==='team')return {table:'teams',id:null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_shape','home_venue_name'])};
  if(kind==='seasons')return {table:'app_seasons',id:blank.seasons||null,payload:cleaned(data,['name','start_date','end_date','status'])};
  if(kind==='competitions'){
   const rules={};
@@ -368,7 +338,7 @@ function adminPayload(form){
     ... (Object.keys(rules).length?{discipline_rules:rules}:{})
   }};
  }
- if(kind==='opponents')return {table:'app_opponents',id:blank.opponents||null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','home_venue_name','home_venue_address'])};
+ if(kind==='opponents')return {table:'app_opponents',id:blank.opponents||null,payload:cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','home_venue_name','home_venue_address'])};
  if(kind==='fixtures'){
   if(!blank.fixtures){
    const round=Number(data.round_no);
@@ -642,8 +612,9 @@ export async function staffSubmit(e,ctx){
    await ctx.reloadAll();ctx.toast('Nuova partita inserita');return true;
   }
   if(obj.table==='teams')obj.id=ctx.state.base.team.id;
-   if(['teams','app_opponents'].includes(obj.table)&&form._badgeFile){
-    obj.payload.logo_url=await uploadClubBadge(form._badgeFile,ctx.state.base.team.id);
+   if(['teams','app_opponents'].includes(obj.table)){
+    const cropped=await prepareLogoForUpload(form);
+    if(cropped)obj.payload.logo_url=await uploadClubBadge(cropped,ctx.state.base.team.id);
    }
   if(obj.table==='app_competitions'){
    const previous=ctx.state.data?.competitions?.find(c=>c.id===obj.id);
