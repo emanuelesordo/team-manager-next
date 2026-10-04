@@ -47,3 +47,13 @@ test('manual save verifies all selected rows on Supabase before success',()=>{
  assert.match(staff,/if\(differences\.length\)throw Error/);
  assert.match(staff,/Convocazioni salvate e verificate/);
 });
+
+test('callups use automatic writes only and restore last saved choice on failure',()=>{
+ const segment=staff.slice(staff.indexOf('function matchCallups('),staff.indexOf('function matchLineup('));
+ assert.doesNotMatch(segment,/submit\('Salva convocazioni'\)/);
+ assert.match(segment,/Salvataggio automatico/);
+ assert.match(segment,/data-persisted-status/);
+ assert.match(main,/button.disabled=true/);
+ assert.match(main,/current.dataset.persistedStatus/);
+ assert.match(main,/paintCallups\(\)/);
+});
