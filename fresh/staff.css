@@ -331,3 +331,46 @@
 /* Explicit write status, not a false local-only selection. */
 .callup-person[data-saving="true"]{opacity:.6}
 .callup-person[data-save-error="true"]{background:color-mix(in srgb,#e35d5d 15%,transparent);outline:1px solid #e35d5d}
+
+
+/* Formazione essenziale: campo a sinistra, convocati eleggibili a destra */
+.lineup-minimal .staff-panel-heading,.lineup-minimal .visual-lineup-head{display:none}
+.lineup-minimal .lineup-split{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(220px,.85fr);gap:18px;align-items:start}
+.lineup-minimal .lineup-pitch-column{position:relative;min-width:0}
+.lineup-minimal .lineup-formation-select{position:absolute;top:12px;left:12px;z-index:4}
+.lineup-minimal .lineup-formation-select select{border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(10,32,35,.78);color:white;padding:7px 9px;font-weight:800;cursor:pointer}
+.lineup-minimal .visual-lineup{width:100%;margin:0}
+.lineup-minimal .visual-field{position:relative;aspect-ratio:0.77;min-height:400px;max-height:670px;overflow:hidden;background:repeating-linear-gradient(0deg,#28784d 0%,#28784d 10%,#318456 10%,#318456 20%);border:2px solid rgba(255,255,255,.7);border-radius:6px}
+.lineup-minimal .visual-field:before{content:"";position:absolute;inset:4%;border:2px solid #ffffff82;pointer-events:none}
+.lineup-minimal .field-midline{position:absolute;top:50%;left:4%;width:92%;border-top:2px solid #ffffff82}
+.lineup-minimal .field-circle{position:absolute;top:50%;left:50%;width:25%;aspect-ratio:1;transform:translate(-50%,-50%);border:2px solid #ffffff82;border-radius:50%}
+.lineup-minimal .field-slot{position:absolute;transform:translate(-50%,-50%);width:76px;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:transparent;color:#fff;cursor:pointer;text-align:center;padding:2px}
+.lineup-minimal .field-slot strong{display:grid;place-items:center;width:36px;height:38px;background:#f6f6f7;color:#17354a;clip-path:polygon(20% 0,35% 9%,65% 9%,80% 0,100% 21%,87% 42%,87% 100%,13% 100%,13% 42%,0 21%);font-size:15px;font-weight:900;filter:drop-shadow(0 1px 1px #0006)}
+.lineup-minimal .field-slot.occupied strong{background:#f5f8fc;color:#17354a}
+.lineup-minimal .field-slot span{font-size:10px;line-height:1.1;font-weight:750;text-shadow:0 1px 3px #000;max-width:94px}
+.lineup-minimal .field-slot.target strong{outline:2px solid #ffd56e}
+.lineup-minimal .field-slot:disabled{opacity:.55;cursor:default}
+.lineup-minimal .pitch-selection[hidden]{display:none}
+.lineup-minimal .lineup-player-column{min-width:0}
+.lineup-minimal .lineup-rows{max-height:670px;overflow:auto}
+.lineup-minimal .lineup-row{display:grid;grid-template-columns:minmax(0,1fr) 32px minmax(94px,115px);gap:7px;align-items:center;padding:6px 4px;min-height:43px}
+.lineup-minimal .lineup-name{border:0;background:none;color:var(--ink);cursor:grab;text-align:left;min-width:0;padding:5px 0;display:block}
+.lineup-minimal .lineup-name strong{font-size:12px}
+.lineup-minimal .lineup-row.pitch-armed{background:color-mix(in srgb,var(--accent) 13%,transparent)}
+.lineup-minimal .lineup-list-number{text-align:center;color:var(--muted);font-weight:700;font-size:12px}
+.lineup-minimal .lineup-row select[name=status]{padding:6px;min-height:32px;font-size:11px}
+.lineup-minimal .lineup-row input[type=radio]{display:none}
+.lineup-minimal .lineup-save-status{display:block;min-height:20px;text-align:right;color:var(--muted);font-size:11px;margin-top:6px}
+@media(max-width:760px){
+ .lineup-minimal .lineup-split{grid-template-columns:minmax(0,1fr) minmax(130px,.8fr);gap:9px}
+ .lineup-minimal .visual-field{min-height:310px}
+ .lineup-minimal .field-slot{width:50px;min-height:42px}
+ .lineup-minimal .field-slot strong{width:28px;height:30px;font-size:12px}
+ .lineup-minimal .field-slot span{font-size:8px}
+ .lineup-minimal .lineup-row{grid-template-columns:minmax(0,1fr) 26px;gap:2px;padding:5px 0}
+ .lineup-minimal .lineup-row .lineup-name{grid-column:1;min-width:0}
+ .lineup-minimal .lineup-row .lineup-list-number{grid-column:2}
+ .lineup-minimal .lineup-row select[name=status]{grid-column:1/-1}
+ .lineup-minimal .lineup-formation-select{top:8px;left:8px}
+ .lineup-minimal .lineup-formation-select select{font-size:11px;padding:5px}
+}
