@@ -901,3 +901,17 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
 .roster-table .roster-status-dot.inactive{background:#98a1a8}
 .roster-table th[aria-sort="ascending"] button,.roster-table th[aria-sort="descending"] button{color:var(--ink)}
 @media(max-width:760px){.roster-table{min-width:680px}.roster-table .roster-player-identity{min-width:140px;gap:7px}.roster-table .roster-avatar{flex-basis:29px;width:29px;height:29px}}
+
+/* Match Center overview: colonne indipendenti, badge rating assoluto e campo compatto. */
+@media(min-width:961px){.match-overview-grid{align-items:stretch;height:clamp(540px,calc(100dvh - 210px),1000px);min-height:0}.match-overview-events,.match-overview-formation{min-height:0;max-height:100%;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}}
+.match-overview-grid .inner-card{min-width:0}
+.match-overview-grid .mt-row{min-height:43px;padding:3px 0}
+.match-overview-grid .mt-minute-group{padding-block:5px}
+.match-overview-grid .mt-divider{margin:8px 0 3px}
+.match-overview-grid .ov-pitch .field-slot .ov-player{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;min-width:0;margin-top:2px}
+.match-overview-grid .ov-pitch .field-slot .ov-player-name{font-size:10px;line-height:1.15;text-align:center;max-width:100%;white-space:normal}
+.match-overview-grid .ov-pitch .field-slot .ov-rating{padding:2px 5px;font-size:10px}
+.match-overview-grid .ov-pitch .field-slot .ov-personal-events{min-height:0}
+.match-overview-grid .ov-bench .ov-player{border:0;border-bottom:1px solid var(--border);border-radius:0;padding:7px 2px}
+.mt-card-stack .mt-card-red{z-index:2;position:relative}
+@media(max-width:960px){.match-overview-events,.match-overview-formation{max-height:none;overflow:visible}}
