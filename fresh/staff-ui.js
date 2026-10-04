@@ -388,7 +388,7 @@ export function matchLineup(ctx,m){
  const fields=roster.filter(x=>!['absent'].includes(current.find(p=>p.player_id===x.player_id)?.selection_status)).map(x=>{
   const old=current.find(p=>p.player_id===x.player_id);
   const status=['starter','bench'].includes(old?.selection_status)?old.selection_status:'available';
-  const shirt=old?.shirt_number??x.shirt_number??x.person?.shirt_number??'';
+  const shirt=old?.shirt_number??(data.habitual||[]).find(h=>h.player_id===x.player_id)?.shirt_number??x.shirt_number??x.person?.shirt_number??'';
   const stat=(data.playerStats||[]).find(p=>p.player_id===x.player_id||p.id===x.player_id);
   const avg=stat?.avg_rating??stat?.rating_average??null;
   const rating=avg!==null&&Number.isFinite(Number(avg))?Number(avg).toFixed(1).replace('.',','):'—';
@@ -396,9 +396,9 @@ export function matchLineup(ctx,m){
   const surname=String(x.person.last_name||'').trim();
   const initial=String(x.person.first_name||'').trim().slice(0,1);
   const compactName=(initial?initial+'. ':'')+surname;
-  return '<div class="lineup-row" data-lineup-player="'+esc(x.player_id)+'">'+
+  return '<div class="lineup-row" data-lineup-player="'+esc(x.player_id)+'" data-sort-role="'+esc(role)+'" data-sort-number="'+esc(shirt||0)+'" data-sort-name="'+esc(surname)+'" data-sort-rating="'+esc(avg??0)+'">'+
    '<span class="lineup-role">'+esc(role)+'</span>'+
-   '<span class="lineup-list-number">'+esc(shirt||'—')+'</span>'+
+   '<button type="button" class="lineup-list-number" data-lineup-number aria-label="Modifica numero '+esc(compactName)+'">'+esc(shirt||'—')+'</button>'+
    '<button type="button" class="lineup-name" draggable="'+allowed+'" aria-label="Posiziona '+esc(playerText(x.person))+'" '+(allowed?'':'disabled')+'><strong>'+esc(compactName)+'</strong></button>'+
    '<span class="lineup-rating" title="Rating medio">'+esc(rating)+'</span>'+
    '<input type="hidden" name="status" value="'+esc(status)+'">'+
@@ -415,7 +415,7 @@ export function matchLineup(ctx,m){
  '<label class="lineup-formation-select"><select name="formation" aria-label="Modulo" '+(allowed?'':'disabled')+'>'+
  [...new Set([...formationModules,...(m.formation&&!formationModules.includes(m.formation)?[m.formation]:[])])].map(f=>option(f,f,m.formation||'4-4-2')).join('')+
  '</select></label>'+pitchMarkup()+'</div>'+
- '<div class="lineup-player-column"><div class="lineup-rows">'+fields+'</div></div></div>'+
+ '<div class="lineup-player-column"><div class="lineup-sort-head">'+[['role','Ruolo'],['number','N°'],['name','Cognome'],['rating','Rating']].map(([key,label])=>'<button type="button" data-lineup-sort="'+key+'" aria-label="Ordina per '+label+'">'+label+'</button>').join('')+'</div><div class="lineup-rows">'+fields+'</div></div></div>'+
  '<span class="lineup-save-status" data-lineup-save-status role="status" aria-live="polite"></span>'+
  '</form></section>';
 }
