@@ -63,7 +63,7 @@ export function paintLineupPitch(){
   cell.dataset.playerId=row?.dataset.lineupPlayer||'';
   cell.draggable=Boolean(row)&&form.dataset.lineupEnabled==='true';
  }
- for(const row of rows){row.classList.toggle('pitch-armed',row.dataset.lineupPlayer===activePlayer);const bench=row.querySelector('[data-lineup-bench]');if(bench){const outside=!isStarter(row);bench.hidden=!outside;bench.setAttribute('aria-hidden',String(!outside));}}
+ for(const row of rows){const outside=!isStarter(row);row.classList.toggle('pitch-armed',row.dataset.lineupPlayer===activePlayer);row.classList.toggle('lineup-on-field',!outside);row.hidden=!outside;const bench=row.querySelector('[data-lineup-bench]');if(bench){bench.hidden=!outside;bench.setAttribute('aria-hidden',String(!outside));}}
 }
 function assign(slot,playerId){
  const form=currentForm();if(!form)return;
