@@ -6,7 +6,7 @@ import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?callups=20261004official2';
-import {overviewLineup} from './match-overview.js?lineup=20261004official';
+import {overviewLineup} from './match-overview.js?lineup=20261004ratingfix';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004benchonly';
 import {projectionContainer,updateProjection} from './projection-ui.js?clubs=20261003id';
@@ -259,7 +259,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
    }).filter(previous=>order(previous)<order(e)||(order(previous)===order(e)&&String(previous.created_at||'')<=String(e.created_at||'')))
     .slice(-2).map(previous=>type(previous));
   }
-  const colors=cumulative?[...history.map(c=>c==='blue_card'?'blue':'yellow'),'red']:[t==='red_card'?'red':t==='blue_card'?'blue':'yellow'];
+  const sanction=history.at(-1)==='blue_card'?'blue':'yellow';
+  const colors=cumulative?[sanction,'red']:[t==='red_card'?'red':t==='blue_card'?'blue':'yellow'];
   if(cumulative&&colors.length===1)colors.unshift('yellow');
   return '<span class="mt-card-stack" aria-label="Cartellino">'+colors.map(c=>'<i class="mt-card-'+c+'"></i>').join('')+'</span>';
  };
