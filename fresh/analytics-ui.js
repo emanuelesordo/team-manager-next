@@ -43,7 +43,7 @@ export function fixtureEventsPanel(events,competition=null,fixture=null){
   const which=e.side==='home'?'Casa':e.side==='away'?'Ospiti':e.side||'';
   const goal=['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type);
   if(goal){const scorer=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(scorer==='home')home++;if(scorer==='away')away++;}
-  const snapshot=goal&&reconciled?' · '+home+'–'+away:'';
+  const snapshot=goal&&reconciled&&cumulativeEventMinute(e,competition)!==null?' · '+home+'–'+away:'';
   return '<div class="fixture-event-row"><b>'+E(time)+'</b><span>'+E(e.event_type)+' · '+E(which)+E(snapshot)+'</span><small>'+E(e.source||'')+'</small></div>'
  }).join('');
  return '<section class="inner-card fixture-events-panel"><h3>Eventi della fixture</h3><p class="staff-help">Eventi della partita in ordine cronologico. I parziali vengono mostrati solo quando tutti i gol riconciliano il risultato ufficiale.</p>'+badges+'</section>';
