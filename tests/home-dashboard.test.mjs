@@ -111,9 +111,18 @@ test('Home calendar header has one row with centered month controls and details'
 
 test('Home carousel reserves the footer inside its fixed-height frame',()=>{
  const compact=css.slice(css.indexOf('/* Home dashboard: the two columns scroll independently'));
- assert.ok(compact.includes('--home-first-row-height:340px'));
+ assert.ok(compact.includes('--home-first-row-height:270px'));
  assert.ok(compact.includes('height:100%;min-height:0;max-height:none;'));
  assert.ok(compact.includes('display:flex;flex:1 1 auto;flex-direction:column;'));
  assert.ok(compact.includes('.home-feature .hero-bottom{\n  flex:0 0 auto'));
  assert.ok(!compact.includes('grid-template-rows:max-content max-content max-content'));
+});
+
+test('Calendar day positions reserve one centered logo slot for every date',()=>{
+ assert.ok(css.includes('.home-feature .month-days .month-cell{'));
+ assert.ok(css.includes('display:grid;place-items:center;padding:0'));
+ assert.ok(css.includes('.month-cell>.month-number{'));
+ assert.ok(css.includes('grid-area:1/1;position:relative;align-self:center;justify-self:center'));
+ assert.ok(css.includes('.month-cell.with-game>.month-number{'));
+ assert.ok(css.includes('.month-cell:not(.with-game)>.month-matches{visibility:hidden}'));
 });
