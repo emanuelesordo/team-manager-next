@@ -107,7 +107,7 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 .ov-event.ov-yellow_card i,.ov-event.ov-red_card i,.ov-event.ov-blue_card i{display:block;width:9px;height:13px;border-radius:2px;background:#edc93c}
 .ov-event.ov-red_card i{background:#dd4e56}.ov-event.ov-blue_card i{background:#488ee9}
 .ov-event.ov-sub_in{color:#2cb779}.ov-event.ov-sub_out{color:#ec6069}.ov-event.ov-assist{font-size:9px}
-.ov-rating{display:inline-flex;gap:4px;align-items:center;justify-content:center;border-radius:5px;padding:2px 6px;font-size:11px;font-weight:900;white-space:nowrap;border:1px solid transparent;background:rgba(120,135,150,.16)}
+.ov-rating,.ov-lineup .ov-player .ov-rating{display:inline-flex;gap:4px;align-items:center;justify-content:center;border-radius:5px;padding:2px 6px;font-size:11px;font-weight:900;white-space:nowrap;border:1px solid transparent;background:rgba(120,135,150,.16)}
 .ov-rating small{font-size:9px;font-weight:700}
 .ov-rating-high{background:rgba(48,183,119,.31);border-color:rgba(48,183,119,.56)}
 .ov-rating-above{background:rgba(74,179,124,.17);border-color:rgba(74,179,124,.30)}
@@ -123,7 +123,7 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 .ov-bench .ov-rating{margin-left:auto}
 .ov-lineup .subnote{margin-top:12px}
 @media(max-width:960px){.match-overview-grid{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:550px){.match-header-meta{gap:11px 13px;padding:12px}.match-meta-item{flex:1 1 110px;min-width:0}.ov-pitch{min-height:340px;gap:10px;padding:15px 5px}.ov-pitch-line .ov-player-name{font-size:9px}.ov-pitch-line .ov-shirt{min-width:22px;height:22px;font-size:10px}.ov-rating{font-size:10px;padding:2px 4px}.ov-rating small{font-size:8px}.ov-bench{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:550px){.match-header-meta{gap:11px 13px;padding:12px}.match-meta-item{flex:1 1 110px;min-width:0}.ov-pitch{min-height:340px;gap:10px;padding:15px 5px}.ov-pitch-line .ov-player-name{font-size:9px}.ov-pitch-line .ov-shirt{min-width:22px;height:22px;font-size:10px}.ov-rating,.ov-lineup .ov-player .ov-rating{font-size:10px;padding:2px 4px}.ov-rating small{font-size:8px}.ov-bench{grid-template-columns:minmax(0,1fr)}}
 
 
 /* Shared team identity: one saved geometry for every crest in the application. */
