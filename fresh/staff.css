@@ -384,3 +384,16 @@
 .lineup-minimal .field-slot[draggable=true]{cursor:grab}
 .lineup-minimal .field-slot[draggable=true]:active{cursor:grabbing}
 @media(max-width:760px){.lineup-minimal .lineup-row{grid-template-columns:25px 23px minmax(0,1fr) 29px;gap:3px}.lineup-minimal .lineup-row .lineup-name{grid-column:auto}.lineup-minimal .lineup-row .lineup-list-number{grid-column:auto}.lineup-minimal .lineup-role,.lineup-minimal .lineup-rating{font-size:9px}}
+
+
+.lineup-minimal .lineup-sort-head{display:grid;grid-template-columns:36px 31px minmax(0,1fr) 40px;gap:6px;padding:4px 4px 8px}
+.lineup-minimal .lineup-sort-head button{border:0;background:transparent;color:var(--muted);font-size:10px;font-weight:750;padding:3px 0;cursor:pointer;text-align:center}
+.lineup-minimal .lineup-sort-head button:nth-child(3){text-align:left}
+.lineup-minimal .lineup-sort-head button[aria-sort=ascending]:after{content:' ↑'}
+.lineup-minimal .lineup-sort-head button[aria-sort=descending]:after{content:' ↓'}
+.lineup-minimal button.lineup-list-number{border:0;background:transparent;padding:4px 0;cursor:pointer;color:var(--ink);font-size:12px;font-weight:700}
+.lineup-minimal .duplicate-shirt [data-lineup-number]{color:#ec4848;font-weight:900}
+.lineup-minimal .field-slot .pitch-remove{position:absolute;top:-8px;right:3px;z-index:4;display:none;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:white;font-size:17px;line-height:1;cursor:pointer;text-shadow:none}
+.lineup-minimal .field-slot:hover .pitch-remove,.lineup-minimal .field-slot:focus-visible .pitch-remove{display:flex}
+@media(hover:none){.lineup-minimal .field-slot.occupied .pitch-remove{display:flex}}
+@media(max-width:760px){.lineup-minimal .lineup-sort-head{grid-template-columns:25px 23px minmax(0,1fr) 29px;gap:3px}.lineup-minimal .lineup-sort-head button{font-size:9px}}
