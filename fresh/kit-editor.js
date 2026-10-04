@@ -163,7 +163,7 @@ export function openKitConfigurator(club,onSave){
   node.querySelector('[data-kit-tabs]').innerHTML=Object.entries(draft).map(([key,kit])=>
    '<button type="button" data-kit-tab="'+esc(key)+'" class="kit-tab" aria-pressed="'+(key===selected)+'">'+esc(kit.name)+'</button>').join('')+
    '<button type="button" class="kit-tab kit-tab-add" data-kit-add>+ Nuova maglia</button>'+
-   (Object.keys(draft).length>1?'<button type="button" class="kit-tab kit-tab-remove" data-kit-remove title="Elimina kit selezionato">Elimina selezionata</button>':'');
+   '';
  };
  const refreshModel=()=>{
   const holder=node.querySelector('[data-kit-models]');
@@ -195,7 +195,7 @@ export function openKitConfigurator(club,onSave){
   const tab=event.target.closest('[data-kit-tab]');
   if(tab){selected=tab.dataset.kitTab;paletteField='';paint();return;}
   if(event.target.closest('[data-kit-add]')){const key=newKitKey(draft);draft[key]={...normalizeKit(draft[selected]),name:'Nuova maglia '+(Object.keys(draft).length+1)};selected=key;paint();node.querySelector('[data-kit-name]').focus();return;}
-  if(event.target.closest('[data-kit-remove]')){if(Object.keys(draft).length>1){delete draft[selected];selected=Object.keys(draft)[0];paint();}return;}
+  // I kit referenziati da partite storiche non vengono cancellati dal configuratore.
   const patternButton=event.target.closest('[data-kit-style]');
   if(patternButton){draft[selected]=modelKit(patternButton.dataset.kitStyle,draft[selected]);updatePreview();refreshColors();return;}
   const choose=event.target.closest('[data-kit-palette]');
