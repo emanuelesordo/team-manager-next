@@ -408,3 +408,17 @@
 .lineup-minimal .lineup-role{display:flex;gap:3px;align-items:center;justify-content:center}
 .lineup-minimal .lineup-bench{font-size:10px;line-height:1;color:var(--muted)}
 .lineup-minimal .lineup-bench[hidden]{display:none}
+
+/* Icona panchina dedicata, esterna alla colonna ruolo. */
+.lineup-minimal .lineup-row,.lineup-minimal .lineup-sort-head{grid-template-columns:24px 36px 31px minmax(0,1fr) 40px;gap:6px}
+.lineup-minimal .lineup-bench-col{display:flex;justify-content:center;align-items:center;min-width:0}
+.lineup-minimal .lineup-bench{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;color:var(--muted)}
+.lineup-minimal .lineup-bench[hidden]{display:none}
+.lineup-minimal .lineup-bench-svg{display:block;width:19px;height:19px;fill:currentColor}
+.lineup-minimal .lineup-role{display:block;text-align:center}
+.lineup-minimal .lineup-sort-head button:nth-child(4){text-align:left}
+@media(max-width:760px){
+ .lineup-minimal .lineup-row,.lineup-minimal .lineup-sort-head{grid-template-columns:19px 27px 23px minmax(0,1fr) 29px;gap:3px}
+ .lineup-minimal .lineup-row .lineup-role,.lineup-minimal .lineup-row .lineup-name,.lineup-minimal .lineup-row .lineup-list-number{grid-column:auto}
+ .lineup-minimal .lineup-bench,.lineup-minimal .lineup-bench-svg{width:15px;height:15px}
+}
