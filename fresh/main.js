@@ -8,7 +8,7 @@ import {votesPanel,saveVote} from './votes.js';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?callups=20261004ordered';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
-import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004persist';
+import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004shirt-sort-v2';
 import {projectionContainer,updateProjection} from './projection-ui.js?clubs=20261003id';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?clubs=20261003id';
