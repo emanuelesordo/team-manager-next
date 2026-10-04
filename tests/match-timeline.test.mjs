@@ -105,3 +105,16 @@ test('substitution puts green incoming arrow above red outgoing arrow',()=>{
  assert.ok(output.indexOf('mt-icon')<output.indexOf('>In<'));
  assert.ok(output.indexOf('>In<')<output.indexOf('>Out<'));
 });
+
+
+test('fixture-only imported goals preserve their original home-away scoreboard regardless of imported minute order',()=>{
+ const fixture={status:'finished',home_team:'Justinense',away_team:'Amatori Armistizio',home_team_id:null,away_team_id:null,home_opponent_id:'J',away_opponent_id:'A',home_score:1,away_score:2};
+ const events=[
+  {minute:10,event_type:'goal',team_side:'away',payload:{legacy_fixture_score:{home:1,away:1}}},
+  {minute:40,event_type:'goal',team_side:'away',payload:{legacy_fixture_score:{home:1,away:2}}},
+  {minute:56,event_type:'goal',team_side:'home',payload:{legacy_fixture_score:{home:1,away:0}}}
+ ];
+ const html=render(events,fixture,()=>'',{id:'unrelated'}, {minutes_per_period:45});
+ for(const score of ['1 - 0','1 - 1','1 - 2'])assert.match(html,new RegExp('mt-score[^>]*>'+score+'<'));
+ assert.ok(html.indexOf('>1 - 0</span>')<html.indexOf('>1 - 2</span>'));
+});
