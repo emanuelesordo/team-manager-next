@@ -16,6 +16,38 @@ const defaults={home:{style:'stripes',primary:'#18252b',secondary:'#ffdf22',slee
  goalkeeper:{style:'solid',primary:'#4cae6a',secondary:'#1c4539',sleeves:'#4cae6a',number:'#ffffff'}};
 const labels={home:'Prima maglia',away:'Trasferta',goalkeeper:'Portiere'};
 const palette=['#ffffff','#eeeeee','#111111','#192d4d','#283a79','#2564c8','#83b3db','#a21524','#ec1425','#c01a27','#72243a','#ffd323','#ff961c','#53a86a','#111f1b','#8d8d8d'];
+
+/* Colorazioni di riferimento dei 20 bozzetti e delle quattro fotografie. */
+export const kitModelPresets=Object.freeze({
+ 'solid':['#213f75','#213f75','#213f75','#ffffff'],
+ 'center-panel':['#ae151d','#ffffff','#ffffff','#ffffff'],
+ 'shoulder-band':['#f4f5f5','#142032','#f4f5f5','#f5ca27'],
+ 'sky-raglan':['#8db8df','#25314d','#25314d','#ffffff'],
+ 'red-shoulders':['#bd1f24','#a51219','#bd1f24','#ffffff'],
+ 'pinstripes':['#ffffff','#db1221','#db1221','#ba161d'],
+ 'claret-sleeves':['#75283a','#83b6d8','#83b6d8','#ffffff'],
+ 'red-classic':['#b81925','#8d1523','#b81925','#ffffff'],
+ 'cross-stripes':['#ffffff','#d8202c','#ffffff','#ffffff'],
+ 'contrast-collar':['#292b66','#ffffff','#292b66','#ffffff'],
+ 'trimmed':['#2d58a4','#ecca35','#2d58a4','#ffffff'],
+ 'white-classic':['#ffffff','#e7e7e7','#ffffff','#17252c'],
+ 'yellow-classic':['#f7eb25','#111111','#f7eb25','#111111'],
+ 'bold-stripes':['#ffffff','#18244e','#ffffff','#18244e'],
+ 'side-panels':['#272a66','#b3222b','#b3222b','#ffffff'],
+ 'black-red':['#161619','#c51e2c','#c51e2c','#ffffff'],
+ 'red-white':['#ffffff','#bb2029','#bb2029','#f8cd1e'],
+ 'claret-trim':['#762a3a','#8bb5d5','#762a3a','#ffffff'],
+ 'low-sash':['#b31f2c','#ffffff','#b31f2c','#ffffff'],
+ 'dark-sash':['#ffa52b','#24231f','#ffa52b','#24231f'],
+ 'white-red-sash':['#ffffff','#e6212d','#ffffff','#e6212d'],
+ 'heather-raglan':['#ed1421','#ff9ea1','#ee5c65','#ffffff'],
+ 'royal-stripes':['#101c46','#1b4baf','#101c46','#ffffff'],
+ 'yellow-dots':['#131314','#f2d51c','#131314','#ffffff']
+});
+export function modelKit(id,base={}){
+ const colors=kitModelPresets[id],current=normalizeKit(base);
+ return colors?{...current,style:id,primary:colors[0],secondary:colors[1],sleeves:colors[2],number:colors[3]}:{...current,style:id};
+}
 export const isKitColor=x=>typeof x==='string'&&/^#[0-9a-f]{6}$/i.test(x);
 const safeKey=x=>/^[a-z0-9_-]{1,60}$/.test(x);
 export function normalizeKit(value={},fallback='home'){
@@ -137,7 +169,7 @@ export function openKitConfigurator(club,onSave){
   const holder=node.querySelector('[data-kit-models]');
   holder.innerHTML=kitModels.map((model,i)=>
    '<button type="button" class="kit-model" data-kit-style="'+model.id+'" aria-label="'+esc(model.label)+'" aria-pressed="'+(draft[selected].style===model.id)+'">'+
-    shirtSvg({...draft[selected],style:model.id},'model-'+i,false)+'<span>'+esc(model.label)+'</span></button>').join('');
+    shirtSvg(modelKit(model.id,draft[selected]),'model-'+i,false)+'<span>'+esc(model.label)+'</span></button>').join('');
  };
  const refreshColors=()=>{
   const fields=[['primary','Base'],['secondary','Disegno'],['sleeves','Maniche'],['number','Numero']];
@@ -165,7 +197,7 @@ export function openKitConfigurator(club,onSave){
   if(event.target.closest('[data-kit-add]')){const key=newKitKey(draft);draft[key]={...normalizeKit(draft[selected]),name:'Nuova maglia '+(Object.keys(draft).length+1)};selected=key;paint();node.querySelector('[data-kit-name]').focus();return;}
   if(event.target.closest('[data-kit-remove]')){if(Object.keys(draft).length>1){delete draft[selected];selected=Object.keys(draft)[0];paint();}return;}
   const patternButton=event.target.closest('[data-kit-style]');
-  if(patternButton){draft[selected].style=patternButton.dataset.kitStyle;updatePreview();return;}
+  if(patternButton){draft[selected]=modelKit(patternButton.dataset.kitStyle,draft[selected]);updatePreview();refreshColors();return;}
   const choose=event.target.closest('[data-kit-palette]');
   if(choose){paletteField=paletteField===choose.dataset.kitPalette?'':choose.dataset.kitPalette;refreshColors();return;}
   const swatch=event.target.closest('[data-kit-swatch]');
