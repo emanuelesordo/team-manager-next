@@ -397,7 +397,7 @@ export function matchLineup(ctx,m){
   const initial=String(x.person.first_name||'').trim().slice(0,1);
   const compactName=(initial?initial+'. ':'')+surname;
   return '<div class="lineup-row" data-lineup-player="'+esc(x.player_id)+'" data-sort-role="'+esc(role)+'" data-sort-number="'+esc(shirt===''?'':shirt)+'" data-sort-name="'+esc(surname)+'" data-sort-rating="'+esc(avg??'')+'">'+
-   '<span class="lineup-role"><span class="lineup-bench" data-lineup-bench title="Panchina" aria-label="Panchina" '+(status==='starter'?'hidden':'')+'>🪑</span>'+esc(role)+'</span>'+
+   '<span class="lineup-bench-col"><span class="lineup-bench" data-lineup-bench title="Panchina" aria-label="Panchina" '+(status==='starter'?'hidden':'')+'><svg class="lineup-bench-svg" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M9 11a3 3 0 0 1 3-3h2a3 3 0 0 1 3 3v2h30v-2a3 3 0 0 1 3-3h2a3 3 0 0 1 3 3v27l3.5 5a2 2 0 0 1-1.7 3H7.2a2 2 0 0 1-1.7-3L9 38V11Zm8 8v19h6V19h-6Zm12 0v19h6V19h-6Zm12 0v19h6V19h-6ZM5 48h54a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-5l-1 7h-5l-1-7H17l-1 7h-5l-1-7H5a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2Z"/></svg></span></span>'+'<span class="lineup-role">'+esc(role)+'</span>'+
    '<button type="button" class="lineup-list-number" data-lineup-number aria-label="Modifica numero '+esc(compactName)+'">'+esc(shirt||'—')+'</button>'+
    '<button type="button" class="lineup-name" draggable="'+allowed+'" aria-label="Posiziona '+esc(playerText(x.person))+'" '+(allowed?'':'disabled')+'><strong>'+esc(compactName)+'</strong></button>'+
    '<span class="lineup-rating" title="Rating medio">'+esc(rating)+'</span>'+
@@ -415,7 +415,7 @@ export function matchLineup(ctx,m){
  '<label class="lineup-formation-select"><select name="formation" aria-label="Modulo" '+(allowed?'':'disabled')+'>'+
  [...new Set([...formationModules,...(m.formation&&!formationModules.includes(m.formation)?[m.formation]:[])])].map(f=>option(f,f,m.formation||'4-4-2')).join('')+
  '</select></label>'+pitchMarkup()+'</div>'+
- '<div class="lineup-player-column"><div class="lineup-sort-head">'+[['role','Ruolo'],['number','N°'],['name','Cognome'],['rating','Rating']].map(([key,label])=>'<button type="button" data-lineup-sort="'+key+'" aria-label="Ordina per '+label+'">'+label+'</button>').join('')+'</div><div class="lineup-rows">'+fields+'</div></div></div>'+
+ '<div class="lineup-player-column"><div class="lineup-sort-head"><span class="lineup-sort-spacer" aria-hidden="true"></span>'+[['role','Ruolo'],['number','N°'],['name','Cognome'],['rating','Rating']].map(([key,label])=>'<button type="button" data-lineup-sort="'+key+'" aria-label="Ordina per '+label+'">'+label+'</button>').join('')+'</div><div class="lineup-rows">'+fields+'</div></div></div>'+
  '<span class="lineup-save-status" data-lineup-save-status role="status" aria-live="polite"></span>'+
  '</form></section>';
 }
