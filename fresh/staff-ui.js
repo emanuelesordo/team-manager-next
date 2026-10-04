@@ -340,7 +340,7 @@ function matchLineup(ctx,m){
   if((ctx.state.data?.suspensions||[]).some(s=>s.player_id===row.player_id&&s.status==='active'&&Number(s.matches_served)<Number(s.matches_count)))
    alerts.push('Squalifica attiva');
   const columns=[
-   '<div class="lineup-name" draggable="true" role="button" tabindex="0" aria-label="Seleziona per il campo"><strong>'+esc(playerText(row.person))+'</strong><small>'+esc(row.person.generic_role_manual||'—')+'</small>'+alerts.map(a=>'<em class="lineup-alert">'+esc(a)+'</em>').join('')+'</div>'+(allowed&&activeInjury?'<button type="button" class="staff-soft" data-staff-action="recover-player" data-injury-id="'+esc(activeInjury.id)+'">Segna rientrato</button>':''),
+   '<div class="lineup-name" draggable="true" role="button" tabindex="0" aria-label="Seleziona per il campo"><strong>'+esc(playerText(row.person))+'</strong><small>'+esc(row.person.generic_role_manual||'—')+'</small>'+alerts.map(a=>'<em class="lineup-alert">'+esc(a)+'</em>').join('')+(allowed&&activeInjury?'<button type="button" class="staff-soft" data-staff-action="recover-player" data-injury-id="'+esc(activeInjury.id)+'">Segna rientrato</button>':'')+'</div>',
    '<select name="status" aria-label="Disponibilità '+esc(playerText(row.person))+'" '+(allowed?'':'disabled')+'>'+types.map(v=>option(v[0],v[1],status)).join('')+'</select>',
    '<input type="number" name="shirt" aria-label="Maglia" placeholder="N°" min="1" max="99" value="'+esc(old?.shirt_number??row.shirt_number??'')+'" '+(allowed?'':'disabled')+'>',
    '<input type="number" name="slot" aria-label="Posizione" placeholder="1–11" min="1" max="11" value="'+esc(old?.tactical_slot??'')+'" '+(allowed?'':'disabled')+'>',
