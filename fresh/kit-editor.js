@@ -96,7 +96,7 @@ export function shirtSvg(config={},uid='shirt',back=false,shownNumber=null){
  return '<svg class="kit-svg" viewBox="0 0 145 160" role="img" aria-label="Maglia '+(back?'retro':'fronte')+'" xmlns="http://www.w3.org/2000/svg">'+
   '<defs><clipPath id="'+clip+'"><path d="'+shape+'"/></clipPath></defs>'+
   '<path d="'+shape+'" fill="'+k.primary+'" stroke="rgba(20,30,42,.6)" stroke-width="1.25"/>'+
-  '<g clip-path="url(#'+clip+')+'">'+pattern(k)+
+  '<g clip-path="url(#'+clip+')">'+pattern(k)+
   '<path d="M37 52Q31 88 34 136L41 122M108 52Q116 92 109 138" fill="none" stroke="#000" stroke-width="2" opacity=".07"/>'+
   '</g>'+
   '<path d="M57 9Q73 36 89 9L85 17Q73 30 61 17Z" fill="'+k.secondary+'" stroke="#000" stroke-width=".45" opacity=".95"/>'+
