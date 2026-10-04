@@ -14,13 +14,16 @@ test('callups and formation use separate tabs and save functions',()=>{
 });
 test('callups have two moveable lists and five icon reasons',()=>{
  for(const value of ['illness','injury','suspension','personal','technical_choice'])assert.match(staff,new RegExp("'"+value+"'"));
- assert.match(staff,/data-callup-toggle/);
+ assert.doesNotMatch(staff,/data-callup-toggle/);
+ assert.match(pitch,/selection.value==='absent'&&reason.value===button.dataset.callupReason/);
  assert.match(staff,/data-callup-reason/);
  assert.match(staff,/data-callup-list="available"/);
  assert.match(staff,/data-callup-list="absent"/);
  assert.match(pitch,/function paintCallups\(/);
  assert.match(pitch,/appendChild\(row\)/);
  assert.match(css,/\.callup-columns\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(css,/\.callup-list\{min-width:0;min-height:110px;padding:0;border:0/);
+ assert.match(css,/\.callup-reason.selected\{background:/);
  assert.match(main,/paintCallups\(\)/);
 });
 test('formation has kickoff gate and supports retrospective editor',()=>{
