@@ -20,8 +20,6 @@ export function paintCallups(){
  for(const row of rows){
   const out=row.querySelector('[name=selection]').value==='absent';
   row.dataset.out=String(out);
-  row.querySelector('[data-callup-toggle]').textContent=out?'←':'→';
-  row.querySelector('[data-callup-toggle]').setAttribute('aria-label',out?'Rendi disponibile':'Escludi dai convocati');
   const choice=row.querySelector('[name=reason]');
   if(out&&!choice.value)choice.value='technical_choice';
   for(const button of row.querySelectorAll('[data-callup-reason]')){
@@ -69,16 +67,16 @@ function assign(slot,playerId){
 export function installLineupPitch(){
  if(attached)return;attached=true;
  document.addEventListener('click',e=>{
-  const button=e.target.closest('[data-callup-toggle],[data-callup-reason]');
+  const button=e.target.closest('[data-callup-reason]');
   const form=button?.closest('form[data-staff-form="callups"]');
   if(!form||button.disabled)return;
   const row=button.closest('[data-callup-player]');
-  if(button.matches('[data-callup-toggle]')){
-   const out=row.querySelector('[name=selection]').value==='absent';
-   row.querySelector('[name=selection]').value=out?'available':'absent';
+  const selection=row.querySelector('[name=selection]');
+  const reason=row.querySelector('[name=reason]');
+  if(selection.value==='absent'&&reason.value===button.dataset.callupReason){
+   selection.value='available';reason.value='';
   }else{
-   row.querySelector('[name=selection]').value='absent';
-   row.querySelector('[name=reason]').value=button.dataset.callupReason;
+   selection.value='absent';reason.value=button.dataset.callupReason;
   }
   paintCallups();
  });
