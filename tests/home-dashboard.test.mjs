@@ -126,3 +126,10 @@ test('Calendar numbers stay centered BELOW logo and within their weekday cells',
  assert.ok(css.includes('align-self:center;justify-self:center;'));
  assert.ok(css.includes('.month-cell:not(.with-game)>.month-matches{visibility:hidden}'));
 });
+
+test('Match-day date is hidden while opponent crest remains centered',()=>{
+ assert.ok(css.includes('.month-cell.with-game>.month-number{display:none}'));
+ assert.ok(css.includes('.month-cell.with-game{\n grid-template-rows:minmax(0,1fr);\n place-items:center;'));
+ assert.ok(css.includes('.month-cell.with-game>.month-matches{'));
+ assert.ok(css.includes('display:grid;place-items:center;margin:0;padding:0;'));
+});
