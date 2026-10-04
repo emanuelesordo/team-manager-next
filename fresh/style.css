@@ -910,7 +910,7 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
 .match-overview-grid .mt-divider{margin:8px 0 3px}
 .match-overview-grid .ov-pitch .field-slot .ov-player{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;min-width:0;margin-top:2px}
 .match-overview-grid .ov-pitch .field-slot .ov-player-name{font-size:10px;line-height:1.15;text-align:center;max-width:100%;white-space:normal}
-.match-overview-grid .ov-pitch .field-slot .ov-rating{padding:2px 5px;font-size:10px}
+
 .match-overview-grid .ov-pitch .field-slot .ov-personal-events{min-height:0}
 .match-overview-grid .ov-bench .ov-player{border:0;border-bottom:1px solid var(--border);border-radius:0;padding:7px 2px}
 .mt-card-stack .mt-card-red{z-index:2;position:relative}
