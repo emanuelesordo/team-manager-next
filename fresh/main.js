@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?callups=20261004flatnav';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?callups=20261004ordered';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004persist';
@@ -324,7 +324,8 @@ function match(){
  const formation=m?overviewLineup(m,data,state.data?.players||[],state.data?.playerStats||[],comp):
   '<div class="empty">Formazione non disponibile: partita senza tabellino operativo.</div>';
  const staffAccess=isStaff(staffContext());
- const tabs=extraMatch?[['overview','Overview']]:[['overview','Overview'],...(staffAccess?[['live','Live'],['callups','Convocazioni']]:[]),['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[]),['ratings','Voti']];
+ const matchIsLive=m?.status==='live'||f.status==='live';
+ const tabs=extraMatch?[['overview','Overview']]:[['ratings','Voti'],...(staffAccess&&matchIsLive?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[])];
  const requestedTab=state.matchTab==='summary'?'overview':state.matchTab;
  const mappedTab=requestedTab==='staff'?(staffAccess&&!extraMatch?'callups':'overview'):requestedTab;
  const selectedTab=tabs.some(([id])=>id===mappedTab)?mappedTab:'overview';
