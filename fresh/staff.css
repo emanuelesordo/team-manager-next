@@ -499,3 +499,27 @@
  .kit-color-row input{grid-column:1/-1}
  .match-kit-choice{max-width:48%;flex:1 1 142px}
 }
+
+
+/* Campo originale ridisegnato sull'immagine fornita, ruotato con porta del portiere in basso.
+   Lo stesso asset e le stesse linee valgono per Formazione e Overview. */
+.lineup-minimal .visual-field,
+.lineup-minimal .visual-field.ov-pitch,
+.ov-shared-field .visual-field{
+ background:#35842a url('../assets/lineup-field.svg') center / 100% 100% no-repeat !important;
+ border:0 !important;
+ border-radius:0 !important;
+ box-shadow:none !important;
+ isolation:isolate;
+}
+.lineup-minimal .visual-field::before,
+.lineup-minimal .visual-field::after,
+.ov-shared-field .visual-field::before,
+.ov-shared-field .visual-field::after{
+ content:none !important;
+ display:none !important;
+}
+.lineup-minimal .visual-field > .field-midline,
+.lineup-minimal .visual-field > .field-circle,
+.ov-shared-field .visual-field > .field-midline,
+.ov-shared-field .visual-field > .field-circle{display:none !important}
