@@ -327,7 +327,7 @@ function matchLineup(ctx,m){
  const allowed=m.status==='scheduled';
  const fields=rostered.map(row=>{
   const old=current.find(x=>x.player_id===row.player_id);
-  const proposal=availabilityDefault({saved:old,injuries:ctx.state.data?.injuries||[],suspensions:ctx.state.data?.suspensions||[],playerId:row.player_id,fixtureDate:m.kickoff_at,priorSelections:ctx.state.data?.priorSelections||[],matches:ctx.state.data?.matches||[],matchId:m.id,disciplinaryEvents:ctx.state.data?.disciplinaryEvents||[],competitionId:m.competition_id,competitionRules:(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id)?.discipline_rules||{}});
+  const proposal=availabilityDefault({saved:old,injuries:ctx.state.data?.injuries||[],suspensions:ctx.state.data?.suspensions||[],playerId:row.player_id,fixtureDate:m.kickoff_at,priorSelections:ctx.state.data?.priorSelections||[],matches:ctx.state.data?.matches||[],matchId:m.id,disciplinaryEvents:ctx.state.data?.disciplinaryEvents||[],competitionId:m.competition_id,competitionRules:(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id)?.discipline_rules||{},competitionLinks:ctx.state.data?.competitionLinks||[]});
   const status=proposal.status;
   const cap=Boolean(old?.is_captain);
   const code=esc(row.player_id);
