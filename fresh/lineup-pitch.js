@@ -55,7 +55,7 @@ export function paintLineupPitch(){
   const cell=field.querySelector('[data-pitch-slot="'+pos.slot+'"]');
   const row=rows.find(r=>isStarter(r)&&slotOf(r)===pos.slot);
   cell.style.left=pos.x+'%';cell.style.top=pos.y+'%';
-  cell.classList.toggle('occupied',!!row);cell.classList.toggle('target',!!selected);cell.replaceChildren();
+  cell.classList.toggle('occupied',!!row);cell.classList.toggle('target',!!selected);cell.classList.toggle('duplicate-shirt',!!row?.classList.contains('duplicate-shirt'));cell.replaceChildren();
   const number=document.createElement('strong');number.textContent=row?(row.querySelector('[name=shirt]')?.value||'•'):'+'; if(row){number.dataset.pitchJersey=row.dataset.lineupPlayer;number.title='Clicca per cambiare maglia'}
   const caption=document.createElement('span');caption.textContent=row?getName(row):'';
   cell.append(number,caption);if(row&&form.dataset.lineupEnabled==='true'){const remove=document.createElement('span');remove.className='pitch-remove';remove.dataset.pitchRemove=row.dataset.lineupPlayer;remove.textContent='×';remove.title='Rimuovi dal campo';cell.append(remove)}cell.title=(row?getName(row):'Slot '+pos.slot)+' · posizione '+pos.slot;
