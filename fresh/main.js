@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot} from './staff-ui.js?callups=20261004autosave';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup} from './staff-ui.js?callups=20261004autosave';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004persist';
@@ -368,7 +368,7 @@ function match(){
  if(selectedTab==='staff'&&extraMatch)body='<section class="inner-card"><h3>Gestione risultato</h3><p class="staff-help">Modifica il risultato ufficiale cliccando sul punteggio nella testata della partita.</p></section>';
  else if(selectedTab==='staff')body=staffMatchPanel(staffContext(),f,m);
  else if(selectedTab==='events')body='<div class="inner-card"><h3>Cronologia eventi</h3>'+timeline+'</div>';
- else if(selectedTab==='lineup')body='<div class="inner-card">'+formation+'</div>';
+ else if(selectedTab==='lineup')body=isStaff(staffContext())&&m?matchLineup(staffContext(),m):'<div class="inner-card">'+formation+'</div>';
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E});
  else body=extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
   '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>';
