@@ -31,7 +31,7 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
  '<p class="subnote">Calcolato solo per '+coverage.complete+' gare con tutti i gol certificati, minuto noto e punteggio finale riconciliato. Le altre gare sono escluse e non valgono zero per le metriche non disponibili.</p>';
 }
 export function fixtureEventsPanel(events,competition=null,fixture=null){
- const rows=(events||[]).filter(e=>e.event_type).sort((a,b)=>(cumulativeEventMinute(a,competition)??999)-(cumulativeEventMinute(b,competition)??999)||(a.stoppage_minute??0)-(b.stoppage_minute??0));
+ const rows=(events||[]).filter(e=>e.event_type&&e.validation_status!=='rejected').sort((a,b)=>(cumulativeEventMinute(a,competition)??999)-(cumulativeEventMinute(b,competition)??999)||(a.stoppage_minute??0)-(b.stoppage_minute??0));
  if(!rows.length)return '';
  const goals=rows.filter(e=>['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type)&&e.validation_status!=='rejected');
  const homeCount=goals.filter(e=>e.side==='home'&&e.event_type!=='own_goal'||e.side==='away'&&e.event_type==='own_goal').length;
