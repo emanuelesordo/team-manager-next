@@ -107,14 +107,16 @@ body[data-theme=ice] .hero-panel{border-color:#85c6cf85}body[data-theme=ice] .fe
 .ov-event.ov-yellow_card i,.ov-event.ov-red_card i,.ov-event.ov-blue_card i{display:block;width:9px;height:13px;border-radius:2px;background:#edc93c}
 .ov-event.ov-red_card i{background:#dd4e56}.ov-event.ov-blue_card i{background:#488ee9}
 .ov-event.ov-sub_in{color:#2cb779}.ov-event.ov-sub_out{color:#ec6069}.ov-event.ov-assist{font-size:9px}
-.ov-rating,.ov-lineup .ov-player .ov-rating{display:inline-flex;gap:4px;align-items:center;justify-content:center;border-radius:5px;padding:2px 6px;font-size:11px;font-weight:900;white-space:nowrap;border:1px solid transparent;background:rgba(120,135,150,.16)}
+/* Single rating component shared by starters and substitutes: solid pastel, never translucent. */
+.ov-rating,.ov-lineup .ov-player .ov-rating{display:inline-flex;gap:4px;align-items:center;justify-content:center;border-radius:5px;padding:2px 6px;font-size:11px;font-weight:900;white-space:nowrap;border:1px solid #c6d0d2;background:#e6ebed;color:#263e42;text-shadow:none}
 .ov-rating small{font-size:9px;font-weight:700}
-.ov-rating-high{background:rgba(48,183,119,.31);border-color:rgba(48,183,119,.56)}
-.ov-rating-above{background:rgba(74,179,124,.17);border-color:rgba(74,179,124,.30)}
-.ov-rating-even{background:rgba(133,143,162,.18)}
-.ov-rating-below{background:rgba(232,160,67,.2);border-color:rgba(232,160,67,.36)}
-.ov-rating-low{background:rgba(217,79,87,.27);border-color:rgba(217,79,87,.44)}
-.ov-rating-unrated,.ov-no-rating{color:var(--muted)}
+.ov-rating-elite,.ov-lineup .ov-player .ov-rating-elite{background:#d9e5fa;border-color:#9ab9ec;color:#234a83}
+.ov-rating-high,.ov-lineup .ov-player .ov-rating-high{background:#d4eef5;border-color:#8bc8d8;color:#176475}
+.ov-rating-above,.ov-lineup .ov-player .ov-rating-above{background:#dcefe3;border-color:#9dd6b5;color:#235c40}
+.ov-rating-even,.ov-lineup .ov-player .ov-rating-even{background:#e6ebed;border-color:#c6d0d2;color:#374f52}
+.ov-rating-below,.ov-lineup .ov-player .ov-rating-below{background:#f7ead7;border-color:#e8c794;color:#795120}
+.ov-rating-low,.ov-lineup .ov-player .ov-rating-low{background:#f7dfe2;border-color:#e5a9b0;color:#872e3d}
+.ov-rating-unrated,.ov-no-rating,.ov-lineup .ov-player .ov-no-rating{background:#e6ebed;border-color:#c6d0d2;color:#5a7174}
 .ov-bench-heading{margin:20px 0 11px}
 .ov-bench{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:7px}
 .ov-bench .ov-player{display:flex;align-items:center;gap:7px;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px}
