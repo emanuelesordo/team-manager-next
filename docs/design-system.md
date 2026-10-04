@@ -17,3 +17,9 @@ Tema opzionale persistito soltanto lato browser: blu ghiaccio, pannelli avorio/b
 - KPI a swipe e tab bar inferiore con safe-area inset.
 - Bottom sheet per login e selezione stagione; azioni da tastiera complete.
 - Controllo `prefers-reduced-motion`, testi ad alto contrasto, nessun valore sportivo campione.
+
+## Gerarchia delle superfici · regola globale (04/10/2026)
+- Una sola superficie glass per blocco principale: hero, grande pannello, sidebar o sezione autonoma. Non applicare una nuova card a ogni sottogruppo, giocatore, riga, risultato, metrica o elemento del campo.
+- Le sottosezioni di un pannello devono essere **piatte**: fondo trasparente, senza ombra, contorno o raggio; usare spaziatura contenuta e, se necessario, un separatore sottile tra righe.
+- Campo da calcio, maglie, stemmi, controlli, stati di attenzione e finestre modali conservano la loro semantica visiva. Evidenziare focus, selezione e indisponibilità senza costruire nuove card.
+- Questa regola è centralizzata in `fresh/flat-surfaces.css`, caricato **dopo** tutti gli altri fogli nel documento effettivamente servito (`index.html`); si applica sia su desktop sia su mobile e a tutti i temi.
