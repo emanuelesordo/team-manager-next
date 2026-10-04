@@ -303,3 +303,30 @@
 @media(max-width:370px){
  .kit-editor-controls{grid-template-columns:1fr}
 }
+
+
+/* Two-column pre-match callups, independent from the formation editor. */
+.callup-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.callup-list{background:color-mix(in srgb,var(--surface) 75%,transparent);border:1px solid var(--border);border-radius:13px;min-width:0;min-height:170px;padding:12px}
+.callup-list h3{margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.callup-list h3 span{font-size:11px;color:var(--muted)}
+.callup-list>div{display:flex;flex-direction:column;gap:5px;min-height:80px}
+.callup-store{display:none}
+.callup-person{min-width:0;display:flex;gap:8px;align-items:center;padding:8px 7px;min-height:46px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
+.callup-player-name{min-width:0;flex:1;font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.callup-person[data-locked="true"]{opacity:.75}
+.callup-transfer{flex:0 0 30px;height:30px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--accent);font-weight:800;cursor:pointer}
+.callup-transfer:disabled{opacity:.4;cursor:default}
+.callup-reasons{display:none;gap:3px;align-items:center;flex-wrap:wrap}
+.callup-person[data-out="true"] .callup-reasons{display:flex}
+.callup-reason{width:27px;height:29px;display:grid;place-items:center;background:transparent;color:var(--muted);border:1px solid transparent;border-radius:7px;cursor:pointer}
+.callup-reason.selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+.callup-symbol{font-size:19px;line-height:1}
+.callup-red{color:#f46666;font-size:23px}
+.callup-cross{font-size:22px}
+@media(max-width:900px){
+ .callup-columns{grid-template-columns:minmax(0,1fr);gap:10px}
+ .callup-list{min-height:100px}
+ .callup-person{flex-wrap:wrap}
+ .callup-reasons{order:3;flex:1 0 100%;justify-content:flex-start}
+}
