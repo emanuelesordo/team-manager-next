@@ -891,3 +891,13 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
 .roster-player-link:hover{text-decoration:underline}
 .roster-table tr[hidden]{display:none}
 @media(max-width:760px){.roster-tools{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}.roster-filters .roster-tools .roster-view-toggle{grid-column:1/-1;width:max-content}.roster-tools .local-search{min-width:0;width:100%}.roster-add{padding:10px 12px}.roster-table td{padding:9px 7px}}
+
+/* Tabella Rosa: avatar, numero, ruolo e indicatore stato nello stile Next */
+.roster-table .roster-player-identity{display:inline-flex;align-items:center;gap:10px;min-width:180px}
+.roster-table .roster-avatar{display:inline-grid;flex:0 0 34px;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--surface);border:1px solid var(--border);overflow:hidden;font-size:11px;font-weight:800}
+.roster-table .roster-avatar img{width:100%;height:100%;object-fit:cover}
+.roster-table .roster-status-dot{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid var(--border)}
+.roster-table .roster-status-dot.active{background:#3bbb80}
+.roster-table .roster-status-dot.inactive{background:#98a1a8}
+.roster-table th[aria-sort="ascending"] button,.roster-table th[aria-sort="descending"] button{color:var(--ink)}
+@media(max-width:760px){.roster-table{min-width:680px}.roster-table .roster-player-identity{min-width:140px;gap:7px}.roster-table .roster-avatar{flex-basis:29px;width:29px;height:29px}}
