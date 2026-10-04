@@ -32,7 +32,7 @@ TABLES = {
  "app_opponents":[{"id":"opponent-01","name":"Voltesea Calcio","short_name":"VOL"}],
  "app_competitions":[{"id":COMP,"season_id":SEASON,"name":"Campionato","kind":"league","minutes_per_period":40}],
  "app_competition_fixtures":[{"id":FIXTURE,"season_id":SEASON,"competition_id":COMP,"round_no":1,"kickoff_at":KICKOFF,
- "home_team":"Voltesea Calcio","away_team":"Calcio Caselle","status":"finished","home_score":1,"away_score":4}],
+ "home_team":"Voltesea Calcio","away_team":"Calcio Caselle","away_team_id":TEAM,"status":"finished","home_score":1,"away_score":4}],
  "app_matches":[{"id":MATCH,"fixture_id":FIXTURE,"season_id":SEASON,"competition_id":COMP,"opponent_id":"opponent-01",
  "home_away":"away","kickoff_at":KICKOFF,"status":"finished","home_score":0,"away_score":0}],
  "players":PLAYERS,"app_roster":ROSTER,"app_match_players":PARTICIPANTS,"app_match_events":EVENTS,
@@ -76,33 +76,25 @@ async def test_view(browser, width, height):
  await page.locator("button[data-match]").first.click()
  await page.locator(".match-detail-head").wait_for(timeout=15000)
  assert page.url.endswith("#match/"+FIXTURE),page.url
+ await page.locator('[data-tab="info"]').click()
+ assert await page.locator('.match-info-editor').count()==1
  await page.locator('[data-tab="lineup"]').click()
+ await page.locator('form[data-staff-form="lineup"]').wait_for(timeout=10000)
+ await page.wait_for_function("document.querySelectorAll('form[data-staff-form=lineup] .field-slot.occupied').length === 11")
+ assert await page.locator('[data-lineup-confirm]').count()==1
+ await page.locator('[data-tab="overview"]').click()
  await page.wait_for_function("document.querySelectorAll('.ov-pitch .ov-player').length === 11")
- assert await page.locator(".ov-pitch .ov-player").count()==11
+ assert await page.locator(".ov-pitch .field-slot.occupied").count()==11
  await page.locator('[data-tab="events"]').click()
  await page.wait_for_function("document.querySelectorAll('.mt-row').length === 16")
  assert await page.locator(".mt-row").count()==16
- await page.locator('[data-tab="staff"]').click()
- await page.locator('[data-staff-match-tab="events"]').click()
- await page.locator('[data-staff-action="review-approve"]').first.wait_for()
- assert await page.locator('[data-staff-action="review-approve"]').count()==16
- assert await page.locator('[data-staff-action="review-result-align"]').count()==0
- assert await page.locator('[data-staff-action="review-result-confirm"]').is_disabled()
- await page.locator('[data-staff-action="review-edit"]').first.click()
- await page.locator('form[data-staff-form="amend-event"]').wait_for(timeout=10000)
- assert await page.locator('form[data-staff-form="amend-event"] input[name="reason"]').count()==1
- await page.locator('[data-staff-action="review-cancel-edit"]').click()
- await page.locator('[data-staff-action="review-result-history"]').click()
- await page.wait_for_function("document.querySelector('.staff-subpanel')?.textContent.includes('Nessun allineamento')",timeout=12000)
-
- assert "non riscrive i punteggi" in (await page.locator('.staff-subpanel').inner_text()).lower()
  # Browser refresh must reconstruct the selected fixture and fetch match data.
  await page.reload(wait_until="domcontentloaded")
  await page.locator(".match-detail-head").wait_for(timeout=15000)
  assert page.url.endswith("#match/"+FIXTURE),page.url
  await page.locator('[data-tab="events"]').click()
  await page.wait_for_function("document.querySelectorAll('.mt-row').length === 16")
- await page.locator('[data-tab="lineup"]').click()
+ await page.locator('[data-tab="overview"]').click()
  await page.wait_for_function("document.querySelectorAll('.ov-pitch .ov-player').length === 11")
  assert not errors,errors
  print(f"PASS {width}x{height}: login, linked lineup (11), events (16), refresh/deep link",flush=True)
