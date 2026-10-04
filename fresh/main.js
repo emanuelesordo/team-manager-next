@@ -8,7 +8,7 @@ import {votesPanel,saveVote} from './votes.js';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock} from './staff-ui.js?availability=20261004';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
-import {installLineupPitch,paintLineupPitch} from './lineup-pitch.js';
+import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js';
 import {projectionContainer,updateProjection} from './projection-ui.js?clubs=20261003id';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?clubs=20261003id';
@@ -443,7 +443,7 @@ function render(){
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading)paintMatchHeaderCompact();
  if(state.page==='home'&&!state.loading)void hydrateHomeRatings();
- manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
+ manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();paintCallups();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
