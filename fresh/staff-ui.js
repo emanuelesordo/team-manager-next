@@ -341,7 +341,7 @@ function matchCallups(ctx,m){
   const locked=m.status!=='scheduled'&&Boolean(saved?.started||Number(saved?.minutes_played)>0);
   const buttons=callupReasons.map(([key,label,icon])=>
    '<button type="button" class="callup-reason '+(reason===key?'selected':'')+'" data-callup-reason="'+key+'" title="'+label+'" aria-label="'+label+'" aria-pressed="'+(reason===key)+'" '+(locked?'disabled':'')+'>'+
-    '<span class="callup-symbol callup-'+icon+'" aria-hidden="true">'+({thermometer:'♨',cross:'✚',red:'▮',person:'●',minus:'×'}[icon])+'</span></button>').join('');
+    '<span class="callup-symbol callup-'+icon+'" aria-hidden="true">'+({thermometer:'🤒',cross:'✚',red:'🟥',person:'👤',minus:'🚫'}[icon])+'</span></button>').join('');
   return '<div class="callup-person" data-callup-player="'+esc(row.player_id)+'" data-out="'+out+'" data-locked="'+locked+'">'+
    '<span class="callup-player-name">'+esc(playerText(row.person))+'</span>'+
    '<input type="hidden" name="selection" value="'+(out?'absent':'available')+'">'+
