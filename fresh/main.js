@@ -116,7 +116,7 @@ function scorecard(f,compact=false){if(!f)return '<div class="empty">Nessun inco
 }
 function fixtureRow(f,short=false){return `<button class="fixture-row" data-match="${E(f.id)}"><span class="fixture-date"><b>${date(f.kickoff_at).split(' ')[0]}</b><small>${date(f.kickoff_at).split(' ').slice(1).join(' ')}</small></span><div class="fixture-main"><div class="fixture-clubs">${club(f.home_team,'tiny',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong><span class="fixture-separator">—</span><strong>${E(f.away_team)}</strong>${club(f.away_team,'tiny',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}</div>${short?'':`<small>${E(competition(f.competition_id)?.name||'Partita')} ${f.round_no!=null?' · G'+E(f.round_no):''} · ${E(fixtureVenueDetails(f,fixtureHomeClub(f)).name||'Campo da definire')}</small>`}</div><span class="fixture-result ${hasScore(f)?'played':''}">${hasScore(f)?E(f.home_score)+'–'+E(f.away_score):time(f.kickoff_at)}</span>${ico('chevron',15)}</button>`}
 function standings(comp,limit=0){
- const all=rankRows((state.data?.standings||[]).filter(x=>x.competition_id===comp?.id));const rows=limit?all.slice(0,limit):all;
+ const all=rankRows((state.data?.standings||[]).filter(x=>x.competition_id===comp?.id),comp,fixtures());const rows=limit?all.slice(0,limit):all;
  if(!rows.length)return '<div class="empty">Classifica non disponibile per questa competizione.</div>';
  return `<div class="table-scroller"><table class="standing-table"><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>DR</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.team_id===team()?.id?'ours':''}"><td>${i+1}</td><td><span class="standing-team">${club(r.team,'tiny',{team_id:r.team_id,opponent_id:r.opponent_id})}<span>${E(r.team)}</span></span></td><td>${r.played??'—'}</td><td>${r.won??'—'}</td><td>${r.drawn??'—'}</td><td>${r.lost??'—'}</td><td>${r.goals_for??'—'}</td><td>${r.goals_against??'—'}</td><td>${r.goal_difference??'—'}</td><td class="points">${r.points??'—'}</td></tr>`).join('')}</tbody></table></div>`
 }
@@ -132,7 +132,7 @@ function monthOnHome(){return Number.isInteger(state.homeMonth)?state.homeMonth:
 function monthMarkup(){return renderMonthCalendar(ownFixtures(),team().id,monthOnHome(),club,'<button class="home-plain-link month-nav-detail" data-page="calendar">Dettagli '+ico('arrow',14)+'</button>')}
 function homeCompetition(){return competition(next()?.competition_id||previous()?.competition_id)||currentComp()}
 function homeRankings(c){
- const ranked=rankRows((state.data?.standings||[]).filter(x=>x.competition_id===c?.id));
+ const ranked=rankRows((state.data?.standings||[]).filter(x=>x.competition_id===c?.id),c,fixtures());
  if(!ranked.length)return '<p class="empty">Nessuna classifica disponibile.</p>';
  const ourPlace=ranked.findIndex(x=>x.team_id===team()?.id);
  const start=ranked.length<=7?0:Math.max(0,Math.min(ranked.length-7,ourPlace<0?0:ourPlace-3));
@@ -446,7 +446,7 @@ function render(){
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading)paintMatchHeaderCompact();
  if(state.page==='home'&&!state.loading)void hydrateHomeRatings();
- manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[]);paintLineupPitch();paintCallups();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
+ manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[],(row)=>{const match=(state.data?.standings||[]).find(x=>('team:'+x.team_id===row.club_id&&x.team_id)||('opponent:'+x.opponent_id===row.club_id&&x.opponent_id));return match?club(row.team,'tiny',{team_id:match.team_id,opponent_id:match.opponent_id}):''});paintLineupPitch();paintCallups();if(state.page==='match'&&isStaff(staffContext()))startStaffClock(staffContext());
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
