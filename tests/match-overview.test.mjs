@@ -22,7 +22,7 @@ test('overview includes starters and bench, individual events, not invented oppo
  assert.match(html,/L\. Verdi/);
  assert.match(html,/ov-pitch/);
  assert.match(html,/ov-bench/);
- assert.match(html,/ov-goal/);
+ assert.match(html,/ov-badge-goal/);
  assert.match(html,/ov-assist/);
  assert.match(html,/ov-rating-above/);
  assert.match(html,/ov-rating-below/);
@@ -45,4 +45,26 @@ test('relative rating uses only the current match votes, without season comparis
 test('rejected personal events are hidden',()=>{
  const hidden=[...game.events,{event_type:'yellow_card',player_id:'a',minute:29,validation_status:'rejected'}];
  assert.equal(playerMatchEvents('a',hidden,competition).length,1);
+});
+
+test('multiple goals and assists aggregate into right-side counters without duplicate field number',()=>{
+ const many={...game,events:[
+  {event_type:'goal',player_id:'a',minute:12,validation_status:'official'},
+  {event_type:'goal',player_id:'a',minute:31,validation_status:'official'},
+  {event_type:'assist',player_id:'a',minute:15,validation_status:'official'},
+  {event_type:'assist',player_id:'a',minute:28,validation_status:'official'},
+  {event_type:'yellow_card',player_id:'a',minute:37,validation_status:'official'},
+  {event_type:'substitution',player_id:'a',secondary_player_id:'b',minute:69,validation_status:'official'}
+ ]};
+ const html=overviewLineup({formation:'4-4-2'},many,people,season,competition,{primary:'#ffffff',secondary:'#111111'});
+ const field=html.slice(html.indexOf('class="visual-field'),html.indexOf('</div></div></div></div>')+24);
+ assert.match(html,/ov-marker-side-left/);
+ assert.match(html,/ov-marker-side-right/);
+ assert.match(html,/ov-badge-goal[^"]*"[^>]*>[\\s\\S]*?ov-marker-count">2<\\/small>/);
+ assert.match(html,/ov-badge-assist[^"]*"[^>]*>[\\s\\S]*?ov-marker-count">2<\\/small>/);
+ assert.match(html,/ov-badge-yellow_card/);
+ assert.match(html,/ov-badge-substitution/);
+ assert.match(html,/ov-marker-art/);
+ assert.match(html,/Voto medio partita: 7.20/);
+ assert.doesNotMatch(field,/class="ov-shirt"/);
 });
