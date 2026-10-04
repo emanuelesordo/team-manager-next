@@ -35,7 +35,7 @@ TABLES = {
  "home_team":"Voltesea Calcio","away_team":"Calcio Caselle","away_team_id":TEAM,"status":"finished","home_score":1,"away_score":4}],
  "app_matches":[{"id":MATCH,"fixture_id":FIXTURE,"season_id":SEASON,"competition_id":COMP,"opponent_id":"opponent-01",
  "home_away":"away","kickoff_at":KICKOFF,"status":"finished","home_score":0,"away_score":0}],
- "players":PLAYERS,"app_roster":ROSTER,"app_match_players":PARTICIPANTS,"app_match_events":EVENTS,
+ "players":PLAYERS,"app_roster":ROSTER,"app_roster_periods":[{"id":uid(700+n),"season_id":SEASON,"player_id":uid(n),"start_date":"2026-07-01","end_date":"2027-06-30"} for n in range(1,22)],"app_match_players":PARTICIPANTS,"app_match_events":EVENTS,
  "app_user_roles":[{"user_id":USER,"role":"admin","player_id":None}],
  "profiles":[{"id":USER,"username":"demo","display_name":"Demo Admin","is_active":True,"must_change_password":False}],
 }
