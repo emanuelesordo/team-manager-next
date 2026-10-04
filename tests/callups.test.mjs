@@ -39,3 +39,11 @@ test('icon selections persist immediately and verify database records',()=>{
  assert.match(staff,/await get\('app_match_players'/);
  assert.match(staff,/Il database non conferma la convocazione/);
 });
+
+test('manual save verifies all selected rows on Supabase before success',()=>{
+ assert.match(staff,/if\(!rows\.length\)throw Error/);
+ assert.match(staff,/Number\(result\)!==rows\.length/);
+ assert.match(staff,/const byId=new Map\(saved\.map/);
+ assert.match(staff,/if\(differences\.length\)throw Error/);
+ assert.match(staff,/Convocazioni salvate e verificate/);
+});
