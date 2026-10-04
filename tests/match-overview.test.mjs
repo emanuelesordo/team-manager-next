@@ -24,8 +24,8 @@ test('overview includes starters and bench, individual events, not invented oppo
  assert.match(html,/ov-bench/);
  assert.match(html,/ov-goal/);
  assert.match(html,/ov-assist/);
- assert.match(html,/ov-rating-high/);
- assert.match(html,/ov-rating-low/);
+ assert.match(html,/ov-rating-above/);
+ assert.match(html,/ov-rating-below/);
 });
 test('historical events display cumulative minute and assistant attribution',()=>{
  const a=playerMatchEvents('a',game.events,competition);
@@ -36,11 +36,11 @@ test('historical events display cumulative minute and assistant attribution',()=
  assert.equal(b[0].kind,'assist');
  assert.equal(b[0].minute,68);
 });
-test('relative rating compares game vote with individual seasonal average',()=>{
- assert.equal(relativeRating('a',game,season).level,'high');
- assert.equal(relativeRating('b',game,season).level,'low');
+test('relative rating uses only the current match votes, without season comparisons',()=>{
+ assert.equal(relativeRating('a',game,season).level,'above');
+ assert.equal(relativeRating('b',game,season).level,'below');
  assert.equal(relativeRating('unknown',game,season),null);
- assert.equal(relativeRating('a',game,[]).level,'unrated');
+ assert.equal(relativeRating('a',game,[]).level,'above');
 });
 test('rejected personal events are hidden',()=>{
  const hidden=[...game.events,{event_type:'yellow_card',player_id:'a',minute:29,validation_status:'rejected'}];
