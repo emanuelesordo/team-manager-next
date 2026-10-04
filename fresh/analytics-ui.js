@@ -30,14 +30,21 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
  [['In vantaggio','ahead'],['In parità','equal'],['In svantaggio','behind']].map(([label,k])=>'<tr><td>'+label+'</td><td>'+g[k]+'</td><td>'+a[k]+'</td></tr>').join('')+'</tbody></table></div>'+
  '<p class="subnote">Calcolato solo per '+coverage.complete+' gare con tutti i gol certificati, minuto noto e punteggio finale riconciliato. Le altre gare sono escluse e non valgono zero per le metriche non disponibili.</p>';
 }
-export function fixtureEventsPanel(events,competition=null){
+export function fixtureEventsPanel(events,competition=null,fixture=null){
  const rows=(events||[]).filter(e=>e.event_type).sort((a,b)=>(cumulativeEventMinute(a,competition)??999)-(cumulativeEventMinute(b,competition)??999)||(a.stoppage_minute??0)-(b.stoppage_minute??0));
  if(!rows.length)return '';
+ const goals=rows.filter(e=>['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type)&&e.validation_status!=='rejected');
+ const homeCount=goals.filter(e=>e.side==='home'&&e.event_type!=='own_goal'||e.side==='away'&&e.event_type==='own_goal').length;
+ const awayCount=goals.filter(e=>e.side==='away'&&e.event_type!=='own_goal'||e.side==='home'&&e.event_type==='own_goal').length;
+ const reconciled=fixture&&Number(fixture.home_score)===homeCount&&Number(fixture.away_score)===awayCount;
+ let home=0,away=0;
  const badges=rows.map(e=>{
   const time=displayEventMinute(e,competition);
   const which=e.side==='home'?'Casa':e.side==='away'?'Ospiti':e.side||'';
-  const snapshot=Number.isInteger(e.home_score)&&Number.isInteger(e.away_score)?' · '+e.home_score+'–'+e.away_score:'';
+  const goal=['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type);
+  if(goal){const scorer=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(scorer==='home')home++;if(scorer==='away')away++;}
+  const snapshot=goal&&reconciled?' · '+home+'–'+away:'';
   return '<div class="fixture-event-row"><b>'+E(time)+'</b><span>'+E(e.event_type)+' · '+E(which)+E(snapshot)+'</span><small>'+E(e.source||'')+'</small></div>'
  }).join('');
- return '<section class="inner-card fixture-events-panel"><h3>Eventi della fixture</h3><p class="staff-help">Fonte del calendario, separata dal tabellino operativo: gli eventi non vengono sommati per evitare duplicazioni.</p>'+badges+'</section>';
+ return '<section class="inner-card fixture-events-panel"><h3>Eventi della fixture</h3><p class="staff-help">Eventi della partita in ordine cronologico. I parziali vengono mostrati solo quando tutti i gol riconciliano il risultato ufficiale.</p>'+badges+'</section>';
 }
