@@ -364,7 +364,7 @@ function matchCallups(ctx,m){
   const buttons=callupReasons.map(([key,label,icon])=>
    '<button type="button" class="callup-reason '+(reason===key?'selected':'')+'" data-callup-reason="'+key+'" title="'+label+'" aria-label="'+label+'" aria-pressed="'+(reason===key)+'" '+(locked?'disabled':'')+'>'+
     '<span class="callup-symbol callup-'+icon+'" aria-hidden="true">'+({thermometer:'🤒',cross:'✚',red:'🟥',person:'👤',minus:'🚫'}[icon])+'</span></button>').join('');
-  return '<div class="callup-person" data-callup-player="'+esc(row.player_id)+'" data-out="'+out+'" data-locked="'+locked+'">'+
+  return '<div class="callup-person" data-callup-player="'+esc(row.player_id)+'" data-out="'+out+'" data-locked="'+locked+'" data-persisted-status="'+(out?'absent':'available')+'" data-persisted-reason="'+esc(reason)+'">'+
    '<span class="callup-player-name">'+esc(playerText(row.person))+'</span>'+
    '<input type="hidden" name="selection" value="'+(out?'absent':'available')+'">'+
    '<input type="hidden" name="reason" value="'+esc(reason)+'">'+
@@ -372,11 +372,11 @@ function matchCallups(ctx,m){
    '</div>';
  }).join('');
  return '<section class="staff-subpanel">'+title('PREPARTITA','Convocazioni')+
- help('Tocca un’icona per rendere il giocatore indisponibile e assegnare il motivo. Tocca di nuovo l’icona selezionata per reintegrarlo. Le convocazioni si possono integrare anche a posteriori.')+
+ help('Ogni scelta viene salvata automaticamente. Tocca un’icona per assegnare o modificare la motivazione; tocca quella selezionata per reintegrare il giocatore.')+
  '<form data-staff-form="callups" data-callup-match="'+esc(m.id)+'"><div class="callup-columns">'+
  '<section class="callup-list"><h3>Disponibili <span data-callup-count="available"></span></h3><div data-callup-list="available"></div></section>'+
  '<section class="callup-list"><h3>Indisponibili <span data-callup-count="absent"></span></h3><div data-callup-list="absent"></div></section>'+
- '</div><div class="callup-store" data-callup-store>'+rows+'</div>'+submit('Salva convocazioni')+'</form></section>';
+ '</div><div class="callup-store" data-callup-store>'+rows+'</div><p class="staff-help" role="status">Salvataggio automatico a ogni modifica.</p></form></section>';
 }
 function matchLineup(ctx,m){
  const players=ctx.state.data?.players||[],roster=(ctx.state.data?.roster||[]),
