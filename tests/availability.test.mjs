@@ -8,6 +8,7 @@ test('four reasons and default technical absence',()=>{
  assert.equal(normalizedReason('absent',''),'technical_choice');
  assert.equal(normalizedReason('starter','injury'),null);
  assert.equal(normalizedReason('absent','personal'),'personal');
+ assert.equal(normalizedReason('absent','illness'),'illness');
 });
 test('saved choice always takes precedence over suggestions',()=>{
  assert.equal(availabilityDefault({...base,saved:{selection_status:'bench'},injuries:[{player_id:'p1',status:'active'}]}).status,'bench');
