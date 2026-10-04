@@ -90,6 +90,9 @@ export function adminPage(ctx){
   const generalSeason=findGeneralSeason(data.generalSeasons,appSeason,t.id);
   const generalCandidates=(data.generalCompetitions||[]).filter(x=>x.season_id===generalSeason?.id);
   const chosenBridge=(data.competitionLinks||[]).find(x=>x.app_competition_id===c?.id);
+  const tieOrder=(Array.isArray(settings.standings_tiebreakers)&&settings.standings_tiebreakers.length===4?settings.standings_tiebreakers:['gd','h2h','gf','gs']);
+  const tieLabels={gd:'Differenza reti',h2h:'Scontri diretti · classifica avulsa',gf:'Gol fatti',gs:'Gol subiti'};
+  const tieMarkup='<div class="staff-tiebreak"><strong>Parità punti · ordine criteri</strong><small>Trascina per modificare la priorità (oppure usa le frecce).</small><input type="hidden" name="standings_tiebreakers" value="'+esc(tieOrder.join(','))+'"><div data-tiebreak-list>'+tieOrder.map((key,i)=>'<div class="staff-tie-item" draggable="true" data-tie-key="'+esc(key)+'"><span class="staff-tie-grip">⠿</span><span>'+esc(tieLabels[key]||key)+'</span><button type="button" data-staff-tie-move="up" aria-label="Sposta in alto" '+(i===0?'disabled':'')+'>↑</button><button type="button" data-staff-tie-move="down" aria-label="Sposta in basso" '+(i===3?'disabled':'')+'>↓</button></div>').join('')+'</div></div>';
   form=wrapForm('competitions','Regolamenti delle competizioni',selectExisting('competitions',comps,'name')+
    '<div class="staff-form-grid">'+input('name','Denominazione',c?.name||'','text','required')+
    selection('kind','Categoria',[['league','Campionato'],['cup','Coppa'],['friendly','Amichevole'],['tournament','Torneo'],['other','Altro']],c?.kind||'league')+
@@ -115,7 +118,7 @@ export function adminPage(ctx){
    selection('playoff_playout_enabled','Playoff e playout',[['false','No'],['true','Sì']],String(c?.playoff_playout_enabled??false))+
    selection('general_competition_id','Competizione gestionale collegata',
     [['','Nessuna (blocco conservativo delle squalifiche attive)'],...generalCandidates.map(x=>[x.id,x.name])],
-    chosenBridge?.general_competition_id||'')+'</div>',
+    chosenBridge?.general_competition_id||'')+'</div>'+( ['league','tournament','cup'].includes(c?.kind||'league')?tieMarkup:'' )
    'Le competizioni conservano la propria durata e regole. Non vengono cancellati calendario o partite.');
   if(c){
    const linked=new Set((data.competitionOpponents||[]).filter(x=>x.competition_id===c.id).map(x=>x.opponent_id));
@@ -457,6 +460,8 @@ function adminPayload(form,ctx){
  if(kind==='seasons')return {table:'app_seasons',id:blank.seasons||null,payload:cleaned(data,['name','start_date','end_date','status'])};
  if(kind==='competitions'){
   const rules={};
+  const order=String(data.standings_tiebreakers||'').split(',').filter(Boolean);
+  if(order.length===4&&new Set(order).size===4&&['gd','h2h','gf','gs'].every(x=>order.includes(x)))rules.standings_tiebreakers=order;
   if(data.blue_duration)rules.blue_duration_minutes=Number(data.blue_duration);
   if(String(data.yellow_thresholds||'').trim()){
    if(!/^\d{1,2}(\s*,\s*\d{1,2}){0,9}$/.test(String(data.yellow_thresholds).trim()))
@@ -882,3 +887,22 @@ function tickClock(){
  }
 }
 export function startStaffClock(ctx){clockContext=ctx;if(clockInterval)return;clockInterval=setInterval(tickClock,1000);tickClock()}
+
+/* Riordino criteri di classifica: drag and drop desktop e frecce accessibili su touch. */
+function syncTieList(list){
+ const items=[...list.querySelectorAll('[data-tie-key]')],input=list.closest('form')?.querySelector('[name=standings_tiebreakers]');
+ if(input)input.value=items.map(x=>x.dataset.tieKey).join(',');
+ items.forEach((el,i)=>{el.querySelector('[data-staff-tie-move=up]').disabled=i===0;el.querySelector('[data-staff-tie-move=down]').disabled=i===items.length-1});
+}
+document.addEventListener('click',event=>{
+ const btn=event.target.closest('[data-staff-tie-move]');if(!btn)return;
+ const item=btn.closest('[data-tie-key]'),list=item?.parentElement;if(!list)return;
+ if(btn.dataset.staffTieMove==='up'&&item.previousElementSibling)list.insertBefore(item,item.previousElementSibling);
+ if(btn.dataset.staffTieMove==='down'&&item.nextElementSibling)list.insertBefore(item.nextElementSibling,item);
+ syncTieList(list);
+});
+let draggedTie=null;
+document.addEventListener('dragstart',event=>{const item=event.target.closest('[data-tie-key]');if(item){draggedTie=item;event.dataTransfer.effectAllowed='move'}});
+document.addEventListener('dragover',event=>{const item=event.target.closest('[data-tie-key]');if(item&&draggedTie&&item!==draggedTie){event.preventDefault();event.dataTransfer.dropEffect='move'}});
+document.addEventListener('drop',event=>{const item=event.target.closest('[data-tie-key]');if(item&&draggedTie&&item!==draggedTie){event.preventDefault();const list=item.parentElement;const rect=item.getBoundingClientRect();list.insertBefore(draggedTie,event.clientY<rect.top+rect.height/2?item:item.nextSibling);syncTieList(list)}draggedTie=null});
+document.addEventListener('dragend',()=>{draggedTie=null});
