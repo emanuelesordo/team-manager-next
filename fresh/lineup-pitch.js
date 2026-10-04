@@ -1,4 +1,5 @@
 /** Editor tattico accessibile: tap-to-place mobile, drag-and-drop desktop. */
+import {shirtSvg} from './kit-editor.js';
 const START='starter';
 /** Moduli ammessi per lo schieramento (10 giocatori di movimento). */
 export const formationModules=Object.freeze(["4-4-2","4-3-3","4-5-1","3-4-3","3-5-2","3-1-5-1","5-3-2","5-4-1","4-2-2-2","4-2-3-1","2-4-4","2-5-3"]);
@@ -48,6 +49,7 @@ function isStarter(row){return getStatus(row)?.value===START}
 export function paintLineupPitch(){
  const form=currentForm(),field=form?.querySelector('[data-lineup-pitch]');if(!field)return;
  const rows=rowList(form),positions=basePositions(form.elements.formation?.value);
+ let matchKit={};try{matchKit=JSON.parse(form.dataset.lineupKit||'{}')}catch{}
  markDuplicateNumbers(form);
  const selected=rows.find(r=>r.dataset.lineupPlayer===activePlayer);
  form.querySelector('[data-pitch-selection]').textContent=selected?'Selezionato: '+getName(selected):'';
@@ -56,7 +58,9 @@ export function paintLineupPitch(){
   const row=rows.find(r=>isStarter(r)&&slotOf(r)===pos.slot);
   cell.style.left=pos.x+'%';cell.style.top=pos.y+'%';
   cell.classList.toggle('occupied',!!row);cell.classList.toggle('target',!!selected);cell.classList.toggle('duplicate-shirt',!!row?.classList.contains('duplicate-shirt'));cell.replaceChildren();
-  const number=document.createElement('strong');number.textContent=row?(row.querySelector('[name=shirt]')?.value||'•'):'+'; if(row){number.dataset.pitchJersey=row.dataset.lineupPlayer;number.title='Clicca per cambiare maglia'}
+  const number=document.createElement(row?'span':'strong');
+  if(row){number.className='field-kit-shirt';number.innerHTML=shirtSvg(matchKit,'lineup-'+pos.slot,false,row.querySelector('[name=shirt]')?.value||null);number.dataset.pitchJersey=row.dataset.lineupPlayer;number.title='Clicca per cambiare numero';}
+  else number.textContent='+';
   const caption=document.createElement('span');caption.textContent=row?getName(row):'';
   cell.append(number,caption);if(row&&form.dataset.lineupEnabled==='true'){const remove=document.createElement('span');remove.className='pitch-remove';remove.dataset.pitchRemove=row.dataset.lineupPlayer;remove.textContent='×';remove.title='Rimuovi dal campo';cell.append(remove)}cell.title=(row?getName(row):'Slot '+pos.slot)+' · posizione '+pos.slot;
   cell.disabled=form.dataset.lineupEnabled!=='true';
