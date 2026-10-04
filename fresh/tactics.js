@@ -1,3 +1,4 @@
+import {formationModules} from './lineup-pitch.js';
 /** Tactical decisions stored in app_match_tactical_changes. */
 const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nameOf=(people,id)=>{const p=(people||[]).find(x=>x.id===id);return p?(String(p.last_name||'')+' '+String(p.first_name||'')).trim():'Giocatore'};
@@ -34,7 +35,7 @@ export function staffTacticsPanel(ctx,m){
     options.map(([id,label])=>'<option value="'+E(id)+'"'+(selected(slot)===id?' selected':'')+'>'+E(label)+'</option>').join('')+
     '</select></label>';
  }).join('');
- const forms=['4-4-2','4-3-3','3-5-2','4-2-3-1','3-4-3','4-5-1','5-3-2'];
+ const forms=formationModules;
  const opts=[...new Set([...forms,formation])];
  const form='<form data-staff-form="tactics"><div class="staff-form-grid">'+
   '<label class="staff-field"><span>Minuto cumulativo</span><input name="minute" type="number" min="0" max="300" required'+(m.status!=='live'?' disabled':'')+'></label>'+
