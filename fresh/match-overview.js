@@ -45,7 +45,7 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
  const bench=roster.filter(x=>!x.started&&x.selection_status==='bench')
   .sort((a,b)=>(a.shirt_number??999)-(b.shirt_number??999));
  const byId=new Map((people||[]).map(p=>[p.id,p]));
- const renderPlayer=row=>{
+ const renderPlayer=(row,onPitch=false)=>{
   const p=byId.get(row.player_id);
   const name=matchPlayerLabel(p);
   const rating=relativeRating(row.player_id,matchData,seasonStats);
@@ -57,7 +57,7 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
    const title='Voto medio partita: '+rating.score.toFixed(2)+' ('+rating.votes+' voti)';
    ratingMarkup='<span class="ov-rating ov-rating-'+rating.level+'" title="'+escapeHtml(title)+'">'+rating.score.toFixed(1).replace('.',',')+'</span>';
   }
-  return '<div class="ov-player" data-player-id="'+escapeHtml(row.player_id)+'">'+
+  return '<div class="ov-player" data-player-id="'+escapeHtml(row.player_id)+'">'+(onPitch?'':'<span class="ov-shirt">'+escapeHtml(row.shirt_number??'·')+'</span>')+
    '<span class="ov-player-name">'+escapeHtml(name)+(row.is_captain?' <small class="ov-captain">C</small>':'')+'</span>'+
    '<span class="ov-personal-events">'+eventMarkup+'</span>'+ratingMarkup+'</div>';
  };
@@ -69,11 +69,11 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
   positions.map(pos=>{const row=occupied.get(pos.slot);if(!row)return '';
    const p=byId.get(row.player_id),name=matchPlayerLabel(p);
    return '<div class="field-slot occupied" style="left:'+pos.x+'%;top:'+pos.y+'%" title="'+escapeHtml(name)+'">'+
-   '<strong>'+escapeHtml(row.shirt_number??'·')+'</strong>'+renderPlayer(row)+'</div>';
+   '<strong>'+escapeHtml(row.shirt_number??'·')+'</strong>'+renderPlayer(row,true)+'</div>';
   }).join('')+'</div></div>';
  return '<section class="ov-lineup lineup-minimal ov-shared-field"><div class="ov-section-heading"><h3>Formazione titolare</h3><small>'+escapeHtml(label)+' · '+starters.length+' titolari'+(match.lineup_confirmed_at?' · confermata':' · provvisoria')+'</small></div>'+
   (starters.length?pitch:'<div class="empty">Formazione iniziale non registrata.</div>')+
   '<div class="ov-section-heading ov-bench-heading"><h3>Panchina</h3><small>'+bench.length+' giocatori</small></div>'+
-  (bench.length?'<div class="ov-bench">'+bench.map(renderPlayer).join('')+'</div>':'<div class="empty">Nessun giocatore in panchina registrato.</div>')+
+  (bench.length?'<div class="ov-bench">'+bench.map(row=>renderPlayer(row,false)).join('')+'</div>':'<div class="empty">Nessun giocatore in panchina registrato.</div>')+
   '<p class="subnote">Il rating mostra esclusivamente la media dei voti della partita. Le icone riportano gli eventi individuali registrati.</p></section>';
 }
