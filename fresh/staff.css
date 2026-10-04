@@ -374,3 +374,13 @@
  .lineup-minimal .lineup-formation-select{top:8px;left:8px}
  .lineup-minimal .lineup-formation-select select{font-size:11px;padding:5px}
 }
+
+
+/* Lista schieramento: ruolo | numero | iniziale e cognome | rating */
+.lineup-minimal .lineup-row{grid-template-columns:36px 31px minmax(0,1fr) 40px;gap:6px;min-height:37px}
+.lineup-minimal .lineup-role,.lineup-minimal .lineup-rating{font-size:11px;color:var(--muted);font-weight:700;text-align:center}
+.lineup-minimal .lineup-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lineup-minimal .lineup-name strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.lineup-minimal .field-slot[draggable=true]{cursor:grab}
+.lineup-minimal .field-slot[draggable=true]:active{cursor:grabbing}
+@media(max-width:760px){.lineup-minimal .lineup-row{grid-template-columns:25px 23px minmax(0,1fr) 29px;gap:3px}.lineup-minimal .lineup-row .lineup-name{grid-column:auto}.lineup-minimal .lineup-row .lineup-list-number{grid-column:auto}.lineup-minimal .lineup-role,.lineup-minimal .lineup-rating{font-size:9px}}
