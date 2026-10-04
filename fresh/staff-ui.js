@@ -362,7 +362,7 @@ function matchLineup(ctx,m){
   current=ctx.state.matchData?.players||[];
  const rostered=roster.map(x=>({...x,person:players.find(p=>p.id===x.player_id)})).filter(x=>x.person)
    .sort((a,b)=>String(a.person.last_name).localeCompare(String(b.person.last_name),'it'));
- const allowed=true;
+ const allowed=Number.isFinite(Date.parse(m.kickoff_at))&&Date.now()>=Date.parse(m.kickoff_at);
  const fields=rostered.filter(row=>{
   const p=current.find(x=>x.player_id===row.player_id);
   return !p||p.selection_status!=='absent';
@@ -394,7 +394,7 @@ function matchLineup(ctx,m){
  help('Questa sezione è separata dalle convocazioni. Imposta titolari, posizioni sul campo e panchina al calcio d’inizio o ricostruisci la formazione a posteriori; le modifiche non cancellano gli eventi registrati.')+
  '<form data-staff-form="lineup"><div class="staff-top-fields">'+input('formation','Modulo',m.formation||'4-4-2','text','maxlength="32" '+(allowed?'':'disabled'))+'</div>'+
  pitchMarkup()+'<div class="lineup-header"><span>Giocatore</span><span>Disponibilità</span><span>N°</span><span>Slot</span><span>Cap.</span><span>Motivo</span></div>'+
- '<div class="lineup-rows">'+fields+'</div>'+submit('Salva formazione e panchina')+'</form></section>';
+ '<div class="lineup-rows">'+fields+'</div>'+(allowed?submit('Salva formazione e panchina'):help('La formazione si compila dal calcio d’inizio. Prima di allora completa soltanto le convocazioni.'))+'</form></section>';
 }
 function scoreForm(m){
  return '<form data-staff-form="score" class="live-score-editor"><label>Casa<input name="home_score" type="number" min="0" max="99" required value="'+esc(m.home_score??0)+'"></label><strong>:</strong><label>Ospite<input name="away_score" type="number" min="0" max="99" required value="'+esc(m.away_score??0)+'"></label>'+submit('Aggiorna risultato')+'</form>';
@@ -716,6 +716,7 @@ export async function staffSubmit(e,ctx){
   }
   if(kind==='lineup'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
+   if(!Number.isFinite(Date.parse(m.kickoff_at))||Date.now()<Date.parse(m.kickoff_at))throw Error('La formazione è modificabile dal calcio d’inizio');
    const rows=[...form.querySelectorAll('[data-lineup-player]')].map(el=>{
     const query=name=>el.querySelector('[name="'+name+'"]').value;
     const st=query('status');
