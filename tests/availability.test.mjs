@@ -25,7 +25,7 @@ test('registered suspension is offered only while active',()=>{
 test('discipline rules propose a ban after the fifth yellow in latest played match',()=>{
  const matches=Array.from({length:5},(_,i)=>({id:'m'+i,competition_id:'c1',status:'finished',kickoff_at:'2026-09-'+String(i+1).padStart(2,'0')+'T19:00:00Z'}));
  const disciplinaryEvents=matches.map(m=>({match_id:m.id,player_id:'p1',team_side:'own',event_type:'yellow_card'}));
- const props={...base,matches,disciplinaryEvents,competitionRules:{yellow_thresholds:[5,4,3,2]}};
+ const props={...base,matchId:'m-next',matches,disciplinaryEvents,competitionRules:{yellow_thresholds:[5,4,3,2]}};
  assert.equal(disciplinarySuggestion(props),true);
  assert.equal(availabilityDefault(props).reason,'suspension');
  assert.equal(disciplinarySuggestion({...props,matchId:'m-new',fixtureDate:'2026-09-04T20:00:00Z'}),false);
