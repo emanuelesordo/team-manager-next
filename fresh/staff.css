@@ -422,3 +422,6 @@
  .lineup-minimal .lineup-row .lineup-role,.lineup-minimal .lineup-row .lineup-name,.lineup-minimal .lineup-row .lineup-list-number{grid-column:auto}
  .lineup-minimal .lineup-bench,.lineup-minimal .lineup-bench-svg{width:15px;height:15px}
 }
+
+/* La lista mostra solo le riserve; i titolari restano nel DOM per il salvataggio. */
+.lineup-minimal .lineup-rows .lineup-row.lineup-on-field{display:none}
