@@ -32,7 +32,11 @@ export function paintCallups(){
  }
  for(const status of ['available','absent'])form.querySelector('[data-callup-count="'+status+'"]').textContent=String(rows.filter(row=>(row.dataset.out==='true')===(status==='absent')).length);
 }
-let activePlayer=null,attached=false;
+let activePlayer=null,attached=false,sortKey='name',sortDesc=false;
+export function numericSortValue(value){const n=Number(String(value??'').trim().replace(',','.'));return Number.isFinite(n)?n:0}
+function sortLineup(form){const list=form?.querySelector('.lineup-rows');if(!list)return;const rows=[...list.querySelectorAll('[data-lineup-player]')];rows.sort((a,b)=>{const x=a.dataset['sort'+sortKey[0].toUpperCase()+sortKey.slice(1)],y=b.dataset['sort'+sortKey[0].toUpperCase()+sortKey.slice(1)];const v=['number','rating'].includes(sortKey)?numericSortValue(x)-numericSortValue(y):String(x||'').localeCompare(String(y||''),'it',{sensitivity:'base',numeric:true});return (sortDesc?-v:v)||String(a.dataset.sortName).localeCompare(String(b.dataset.sortName),'it')});rows.forEach(row=>list.appendChild(row));form.querySelectorAll('[data-lineup-sort]').forEach(b=>b.setAttribute('aria-sort',b.dataset.lineupSort===sortKey?(sortDesc?'descending':'ascending'):'none'))}
+function markDuplicateNumbers(form){const rows=rowList(form),groups=new Map();for(const row of rows){const n=Number(row.querySelector('[name=shirt]')?.value);if(n>0){const members=groups.get(n)||[];members.push(row);groups.set(n,members)}}for(const row of rows){const n=Number(row.querySelector('[name=shirt]')?.value);const duplicate=n>0&&(groups.get(n)||[]).length>1;row.classList.toggle('duplicate-shirt',duplicate);const display=row.querySelector('[data-lineup-number]');if(display)display.textContent=n||'—';row.dataset.sortNumber=String(n||0)}}
+function changeShirt(form,row){if(!row||form.dataset.lineupEnabled!=='true')return;const current=row.querySelector('[name=shirt]'),before=current.value;const entered=window.prompt('Numero maglia (1–99)',before);if(entered===null)return;const next=entered.trim();if(!/^[1-9][0-9]?$/.test(next))return;const counterpart=rowList(form).find(x=>x!==row&&Number(x.querySelector('[name=shirt]').value)===Number(next));if(counterpart)counterpart.querySelector('[name=shirt]').value=before;current.value=String(Number(next));markDuplicateNumbers(form);sortLineup(form);paintLineupPitch();changed(form)}
 function changed(form){if(form?.dataset.lineupEnabled==='true')document.dispatchEvent(new CustomEvent('tm-lineup-change',{detail:{form}}))}
 function currentForm(){return document.querySelector('form[data-staff-form="lineup"]')}
 function rowList(form){return [...form.querySelectorAll('[data-lineup-player]')]}
@@ -44,6 +48,7 @@ function isStarter(row){return getStatus(row)?.value===START}
 export function paintLineupPitch(){
  const form=currentForm(),field=form?.querySelector('[data-lineup-pitch]');if(!field)return;
  const rows=rowList(form),positions=basePositions(form.elements.formation?.value);
+ markDuplicateNumbers(form);
  const selected=rows.find(r=>r.dataset.lineupPlayer===activePlayer);
  form.querySelector('[data-pitch-selection]').textContent=selected?'Selezionato: '+getName(selected):'';
  for(const pos of positions){
@@ -53,7 +58,7 @@ export function paintLineupPitch(){
   cell.classList.toggle('occupied',!!row);cell.classList.toggle('target',!!selected);cell.replaceChildren();
   const number=document.createElement('strong');number.textContent=row?(row.querySelector('[name=shirt]')?.value||'•'):'+'; if(row){number.dataset.pitchJersey=row.dataset.lineupPlayer;number.title='Clicca per cambiare maglia'}
   const caption=document.createElement('span');caption.textContent=row?getName(row):'';
-  cell.append(number,caption);cell.title=(row?getName(row):'Slot '+pos.slot)+' · posizione '+pos.slot;
+  cell.append(number,caption);if(row&&form.dataset.lineupEnabled==='true'){const remove=document.createElement('span');remove.className='pitch-remove';remove.dataset.pitchRemove=row.dataset.lineupPlayer;remove.textContent='×';remove.title='Rimuovi dal campo';cell.append(remove)}cell.title=(row?getName(row):'Slot '+pos.slot)+' · posizione '+pos.slot;
   cell.disabled=form.dataset.lineupEnabled!=='true';
   cell.dataset.playerId=row?.dataset.lineupPlayer||'';
   cell.draggable=Boolean(row)&&form.dataset.lineupEnabled==='true';
@@ -91,14 +96,13 @@ export function installLineupPitch(){
  });
  document.addEventListener('click',e=>{
   const form=e.target.closest('form[data-staff-form="lineup"]');if(!form)return;
+  const order=e.target.closest('[data-lineup-sort]');if(order){const key=order.dataset.lineupSort;sortDesc=sortKey===key?!sortDesc:false;sortKey=key;sortLineup(form);return}
+  const num=e.target.closest('[data-lineup-number]');if(num){changeShirt(form,num.closest('[data-lineup-player]'));return}
+  const remove=e.target.closest('[data-pitch-remove]');if(remove){const row=rowList(form).find(r=>r.dataset.lineupPlayer===remove.dataset.pitchRemove);if(row){getStatus(row).value='bench';getSlot(row).value='';activePlayer=null;paintLineupPitch();changed(form)}return}
   const jersey=e.target.closest('[data-pitch-jersey]');if(jersey){
    const occupied=rowList(form).find(r=>r.dataset.lineupPlayer===jersey.dataset.pitchJersey);
    if(!occupied)return;
-   const current=occupied.querySelector('[name=shirt]');
-   const value=window.prompt('Numero maglia (1–99)',current.value);
-   if(value===null)return;
-   if(!/^[1-9][0-9]?$/.test(value.trim())){form.querySelector('[data-pitch-selection]').textContent='Numero non valido';return}
-   current.value=String(Number(value));paintLineupPitch();changed(form);return;
+   changeShirt(form,occupied);return;
   }
   const target=e.target.closest('[data-pitch-slot]');if(target){
    if(!activePlayer){if(target.dataset.playerId){const row=rowList(form).find(r=>r.dataset.lineupPlayer===target.dataset.playerId);if(row){getStatus(row).value='bench';getSlot(row).value='';paintLineupPitch();changed(form)}}return}
