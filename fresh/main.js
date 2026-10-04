@@ -348,7 +348,7 @@ function match(){
  const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
  const scoreText=hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
  const editableScore=extraMatch&&state.identity?.role?.role==='admin';
- const headerScore=editableScore?'<button type="button" class="match-score-trigger'+(state.scoreEditing?' score-pending':'')+'" data-score-edit="true" title="'+(state.scoreEditing?'Salva risultato':'Modifica partita')+'" aria-label="'+(state.scoreEditing?'Salva risultato':'Modifica partita')+'">'+(state.scoreEditing?'✓ ':'')+scoreText+'</button>':(isLive(f)?'<span class="match-score-trigger score-pending">'+scoreText+'</span>':scoreText);
+ const headerScore=isLive(f)?'<span class="match-score-trigger score-pending">'+scoreText+'</span>':scoreText;
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
@@ -375,6 +375,7 @@ function match(){
   '<option value="">Non specificata</option>'+kitKeys.map(key=>'<option value="'+E(key)+'"'+(m.match_kit_key===key?' selected':'')+'>'+E(({home:'Casa',away:'Trasferta',goalkeeper:'Portiere'})[key]||key)+'</option>').join('')+
   '</select></label>':'';
  const infoContent='<div class="match-info-editor">'+
+  (extraMatch&&canEditInfo?'<button type="button" class="staff-soft" data-score-edit="true">'+(state.scoreEditing?'Salva risultato':'Modifica risultato ed eventi')+'</button>':'')+
   '<div class="staff-form-grid">'+infoField('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):'')+
   infoField('venue_name','Campo',f.venue_name||venue)+infoField('venue_address','Indirizzo',f.venue_address||address)+
   (canEditInfo?'<label class="staff-field"><span>Stato</span><select data-extra-status>'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,name])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+name+'</option>').join('')+'</select></label>':'')+
