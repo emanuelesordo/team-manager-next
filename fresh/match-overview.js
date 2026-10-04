@@ -35,12 +35,8 @@ export function relativeRating(playerId,matchData,seasonStats=[]){
   votes=ratings.length;score=votes?ratings.reduce((sum,x)=>sum+Number(x.rating),0)/votes:NaN;
  }
  if(!votes||!Number.isFinite(score))return null;
- const baselineRow=(seasonStats||[]).find(x=>x.player_id===playerId);
- const base=baselineRow?.avg_rating==null?null:Number(baselineRow.avg_rating);
- const difference=base!==null&&Number.isFinite(base)?score-base:null;
- const level=difference===null?'unrated':difference>=.75?'high':difference>=.2?'above':
-  difference<=-.75?'low':difference<=-.2?'below':'even';
- return {score,baseline:base,difference,level,votes};
+ const level=score>=8.5?'high':score>=7?'above':score>=6?'even':score>=5?'below':'low';
+ return {score,level,votes};
 }
 export function overviewLineup(match,matchData,people=[],seasonStats=[],competition=null){
  const roster=(matchData?.players||[]).filter(x=>x.selection_status!=='absent');
@@ -58,15 +54,10 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
     (['yellow_card','blue_card','red_card'].includes(x.kind)?'<i></i>':escapeHtml(x.label))+'</span>').join('');
   let ratingMarkup='<span class="ov-rating ov-no-rating" title="Nessun voto registrato">—</span>';
   if(rating){
-   const diff=rating.difference;
-   const diffText=diff===null?'':(diff>0?'+':'')+diff.toFixed(1).replace('.',',');
-   const title='Voto partita: '+rating.score.toFixed(2)+' · Voto medio personale: '+
-    (rating.baseline===null?'non disponibile':rating.baseline.toFixed(2))+
-    (diff===null?'':' · Scarto '+diffText);
-   ratingMarkup='<span class="ov-rating ov-rating-'+rating.level+'" title="'+escapeHtml(title)+'">'+
-    rating.score.toFixed(1).replace('.',',')+(diff!==null?'<small>'+escapeHtml(diffText)+'</small>':'')+'</span>';
+   const title='Voto medio partita: '+rating.score.toFixed(2)+' ('+rating.votes+' voti)';
+   ratingMarkup='<span class="ov-rating ov-rating-'+rating.level+'" title="'+escapeHtml(title)+'">'+rating.score.toFixed(1).replace('.',',')+'</span>';
   }
-  return '<div class="ov-player" data-player-id="'+escapeHtml(row.player_id)+'"><span class="ov-shirt">'+escapeHtml(row.shirt_number??'·')+'</span>'+
+  return '<div class="ov-player" data-player-id="'+escapeHtml(row.player_id)+'">'+
    '<span class="ov-player-name">'+escapeHtml(name)+(row.is_captain?' <small class="ov-captain">C</small>':'')+'</span>'+
    '<span class="ov-personal-events">'+eventMarkup+'</span>'+ratingMarkup+'</div>';
  };
@@ -78,11 +69,11 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
   positions.map(pos=>{const row=occupied.get(pos.slot);if(!row)return '';
    const p=byId.get(row.player_id),name=matchPlayerLabel(p);
    return '<div class="field-slot occupied" style="left:'+pos.x+'%;top:'+pos.y+'%" title="'+escapeHtml(name)+'">'+
-   '<strong>'+escapeHtml(row.shirt_number??'·')+'</strong><span>'+escapeHtml(name)+'</span>'+renderPlayer(row)+'</div>';
+   '<strong>'+escapeHtml(row.shirt_number??'·')+'</strong>'+renderPlayer(row)+'</div>';
   }).join('')+'</div></div>';
  return '<section class="ov-lineup lineup-minimal ov-shared-field"><div class="ov-section-heading"><h3>Formazione titolare</h3><small>'+escapeHtml(label)+' · '+starters.length+' titolari'+(match.lineup_confirmed_at?' · confermata':' · provvisoria')+'</small></div>'+
   (starters.length?pitch:'<div class="empty">Formazione iniziale non registrata.</div>')+
   '<div class="ov-section-heading ov-bench-heading"><h3>Panchina</h3><small>'+bench.length+' giocatori</small></div>'+
   (bench.length?'<div class="ov-bench">'+bench.map(renderPlayer).join('')+'</div>':'<div class="empty">Nessun giocatore in panchina registrato.</div>')+
-  '<p class="subnote">Il voto è confrontato con la media personale stagionale, quando disponibile. Le icone riportano gli eventi individuali effettivamente registrati.</p></section>';
+  '<p class="subnote">Il rating mostra esclusivamente la media dei voti della partita. Le icone riportano gli eventi individuali registrati.</p></section>';
 }
