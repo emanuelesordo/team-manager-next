@@ -77,11 +77,11 @@ async def test_view(browser, width, height):
  await page.locator(".match-detail-head").wait_for(timeout=15000)
  assert page.url.endswith("#match/"+FIXTURE),page.url
  await page.locator('[data-tab="lineup"]').click()
- await page.wait_for_function("document.querySelectorAll('.pitch-player').length === 11")
- assert await page.locator(".pitch-player").count()==11
+ await page.wait_for_function("document.querySelectorAll('.ov-pitch .ov-player').length === 11")
+ assert await page.locator(".ov-pitch .ov-player").count()==11
  await page.locator('[data-tab="events"]').click()
- await page.wait_for_function("document.querySelectorAll('.timeline-item').length === 16")
- assert await page.locator(".timeline-item").count()==16
+ await page.wait_for_function("document.querySelectorAll('.mt-row').length === 16")
+ assert await page.locator(".mt-row").count()==16
  await page.locator('[data-tab="staff"]').click()
  await page.locator('[data-staff-match-tab="events"]').click()
  await page.locator('[data-staff-action="review-approve"]').first.wait_for()
@@ -101,9 +101,9 @@ async def test_view(browser, width, height):
  await page.locator(".match-detail-head").wait_for(timeout=15000)
  assert page.url.endswith("#match/"+FIXTURE),page.url
  await page.locator('[data-tab="events"]').click()
- await page.wait_for_function("document.querySelectorAll('.timeline-item').length === 16")
+ await page.wait_for_function("document.querySelectorAll('.mt-row').length === 16")
  await page.locator('[data-tab="lineup"]').click()
- await page.wait_for_function("document.querySelectorAll('.pitch-player').length === 11")
+ await page.wait_for_function("document.querySelectorAll('.ov-pitch .ov-player').length === 11")
  assert not errors,errors
  print(f"PASS {width}x{height}: login, linked lineup (11), events (16), refresh/deep link",flush=True)
  await ctx.close()
