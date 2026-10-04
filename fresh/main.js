@@ -7,6 +7,7 @@ import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?callups=20261004official2';
 import {overviewLineup} from './match-overview.js?lineup=20261004ratingfix';
+import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004benchonly';
 import {projectionContainer,updateProjection} from './projection-ui.js?clubs=20261003id';
@@ -322,7 +323,9 @@ function match(){
  const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),comp):
   (state.fixtureEvents?.length?fixtureEventsPanel(state.fixtureEvents,comp,f):'<div class="empty">Nessun tabellino associato.</div>');
  const extraMatch=!involvesTeam(f,team());
- const formation=m?overviewLineup(m,data,state.data?.players||[],state.data?.playerStats||[],comp):
+ const availableKits=collectionForClub(team()||{});
+ const activeKit=availableKits[m?.match_kit_key]||availableKits.home||Object.values(availableKits)[0];
+ const formation=m?overviewLineup(m,data,state.data?.players||[],state.data?.playerStats||[],comp,activeKit):
   '<div class="empty">Formazione non disponibile: partita senza tabellino operativo.</div>';
  const staffAccess=isStaff(staffContext());
  const matchIsLive=m?.status==='live'||f.status==='live';
@@ -370,11 +373,10 @@ function match(){
   (resultStatus&&selectedTab==='info'?'<p class="staff-help">'+E(resultStatus)+'</p>':'');
  const canEditInfo=state.identity?.role?.role==='admin';
  const infoField=(key,label,value)=>'<label class="staff-field"><span>'+label+'</span><input data-extra-field="'+key+'" aria-label="'+label+'" value="'+E(value??'')+'" '+(canEditInfo?'':'disabled')+'></label>';
- const kits=team()?.kits||{};
- const kitKeys=Object.keys(kits).filter(key=>kits[key]&&typeof kits[key]==='object');
- const kitSelect=staffAccess&&!extraMatch&&m?'<label class="staff-field"><span>Maglia utilizzata</span><select data-match-kit aria-label="Maglia utilizzata">'+
-  '<option value="">Non specificata</option>'+kitKeys.map(key=>'<option value="'+E(key)+'"'+(m.match_kit_key===key?' selected':'')+'>'+E(({home:'Casa',away:'Trasferta',goalkeeper:'Portiere'})[key]||key)+'</option>').join('')+
-  '</select></label>':'';
+ const kitSelect=staffAccess&&!extraMatch&&m?'<div class="match-kit-chooser"><span>Maglia utilizzata</span><div class="match-kit-grid">'+
+  Object.entries(availableKits).map(([key,kit],i)=>'<button type="button" class="match-kit-choice" data-match-kit-choice="'+E(key)+'" aria-pressed="'+((m.match_kit_key||Object.keys(availableKits)[0])===key)+'">'+
+   shirtSvg(kit,'matchkit-'+i,false)+'<strong>'+E(kit.name||key)+'</strong></button>').join('')+
+  '</div><p class="match-kit-caption">La scelta viene salvata per questa partita e utilizzata sul campo nelle schede Formazione e Overview.</p></div>':'';
  const reviewAction=canEditInfo&&m&&f.status==='finished'&&m.status==='finished'&&!extraMatch?
   (m.result_review_status==='confirmed'?'<div class="match-result-decision"><strong>Risultato ufficiale confermato</strong><button type="button" class="staff-soft" data-staff-action="review-result-reopen">Riapri verifica</button></div>':
   '<div class="match-result-decision"><strong>Risultato in attesa di conferma</strong>'+(pending?'<small>Prima ufficializza i '+pending+' eventi in sospeso dalla scheda Eventi.</small>':'')+
@@ -572,6 +574,16 @@ async function reloadAll(){
 }
 document.addEventListener('click',async e=>{
  if(staffLogoEvent(e))return;
+ const kitChoice=e.target.closest('[data-match-kit-choice]');
+ if(kitChoice){
+  const m=resolveMatch().operational,available=collectionForClub(team()||{});
+  const key=kitChoice.dataset.matchKitChoice;
+  if(!isStaff(staffContext())||!m||!Object.hasOwn(available,key))return;
+  for(const b of document.querySelectorAll('[data-match-kit-choice]'))b.disabled=true;
+  try{await rpc('tm_app_match_details',{p_match_id:m.id,p_kit_key:key});m.match_kit_key=key;toast('Maglia partita salvata');render();}
+  catch(err){toast('Maglia non salvata: '+err.message);for(const b of document.querySelectorAll('[data-match-kit-choice]'))b.disabled=false;}
+  return;
+ }
  const confirm=e.target.closest('[data-lineup-confirm]');
  if(confirm){
   const form=confirm.closest('form[data-staff-form="lineup"]');
