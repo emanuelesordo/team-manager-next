@@ -396,8 +396,8 @@ export function matchLineup(ctx,m){
   const surname=String(x.person.last_name||'').trim();
   const initial=String(x.person.first_name||'').trim().slice(0,1);
   const compactName=(initial?initial+'. ':'')+surname;
-  return '<div class="lineup-row" data-lineup-player="'+esc(x.player_id)+'" data-sort-role="'+esc(role)+'" data-sort-number="'+esc(shirt||0)+'" data-sort-name="'+esc(surname)+'" data-sort-rating="'+esc(avg??0)+'">'+
-   '<span class="lineup-role">'+esc(role)+'</span>'+
+  return '<div class="lineup-row" data-lineup-player="'+esc(x.player_id)+'" data-sort-role="'+esc(role)+'" data-sort-number="'+esc(shirt===''?'':shirt)+'" data-sort-name="'+esc(surname)+'" data-sort-rating="'+esc(avg??'')+'">'+
+   '<span class="lineup-role"><span class="lineup-bench" data-lineup-bench title="Panchina" '+(status==='starter'?'hidden':'')+'>▰</span>'+esc(role)+'</span>'+
    '<button type="button" class="lineup-list-number" data-lineup-number aria-label="Modifica numero '+esc(compactName)+'">'+esc(shirt||'—')+'</button>'+
    '<button type="button" class="lineup-name" draggable="'+allowed+'" aria-label="Posiziona '+esc(playerText(x.person))+'" '+(allowed?'':'disabled')+'><strong>'+esc(compactName)+'</strong></button>'+
    '<span class="lineup-rating" title="Rating medio">'+esc(rating)+'</span>'+
