@@ -60,8 +60,8 @@ test('multiple goals and assists aggregate into right-side counters without dupl
  const field=html.slice(html.indexOf('class="visual-field'),html.indexOf('</div></div></div></div>')+24);
  assert.match(html,/ov-marker-side-left/);
  assert.match(html,/ov-marker-side-right/);
- assert.match(html,/ov-badge-goal[^"]*"[^>]*>[\\s\\S]*?ov-marker-count">2<\\/small>/);
- assert.match(html,/ov-badge-assist[^"]*"[^>]*>[\\s\\S]*?ov-marker-count">2<\\/small>/);
+ assert.match(html,/ov-badge-goal[^"]*"[^>]*>[\s\S]*?ov-marker-count">2<\/small>/);
+ assert.match(html,/ov-badge-assist[^"]*"[^>]*>[\s\S]*?ov-marker-count">2<\/small>/);
  assert.match(html,/ov-badge-yellow_card/);
  assert.match(html,/ov-badge-substitution/);
  assert.match(html,/ov-marker-art/);
