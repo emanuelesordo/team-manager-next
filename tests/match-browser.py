@@ -86,14 +86,14 @@ async def test_view(browser, width, height):
  await page.wait_for_function("document.querySelectorAll('.ov-pitch .ov-player').length === 11")
  assert await page.locator(".ov-pitch .field-slot.occupied").count()==11
  await page.locator('[data-tab="events"]').click()
- await page.wait_for_function("document.querySelectorAll('.mt-row').length === 16")
- assert await page.locator(".mt-row").count()==16
+ await page.wait_for_function("document.querySelectorAll('.staff-event-row').length === 16")
+ assert await page.locator(".staff-event-row").count()==16
  # Browser refresh must reconstruct the selected fixture and fetch match data.
  await page.reload(wait_until="domcontentloaded")
  await page.locator(".match-detail-head").wait_for(timeout=15000)
  assert page.url.endswith("#match/"+FIXTURE),page.url
  await page.locator('[data-tab="events"]').click()
- await page.wait_for_function("document.querySelectorAll('.mt-row').length === 16")
+ await page.wait_for_function("document.querySelectorAll('.staff-event-row').length === 16")
  await page.locator('[data-tab="overview"]').click()
  await page.wait_for_function("document.querySelectorAll('.ov-pitch .ov-player').length === 11")
  assert not errors,errors
