@@ -231,7 +231,6 @@
 }
 .ov-shared-field .field-slot .ov-field-shirt .kit-svg{filter:drop-shadow(0 2px 3px #0008)}
 /* Identica label .ov-rating della panchina: nessuna variante grafica sul campo. */
-.ov-rating-elite{background:rgba(69,142,228,.26);border-color:rgba(69,142,228,.46)}
 .ov-shared-field .field-slot .ov-marker-art > .ov-rating{
  position:absolute;z-index:5;bottom:-5px;left:50%;transform:translateX(-50%);
 }
