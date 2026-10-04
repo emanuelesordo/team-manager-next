@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange} from './staff-ui.js?callups=20261004autosave';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot} from './staff-ui.js?callups=20261004autosave';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004persist';
@@ -618,6 +618,32 @@ async function saveExtraDetail(field,value){
  const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
  try{await adminWrite('app_competition_fixtures','PATCH',{[field]:value},{id:f.id});f[field]=value;render();toast('Dettaglio aggiornato')}catch(error){toast('Modifica non salvata: '+error.message)}
 }
+let lineupTimer=null;
+document.addEventListener('tm-lineup-change',e=>{
+ const form=e.detail.form;
+ if(!form?.isConnected||form.dataset.lineupEnabled!=='true')return;
+ const matchId=form.dataset.lineupMatch;
+ const rows=[...form.querySelectorAll('[data-lineup-player]')].map(el=>{
+  const value=n=>el.querySelector('[name="'+n+'"]')?.value||'';
+  const selection_status=value('status');
+  return {player_id:el.dataset.lineupPlayer,selection_status,
+   shirt_number:value('shirt')?Number(value('shirt')):null,
+   tactical_slot:selection_status==='starter'?(Number(value('slot'))||null):null,
+   is_captain:form.querySelector('[name=captain]:checked')?.value===el.dataset.lineupPlayer&&selection_status==='starter',
+   unavailability_reason:null,unavailability_note:null};
+ });
+ const snapshot={matchId,formation:form.elements.formation?.value||'4-4-2',rows};
+ const label=form.querySelector('[data-lineup-save-status]');
+ if(label)label.textContent='Modifiche da salvare…';
+ clearTimeout(lineupTimer);
+ lineupTimer=setTimeout(()=>{
+  if(label)label.textContent='Salvataggio…';
+  void persistLineupSnapshot(snapshot,error=>{
+   if(!label?.isConnected)return;
+   label.textContent=error?'Errore: '+error.message:'Salvato';
+  }).catch(()=>{});
+ },350);
+});
 document.addEventListener('tm-callup-change',e=>{
  const detail=e.detail;
  const getRow=()=>[...document.querySelectorAll('[data-callup-player]')].find(x=>x.dataset.callupPlayer===detail.playerId);
