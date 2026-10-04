@@ -873,3 +873,21 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
 .extra-meta-field{display:grid;gap:4px;min-width:0;font-size:10px;color:var(--muted)}
 .match-score-trigger.score-pending{animation:tm-score-alert 1.65s ease-in-out infinite}
 @media(max-width:760px){.extra-event-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 64px;gap:5px}.extra-event-row button{grid-column:auto;min-width:0}.extra-event-row button[type=submit]{grid-column:1/3}.extra-event-row button:not([type=submit]){grid-column:3}.extra-edit-panel{padding:10px}}
+
+/* Rosa: strumenti compatti e vista tabellare ordinabile. */
+.roster-tools{display:flex;align-items:center;justify-content:flex-end;gap:9px;min-width:0;flex-wrap:wrap}
+.roster-filters .roster-tools .roster-view-toggle{width:auto;flex:none;display:flex}
+.roster-view-toggle button{white-space:nowrap}
+.roster-tools .local-search{flex:0 1 230px;min-width:130px}
+.roster-add{white-space:nowrap;border:0;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:11px 16px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.roster-table-wrap{margin-top:8px}
+.roster-table{width:100%;min-width:540px}
+.roster-table th:first-child,.roster-table td:first-child{text-align:left}
+.roster-table th button{background:none;border:0;color:inherit;font:inherit;font-weight:800;padding:6px 4px;cursor:pointer;white-space:nowrap}
+.roster-table th button:hover,.roster-table th button:focus-visible{color:var(--ink);text-decoration:underline}
+.roster-table td{padding:10px 8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.roster-table tbody tr:hover{background:var(--surface)}
+.roster-player-link{background:none;border:0;padding:4px 0;color:var(--ink);font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.roster-player-link:hover{text-decoration:underline}
+.roster-table tr[hidden]{display:none}
+@media(max-width:760px){.roster-tools{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}.roster-filters .roster-tools .roster-view-toggle{grid-column:1/-1;width:max-content}.roster-tools .local-search{min-width:0;width:100%}.roster-add{padding:10px 12px}.roster-table td{padding:9px 7px}}
