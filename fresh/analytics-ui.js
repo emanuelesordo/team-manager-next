@@ -36,7 +36,8 @@ export function fixtureEventsPanel(events,competition=null,fixture=null){
  const goals=rows.filter(e=>['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type)&&e.validation_status!=='rejected');
  const homeCount=goals.filter(e=>e.side==='home'&&e.event_type!=='own_goal'||e.side==='away'&&e.event_type==='own_goal').length;
  const awayCount=goals.filter(e=>e.side==='away'&&e.event_type!=='own_goal'||e.side==='home'&&e.event_type==='own_goal').length;
- const reconciled=fixture&&Number(fixture.home_score)===homeCount&&Number(fixture.away_score)===awayCount;
+ const hasUntimedGoals=goals.some(e=>cumulativeEventMinute(e,competition)===null);
+ const reconciled=!hasUntimedGoals&&fixture&&Number(fixture.home_score)===homeCount&&Number(fixture.away_score)===awayCount;
  let home=0,away=0;
  const badges=rows.map(e=>{
   const time=displayEventMinute(e,competition);
