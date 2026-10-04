@@ -237,7 +237,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
- const tracked=ordered.map(e=>{if(goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}return {event:e,score:goal(e)?home+' - '+away:null}});
+ const tracked=ordered.map(e=>{if(goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:goal(e)?(snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
  const heading=label=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
  const cards=e=>{
   const t=type(e),shirt=String(e.payload?.opponent_shirt_number||'');
