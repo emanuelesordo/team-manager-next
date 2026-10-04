@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer} from './staff-ui.js?callups=20261004moduli';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange} from './staff-ui.js?callups=20261004moduli';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004moduli';
@@ -616,6 +616,15 @@ async function saveExtraDetail(field,value){
  const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
  try{await adminWrite('app_competition_fixtures','PATCH',{[field]:value},{id:f.id});f[field]=value;render();toast('Dettaglio aggiornato')}catch(error){toast('Modifica non salvata: '+error.message)}
 }
+document.addEventListener('tm-callup-change',e=>{
+ const detail=e.detail;
+ const getRow=()=>[...document.querySelectorAll('[data-callup-player]')].find(x=>x.dataset.callupPlayer===detail.playerId);
+ const row=getRow();if(row){row.dataset.saving='true';row.dataset.saveError='false'}
+ void persistCallupChange(detail,error=>{
+  const current=getRow();if(current){current.dataset.saving='false';current.dataset.saveError=String(Boolean(error))}
+  toast(error?'Convocazione NON salvata: '+error.message:'Convocazione salvata');
+ }).catch(()=>{});
+});
 document.addEventListener('submit',async e=>{
  if(e.target.matches('[data-extra-event-form]')){
   e.preventDefault();if(state.identity?.role?.role!=='admin'||!state.scoreEditing)return;
