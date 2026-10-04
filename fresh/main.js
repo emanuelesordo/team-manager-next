@@ -315,7 +315,7 @@ function match(){
  const extraMatch=!involvesTeam(f,team());
  const formation=m?overviewLineup(m,data,state.data?.players||[],state.data?.playerStats||[],comp):
   '<div class="empty">Formazione non disponibile: partita senza tabellino operativo.</div>';
- const tabs=extraMatch?[['overview','Overview'],...(isStaff(staffContext())?[['staff','Gestione']]:[])]:[['overview','Overview'],['events','Eventi'],['lineup','Formazioni'],['ratings','Voti'],...(isStaff(staffContext())?[['staff','Gestione']]:[])];
+ const tabs=extraMatch?[['overview','Overview'],...(state.identity?.role?.role==='admin'?[['staff','Gestione']]:[])]:[['overview','Overview'],['events','Eventi'],['lineup','Formazioni'],['ratings','Voti'],...(isStaff(staffContext())?[['staff','Gestione']]:[])];
  const requestedTab=state.matchTab==='summary'?'overview':state.matchTab;
  const selectedTab=extraMatch&&!['overview','staff'].includes(requestedTab)?'overview':requestedTab;
  const titleInfo=(label,value)=>value?'<span class="match-meta-item" title="'+E(label)+'"><small class="sr-only">'+E(label)+'</small><strong>'+E(value)+'</strong></span>':'';
@@ -332,7 +332,7 @@ function match(){
    titleInfo('Campo',venue||'—')+'</div></div>';
  const scorers=matchScorerRows(activeEvents,f,team(),playerName,comp);
  const scoreText=hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
- const editableScore=extraMatch&&isStaff(staffContext());
+ const editableScore=extraMatch&&state.identity?.role?.role==='admin';
  const headerScore=editableScore?'<button type="button" class="match-score-trigger" data-score-edit="true" title="Modifica il risultato" aria-label="Modifica il risultato">'+scoreText+'</button>':scoreText;
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
@@ -540,7 +540,7 @@ document.addEventListener('click',async e=>{
  const x=e.target.closest('button,[data-dismiss]');if(!x)return;
  if(x.dataset.dismiss!==undefined&&e.target===x){state.overlay=null;render();return}
  if(x.dataset.page){navigate(x.dataset.page);return}
- if(x.dataset.scoreEdit!==undefined){if(isStaff(staffContext())&&involvesTeam(resolveMatch().fixture,team())===false){state.scoreEditing=true;render()}return}
+ if(x.dataset.scoreEdit!==undefined){if(state.identity?.role?.role==='admin'&&involvesTeam(resolveMatch().fixture,team())===false){state.scoreEditing=true;render()}return}
  if(x.dataset.scoreCancel!==undefined){state.scoreEditing=false;render();return}
  if(x.dataset.match){openMatch(x.dataset.match);return}
  if(x.dataset.player){state.player=x.dataset.player;navigate('player');return}
@@ -583,7 +583,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('submit',async e=>{
  if(e.target.matches('[data-extra-score-form]')){
-  e.preventDefault();if(!isStaff(staffContext()))return;
+  e.preventDefault();if(state.identity?.role?.role!=='admin')return;
   const f=resolveMatch().fixture;if(!f||involvesTeam(f,team()))return;
   const form=new FormData(e.target),home=Number(form.get('home_score')),away=Number(form.get('away_score'));
   if(![home,away].every(n=>Number.isInteger(n)&&n>=0&&n<=99)){toast('Risultato non valido');return}
