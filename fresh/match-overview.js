@@ -15,6 +15,11 @@ export function playerMatchEvents(playerId,events=[],competition=null){
  for(const e of events){
   if(e.validation_status==='rejected'||!relevantTypes.has(e.event_type))continue;
   const t=e.event_type;
+  // A dedicated assist row can mirror the assist already linked to a goal.
+  if(t==='assist'&&e.player_id===playerId&&events.some(g=>
+   ['goal','penalty_scored'].includes(g.event_type)&&g.validation_status!=='rejected'&&
+   g.secondary_player_id===playerId&&g.minute===e.minute&&
+   (g.payload?.period||'')===(e.payload?.period||'')))continue;
   let role=null;
   if(t==='substitution'){
    if(e.player_id===playerId)role='sub_out';
@@ -51,6 +56,11 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
   const kinds=side==='left'?['substitution','yellow_card','blue_card','double_card','red_card','blue_return']:['goal','assist','own_goal'];
   const grouped=new Map();
   for(const e of events){
+   // Some feeds provide a second-yellow entry plus its resulting red card.
+   // Both describe the same expulsion, not two expulsions.
+   if(e.kind==='second_yellow'&&events.some(r=>r.kind==='red_card'&&
+    ['second_yellow_blue','second_card','second_yellow'].includes(r.cardType)&&
+    Math.abs((r.minute??-100)-(e.minute??100))<=1))continue;
    let kind=e.kind;
    if(['sub_in','sub_out'].includes(kind))kind='substitution';
    if(['goal','penalty_scored'].includes(kind))kind='goal';
