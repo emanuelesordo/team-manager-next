@@ -8,7 +8,7 @@ const relevantTypes=new Set(['goal','penalty_scored','own_goal','assist','yellow
 const iconTypes={
  goal:['⚽','Gol'],penalty_scored:['⚽','Rigore segnato'],own_goal:['AG','Autogol'],
  assist:['A','Assist'],yellow_card:['','Ammonizione'],red_card:['','Espulsione'],
- blue_card:['','Cartellino blu'],blue_return:['↩','Rientro'],sub_in:['↗','Entrata'],sub_out:['↙','Uscita']
+ blue_card:['','Cartellino blu'],second_yellow:['','Doppio cartellino'],blue_return:['↩','Rientro'],sub_in:['↗','Entrata'],sub_out:['↙','Uscita']
 };
 export function playerMatchEvents(playerId,events=[],competition=null){
  const result=[];
@@ -36,7 +36,7 @@ export function relativeRating(playerId,matchData,seasonStats=[]){
   votes=ratings.length;score=votes?ratings.reduce((sum,x)=>sum+Number(x.rating),0)/votes:NaN;
  }
  if(!votes||!Number.isFinite(score))return null;
- const level=score>=8.5?'high':score>=7?'above':score>=6?'even':score>=5?'below':'low';
+ const level=score>=9?'elite':score>=8?'high':score>=7?'above':score>=6?'even':score>=5?'below':'low';
  return {score,level,votes};
 }
 export function overviewLineup(match,matchData,people=[],seasonStats=[],competition=null,kit=null){
