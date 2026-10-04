@@ -1,10 +1,13 @@
 /* Match-day availability defaults. Suggestions never overwrite saved choices. */
 export const unavailabilityReasons=[['injury','Infortunio'],['suspension','Squalifica'],['personal','Assenza giocatore'],['technical_choice','Scelta tecnica']];
-export function availabilityDefault({saved,injuries=[],suspensions=[],playerId,fixtureDate,priorSelections=[],matches=[],matchId,disciplinaryEvents=[],competitionId,competitionRules={}}){
+export function availabilityDefault({saved,injuries=[],suspensions=[],playerId,fixtureDate,priorSelections=[],matches=[],matchId,disciplinaryEvents=[],competitionId,competitionRules={},competitionLinks=[]}){
  if(saved)return {status:saved.started?'starter':saved.selection_status||'available',reason:saved.unavailability_reason||'',source:'saved'};
  const date=fixtureDate?String(fixtureDate).slice(0,10):null;
  const suspensionFromCards=disciplinarySuggestion({playerId,matchId,fixtureDate,competitionId,matches,disciplinaryEvents,competitionRules});
- const suspension=suspensions.some(s=>s.player_id===playerId&&['active','pending'].includes(s.status)&&((Number(s.matches_count)>Number(s.matches_served??0))||(s.start_date&&(!s.end_date||!date||s.end_date>=date)))
+ const links=competitionLinks.filter(l=>l.app_competition_id===competitionId);
+ const suspension=suspensions.some(s=>s.player_id===playerId&&['active','pending'].includes(s.status)
+  &&(!s.competition_id||!links.length||links.some(l=>l.general_competition_id===s.competition_id))
+  &&((Number(s.matches_count)>Number(s.matches_served??0))||(s.start_date&&(!s.end_date||!date||s.end_date>=date)))
   &&(!s.start_date||!date||s.start_date<=date)&&(!s.end_date||!date||s.end_date>=date));
  if(suspension||suspensionFromCards)return {status:'absent',reason:'suspension',source:suspension?'suspension':'cards'};
  const kickoff=Date.parse(fixtureDate||'');
