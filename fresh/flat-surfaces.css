@@ -203,3 +203,101 @@
   .glass .glass, .glass .inner-card { padding: 0; }
   .visual-lineup { margin: 8px 0 14px; }
 }
+
+
+/* Overview Sofascore-inspired player markers · 2026-10-05.
+   Shirt artwork still comes from the team's configured SVG kit. */
+.ov-shared-field .visual-field .field-slot.occupied{
+  width:clamp(54px,12%,85px);
+  min-height:78px;
+  padding:0;
+  overflow:visible;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  transform:translate(-50%,-50%);
+}
+.ov-shared-field .field-slot .ov-player-pitch{
+  position:relative;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:0;margin:0;width:100%;min-width:0;
+}
+.ov-shared-field .field-slot .ov-marker-art{
+  position:relative;display:block;width:44px;height:49px;isolation:isolate;flex-shrink:0;
+}
+.ov-shared-field .field-slot .ov-field-shirt,
+.ov-shared-field .field-slot .ov-field-shirt .kit-svg{
+  display:block;width:44px;height:49px;margin:0;
+}
+.ov-shared-field .field-slot .ov-field-shirt .kit-svg{filter:drop-shadow(0 2px 3px #0008)}
+.ov-shared-field .field-slot .ov-marker-art > .ov-rating{
+  position:absolute;z-index:5;bottom:-5px;left:50%;transform:translateX(-50%);
+  min-width:32px;height:20px;padding:0 3px !important;
+  border:1px solid #ffffff44;border-radius:2px;
+  font:900 11px/1 'Manrope',sans-serif;color:#fff;text-shadow:0 1px 2px #0008;
+  box-shadow:0 2px 3px #0005;
+}
+.ov-shared-field .field-slot .ov-rating-high{background:#2753c9;border-color:#4e80e9}
+.ov-shared-field .field-slot .ov-rating-above{background:#23b954;border-color:#65d58a}
+.ov-shared-field .field-slot .ov-rating-even{background:#b99713;border-color:#dec54b}
+.ov-shared-field .field-slot .ov-rating-below{background:#c67d16;border-color:#e3a03a}
+.ov-shared-field .field-slot .ov-rating-low{background:#bb3643;border-color:#d6606a}
+.ov-shared-field .field-slot .ov-no-rating{background:#5f7075;border-color:#a0b2b4;color:#fff}
+.ov-shared-field .field-slot .ov-player-pitch > .ov-player-name{
+  display:block;max-width:105px;width:max-content;
+  margin-top:9px;line-height:1.14;
+  font-size:10px;font-weight:800;color:#fff;
+  text-align:center;white-space:normal;overflow-wrap:normal;
+  text-shadow:0 1px 3px #000,0 2px 5px #000c;
+}
+.ov-shared-field .field-slot .ov-captain{font-size:9px;color:#fff}
+.ov-shared-field .field-slot .ov-marker-side{
+  position:absolute;z-index:4;bottom:13px;
+  display:flex;flex-direction:column-reverse;align-items:center;gap:2px;
+  width:20px;min-height:18px;
+}
+.ov-shared-field .field-slot .ov-marker-side-left{right:calc(100% - 6px)}
+.ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 6px)}
+.ov-shared-field .field-slot .ov-marker-badge{
+  position:relative;box-sizing:border-box;display:grid;place-items:center;
+  flex:0 0 auto;width:19px;height:19px;border:1px solid #9eabb2;
+  border-radius:50%;background:#f6f8f9;color:#202b35;
+  font:bold 12px/1 Arial,sans-serif;white-space:nowrap;
+  text-shadow:none;box-shadow:0 1px 3px #0008;
+}
+.ov-shared-field .field-slot .ov-marker-badge svg{width:14px;height:14px;display:block}
+.ov-shared-field .field-slot .ov-badge-goal{font-size:13px}
+.ov-shared-field .field-slot .ov-badge-own_goal{font-size:9px;color:#bb2733}
+.ov-shared-field .field-slot .ov-mini-card{
+  display:block;width:9px;height:13px;border-radius:1px;background:#ebbf26;
+  border:1px solid #d7a715;
+}
+.ov-shared-field .field-slot .ov-badge-blue_card .ov-mini-card{background:#2e84e8;border-color:#1c5db5}
+.ov-shared-field .field-slot .ov-badge-red_card .ov-mini-card{background:#da3648;border-color:#b21d30}
+.ov-shared-field .field-slot .ov-badge-double_card .ov-mini-card{background:linear-gradient(90deg,#d83748 0 75%,#e7bc22 75% 100%);border-color:#ae2331}
+.ov-shared-field .field-slot .ov-badge-double_card .ov-double-blue{background:linear-gradient(90deg,#d83748 0 75%,#3280de 75% 100%)}
+.ov-shared-field .field-slot .ov-badge-substitution .ov-swap-symbol{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:11px;line-height:7px;margin-top:-2px;
+}
+.ov-shared-field .field-slot .ov-swap-symbol b:first-child{color:#34976a;font-weight:900}
+.ov-shared-field .field-slot .ov-swap-symbol b:last-child{color:#cf3e4c;font-weight:900}
+.ov-shared-field .field-slot .ov-marker-count{
+  position:absolute;top:-5px;right:-6px;min-width:13px;height:13px;
+  display:grid;place-items:center;padding:0 2px;border-radius:8px;
+  color:#fff;background:#212b34;border:1px solid #fff;
+  font:800 9px/1 'Manrope',sans-serif;text-shadow:none;
+}
+@media(max-width:550px){
+  .ov-shared-field .visual-field .field-slot.occupied{width:54px;min-height:72px}
+  .ov-shared-field .field-slot .ov-marker-art,
+  .ov-shared-field .field-slot .ov-field-shirt,
+  .ov-shared-field .field-slot .ov-field-shirt .kit-svg{width:36px;height:41px}
+  .ov-shared-field .field-slot .ov-player-pitch > .ov-player-name{font-size:8px;max-width:70px;margin-top:8px}
+  .ov-shared-field .field-slot .ov-marker-badge{width:16px;height:16px;font-size:10px}
+  .ov-shared-field .field-slot .ov-marker-side{gap:1px;width:16px;bottom:11px}
+  .ov-shared-field .field-slot .ov-marker-side-left{right:calc(100% - 5px)}
+  .ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 5px)}
+  .ov-shared-field .field-slot .ov-marker-art > .ov-rating{font-size:9px;min-width:29px;height:18px}
+  .ov-shared-field .field-slot .ov-marker-count{font-size:8px;height:12px;min-width:12px}
+}
