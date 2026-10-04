@@ -81,6 +81,10 @@ export function installLineupPitch(){
    selection.value='absent';reason.value=button.dataset.callupReason;
   }
   paintCallups();
+  document.dispatchEvent(new CustomEvent('tm-callup-change',{detail:{
+   matchId:form.dataset.callupMatch,playerId:row.dataset.callupPlayer,
+   status:selection.value,reason:reason.value
+  }}));
  });
  document.addEventListener('click',e=>{
   const form=e.target.closest('form[data-staff-form="lineup"]');if(!form)return;
