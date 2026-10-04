@@ -63,7 +63,8 @@ test('finished match can recover callups and show a separate formation editor',a
  await staffClick({},{dataset:{staffMatchTab:'lineup'}},ctx);
  const formation=staffMatchPanel(ctx,fixture,ctx.state.data.matches[0]);
  assert.match(formation,/data-staff-form="lineup"/);
- assert.match(formation,/Formazione e panchina/);
+ assert.match(formation,/lineup-minimal/);
+ assert.match(formation,/data-lineup-pitch/);
  await staffClick({},{dataset:{staffMatchTab:'callups'}},ctx);
 });
 
