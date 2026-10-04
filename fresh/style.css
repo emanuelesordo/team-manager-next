@@ -775,3 +775,18 @@ body[data-logo-shape="square"] .home-feature .month-matches .crest{border-radius
  font-variant-numeric:tabular-nums;
 }
 .home-feature .month-days .month-cell:not(.with-game)>.month-matches{visibility:hidden}
+
+/* Match days: logo only, optically centered in the entire calendar slot. */
+.home-feature .month-days .month-cell.with-game{
+ grid-template-rows:minmax(0,1fr);
+ place-items:center;
+}
+.home-feature .month-days .month-cell.with-game>.month-number{display:none}
+.home-feature .month-days .month-cell.with-game>.month-matches{
+ grid-row:1;grid-column:1;
+ display:flex;align-items:center;align-content:center;justify-content:center;
+ width:100%;height:100%;margin:0;padding:0;
+}
+.home-feature .month-days .month-cell.with-game .month-matches button{
+ display:grid;place-items:center;margin:0;padding:0;
+}
