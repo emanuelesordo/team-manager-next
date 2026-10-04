@@ -336,7 +336,7 @@ function match(){
  const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
  const scoreText=hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
  const editableScore=extraMatch&&state.identity?.role?.role==='admin';
- const headerScore=editableScore?'<button type="button" class="match-score-trigger'+(scoreMismatch?' score-pending':'')+'" data-score-edit="true" title="Modifica il risultato" aria-label="Modifica il risultato">'+scoreText+'</button>':scoreText;
+ const headerScore=editableScore?'<button type="button" class="match-score-trigger'+(state.scoreEditing?' score-pending':'')+'" data-score-edit="true" title="'+(state.scoreEditing?'Salva risultato':'Modifica partita')+'" aria-label="'+(state.scoreEditing?'Salva risultato':'Modifica partita')+'">'+(state.scoreEditing?'✓ ':'')+scoreText+'</button>':scoreText;
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
@@ -362,8 +362,10 @@ function match(){
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E});
  else body=extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
   '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>';
- if(extraMatch&&editableScore){body='<div class="extra-score-summary">Gol registrati: <strong>'+eventGoals.home+'–'+eventGoals.away+'</strong> · Risultato ufficiale: <strong>'+E(f.home_score??'—')+'–'+E(f.away_score??'—')+'</strong>'+(scoreMismatch?' · <span>Verifica necessaria</span>':' · Coerente')+'</div>'+body;
- if(state.scoreEditing)body+='<div class="extra-score-backdrop"><form data-extra-score-form class="extra-score-dialog" role="dialog" aria-modal="true" aria-label="Conferma risultato"><button type="button" class="extra-score-close" data-score-cancel aria-label="Chiudi">×</button><h2>Conferma risultato</h2><p>Il risultato viene verificato rispetto ai gol registrati. Puoi renderlo definitivo anche con marcatori incompleti.</p><div class="extra-score-values"><label>Casa<input type="number" min="0" max="99" name="home_score" required value="'+E(f.home_score??eventGoals.home)+'"></label><strong>–</strong><label>Ospiti<input type="number" min="0" max="99" name="away_score" required value="'+E(f.away_score??eventGoals.away)+'"></label></div><p class="extra-score-check">Gol dagli eventi: '+eventGoals.home+'–'+eventGoals.away+(scoreMismatch?' · Differenza rispetto al risultato ufficiale':' · Dati coerenti')+'</p><div class="extra-score-actions"><button type="button" data-score-cancel>Annulla</button><button type="submit">Rendi definitivo</button></div></form></div>'; }
+ if(extraMatch&&editableScore&&state.scoreEditing){
+  const eventRows=(state.fixtureEvents||[]).filter(x=>x.validation_status!=='rejected').map(x=>'<form data-extra-event-form data-event-id="'+E(x.id)+'" class="extra-event-row"><select name="event_type">'+[['goal','Gol'],['own_goal','Autogol'],['yellow_card','Giallo'],['blue_card','Blu'],['red_card','Rosso']].map(([k,v])=>'<option value="'+k+'"'+(x.event_type===k?' selected':'')+'>'+v+'</option>').join('')+'</select><select name="team_side"><option value="home"'+(x.side==='home'?' selected':'')+'>Casa</option><option value="away"'+(x.side==='away'?' selected':'')+'>Ospiti</option></select><input name="minute" type="number" min="0" max="300" placeholder="Minuto ?" value="'+E(cumulativeEventMinute(x,comp)??'')+'"><button type="submit">Aggiorna</button><button type="button" data-extra-remove="'+E(x.id)+'" aria-label="Escludi evento">×</button></form>').join('');
+  body='<section class="extra-edit-panel"><h3>Modifica partita</h3><p>Le modifiche ai singoli eventi e ai dettagli si salvano con i rispettivi comandi. Premi di nuovo il punteggio per aggiornare il risultato in base ai gol.</p><div class="extra-event-editor">'+eventRows+'<form data-extra-event-form class="extra-event-row"><select name="event_type"><option value="goal">Gol</option><option value="own_goal">Autogol</option><option value="yellow_card">Giallo</option><option value="blue_card">Blu</option><option value="red_card">Rosso</option></select><select name="team_side"><option value="home">Casa</option><option value="away">Ospiti</option></select><input name="minute" type="number" min="0" max="300" placeholder="Minuto ?" value=""><button type="submit">+ Evento</button></form></div><p class="extra-score-summary">Gol inseriti: <strong>'+eventGoals.home+'–'+eventGoals.away+'</strong> · senza minuto contribuiscono al risultato, ma non ai parziali della cronologia.</p></section>'+body;
+ }
  return '<button class="back-link" data-page="calendar">'+ico('back')+' Torna al calendario</button>'+
   '<div class="match-header-sentinel" aria-hidden="true"></div>'+header+compactHeader+'<section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">'+
   tabs.map(([id,label])=>'<button role="tab" aria-selected="'+(selectedTab===id)+'" data-tab="'+id+
@@ -544,8 +546,9 @@ document.addEventListener('click',async e=>{
  const x=e.target.closest('button,[data-dismiss]');if(!x)return;
  if(x.dataset.dismiss!==undefined&&e.target===x){state.overlay=null;render();return}
  if(x.dataset.page){navigate(x.dataset.page);return}
- if(x.dataset.scoreEdit!==undefined){if(state.identity?.role?.role==='admin'&&involvesTeam(resolveMatch().fixture,team())===false){state.scoreEditing=true;render()}return}
+ if(x.dataset.scoreEdit!==undefined){if(state.identity?.role?.role==='admin'&&!involvesTeam(resolveMatch().fixture,team())){if(!state.scoreEditing){state.scoreEditing=true;render()}else await saveExtraScore()}return}
  if(x.dataset.scoreCancel!==undefined){state.scoreEditing=false;render();return}
+ if(x.dataset.extraRemove){if(state.identity?.role?.role==='admin'){try{await adminWrite('app_match_events','PATCH',{validation_status:'rejected'},{id:x.dataset.extraRemove});state.fixtureEvents=await loadFixtureEvents(state.match);render();toast('Evento escluso')}catch(error){toast(error.message)}}return}
  if(x.dataset.match){openMatch(x.dataset.match);return}
  if(x.dataset.player){state.player=x.dataset.player;navigate('player');return}
  if(x.dataset.slide!==undefined){changeSlide(Number(x.dataset.slide));return}
@@ -585,16 +588,29 @@ document.addEventListener('input',e=>{
   const missing=$('#roster-empty');if(missing)missing.hidden=visible>0;
  }
 });
+async function saveExtraScore(){
+ const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin'||!state.scoreEditing)return;
+ const goals=(state.fixtureEvents||[]).filter(x=>x.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(x.event_type)).reduce((a,x)=>{const side=x.event_type==='own_goal'?(x.side==='home'?'away':'home'):x.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
+ try{await adminWrite('app_competition_fixtures','PATCH',{home_score:goals.home,away_score:goals.away},{id:f.id});f.home_score=goals.home;f.away_score=goals.away;state.scoreEditing=false;render();toast('Risultato aggiornato dai gol registrati')}
+ catch(error){toast('Salvataggio risultato non riuscito: '+error.message)}
+}
+async function saveExtraDetail(field,value){
+ const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
+ try{await adminWrite('app_competition_fixtures','PATCH',{[field]:value},{id:f.id});f[field]=value;render();toast('Dettaglio aggiornato')}catch(error){toast('Modifica non salvata: '+error.message)}
+}
 document.addEventListener('submit',async e=>{
- if(e.target.matches('[data-extra-score-form]')){
-  e.preventDefault();if(state.identity?.role?.role!=='admin')return;
+ if(e.target.matches('[data-extra-event-form]')){
+  e.preventDefault();if(state.identity?.role?.role!=='admin'||!state.scoreEditing)return;
   const f=resolveMatch().fixture;if(!f||involvesTeam(f,team()))return;
-  const form=new FormData(e.target),home=Number(form.get('home_score')),away=Number(form.get('away_score'));
-  const goals=(state.fixtureEvents||[]).filter(x=>x.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(x.event_type)).reduce((a,x)=>{const side=x.event_type==='own_goal'?(x.side==='home'?'away':'home'):x.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
-  if(home<goals.home||away<goals.away){toast('Il risultato non può essere inferiore ai gol già registrati. Correggi prima gli eventi.');return}
-  if(![home,away].every(n=>Number.isInteger(n)&&n>=0&&n<=99)){toast('Risultato non valido');return}
-  try{await adminWrite('app_competition_fixtures','PATCH',{home_score:home,away_score:away},{id:f.id});state.scoreEditing=false;await refreshLive();toast('Risultato aggiornato')}
-  catch(error){toast('Salvataggio non riuscito: '+(error.message||error))}return;
+  const fd=new FormData(e.target),kind=String(fd.get('event_type')),side=String(fd.get('team_side')),raw=String(fd.get('minute')||'').trim();
+  const minute=raw===''?null:Number(raw);
+  if(!['goal','own_goal','yellow_card','blue_card','red_card'].includes(kind)||!['home','away'].includes(side)||minute!==null&&(!Number.isInteger(minute)||minute<0||minute>300)){toast('Evento non valido');return}
+  const existing=state.fixtureEvents.find(x=>x.id===e.target.dataset.eventId);
+  const payload={event_type:kind,team_side:side,minute,source_raw:{period:'first_half'},payload:{origin:'extra_manual'},source:'manual'};
+  try{
+   await adminWrite('app_match_events',existing?'PATCH':'POST',existing?{event_type:kind,team_side:side,minute,source_raw:payload.source_raw,payload:payload.payload}:{...payload,fixture_id:f.id,match_id:null,proposed_by:state.identity.user},existing?{id:existing.id}:{});
+   state.fixtureEvents=await loadFixtureEvents(f.id);render();toast('Evento salvato');
+  }catch(error){toast('Evento non salvato: '+error.message)}return;
  }
  if(e.target.matches('[data-vote-form]')){
   e.preventDefault();
