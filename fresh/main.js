@@ -311,7 +311,7 @@ function match(){
  const activeEvents=(data.events||[]).filter(e=>e.validation_status!=='rejected');
  const pending=activeEvents.filter(e=>['proposed','community_confirmed','disputed'].includes(e.validation_status)).length;
  const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),comp):
-  (state.fixtureEvents?.length?fixtureEventsPanel(state.fixtureEvents,comp):'<div class="empty">Nessun tabellino associato.</div>');
+  (state.fixtureEvents?.length?fixtureEventsPanel(state.fixtureEvents,comp,f):'<div class="empty">Nessun tabellino associato.</div>');
  const formation=m?overviewLineup(m,data,state.data?.players||[],state.data?.playerStats||[],comp):
   '<div class="empty">Formazione non disponibile: partita senza tabellino operativo.</div>';
  const tabs=[['overview','Overview'],['events','Eventi'],['lineup','Formazioni'],['ratings','Voti'],...(isStaff(staffContext())?[['staff','Gestione']]:[])];
