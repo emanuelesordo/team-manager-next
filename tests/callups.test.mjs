@@ -30,3 +30,12 @@ test('formation has kickoff gate and supports retrospective editor',()=>{
  assert.match(staff,/Date\.now\(\)>=Date\.parse\(m\.kickoff_at\)/);
  assert.match(staff,/La formazione è modificabile dal calcio d’inizio/);
 });
+
+test('icon selections persist immediately and verify database records',()=>{
+ assert.match(pitch,/new CustomEvent\('tm-callup-change'/);
+ assert.match(main,/document\.addEventListener\('tm-callup-change'/);
+ assert.match(staff,/export async function persistCallupChange/);
+ assert.match(staff,/rpc\('tm_app_save_callups'/);
+ assert.match(staff,/await get\('app_match_players'/);
+ assert.match(staff,/Il database non conferma la convocazione/);
+});
