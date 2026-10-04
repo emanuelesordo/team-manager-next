@@ -99,7 +99,7 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
   fixtures:['app_competition_fixtures','select=*&season_id=eq.'+id+'&order=kickoff_at.asc&limit=1000'],
   standings:['app_competition_standings','select=*&season_id=eq.'+id],
   roster:['app_roster','select=*&season_id=eq.'+id],
-  contracts:['player_contracts','select=id,season_id,player_id,start_date,planned_end_date,actual_end_date,status&season_id=eq.'+id+'&limit=1000'],
+  contracts:['app_roster_periods','select=id,season_id,player_id,start_date,end_date&season_id=eq.'+id+'&order=start_date.asc&limit=1000'],
   playerStats:['app_player_season_stats','select=*&season_id=eq.'+id],
   habitual:['tm_player_habitual_shirts','select=player_id,shirt_number,occurrences,last_used&limit=1000'],
   matches:['app_matches','select=*&season_id=eq.'+id],
