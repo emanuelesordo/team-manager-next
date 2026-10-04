@@ -218,7 +218,9 @@ export function adminPage(ctx){
   const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const firstDay=p?(p.created_at?.slice(0,10)>season?.start_date?p.created_at.slice(0,10):season?.start_date):today;
   const starting=contract?.start_date||firstDay||today;
-  const ending=contract?.actual_end_date||contract?.planned_end_date||season?.end_date||'';
+  const ending=contract?.end_date||season?.end_date||'';
+  const previousPeriods=(data.contracts||[]).filter(x=>x.player_id===p?.id&&x.season_id===ctx.state.season).sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
+  const periodHistory=previousPeriods.length?'<div class="staff-help"><strong>Periodi registrati:</strong> '+previousPeriods.map(x=>esc(x.start_date)+' → '+esc(x.end_date)).join(' · ')+'</div>':'';
   form=wrapForm('players','Gestione anagrafica e rosa',
    selectExisting('players',list,'last_name')+
    '<div class="staff-form-grid">'+input('first_name','Nome',p?.first_name||'','text','required')+
@@ -228,7 +230,8 @@ export function adminPage(ctx){
    input('height_cm','Altezza (cm)',p?.height_cm??'','number','min="100" max="245"')+
    selection('active','Nella rosa della stagione',[['true','Sì'],['false','No']],r?.active===false?'false':'true')+
    input('contract_start','In rosa dal',starting,'date','required')+
-   input('contract_end','In rosa fino al',ending,'date','required')+'</div>',
+   input('contract_end','In rosa fino al',ending,'date','required')+
+   selection('contract_mode','Periodo',[['edit','Modifica ultimo periodo'],['new','Aggiungi nuovo periodo']],p?'edit':'new')+'</div>'+periodHistory,
    'Le date delimitano le gare in cui il giocatore è convocabile. Fuori da questo periodo non compare fra disponibili o indisponibili. La modifica non cancella lo storico.');
  }
  if(memory.area==='users'){
@@ -341,10 +344,9 @@ const callupReasons=[
 function playerEligibleAt(data,row,kickoff){
  if(!kickoff||!Number.isFinite(Date.parse(kickoff)))return true;
  const day=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(kickoff));
- const contracts=(data.contracts||[]).filter(c=>c.player_id===row.player_id&&c.season_id===row.season_id);
- if(contracts.length)return contracts.some(c=>c.status!=='cancelled'&&c.status!=='rejected'&&c.start_date<=day&&day<=(c.actual_end_date&&c.actual_end_date<c.planned_end_date?c.actual_end_date:c.planned_end_date||'9999-12-31'));
- const person=row.person;const season=(data.seasonStart||'0000-01-01');const created=person?.created_at?.slice(0,10)||season;
- return day>=(created>season?created:season);
+ const periods=(data.contracts||[]).filter(p=>p.player_id===row.player_id&&p.season_id===row.season_id);
+ if(periods.length)return periods.some(p=>p.start_date<=day&&day<=p.end_date);
+ return false;
 }
 function matchCallups(ctx,m){
  const data=ctx.state.data||{},current=ctx.state.matchData?.players||[];
@@ -842,12 +844,12 @@ export async function staffSubmit(e,ctx){
    return true;
   }
   if(kind==='players'){
-   const d=dataForm(form),{contract_start,contract_end,...raw}=d;
+   const d=dataForm(form),{contract_start,contract_end,contract_mode,...raw}=d;
    if(!contract_start||!contract_end||contract_start>contract_end)throw Error('Periodo di appartenenza non valido');
    const payload={...raw,id:memory.selected.players||null,
     active:d.active==='true',height_cm:d.height_cm===''?null:Number(d.height_cm)};
    const playerId=await pendingFn(form,()=>rpc('tm_app_save_player',{p_season_id:ctx.state.season,p_data:payload}));
-   await pendingFn(form,()=>rpc('tm_app_set_player_period',{p_season_id:ctx.state.season,p_player_id:playerId,p_start_date:contract_start,p_end_date:contract_end}));
+   await pendingFn(form,()=>rpc('tm_app_set_player_period',{p_season_id:ctx.state.season,p_player_id:playerId,p_start_date:contract_start,p_end_date:contract_end,p_period_id:contract_mode==='edit'?(ctx.state.data?.contracts||[]).filter(x=>x.player_id===playerId&&x.season_id===ctx.state.season).sort((a,b)=>String(b.start_date).localeCompare(String(a.start_date)))[0]?.id||null:null}));
    memory.selected.players=playerId;
    await ctx.reloadAll();ctx.toast('Giocatore e periodo di rosa aggiornati');return true;
   }
