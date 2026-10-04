@@ -63,6 +63,10 @@ export function installLineupPitch(){
  document.addEventListener('change',e=>{
   const el=e.target,form=el.closest('form[data-staff-form="lineup"]');if(!form)return;
   const row=el.closest('[data-lineup-player]');
+  if(row&&el.matches('select[name="status"]')){
+   const reason=row.querySelector('select[name="reason"]');
+   if(reason){reason.disabled=el.disabled||el.value!=='absent';if(el.value==='absent'&&!reason.value)reason.value='technical_choice'}
+  }
   if(row&&el.matches('select[name="status"]')&&el.value!=='starter'){getSlot(row).value='';const captain=row.querySelector('[name=captain]');if(captain?.checked)captain.checked=false}
   if(row&&el.matches('select[name="status"]')&&el.value==='starter'&&!slotOf(row)){
    const occupied=new Set(rowList(form).filter(r=>isStarter(r)).map(slotOf));
