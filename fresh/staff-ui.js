@@ -362,11 +362,14 @@ function matchLineup(ctx,m){
   current=ctx.state.matchData?.players||[];
  const rostered=roster.map(x=>({...x,person:players.find(p=>p.id===x.player_id)})).filter(x=>x.person)
    .sort((a,b)=>String(a.person.last_name).localeCompare(String(b.person.last_name),'it'));
- const allowed=m.status==='scheduled';
- const fields=rostered.map(row=>{
+ const allowed=true;
+ const fields=rostered.filter(row=>{
+  const p=current.find(x=>x.player_id===row.player_id);
+  return !p||p.selection_status!=='absent';
+ }).map(row=>{
   const old=current.find(x=>x.player_id===row.player_id);
   const proposal=availabilityDefault({saved:old,injuries:ctx.state.data?.injuries||[],suspensions:ctx.state.data?.suspensions||[],playerId:row.player_id,fixtureDate:m.kickoff_at,priorSelections:ctx.state.data?.priorSelections||[],matches:ctx.state.data?.matches||[],matchId:m.id,disciplinaryEvents:ctx.state.data?.disciplinaryEvents||[],competitionId:m.competition_id,competitionRules:(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id)?.discipline_rules||{},competitionLinks:ctx.state.data?.competitionLinks||[]});
-  const status=proposal.status;
+  const status=proposal.status==='absent'?'available':proposal.status;
   const cap=Boolean(old?.is_captain);
   const code=esc(row.player_id);
   const activeInjury=(ctx.state.data?.injuries||[]).find(i=>i.player_id===row.player_id&&['active','recovering'].includes(i.status)&&!i.actual_return);
@@ -379,19 +382,19 @@ function matchLineup(ctx,m){
    alerts.push('Squalifica attiva');
   const columns=[
    '<div class="lineup-name" draggable="true" role="button" tabindex="0" aria-label="Seleziona per il campo"><strong>'+esc(playerText(row.person))+'</strong><small>'+esc(row.person.generic_role_manual||'—')+'</small>'+alerts.map(a=>'<em class="lineup-alert">'+esc(a)+'</em>').join('')+(allowed&&activeInjury?'<button type="button" class="staff-soft" data-staff-action="recover-player" data-injury-id="'+esc(activeInjury.id)+'">Segna rientrato</button>':'')+'</div>',
-   '<select name="status" aria-label="Disponibilità '+esc(playerText(row.person))+'" '+(allowed?'':'disabled')+'>'+types.map(v=>option(v[0],v[1],status)).join('')+'</select>',
+   '<select name="status" aria-label="Impiego '+esc(playerText(row.person))+'" '+(allowed?'':'disabled')+'>'+types.filter(v=>v[0]!=='absent').map(v=>option(v[0],v[1],status)).join('')+'</select>',
    '<input type="number" name="shirt" aria-label="Maglia" placeholder="N°" min="1" max="99" value="'+esc(old?.shirt_number??row.shirt_number??'')+'" '+(allowed?'':'disabled')+'>',
    '<input type="number" name="slot" aria-label="Posizione" placeholder="1–11" min="1" max="11" value="'+esc(old?.tactical_slot??'')+'" '+(allowed?'':'disabled')+'>',
    '<label class="captain-check"><input type="radio" name="captain" value="'+code+'" '+(cap?'checked':'')+' '+(allowed?'':'disabled')+'> C</label>',
-   '<select name="reason" aria-label="Motivo indisponibilità" '+(allowed&&status==='absent'?'':'disabled')+'>'+reasons.map(x=>option(x[0],x[1],status==='absent'?(proposal.reason||'technical_choice'):'')).join('')+'</select>',
+   '<input type="hidden" name="reason" value="">',
   ];
   return '<div class="lineup-row" data-lineup-player="'+code+'">'+columns.join('')+'</div>';
  }).join('');
- return '<section class="staff-subpanel">'+title('PREPARTITA','Convocazioni e undici iniziale')+
- help('Per ogni giocatore scegli Disponibile (anche per convocarlo), Titolare, Panchina o Non convocato. Gli infortuni aperti e le squalifiche registrate sono proposti automaticamente; puoi correggere la scelta. Senza un motivo specifico, il non convocato è una scelta tecnica. Le squalifiche effettive vengono comunque controllate dal server e si rettificano in Amministrazione → Disponibilità; gli infortuni si chiudono nella stessa sezione con data di rientro.')+
+ return '<section class="staff-subpanel">'+title('CALCIO D’INIZIO','Formazione e panchina')+
+ help('Questa sezione è separata dalle convocazioni. Imposta titolari, posizioni sul campo e panchina al calcio d’inizio o ricostruisci la formazione a posteriori; le modifiche non cancellano gli eventi registrati.')+
  '<form data-staff-form="lineup"><div class="staff-top-fields">'+input('formation','Modulo',m.formation||'4-4-2','text','maxlength="32" '+(allowed?'':'disabled'))+'</div>'+
  pitchMarkup()+'<div class="lineup-header"><span>Giocatore</span><span>Disponibilità</span><span>N°</span><span>Slot</span><span>Cap.</span><span>Motivo</span></div>'+
- '<div class="lineup-rows">'+fields+'</div>'+(!allowed?help('La formazione iniziale è bloccata dopo il fischio. Usa gli eventi live per le sostituzioni.'):submit('Salva convocazioni e formazione'))+'</form></section>';
+ '<div class="lineup-rows">'+fields+'</div>'+submit('Salva formazione e panchina')+'</form></section>';
 }
 function scoreForm(m){
  return '<form data-staff-form="score" class="live-score-editor"><label>Casa<input name="home_score" type="number" min="0" max="99" required value="'+esc(m.home_score??0)+'"></label><strong>:</strong><label>Ospite<input name="away_score" type="number" min="0" max="99" required value="'+esc(m.away_score??0)+'"></label>'+submit('Aggiorna risultato')+'</form>';
@@ -724,8 +727,8 @@ export async function staffSubmit(e,ctx){
    const num=rows.filter(x=>x.selection_status==='starter').length;
    if(num>11)throw Error('Massimo undici titolari');
    if(new Set(rows.filter(x=>x.tactical_slot!=null).map(x=>x.tactical_slot)).size!==rows.filter(x=>x.tactical_slot!=null).length)throw Error('Slot tattici ripetuti');
-   await pendingFn(form,()=>rpc('tm_app_save_lineup',{p_match_id:m.id,p_rows:rows,p_formation:dataForm(form).formation||null}));
-   await reloadMatch(ctx);ctx.toast('Formazione e convocazioni salvate');return true;
+   await pendingFn(form,()=>rpc('tm_app_save_formation',{p_match_id:m.id,p_rows:rows,p_formation:dataForm(form).formation||null}));
+   await reloadMatch(ctx);ctx.toast('Formazione e panchina salvate');return true;
   }
   if(kind==='event'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
