@@ -156,7 +156,7 @@ export async function rpc(functionName,args={}){
 }
 /** Mutazioni RLS su tabelle esplicitamente consentite alla console admin. */
 const EDIT_TABLES=new Set(['teams','app_seasons','app_competitions','app_opponents',
- 'players','app_roster','app_competition_fixtures','injuries','suspensions']);
+ 'players','app_roster','app_competition_fixtures','app_match_events','injuries','suspensions']);
 export async function adminWrite(table,method,values,where={}){
  if(!EDIT_TABLES.has(table)||!['POST','PATCH'].includes(method))throw new Error('Operazione non prevista');
  if(!hasSession())throw new Error('Accesso richiesto');
