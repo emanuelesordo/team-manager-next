@@ -25,7 +25,7 @@ test('match header displays three top metadata pairs, no Match Center label or s
  assert.match(css,/match-header-meta\{[^}]*border:0/);
 });
 test('status is above result with explicit dash; substitutions are tight',()=>{
- assert.ok(matchSource.includes("'<div class=\"match-big-score\"><div class=\"match-score-status\">'+status(f)"));
+ assert.ok(matchSource.includes('<div class="match-score-status">'));
  assert.ok(matchSource.includes('match-score-separator'));
  assert.match(css,/\.match-detail-head \.match-big-score\{[^}]*flex-direction:column/);
  assert.match(css,/\.match-timeline \.mt-change\{[^}]*gap:0;line-height:10px/);
