@@ -619,9 +619,22 @@ async function saveExtraDetail(field,value){
 document.addEventListener('tm-callup-change',e=>{
  const detail=e.detail;
  const getRow=()=>[...document.querySelectorAll('[data-callup-player]')].find(x=>x.dataset.callupPlayer===detail.playerId);
- const row=getRow();if(row){row.dataset.saving='true';row.dataset.saveError='false'}
+ const row=getRow();
+ if(row){row.dataset.saving='true';row.dataset.saveError='false';row.querySelectorAll('[data-callup-reason]').forEach(button=>button.disabled=true)}
  void persistCallupChange(detail,error=>{
-  const current=getRow();if(current){current.dataset.saving='false';current.dataset.saveError=String(Boolean(error))}
+  const current=getRow();
+  if(current){
+   current.dataset.saving='false';current.dataset.saveError=String(Boolean(error));
+   current.querySelectorAll('[data-callup-reason]').forEach(button=>button.disabled=current.dataset.locked==='true');
+   if(error){
+    current.querySelector('[name=selection]').value=current.dataset.persistedStatus;
+    current.querySelector('[name=reason]').value=current.dataset.persistedReason;
+    paintCallups();
+   }else{
+    current.dataset.persistedStatus=detail.status;
+    current.dataset.persistedReason=detail.status==='absent'?detail.reason:'';
+   }
+  }
   toast(error?'Convocazione NON salvata: '+error.message:'Convocazione salvata');
  }).catch(()=>{});
 });
