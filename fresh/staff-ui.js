@@ -347,11 +347,10 @@ function matchCallups(ctx,m){
    '<input type="hidden" name="selection" value="'+(out?'absent':'available')+'">'+
    '<input type="hidden" name="reason" value="'+esc(reason)+'">'+
    '<span class="callup-reasons">'+buttons+'</span>'+
-   '<button type="button" class="callup-transfer" data-callup-toggle '+(locked?'disabled':'')+' aria-label="'+(out?'Rendi disponibile':'Escludi dai convocati')+'">'+(out?'←':'→')+'</button>'+
    '</div>';
  }).join('');
  return '<section class="staff-subpanel">'+title('PREPARTITA','Convocazioni')+
- help('Sposta i giocatori con la freccia. Per gli indisponibili scegli il motivo tramite le icone: malattia, infortunio, squalifica, assenza o scelta tecnica. È possibile integrare le convocazioni anche a posteriori, senza modificare la formazione già registrata.')+
+ help('Tocca un’icona per rendere il giocatore indisponibile e assegnare il motivo. Tocca di nuovo l’icona selezionata per reintegrarlo. Le convocazioni si possono integrare anche a posteriori.')+
  '<form data-staff-form="callups"><div class="callup-columns">'+
  '<section class="callup-list"><h3>Disponibili <span data-callup-count="available"></span></h3><div data-callup-list="available"></div></section>'+
  '<section class="callup-list"><h3>Indisponibili <span data-callup-count="absent"></span></h3><div data-callup-list="absent"></div></section>'+
