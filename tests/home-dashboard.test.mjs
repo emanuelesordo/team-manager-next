@@ -118,11 +118,11 @@ test('Home carousel reserves the footer inside its fixed-height frame',()=>{
  assert.ok(!compact.includes('grid-template-rows:max-content max-content max-content'));
 });
 
-test('Calendar day positions reserve one centered logo slot for every date',()=>{
- assert.ok(css.includes('.home-feature .month-days .month-cell{'));
- assert.ok(css.includes('display:grid;place-items:center;padding:0'));
- assert.ok(css.includes('.month-cell>.month-number{'));
- assert.ok(css.includes('grid-area:1/1;position:relative;align-self:center;justify-self:center'));
+test('Calendar numbers stay centered BELOW logo and within their weekday cells',()=>{
+ assert.ok(css.includes('grid-template-rows:minmax(0,1fr) 16px'));
  assert.ok(css.includes('.month-cell.with-game>.month-number{'));
+ assert.ok(css.includes('grid-column:1;grid-row:2;'));
+ assert.ok(css.includes('position:static;inset:auto;transform:none;'));
+ assert.ok(css.includes('align-self:center;justify-self:center;'));
  assert.ok(css.includes('.month-cell:not(.with-game)>.month-matches{visibility:hidden}'));
 });
