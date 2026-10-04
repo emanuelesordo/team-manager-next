@@ -325,7 +325,7 @@ function match(){
   '<div class="empty">Formazione non disponibile: partita senza tabellino operativo.</div>';
  const staffAccess=isStaff(staffContext());
  const matchIsLive=m?.status==='live'||f.status==='live';
- const tabs=extraMatch?[['overview','Overview']]:[['ratings','Voti'],...(staffAccess&&matchIsLive?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[])];
+ const tabs=extraMatch?[['overview','Overview']]:[...(staffAccess?[['callups','Disponibilità']]:[]),['ratings','Voti'],...(staffAccess&&matchIsLive?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[])];
  const requestedTab=state.matchTab==='summary'?'overview':state.matchTab;
  const mappedTab=requestedTab==='staff'?(staffAccess&&!extraMatch?'callups':'overview'):requestedTab;
  const selectedTab=tabs.some(([id])=>id===mappedTab)?mappedTab:'overview';
