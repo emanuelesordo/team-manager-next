@@ -425,3 +425,19 @@
 
 /* La lista mostra solo le riserve; i titolari restano nel DOM per il salvataggio. */
 .lineup-minimal .lineup-rows .lineup-row.lineup-on-field{display:none}
+
+
+/* Campo dell'Overview derivato dalle stesse posizioni di Formazione. */
+.ov-shared-field .visual-field{width:100%;max-height:620px;aspect-ratio:.95;margin-inline:auto}
+.ov-shared-field .field-slot{cursor:default;pointer-events:none}
+.ov-shared-field .field-slot strong{pointer-events:none}
+.match-info-editor{padding:12px 0;max-width:920px}
+.match-info-editor .staff-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.match-info-editor .staff-field{display:grid;gap:5px}
+.match-info-editor input,.match-info-editor select{min-width:0;width:100%;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);padding:10px}
+.lineup-confirm{display:flex;align-items:center;gap:12px;margin-top:10px}
+.lineup-confirm span,.lineup-reason-title{color:var(--muted);font-size:11px}
+.lineup-bench-reasons{display:grid;gap:6px;margin-top:15px}
+.lineup-unused-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,220px);gap:10px;align-items:center;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)}
+.lineup-unused-row select{width:100%;padding:7px;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:8px}
+@media(max-width:760px){.match-info-editor .staff-form-grid{grid-template-columns:1fr}.lineup-unused-row{grid-template-columns:1fr 130px}}
