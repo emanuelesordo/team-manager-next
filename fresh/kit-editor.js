@@ -1,52 +1,33 @@
 /* Modelli vettoriali delle divise: nessuna immagine remota, sponsor o logo.
    Le chiavi dei kit sono stabili, il nome e il modello sono modificabili. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+/* Solo silhouette realmente diverse nella galleria; gli ID legacy restano leggibili
+   per non alterare nessuna maglia già registrata, in particolare i 4 kit Caselle. */
 export const kitModels=Object.freeze([
- ['solid','Tinta unita'],['center-panel','Pannello centrale'],['shoulder-band','Spalle a contrasto'],['sky-raglan','Raglan bicolore'],
- ['red-shoulders','Spalle scure'],['pinstripes','Righe sottili'],['claret-sleeves','Maniche a contrasto'],['red-classic','Classica'],
- ['cross-stripes','Strisce con fascia'],['contrast-collar','Colletto chiaro'],['trimmed','Bordi a contrasto'],['white-classic','Bianca classica'],
- ['yellow-classic','Colletto scuro'],['bold-stripes','Righe larghe'],['side-panels','Pannelli laterali'],['black-red','Rossonera'],
- ['red-white','Biancorossa'],['claret-trim','Raglan con bordi'],['low-sash','Banda bassa'],['dark-sash','Banda diagonale scura'],
- ['white-red-sash','Bianca fascia rossa'],['heather-raglan','Raglan mélange'],['royal-stripes','Blu a bande'],['yellow-dots','Puntinata gialla'],
- ['stripes','Verticali standard'],['hoops','Fasce orizzontali'],['halves','Due metà'],['diagonal','Diagonale standard']
+ ['solid','Tinta unita'],['center-panel','Pannello centrale'],['shoulder-band','Spalle a contrasto'],
+ ['sky-raglan','Raglan bicolore'],['pinstripes','Righe sottili'],['stripes','Righe larghe'],
+ ['hoops','Fasce orizzontali'],['halves','Due metà'],['diagonal','Banda diagonale'],
+ ['white-red-sash','Fascia trasversale'],['side-panels','Pannelli laterali'],
+ ['cross-stripes','Strisce con fascia'],['yellow-dots','Puntinata'],
+ ['low-sash','Banda bassa'],['heather-raglan','Raglan mélange']
 ].map(([id,label])=>({id,label})));
-export const kitStyles=Object.freeze(kitModels.map(x=>x.id));
+export const legacyKitStyles=Object.freeze([
+ 'red-shoulders','claret-sleeves','red-classic','contrast-collar','trimmed',
+ 'white-classic','yellow-classic','bold-stripes','black-red','red-white',
+ 'claret-trim','dark-sash','royal-stripes'
+]);
+export const kitStyles=Object.freeze([...kitModels.map(x=>x.id),...legacyKitStyles]);
 const defaults={home:{style:'stripes',primary:'#18252b',secondary:'#ffdf22',sleeves:'#18252b',number:'#ffffff'},
  away:{style:'solid',primary:'#eeeeee',secondary:'#1f3a45',sleeves:'#eeeeee',number:'#111111'},
  goalkeeper:{style:'solid',primary:'#4cae6a',secondary:'#1c4539',sleeves:'#4cae6a',number:'#ffffff'}};
 const labels={home:'Prima maglia',away:'Trasferta',goalkeeper:'Portiere'};
 const palette=['#ffffff','#eeeeee','#111111','#192d4d','#283a79','#2564c8','#83b3db','#a21524','#ec1425','#c01a27','#72243a','#ffd323','#ff961c','#53a86a','#111f1b','#8d8d8d'];
 
-/* Colorazioni di riferimento dei 20 bozzetti e delle quattro fotografie. */
-export const kitModelPresets=Object.freeze({
- 'solid':['#213f75','#213f75','#213f75','#ffffff'],
- 'center-panel':['#ae151d','#ffffff','#ffffff','#ffffff'],
- 'shoulder-band':['#f4f5f5','#142032','#f4f5f5','#f5ca27'],
- 'sky-raglan':['#8db8df','#25314d','#25314d','#ffffff'],
- 'red-shoulders':['#bd1f24','#a51219','#bd1f24','#ffffff'],
- 'pinstripes':['#ffffff','#db1221','#db1221','#ba161d'],
- 'claret-sleeves':['#75283a','#83b6d8','#83b6d8','#ffffff'],
- 'red-classic':['#b81925','#8d1523','#b81925','#ffffff'],
- 'cross-stripes':['#ffffff','#d8202c','#ffffff','#ffffff'],
- 'contrast-collar':['#292b66','#ffffff','#292b66','#ffffff'],
- 'trimmed':['#2d58a4','#ecca35','#2d58a4','#ffffff'],
- 'white-classic':['#ffffff','#e7e7e7','#ffffff','#17252c'],
- 'yellow-classic':['#f7eb25','#111111','#f7eb25','#111111'],
- 'bold-stripes':['#ffffff','#18244e','#ffffff','#18244e'],
- 'side-panels':['#272a66','#b3222b','#b3222b','#ffffff'],
- 'black-red':['#161619','#c51e2c','#c51e2c','#ffffff'],
- 'red-white':['#ffffff','#bb2029','#bb2029','#f8cd1e'],
- 'claret-trim':['#762a3a','#8bb5d5','#762a3a','#ffffff'],
- 'low-sash':['#b31f2c','#ffffff','#b31f2c','#ffffff'],
- 'dark-sash':['#ffa52b','#24231f','#ffa52b','#24231f'],
- 'white-red-sash':['#ffffff','#e6212d','#ffffff','#e6212d'],
- 'heather-raglan':['#ed1421','#ff9ea1','#ee5c65','#ffffff'],
- 'royal-stripes':['#101c46','#1b4baf','#101c46','#ffffff'],
- 'yellow-dots':['#131314','#f2d51c','#131314','#ffffff']
-});
+/* Il modello descrive SOLO la geometria: non sovrascrive mai la palette.
+   È fondamentale perché i quattro kit Caselle conservino esattamente i colori salvati. */
 export function modelKit(id,base={}){
- const colors=kitModelPresets[id],current=normalizeKit(base);
- return colors?{...current,style:id,primary:colors[0],secondary:colors[1],sleeves:colors[2],number:colors[3]}:{...current,style:id};
+ const kit=normalizeKit(base);
+ return kitStyles.includes(id)?{...kit,style:id}:kit;
 }
 export const isKitColor=x=>typeof x==='string'&&/^#[0-9a-f]{6}$/i.test(x);
 const safeKey=x=>/^[a-z0-9_-]{1,60}$/.test(x);
@@ -78,7 +59,7 @@ export function newKitKey(collection){
  for(let n=2;n<100000;n++)if(!Object.hasOwn(collection,'kit_'+n))return 'kit_'+n;
  throw Error('Troppi kit creati');
 }
-const shape='M40 17 L57 9 L68 16 Q73 24 78 24 Q84 24 89 16 L102 9 L121 17 L143 51 L124 65 L111 46 L111 148 L32 148 L32 46 L20 65 L1 51 Z';
+const shape='M40 17 L57 9 L68 16 Q73 24 78 24 Q84 24 89 16 L102 9 L121 17 L143 51 L124 65 L111 46 L111 148 Q73 151 32 148 L32 46 L20 65 L1 51 Z';
 const torso='<path d="M40 17L57 9L68 16Q78 29 89 16L102 9L111 46V148H32V46Z"/>';
 const bands=(color,n=8,width=8,from=28)=>Array.from({length:n},(_,i)=>'<path d="M'+(from+i*(width+6))+' 0h'+width+'v160h-'+width+'z" fill="'+color+'"/>').join('');
 const hoops=(color,n=5)=>Array.from({length:n},(_,i)=>'<rect x="0" y="'+(20+i*30)+'" width="146" height="13" fill="'+color+'"/>').join('');
@@ -87,27 +68,23 @@ function pattern(kit){
  const sleeves='<path d="M1 51L40 17L43 48L20 65ZM102 9L121 17L143 51L124 65L101 44Z" fill="'+sl+'"/>';
  const sash='<path d="M-4 122L113 -12L148 13L25 152Z" fill="'+s+'"/>';
  switch(kit.style){
-  case 'stripes':return bands(s,8,7,21)+sleeves;
+  case 'solid':return sleeves;
+  case 'stripes':return bands(s,6,12,24)+sleeves;
   case 'hoops':return hoops(s)+sleeves;
   case 'halves':return '<path d="M73 0H147V160H73Z" fill="'+s+'"/>'+sleeves;
-  case 'diagonal':return sash+sleeves;
-  case 'center-panel':return '<path d="M42 14H102L110 150H33Z" fill="'+p+'"/>'+sleeves;
-  case 'shoulder-band':return '<path d="M0 0H146V34H0Z" fill="'+s+'"/>'+sleeves;
-  case 'sky-raglan':case 'claret-sleeves':case 'red-classic':case 'white-classic':case 'yellow-classic':case 'contrast-collar':return sleeves;
-  case 'red-shoulders':return '<path d="M0 0H146V36H0Z" fill="'+s+'"/>'+sleeves;
-  case 'pinstripes':return bands(s,9,3,29)+sleeves;
-  case 'cross-stripes':return bands(s,7,8,31)+'<rect y="52" width="146" height="16" fill="'+s+'"/>'+sleeves;
-  case 'trimmed':return sleeves;
-  case 'bold-stripes':case 'black-red':case 'red-white':return bands(s,6,13,29)+sleeves;
-  case 'side-panels':return '<path d="M24 0H40V160H24ZM104 0H121V160H104Z" fill="'+s+'"/>'+sleeves;
-  case 'claret-trim':return sleeves;
+  case 'diagonal':return '<path d="M-19 4L8 -11L160 126L138 165Z" fill="'+s+'"/>'+sleeves;
+  case 'white-red-sash':return sash+sleeves;
+  case 'center-panel':return '<path d="M54 9H91L97 151H47Z" fill="'+s+'"/>'+sleeves;
+  case 'shoulder-band':return '<path d="M0 -3H146V31H0Z" fill="'+s+'"/>'+sleeves;
+  case 'sky-raglan':return sleeves+'<path d="M39 17L57 9L61 16L43 47Z M89 16L102 9L112 46L104 39Z" fill="'+s+'"/>';
+  case 'pinstripes':return bands(s,11,2.7,25)+sleeves;
+  case 'cross-stripes':return bands(s,6,9,27)+'<rect y="55" width="146" height="15" fill="'+s+'"/>'+sleeves;
+  case 'side-panels':return '<path d="M23 0H43L43 155H23ZM104 0H122V155H104Z" fill="'+s+'"/>'+sleeves;
   case 'low-sash':return '<path d="M-12 112L10 88L125 151L108 162Z" fill="'+s+'"/>'+sleeves;
-  case 'dark-sash':case 'white-red-sash':return sash+sleeves;
   case 'heather-raglan':{
-   const threads=Array.from({length:45},(_,i)=>'<path d="M0 '+(i*4+2)+'L146 '+(i*4-9)+'" stroke="'+s+'" stroke-width=".85" opacity=".45"/>').join('');
-   return sleeves+'<g opacity=".75">'+threads+'</g>'+torso.replace('<path','<path fill="'+p+'"');
+   const threads=Array.from({length:34},(_,i)=>'<path d="M0 '+(i*5+2)+'L146 '+(i*5-10)+'" stroke="'+s+'" stroke-width=".75" opacity=".34"/>').join('');
+   return sleeves+'<g>'+threads+'</g>'+torso.replace('<path','<path fill="'+p+'"');
   }
-  case 'royal-stripes':return bands(s,4,12,38)+sleeves;
   case 'yellow-dots':{
    let dots='';
    for(let row=0;row<29;row++)for(let col=0;col<22;col++){
@@ -118,22 +95,33 @@ function pattern(kit){
    }
    return sleeves+dots;
   }
+  // I vecchi pattern restano renderizzabili, pur non essendo duplicati nel catalogo.
+  case 'red-shoulders':return '<path d="M0 0H146V36H0Z" fill="'+s+'"/>'+sleeves;
+  case 'claret-sleeves':case 'red-classic':case 'white-classic':case 'yellow-classic':
+  case 'contrast-collar':case 'trimmed':case 'claret-trim':return sleeves;
+  case 'bold-stripes':case 'black-red':case 'red-white':return bands(s,6,13,29)+sleeves;
+  case 'dark-sash':return sash+sleeves;
+  case 'royal-stripes':return bands(s,4,12,38)+sleeves;
   default:return sleeves;
  }
 }
 export function shirtSvg(config={},uid='shirt',back=false,shownNumber=null){
  const k=normalizeKit(config),clip='kit-'+String(uid).replace(/[^a-z0-9_-]/gi,'');
+ const sheen=clip+'-sheen';
  const n=shownNumber===null?(back?'10':''):String(shownNumber??'').slice(0,3);
  const isCount=/^[0-9]{1,3}$/.test(n);
  return '<svg class="kit-svg" viewBox="0 0 145 160" role="img" aria-label="Maglia '+(back?'retro':'fronte')+'" xmlns="http://www.w3.org/2000/svg">'+
-  '<defs><clipPath id="'+clip+'"><path d="'+shape+'"/></clipPath></defs>'+
-  '<path d="'+shape+'" fill="'+k.primary+'" stroke="rgba(20,30,42,.6)" stroke-width="1.25"/>'+
+  '<defs><clipPath id="'+clip+'"><path d="'+shape+'"/></clipPath>'+
+  '<linearGradient id="'+sheen+'" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#fff" stop-opacity=".10"/><stop offset="43%" stop-color="#fff" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".065"/></linearGradient></defs>'+
+  '<path d="'+shape+'" fill="'+k.primary+'" stroke="rgba(20,30,42,.42)" stroke-width="1.1"/>'+
   '<g clip-path="url(#'+clip+')">'+pattern(k)+
-  '<path d="M37 52Q31 88 34 136L41 122M108 52Q116 92 109 138" fill="none" stroke="#000" stroke-width="2" opacity=".07"/>'+
+  '<path d="'+shape+'" fill="url(#'+sheen+')"/>'+
+  '<path d="M39 38Q32 54 35 72M106 38Q113 60 109 79M35 136Q53 132 68 145M104 137Q93 133 81 145" fill="none" stroke="#000" stroke-width="1.15" opacity=".075"/>'+
+  '<path d="M38 37Q42 53 43 60M103 37Q100 52 99 61" fill="none" stroke="#fff" stroke-width="1.2" opacity=".10"/>'+
   '</g>'+
-  '<path d="M57 9Q73 36 89 9L85 17Q73 30 61 17Z" fill="'+k.secondary+'" stroke="#000" stroke-width=".45" opacity=".95"/>'+
-  '<path d="M1 51L20 65M124 65L143 51M32 146H111" fill="none" stroke="'+k.secondary+'" stroke-width="2.8" opacity=".8"/>'+
-  (isCount?'<text x="72" y="102" text-anchor="middle" fill="'+k.number+'" font-size="'+(n.length===3?31:43)+'" font-family="Arial,sans-serif" font-weight="900" stroke="#111" stroke-width=".8" paint-order="stroke fill">'+n+'</text>':'')+
+  '<path d="M57 9Q73 36 89 9L85 17Q73 30 61 17Z" fill="'+k.secondary+'" stroke="#000" stroke-width=".45" opacity=".94"/>'+
+  '<path d="M1 51L20 65M124 65L143 51M32 146Q73 149 111 146" fill="none" stroke="'+k.secondary+'" stroke-width="1.9" opacity=".55"/>'+
+  (isCount?'<text x="72" y="102" text-anchor="middle" fill="'+k.number+'" font-size="'+(n.length===3?31:43)+'" font-family="Arial,sans-serif" font-weight="900" stroke="#111" stroke-width=".7" paint-order="stroke fill">'+n+'</text>':'')+
   '</svg>';
 }
 export function openKitConfigurator(club,onSave){
@@ -167,7 +155,9 @@ export function openKitConfigurator(club,onSave){
  };
  const refreshModel=()=>{
   const holder=node.querySelector('[data-kit-models]');
-  holder.innerHTML=kitModels.map((model,i)=>
+  const available=draft[selected].style&&!kitModels.some(m=>m.id===draft[selected].style)?
+   [...kitModels,{id:draft[selected].style,label:'Modello storico · in uso'}]:kitModels;
+  holder.innerHTML=available.map((model,i)=>
    '<button type="button" class="kit-model" data-kit-style="'+model.id+'" aria-label="'+esc(model.label)+'" aria-pressed="'+(draft[selected].style===model.id)+'">'+
     shirtSvg(modelKit(model.id,draft[selected]),'model-'+i,false)+'<span>'+esc(model.label)+'</span></button>').join('');
  };
