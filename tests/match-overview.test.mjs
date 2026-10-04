@@ -68,3 +68,14 @@ test('multiple goals and assists aggregate into right-side counters without dupl
  assert.match(html,/Voto medio partita: 7.20/);
  assert.doesNotMatch(field,/class="ov-shirt"/);
 });
+
+test('rating colors differentiate excellent from exceptional and double sanctions are supported',()=>{
+ const richer={...game,players:[game.players[0]],events:[
+  {event_type:'second_yellow',player_id:'a',minute:37,validation_status:'official'},
+  {event_type:'red_card',player_id:'a',minute:38,payload:{card_type:'second_yellow_blue'},validation_status:'official'}
+ ],ratingMeans:[{player_id:'a',avg_rating:9.2,votes:5}]};
+ const html=overviewLineup({formation:'4-4-2'},richer,people,season,competition);
+ assert.match(html,/ov-rating-elite/);
+ assert.match(html,/ov-badge-double_card/);
+ assert.match(html,/ov-double-blue/);
+});
