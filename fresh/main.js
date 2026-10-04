@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup} from './staff-ui.js?callups=20261004directlineup';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?callups=20261004flatnav';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004persist';
@@ -323,9 +323,11 @@ function match(){
  const extraMatch=!involvesTeam(f,team());
  const formation=m?overviewLineup(m,data,state.data?.players||[],state.data?.playerStats||[],comp):
   '<div class="empty">Formazione non disponibile: partita senza tabellino operativo.</div>';
- const tabs=extraMatch?[['overview','Overview'],...(state.identity?.role?.role==='admin'?[['staff','Gestione']]:[])]:[['overview','Overview'],['events','Eventi'],['lineup','Formazioni'],['ratings','Voti'],...(isStaff(staffContext())?[['staff','Gestione']]:[])];
+ const staffAccess=isStaff(staffContext());
+ const tabs=extraMatch?[['overview','Overview']]:[['overview','Overview'],...(staffAccess?[['live','Live'],['callups','Convocazioni']]:[]),['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[]),['ratings','Voti']];
  const requestedTab=state.matchTab==='summary'?'overview':state.matchTab;
- const selectedTab=extraMatch&&!['overview','staff'].includes(requestedTab)?'overview':requestedTab;
+ const mappedTab=requestedTab==='staff'?(staffAccess&&!extraMatch?'callups':'overview'):requestedTab;
+ const selectedTab=tabs.some(([id])=>id===mappedTab)?mappedTab:'overview';
  const titleInfo=(label,value)=>value?'<span class="match-meta-item" title="'+E(label)+'"><small class="sr-only">'+E(label)+'</small><strong>'+E(value)+'</strong></span>':'';
  const {name:venue,address}=fixtureVenueDetails(f,fixtureHomeClub(f));
  const editor=extraMatch&&state.scoreEditing&&state.identity?.role?.role==='admin';
@@ -365,9 +367,8 @@ function match(){
  const notice=(pending?'<p class="data-warning">'+pending+' eventi ancora da ufficializzare.</p>':'')+
   (resultStatus?'<p class="staff-help">'+E(resultStatus)+'</p>':'');
  let body='';
- if(selectedTab==='staff'&&extraMatch)body='<section class="inner-card"><h3>Gestione risultato</h3><p class="staff-help">Modifica il risultato ufficiale cliccando sul punteggio nella testata della partita.</p></section>';
- else if(selectedTab==='staff')body=staffMatchPanel(staffContext(),f,m);
- else if(selectedTab==='events')body='<div class="inner-card"><h3>Cronologia eventi</h3>'+timeline+'</div>';
+ if(staffAccess&&['live','callups','tactics'].includes(selectedTab))body=staffMatchSection(staffContext(),f,m,selectedTab);
+ else if(selectedTab==='events')body=staffAccess&&!extraMatch?staffMatchSection(staffContext(),f,m,'events'):'<div class="inner-card"><h3>Cronologia eventi</h3>'+timeline+'</div>';
  else if(selectedTab==='lineup')body=isStaff(staffContext())&&m?matchLineup(staffContext(),m):'<div class="inner-card">'+formation+'</div>';
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E});
  else body=extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
