@@ -373,7 +373,7 @@ function matchCallups(ctx,m){
  }).join('');
  return '<section class="staff-subpanel">'+title('PREPARTITA','Convocazioni')+
  help('Tocca un’icona per rendere il giocatore indisponibile e assegnare il motivo. Tocca di nuovo l’icona selezionata per reintegrarlo. Le convocazioni si possono integrare anche a posteriori.')+
- '<form data-staff-form="callups"><div class="callup-columns">'+
+ '<form data-staff-form="callups" data-callup-match="'+esc(m.id)+'"><div class="callup-columns">'+
  '<section class="callup-list"><h3>Disponibili <span data-callup-count="available"></span></h3><div data-callup-list="available"></div></section>'+
  '<section class="callup-list"><h3>Indisponibili <span data-callup-count="absent"></span></h3><div data-callup-list="absent"></div></section>'+
  '</div><div class="callup-store" data-callup-store>'+rows+'</div>'+submit('Salva convocazioni')+'</form></section>';
@@ -698,6 +698,22 @@ export function staffSelect(element,ctx){
  if(!isStaff(ctx))return false;
  const key=element.dataset.staffSelect;if(!key)return false;
  memory.selected[key]=element.value;ctx.render();return true;
+}
+const callupWrites=new Map();
+export async function persistCallupChange({matchId,playerId,status,reason},notify){
+ if(!matchId||!playerId||!['available','absent'].includes(status))throw Error('Selezione convocazione non valida');
+ const normalized=normalizedReason(status,reason);
+ const key=matchId+':'+playerId;
+ const previous=callupWrites.get(key)||Promise.resolve();
+ const run=previous.catch(()=>{}).then(async()=>{
+  await rpc('tm_app_save_callups',{p_match_id:matchId,p_rows:[{player_id:playerId,selection_status:status,unavailability_reason:normalized}]});
+  const rows=await get('app_match_players','select=selection_status,unavailability_reason&match_id=eq.'+encodeURIComponent(matchId)+'&player_id=eq.'+encodeURIComponent(playerId));
+  if(rows.length!==1||rows[0].selection_status!==status||(rows[0].unavailability_reason||null)!==normalized)
+   throw Error('Il database non conferma la convocazione. Riprova.');
+  return rows[0];
+ });
+ callupWrites.set(key,run);
+ try{const result=await run;notify?.(null);return result}catch(error){notify?.(error);throw error}finally{if(callupWrites.get(key)===run)callupWrites.delete(key)}
 }
 export async function staffSubmit(e,ctx){
  const form=e.target,kind=form.dataset.staffForm;if(!kind)return false;
