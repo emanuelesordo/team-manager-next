@@ -378,7 +378,7 @@ function matchCallups(ctx,m){
  '<section class="callup-list"><h3>Indisponibili <span data-callup-count="absent"></span></h3><div data-callup-list="absent"></div></section>'+
  '</div><div class="callup-store" data-callup-store>'+rows+'</div><p class="staff-help" role="status">Salvataggio automatico a ogni modifica.</p></form></section>';
 }
-function matchLineup(ctx,m){
+export function matchLineup(ctx,m){
  const data=ctx.state.data||{},players=data.players||[],current=ctx.state.matchData?.players||[];
  const roster=(data.roster||[]).map(x=>({...x,person:players.find(p=>p.id===x.player_id)}))
   .filter(x=>x.person&&playerEligibleAt({...data,seasonStart:ctx.state.base?.seasons?.find(s=>s.id===ctx.state.season)?.start_date},x,m.kickoff_at))
