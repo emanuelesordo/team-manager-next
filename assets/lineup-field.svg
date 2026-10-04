@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 612" preserveAspectRatio="none">
+<rect width="410" height="612" fill="#35842a"/>
+<rect y="0" width="410" height="51" fill="#468d2e"/>
+<rect y="51" width="410" height="51" fill="#337c29"/>
+<rect y="102" width="410" height="51" fill="#468d2e"/>
+<rect y="153" width="410" height="51" fill="#337c29"/>
+<rect y="204" width="410" height="51" fill="#468d2e"/>
+<rect y="255" width="410" height="51" fill="#337c29"/>
+<rect y="306" width="410" height="51" fill="#468d2e"/>
+<rect y="357" width="410" height="51" fill="#337c29"/>
+<rect y="408" width="410" height="51" fill="#468d2e"/>
+<rect y="459" width="410" height="51" fill="#337c29"/>
+<rect y="510" width="410" height="51" fill="#468d2e"/>
+<rect y="561" width="410" height="51" fill="#337c29"/>
+<g stroke="#fff" stroke-width="2.3" fill="none" stroke-linejoin="round">
+<rect x="14" y="14" width="382" height="584"/>
+<path d="M14 306H396"/>
+<circle cx="205" cy="306" r="51"/>
+<path d="M84 14V117H326V14 M151 14V47H259V14"/>
+<path d="M84 598V495H326V598 M151 598V565H259V598"/>
+<path d="M166 117A43 43 0 0 0 244 117 M166 495A43 43 0 0 1 244 495"/>
+<path d="M14 25A11 11 0 0 0 25 14 M385 14A11 11 0 0 0 396 25 M14 587A11 11 0 0 1 25 598 M385 598A11 11 0 0 1 396 587"/>
+</g>
+<g fill="#fff"><circle cx="205" cy="76" r="2.6"/><circle cx="205" cy="536" r="2.6"/><circle cx="205" cy="306" r="2.6"/></g>
+</svg>
