@@ -337,7 +337,7 @@ function match(){
  const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
  const scoreText=hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
  const editableScore=extraMatch&&state.identity?.role?.role==='admin';
- const headerScore=editableScore?'<button type="button" class="match-score-trigger'+(state.scoreEditing?' score-pending':'')+'" data-score-edit="true" title="'+(state.scoreEditing?'Salva risultato':'Modifica partita')+'" aria-label="'+(state.scoreEditing?'Salva risultato':'Modifica partita')+'">'+(state.scoreEditing?'✓ ':'')+scoreText+'</button>':scoreText;
+ const headerScore=editableScore?'<button type="button" class="match-score-trigger'+(state.scoreEditing?' score-pending':'')+'" data-score-edit="true" title="'+(state.scoreEditing?'Salva risultato':'Modifica partita')+'" aria-label="'+(state.scoreEditing?'Salva risultato':'Modifica partita')+'">'+(state.scoreEditing?'✓ ':'')+scoreText+'</button>':(isLive(f)?'<span class="match-score-trigger score-pending">'+scoreText+'</span>':scoreText);
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
