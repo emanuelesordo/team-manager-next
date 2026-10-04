@@ -1,4 +1,4 @@
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite} from './api.js?callups=20261004v2';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc} from './api.js?callups=20261004v2';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261003id';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
@@ -325,13 +325,13 @@ function match(){
   '<div class="empty">Formazione non disponibile: partita senza tabellino operativo.</div>';
  const staffAccess=isStaff(staffContext());
  const matchIsLive=m?.status==='live'||f.status==='live';
- const tabs=extraMatch?[['overview','Overview']]:[...(staffAccess?[['callups','Disponibilità']]:[]),['ratings','Voti'],...(staffAccess&&matchIsLive?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[])];
+ const tabs=extraMatch?[['info','Info'],['overview','Overview'] ]:[['info','Info'],...(staffAccess?[['callups','Disponibilità']]:[]),['ratings','Voti'],...(staffAccess&&matchIsLive?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[])];
  const requestedTab=state.matchTab==='summary'?'overview':state.matchTab;
  const mappedTab=requestedTab==='staff'?(staffAccess&&!extraMatch?'callups':'overview'):requestedTab;
  const selectedTab=tabs.some(([id])=>id===mappedTab)?mappedTab:'overview';
  const titleInfo=(label,value)=>value?'<span class="match-meta-item" title="'+E(label)+'"><small class="sr-only">'+E(label)+'</small><strong>'+E(value)+'</strong></span>':'';
  const {name:venue,address}=fixtureVenueDetails(f,fixtureHomeClub(f));
- const editor=extraMatch&&state.scoreEditing&&state.identity?.role?.role==='admin';
+ const editor=false; // Modifica metadati esclusivamente nella scheda Info
  const field=(name,label,value)=>'<label class="extra-meta-field">'+label+'<input data-extra-field="'+name+'" aria-label="'+label+'" value="'+E(value??'')+'"></label>';
  const placeLink=address?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(address):'';
  const matchMeta='<div class="match-header-meta" aria-label="Dettagli partita">'+
@@ -367,8 +367,21 @@ function match(){
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato da verificare'):'';
  const notice=(pending?'<p class="data-warning">'+pending+' eventi ancora da ufficializzare.</p>':'')+
   (resultStatus?'<p class="staff-help">'+E(resultStatus)+'</p>':'');
+ const canEditInfo=state.identity?.role?.role==='admin';
+ const infoField=(key,label,value)=>'<label class="staff-field"><span>'+label+'</span><input data-extra-field="'+key+'" aria-label="'+label+'" value="'+E(value??'')+'" '+(canEditInfo?'':'disabled')+'></label>';
+ const kits=team()?.kits||{};
+ const kitKeys=Object.keys(kits).filter(key=>kits[key]&&typeof kits[key]==='object');
+ const kitSelect=staffAccess&&!extraMatch&&m?'<label class="staff-field"><span>Maglia utilizzata</span><select data-match-kit aria-label="Maglia utilizzata">'+
+  '<option value="">Non specificata</option>'+kitKeys.map(key=>'<option value="'+E(key)+'"'+(m.match_kit_key===key?' selected':'')+'>'+E(({home:'Casa',away:'Trasferta',goalkeeper:'Portiere'})[key]||key)+'</option>').join('')+
+  '</select></label>':'';
+ const infoContent='<div class="match-info-editor">'+
+  '<div class="staff-form-grid">'+infoField('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):'')+
+  infoField('venue_name','Campo',f.venue_name||venue)+infoField('venue_address','Indirizzo',f.venue_address||address)+
+  (canEditInfo?'<label class="staff-field"><span>Stato</span><select data-extra-status>'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,name])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+name+'</option>').join('')+'</select></label>':'')+
+  kitSelect+'</div></div>';
  let body='';
- if(staffAccess&&['live','callups','tactics'].includes(selectedTab))body=staffMatchSection(staffContext(),f,m,selectedTab);
+ if(selectedTab==='info')body=infoContent;
+ else if(staffAccess&&['live','callups','tactics'].includes(selectedTab))body=staffMatchSection(staffContext(),f,m,selectedTab);
  else if(selectedTab==='events')body=staffAccess&&!extraMatch?staffMatchSection(staffContext(),f,m,'events'):'<div class="inner-card"><h3>Cronologia eventi</h3>'+timeline+'</div>';
  else if(selectedTab==='lineup')body=isStaff(staffContext())&&m?matchLineup(staffContext(),m):'<div class="inner-card">'+formation+'</div>';
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E});
@@ -553,6 +566,21 @@ async function reloadAll(){
 }
 document.addEventListener('click',async e=>{
  if(staffLogoEvent(e))return;
+ const confirm=e.target.closest('[data-lineup-confirm]');
+ if(confirm){
+  const form=confirm.closest('form[data-staff-form="lineup"]');
+  if(!form||form.dataset.lineupEnabled!=='true')return;
+  confirm.disabled=true;
+  try{
+   clearTimeout(lineupTimer);
+   if(lineupPendingSnapshot?.matchId===form.dataset.lineupMatch)await persistLineupSnapshot(lineupPendingSnapshot);
+   const confirmed=await rpc('tm_app_confirm_lineup',{p_match_id:form.dataset.lineupMatch});
+   const m=resolveMatch().operational;if(m){m.lineup_confirmed_at=confirmed; m.lineup_confirmed_by=state.identity.user;}
+   lineupPendingSnapshot=null;
+   toast('Formazione iniziale ufficialmente confermata');render();
+  }catch(err){toast('Conferma non riuscita: '+err.message);confirm.disabled=false}
+  return;
+ }
  const staffTarget=e.target.closest('[data-staff-action],[data-staff-area],[data-staff-match-tab]');
  if(staffTarget&&await staffClick(e,staffTarget,staffContext()))return;
  const x=e.target.closest('button,[data-dismiss]');if(!x)return;
@@ -584,6 +612,20 @@ document.addEventListener('click',async e=>{
  }
 });
 document.addEventListener('change',async e=>{
+ if(e.target.matches('[data-match-kit]')){
+  const m=resolveMatch().operational;if(!m)return;
+  try{await rpc('tm_app_match_details',{p_match_id:m.id,p_kit_key:e.target.value||null});m.match_kit_key=e.target.value;toast('Divisa salvata')}
+  catch(err){toast('Divisa non salvata: '+err.message)}
+  return;
+ }
+ if(e.target.matches('[data-unused-player]')){
+  const m=resolveMatch().operational;if(!m)return;
+  try{await rpc('tm_app_match_details',{p_match_id:m.id,p_reason_player:e.target.dataset.unusedPlayer,p_reason:e.target.value||null});
+   const pl=state.matchData?.players?.find(p=>p.player_id===e.target.dataset.unusedPlayer);if(pl)pl.unused_sub_reason=e.target.value||null;
+   toast('Motivo salvato')}
+  catch(err){toast('Motivo non salvato: '+err.message)}
+  return;
+ }
  if(e.target.matches('[data-extra-field]')){
   const key=e.target.dataset.extraField;let value=e.target.value;
   if(key==='kickoff_at'){const d=new Date(value);if(!Number.isFinite(d.getTime())){toast('Data non valida');return}value=d.toISOString()}
@@ -611,7 +653,7 @@ document.addEventListener('input',e=>{
  }
 });
 async function saveExtraScore(){
- const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin'||!state.scoreEditing)return;
+ const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
  const goals=(state.fixtureEvents||[]).filter(x=>x.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(x.event_type)).reduce((a,x)=>{const side=x.event_type==='own_goal'?(x.side==='home'?'away':'home'):x.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
  try{await adminWrite('app_competition_fixtures','PATCH',{home_score:goals.home,away_score:goals.away},{id:f.id});f.home_score=goals.home;f.away_score=goals.away;state.scoreEditing=false;render();toast('Risultato aggiornato dai gol registrati')}
  catch(error){toast('Salvataggio risultato non riuscito: '+error.message)}
@@ -620,7 +662,7 @@ async function saveExtraDetail(field,value){
  const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
  try{await adminWrite('app_competition_fixtures','PATCH',{[field]:value},{id:f.id});f[field]=value;render();toast('Dettaglio aggiornato')}catch(error){toast('Modifica non salvata: '+error.message)}
 }
-let lineupTimer=null;
+let lineupTimer=null,lineupPendingSnapshot=null;
 document.addEventListener('tm-lineup-change',e=>{
  const form=e.detail.form;
  if(!form?.isConnected||form.dataset.lineupEnabled!=='true')return;
@@ -635,6 +677,7 @@ document.addEventListener('tm-lineup-change',e=>{
    unavailability_reason:null,unavailability_note:null};
  });
  const snapshot={matchId,formation:form.elements.formation?.value||'4-4-2',rows};
+ lineupPendingSnapshot=snapshot;
  const label=form.querySelector('[data-lineup-save-status]');
  if(label)label.textContent='Modifiche da salvare…';
  clearTimeout(lineupTimer);
