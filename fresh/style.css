@@ -790,3 +790,15 @@ body[data-logo-shape="square"] .home-feature .month-matches .crest{border-radius
 .home-feature .month-days .month-cell.with-game .month-matches button{
  display:grid;place-items:center;margin:0;padding:0;
 }
+
+
+/* Mobile-only shell isolation: later desktop sidebar rules must not revive it. */
+@media screen and (max-width:760px){
+ .shell{display:block;grid-template-columns:none;min-width:0;width:100%}
+ .shell>.sidebar{display:none!important;visibility:hidden!important}
+ .shell>.workspace{display:block;width:100%;min-width:0;max-width:100%;margin:0}
+ .workspace>.content{width:100%;min-width:0;max-width:100%;padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+ .mobile-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+ .mobile-nav button{min-width:0}
+ .mobile-nav button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+}
