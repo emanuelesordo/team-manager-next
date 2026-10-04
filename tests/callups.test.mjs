@@ -1,0 +1,29 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const staff=readFileSync(new URL('../fresh/staff-ui.js',import.meta.url),'utf8');
+const pitch=readFileSync(new URL('../fresh/lineup-pitch.js',import.meta.url),'utf8');
+const css=readFileSync(new URL('../fresh/staff.css',import.meta.url),'utf8');
+const main=readFileSync(new URL('../fresh/main.js',import.meta.url),'utf8');
+test('callups and formation use separate tabs and save functions',()=>{
+ assert.match(staff,/\['callups','Convocazioni'\],\['lineup','Formazione'\]/);
+ assert.match(staff,/data-staff-form="callups"/);
+ assert.match(staff,/rpc\('tm_app_save_callups'/);
+ assert.match(staff,/rpc\('tm_app_save_formation'/);
+ assert.match(staff,/title\('CALCIO D’INIZIO','Formazione e panchina'\)/);
+});
+test('callups have two moveable lists and five icon reasons',()=>{
+ for(const value of ['illness','injury','suspension','personal','technical_choice'])assert.match(staff,new RegExp("'"+value+"'"));
+ assert.match(staff,/data-callup-toggle/);
+ assert.match(staff,/data-callup-reason/);
+ assert.match(staff,/data-callup-list="available"/);
+ assert.match(staff,/data-callup-list="absent"/);
+ assert.match(pitch,/function paintCallups\(/);
+ assert.match(pitch,/appendChild\(row\)/);
+ assert.match(css,/\.callup-columns\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(main,/paintCallups\(\)/);
+});
+test('formation has kickoff gate and supports retrospective editor',()=>{
+ assert.match(staff,/Date\.now\(\)>=Date\.parse\(m\.kickoff_at\)/);
+ assert.match(staff,/La formazione è modificabile dal calcio d’inizio/);
+});
