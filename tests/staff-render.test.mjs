@@ -43,7 +43,9 @@ test('admin navigation exposes configuration and editable roster without mock da
  const staff=staffMatchPanel(ctx,fixture,ctx.state.data.matches[0]);
  assert.match(staff,/Convocazioni/);
  assert.match(staff,/Giulia|Rossi/);
- assert.match(staff,/lineup-row/);
+ assert.match(staff,/callup-columns/);
+ assert.match(staff,/data-callup-list="available"/);
+ assert.match(staff,/data-callup-list="absent"/);
 });
 test('manager has sports controls but no user-management tab',()=>{
  const ctx=context('manager');
@@ -53,11 +55,16 @@ test('manager has sports controls but no user-management tab',()=>{
  const panel=staffMatchPanel(ctx,fixture,ctx.state.data.matches[0]);
  assert.match(panel,/Convocazioni/);
 });
-test('finished game displays disabled lineup editing',()=>{
+test('finished match can recover callups and show a separate formation editor',async()=>{
  const ctx=context('admin','finished');
- const html=staffMatchPanel(ctx,fixture,ctx.state.data.matches[0]);
- assert.match(html,/disabled/);
- assert.match(html,/bloccata dopo il fischio/);
+ ctx.render=()=>{};
+ const callups=staffMatchPanel(ctx,fixture,ctx.state.data.matches[0]);
+ assert.match(callups,/data-staff-form="callups"/);
+ await staffClick({},{dataset:{staffMatchTab:'lineup'}},ctx);
+ const formation=staffMatchPanel(ctx,fixture,ctx.state.data.matches[0]);
+ assert.match(formation,/data-staff-form="lineup"/);
+ assert.match(formation,/Formazione e panchina/);
+ await staffClick({},{dataset:{staffMatchTab:'callups'}},ctx);
 });
 
 test('unlinked finished fixture cannot create duplicate operational match',()=>{
