@@ -79,3 +79,9 @@ test('rating colors differentiate excellent from exceptional and double sanction
  assert.match(html,/ov-badge-double_card/);
  assert.match(html,/ov-double-blue/);
 });
+
+test('an explicit assist and a goal-linked assist at the same minute count once',()=>{
+ const combined=[{event_type:'goal',player_id:'a',secondary_player_id:'b',minute:20,validation_status:'official'},
+  {event_type:'assist',player_id:'b',minute:20,validation_status:'official'}];
+ assert.equal(playerMatchEvents('b',combined,competition).filter(x=>x.kind==='assist').length,1);
+});
