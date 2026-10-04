@@ -11,10 +11,10 @@ const basePositions=formation=>{
 };
 export const pitchPositions=formation=>basePositions(formation);
 export function pitchMarkup(){
- return '<div class="visual-lineup"><div class="visual-lineup-head"><strong>Campo tattico · schieramento</strong><small>Seleziona un giocatore e tocca la posizione; da computer puoi trascinare il nome.</small></div>'+
+ return '<div class="visual-lineup">'+
  '<div class="visual-field" data-lineup-pitch><span class="field-circle"></span><span class="field-midline"></span>'+
  Array.from({length:11},(_,i)=>'<button type="button" class="field-slot" data-pitch-slot="'+(i+1)+'" aria-label="Posizione '+(i+1)+'"><strong>'+(i+1)+'</strong></button>').join('')+
- '</div><p class="pitch-selection" data-pitch-selection aria-live="polite">Tocca il nome di un giocatore per posizionarlo.</p></div>';
+ '</div><span class="pitch-selection" data-pitch-selection aria-live="polite" hidden></span></div>';
 }
 export function paintCallups(){
  const form=document.querySelector('form[data-staff-form="callups"]');if(!form)return;
@@ -33,6 +33,7 @@ export function paintCallups(){
  for(const status of ['available','absent'])form.querySelector('[data-callup-count="'+status+'"]').textContent=String(rows.filter(row=>(row.dataset.out==='true')===(status==='absent')).length);
 }
 let activePlayer=null,attached=false;
+function changed(form){if(form?.dataset.lineupEnabled==='true')document.dispatchEvent(new CustomEvent('tm-lineup-change',{detail:{form}}))}
 function currentForm(){return document.querySelector('form[data-staff-form="lineup"]')}
 function rowList(form){return [...form.querySelectorAll('[data-lineup-player]')]}
 function getStatus(row){return row.querySelector('select[name="status"]')}
@@ -44,16 +45,17 @@ export function paintLineupPitch(){
  const form=currentForm(),field=form?.querySelector('[data-lineup-pitch]');if(!field)return;
  const rows=rowList(form),positions=basePositions(form.elements.formation?.value);
  const selected=rows.find(r=>r.dataset.lineupPlayer===activePlayer);
- form.querySelector('[data-pitch-selection]').textContent=selected?'Da posizionare: '+getName(selected):'Tocca il nome di un giocatore per posizionarlo.';
+ form.querySelector('[data-pitch-selection]').textContent=selected?'Selezionato: '+getName(selected):'';
  for(const pos of positions){
   const cell=field.querySelector('[data-pitch-slot="'+pos.slot+'"]');
   const row=rows.find(r=>isStarter(r)&&slotOf(r)===pos.slot);
   cell.style.left=pos.x+'%';cell.style.top=pos.y+'%';
   cell.classList.toggle('occupied',!!row);cell.classList.toggle('target',!!selected);cell.replaceChildren();
-  const number=document.createElement('strong');number.textContent=row?(row.querySelector('[name=shirt]')?.value||'•'):String(pos.slot);
-  const caption=document.createElement('span');caption.textContent=row?getName(row):'Libero';
+  const number=document.createElement('strong');number.textContent=row?(row.querySelector('[name=shirt]')?.value||'•'):'+'; if(row){number.dataset.pitchJersey=row.dataset.lineupPlayer;number.title='Clicca per cambiare maglia'}
+  const caption=document.createElement('span');caption.textContent=row?getName(row):'';
   cell.append(number,caption);cell.title=(row?getName(row):'Slot '+pos.slot)+' · posizione '+pos.slot;
-  cell.disabled=Boolean(form.querySelector('input[name=formation]')?.disabled);
+  cell.disabled=form.dataset.lineupEnabled!=='true';
+  cell.dataset.playerId=row?.dataset.lineupPlayer||'';
  }
  for(const row of rows)row.classList.toggle('pitch-armed',row.dataset.lineupPlayer===activePlayer);
 }
@@ -64,7 +66,7 @@ function assign(slot,playerId){
  const previous=slotOf(target),old=rows.find(r=>r!==target&&isStarter(r)&&slotOf(r)===slot);
  if(old){if(previous&&isStarter(target)&&previous!==slot)getSlot(old).value=String(previous);
   else{getStatus(old).value='bench';getSlot(old).value='';const radio=old.querySelector('input[name=captain]');if(radio?.checked)radio.checked=false}}
- getStatus(target).value=START;getSlot(target).value=String(slot);activePlayer=playerId;paintLineupPitch();
+ getStatus(target).value=START;getSlot(target).value=String(slot);activePlayer=null;paintLineupPitch();changed(form);
 }
 export function installLineupPitch(){
  if(attached)return;attached=true;
@@ -88,12 +90,21 @@ export function installLineupPitch(){
  });
  document.addEventListener('click',e=>{
   const form=e.target.closest('form[data-staff-form="lineup"]');if(!form)return;
+  const jersey=e.target.closest('[data-pitch-jersey]');if(jersey){
+   const occupied=rowList(form).find(r=>r.dataset.lineupPlayer===jersey.dataset.pitchJersey);
+   if(!occupied)return;
+   const current=occupied.querySelector('[name=shirt]');
+   const value=window.prompt('Numero maglia (1–99)',current.value);
+   if(value===null)return;
+   if(!/^[1-9][0-9]?$/.test(value.trim())){form.querySelector('[data-pitch-selection]').textContent='Numero non valido';return}
+   current.value=String(Number(value));paintLineupPitch();changed(form);return;
+  }
   const target=e.target.closest('[data-pitch-slot]');if(target){
-   if(!activePlayer){form.querySelector('[data-pitch-selection]').textContent='Prima seleziona il nome di un giocatore.';return}
+   if(!activePlayer){if(target.dataset.playerId){const row=rowList(form).find(r=>r.dataset.lineupPlayer===target.dataset.playerId);if(row){getStatus(row).value='bench';getSlot(row).value='';paintLineupPitch();changed(form)}}return}
    assign(Number(target.dataset.pitchSlot),activePlayer);return;
   }
   const name=e.target.closest('.lineup-name');
-  if(name){const row=name.closest('[data-lineup-player]');activePlayer=row?.dataset.lineupPlayer||null;paintLineupPitch()}
+  if(name){const row=name.closest('[data-lineup-player]');activePlayer=activePlayer===row?.dataset.lineupPlayer?null:row?.dataset.lineupPlayer||null;paintLineupPitch()}
  });
  document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('form[data-staff-form="lineup"] .lineup-name')){e.preventDefault();activePlayer=e.target.closest('[data-lineup-player]')?.dataset.lineupPlayer||null;paintLineupPitch()}});
  document.addEventListener('change',e=>{
@@ -108,7 +119,7 @@ export function installLineupPitch(){
    const occupied=new Set(rowList(form).filter(r=>isStarter(r)).map(slotOf));
    const free=Array.from({length:11},(_,i)=>i+1).find(n=>!occupied.has(n));if(free)getSlot(row).value=String(free);
   }
-  paintLineupPitch();
+  paintLineupPitch();changed(form);
  });
  document.addEventListener('dragstart',e=>{
   const name=e.target.closest('.lineup-name');const row=name?.closest('[data-lineup-player]');
