@@ -750,8 +750,16 @@ export async function staffSubmit(e,ctx){
    const rows=[...form.querySelectorAll('[data-callup-player]')].map(el=>({player_id:el.dataset.callupPlayer,
     selection_status:el.querySelector('[name=selection]').value,
     unavailability_reason:normalizedReason(el.querySelector('[name=selection]').value,el.querySelector('[name=reason]').value)}));
-   await pendingFn(form,()=>rpc('tm_app_save_callups',{p_match_id:m.id,p_rows:rows}));
-   await reloadMatch(ctx);ctx.toast('Convocazioni salvate');return true;
+   if(!rows.length)throw Error('Nessun giocatore da salvare: verifica la rosa della partita');
+   await pendingFn(form,async()=>{
+    const result=await rpc('tm_app_save_callups',{p_match_id:m.id,p_rows:rows});
+    if(Number(result)!==rows.length)throw Error('Salvataggio incompleto: il server ha registrato '+result+' di '+rows.length+' giocatori');
+    const saved=await get('app_match_players','select=player_id,selection_status,unavailability_reason&match_id=eq.'+encodeURIComponent(m.id)+'&limit=1000');
+    const byId=new Map(saved.map(p=>[p.player_id,p]));
+    const differences=rows.filter(p=>{const actual=byId.get(p.player_id);return !actual||actual.selection_status!==p.selection_status||(actual.unavailability_reason||null)!==(p.unavailability_reason||null)});
+    if(differences.length)throw Error('Verifica fallita: '+differences.length+' convocazioni diverse dai dati salvati su Supabase');
+   });
+   await reloadMatch(ctx);ctx.toast('Convocazioni salvate e verificate: '+rows.length+' giocatori');return true;
   }
   if(kind==='lineup'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
