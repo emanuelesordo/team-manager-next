@@ -21,7 +21,7 @@ const help=text=>'<p class="staff-help">'+esc(text)+'</p>';
 const title=(name,text)=>'<div class="staff-panel-heading"><div><span class="eyebrow">'+esc(name)+'</span><h2>'+esc(text)+'</h2></div></div>';
 const btn=(action,label)=>'<button type="button" class="staff-soft" data-staff-action="'+esc(action)+'">'+esc(label)+'</button>';
 const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</button>';
-const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'lineup',busy:false};
+const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'callups',busy:false};
 const memory=initial;
 let reviewEditEvent=null,reviewHistoryEvent=null,reviewHistoryEntries=[];
 let scoreAuditRows=[],scoreAuditOpen=false;
@@ -319,6 +319,44 @@ function displayClock(m,competition){
  if(!m)return '';
  return '<div class="clockline"><span class="status '+(m.status==='live'?'live':'end')+'">'+esc(m.status==='live'?'LIVE':m.status==='finished'?'FINALE':'PREPARTITA')+'</span><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+esc(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+esc(m.id)+'" data-blue-min="'+Number(competition?.discipline_rules?.blue_duration_minutes||0)+'">00:00</strong><span>'+esc(m.live_period||'pre')+'</span></div>';
 }
+const callupReasons=[
+ ['illness','Malattia','thermometer'],
+ ['injury','Infortunio','cross'],
+ ['suspension','Squalifica','red'],
+ ['personal','Assente','person'],
+ ['technical_choice','Escluso','minus']
+];
+function matchCallups(ctx,m){
+ const data=ctx.state.data||{},current=ctx.state.matchData?.players||[];
+ const roster=(data.roster||[]).filter(r=>r.active!==false).map(r=>({...r,person:(data.players||[]).find(p=>p.id===r.player_id)}))
+  .filter(r=>r.person).sort((a,b)=>String(a.person.last_name||'').localeCompare(String(b.person.last_name||''),'it'));
+ const rows=roster.map(row=>{
+  const saved=current.find(p=>p.player_id===row.player_id);
+  const proposal=availabilityDefault({saved,injuries:data.injuries||[],suspensions:data.suspensions||[],
+   playerId:row.player_id,fixtureDate:m.kickoff_at,priorSelections:data.priorSelections||[],
+   matches:data.matches||[],matchId:m.id,disciplinaryEvents:data.disciplinaryEvents||[],
+   competitionId:m.competition_id,competitionRules:(data.competitions||[]).find(c=>c.id===m.competition_id)?.discipline_rules||{},
+   competitionLinks:data.competitionLinks||[]});
+  const out=proposal.status==='absent',reason=out?proposal.reason||'technical_choice':'';
+  const locked=m.status!=='scheduled'&&Boolean(saved?.started||Number(saved?.minutes_played)>0);
+  const buttons=callupReasons.map(([key,label,icon])=>
+   '<button type="button" class="callup-reason '+(reason===key?'selected':'')+'" data-callup-reason="'+key+'" title="'+label+'" aria-label="'+label+'" aria-pressed="'+(reason===key)+'" '+(locked?'disabled':'')+'>'+
+    '<span class="callup-symbol callup-'+icon+'" aria-hidden="true">'+({thermometer:'♨',cross:'✚',red:'▮',person:'●',minus:'×'}[icon])+'</span></button>').join('');
+  return '<div class="callup-person" data-callup-player="'+esc(row.player_id)+'" data-out="'+out+'" data-locked="'+locked+'">'+
+   '<span class="callup-player-name">'+esc(playerText(row.person))+'</span>'+
+   '<input type="hidden" name="selection" value="'+(out?'absent':'available')+'">'+
+   '<input type="hidden" name="reason" value="'+esc(reason)+'">'+
+   '<span class="callup-reasons">'+buttons+'</span>'+
+   '<button type="button" class="callup-transfer" data-callup-toggle '+(locked?'disabled':'')+' aria-label="'+(out?'Rendi disponibile':'Escludi dai convocati')+'">'+(out?'←':'→')+'</button>'+
+   '</div>';
+ }).join('');
+ return '<section class="staff-subpanel">'+title('PREPARTITA','Convocazioni')+
+ help('Sposta i giocatori con la freccia. Per gli indisponibili scegli il motivo tramite le icone: malattia, infortunio, squalifica, assenza o scelta tecnica. È possibile integrare le convocazioni anche a posteriori, senza modificare la formazione già registrata.')+
+ '<form data-staff-form="callups"><div class="callup-columns">'+
+ '<section class="callup-list"><h3>Disponibili <span data-callup-count="available"></span></h3><div data-callup-list="available"></div></section>'+
+ '<section class="callup-list"><h3>Indisponibili <span data-callup-count="absent"></span></h3><div data-callup-list="absent"></div></section>'+
+ '</div><div class="callup-store" data-callup-store>'+rows+'</div>'+submit('Salva convocazioni')+'</form></section>';
+}
 function matchLineup(ctx,m){
  const players=ctx.state.data?.players||[],roster=(ctx.state.data?.roster||[]).filter(r=>r.active!==false),
   current=ctx.state.matchData?.players||[];
@@ -394,10 +432,10 @@ export function staffMatchPanel(ctx,f,m){
  help('Associa la partita ufficiale a un unico tabellino operativo, riutilizzando le registrazioni già esistenti quando la corrispondenza è univoca. Nessun dato storico viene duplicato.')+
  btn('ensure','Apri gestione di questa partita')+'</section>';
  const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===f.competition_id);
- const tabs=[['lineup','Convocazioni'],['live','Live'],['events','Eventi'],['tactics','Tattica']];
+ const tabs=[['callups','Convocazioni'],['lineup','Formazione'],['live','Live'],['events','Eventi'],['tactics','Tattica']];
  const tabNav='<div class="staff-switch small-tabs" role="tablist">'+tabs.map(([k,v])=>
   '<button type="button" role="tab" aria-selected="'+(k===memory.matchTab)+'" class="'+(k===memory.matchTab?'selected':'')+'" data-staff-match-tab="'+k+'">'+v+'</button>').join('')+'</div>';
- const page=memory.matchTab==='lineup'?matchLineup(ctx,m):memory.matchTab==='live'?matchLive(ctx,m,competition):memory.matchTab==='tactics'?staffTacticsPanel(ctx,m):matchEvents(ctx,m);
+ const page=memory.matchTab==='callups'?matchCallups(ctx,m):memory.matchTab==='lineup'?matchLineup(ctx,m):memory.matchTab==='live'?matchLive(ctx,m,competition):memory.matchTab==='tactics'?staffTacticsPanel(ctx,m):matchEvents(ctx,m);
  return '<section class="glass panel staff-root">'+tabNav+page+'<div class="staff-bottom-actions">'+btn('refresh-match','Aggiorna tabellino')+'</div></section>';
 }
 function dataForm(form){return Object.fromEntries(new FormData(form))}
@@ -550,7 +588,7 @@ export async function staffClick(e,button,ctx){
    const rows=await get('app_matches','select=*&id=eq.'+encodeURIComponent(id));
    if(!rows.length)throw Error('Tabellino creato ma non leggibile');
    const index=ctx.state.data.matches.findIndex(x=>x.id===id);if(index>=0)ctx.state.data.matches[index]=rows[0];else ctx.state.data.matches.push(rows[0]);
-   ctx.state.matchData=await ctx.loadMatchInfo(id);memory.matchTab='lineup';ctx.render();ctx.toast('Tabellino operativo collegato');return true;
+   ctx.state.matchData=await ctx.loadMatchInfo(id);memory.matchTab='callups';ctx.render();ctx.toast('Tabellino operativo collegato');return true;
   }
   if(action==='qualify-phase'){
    const phaseId=memory.selected.phases;
@@ -664,6 +702,14 @@ export async function staffSubmit(e,ctx){
     p_positions:info.positions,p_notes:info.notes||null
    }));
    await reloadMatch(ctx);ctx.toast('Variazione tattica registrata');return true;
+  }
+  if(kind==='callups'){
+   const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
+   const rows=[...form.querySelectorAll('[data-callup-player]')].map(el=>({player_id:el.dataset.callupPlayer,
+    selection_status:el.querySelector('[name=selection]').value,
+    unavailability_reason:normalizedReason(el.querySelector('[name=selection]').value,el.querySelector('[name=reason]').value)}));
+   await pendingFn(form,()=>rpc('tm_app_save_callups',{p_match_id:m.id,p_rows:rows}));
+   await reloadMatch(ctx);ctx.toast('Convocazioni salvate');return true;
   }
   if(kind==='lineup'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
