@@ -399,3 +399,12 @@
 @media(max-width:760px){.lineup-minimal .lineup-sort-head{grid-template-columns:25px 23px minmax(0,1fr) 29px;gap:3px}.lineup-minimal .lineup-sort-head button{font-size:9px}}
 
 .lineup-minimal .field-slot.duplicate-shirt strong{background:#b91c1c;color:#fff}
+
+/* Scorrimento confinato alla lista, alta quanto il campo. */
+.lineup-minimal .lineup-split{align-items:stretch}
+.lineup-minimal .lineup-player-column{position:relative;overflow:hidden;min-height:0}
+.lineup-minimal .lineup-sort-head{position:relative;z-index:1}
+.lineup-minimal .lineup-rows{position:absolute;top:34px;bottom:0;left:0;right:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.lineup-minimal .lineup-role{display:flex;gap:3px;align-items:center;justify-content:center}
+.lineup-minimal .lineup-bench{font-size:10px;line-height:1;color:var(--muted)}
+.lineup-minimal .lineup-bench[hidden]{display:none}
