@@ -14,6 +14,24 @@ export function pitchMarkup(){
  Array.from({length:11},(_,i)=>'<button type="button" class="field-slot" data-pitch-slot="'+(i+1)+'" aria-label="Posizione '+(i+1)+'"><strong>'+(i+1)+'</strong></button>').join('')+
  '</div><p class="pitch-selection" data-pitch-selection aria-live="polite">Tocca il nome di un giocatore per posizionarlo.</p></div>';
 }
+export function paintCallups(){
+ const form=document.querySelector('form[data-staff-form="callups"]');if(!form)return;
+ const rows=[...form.querySelectorAll('[data-callup-player]')];
+ for(const row of rows){
+  const out=row.querySelector('[name=selection]').value==='absent';
+  row.dataset.out=String(out);
+  row.querySelector('[data-callup-toggle]').textContent=out?'←':'→';
+  row.querySelector('[data-callup-toggle]').setAttribute('aria-label',out?'Rendi disponibile':'Escludi dai convocati');
+  const choice=row.querySelector('[name=reason]');
+  if(out&&!choice.value)choice.value='technical_choice';
+  for(const button of row.querySelectorAll('[data-callup-reason]')){
+   const active=out&&choice.value===button.dataset.callupReason;
+   button.classList.toggle('selected',active);button.setAttribute('aria-pressed',String(active));
+  }
+  form.querySelector('[data-callup-list="'+(out?'absent':'available')+'"]').appendChild(row);
+ }
+ for(const status of ['available','absent'])form.querySelector('[data-callup-count="'+status+'"]').textContent=String(rows.filter(row=>(row.dataset.out==='true')===(status==='absent')).length);
+}
 let activePlayer=null,attached=false;
 function currentForm(){return document.querySelector('form[data-staff-form="lineup"]')}
 function rowList(form){return [...form.querySelectorAll('[data-lineup-player]')]}
@@ -50,6 +68,20 @@ function assign(slot,playerId){
 }
 export function installLineupPitch(){
  if(attached)return;attached=true;
+ document.addEventListener('click',e=>{
+  const button=e.target.closest('[data-callup-toggle],[data-callup-reason]');
+  const form=button?.closest('form[data-staff-form="callups"]');
+  if(!form||button.disabled)return;
+  const row=button.closest('[data-callup-player]');
+  if(button.matches('[data-callup-toggle]')){
+   const out=row.querySelector('[name=selection]').value==='absent';
+   row.querySelector('[name=selection]').value=out?'available':'absent';
+  }else{
+   row.querySelector('[name=selection]').value='absent';
+   row.querySelector('[name=reason]').value=button.dataset.callupReason;
+  }
+  paintCallups();
+ });
  document.addEventListener('click',e=>{
   const form=e.target.closest('form[data-staff-form="lineup"]');if(!form)return;
   const target=e.target.closest('[data-pitch-slot]');if(target){
