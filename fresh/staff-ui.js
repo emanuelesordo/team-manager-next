@@ -1,6 +1,6 @@
 import {matchPlayerLabel} from './match-player-label.js';
 import {roundRobinDraft} from './phase-scheduler.js';
-import {openKitConfigurator} from './kit-editor.js';
+import {openKitConfigurator,collectionForClub} from './kit-editor.js';
 import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge} from './api.js?callups=20261004v2';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup,formationModules} from './lineup-pitch.js?callups=20261004moduli';
@@ -383,6 +383,8 @@ export function matchLineup(ctx,m){
  const roster=(data.roster||[]).map(x=>({...x,person:players.find(p=>p.id===x.player_id)}))
   .filter(x=>x.person&&playerEligibleAt({...data,seasonStart:ctx.state.base?.seasons?.find(s=>s.id===ctx.state.season)?.start_date},x,m.kickoff_at))
   .sort((a,b)=>String(a.person.last_name||'').localeCompare(String(b.person.last_name||''),'it')||String(a.person.first_name||'').localeCompare(String(b.person.first_name||''),'it'));
+ const savedKits=collectionForClub(ctx.state.base?.team||{});
+ const activeJersey=savedKits[m.match_kit_key]||savedKits.home||Object.values(savedKits)[0];
  const confirmed=current.some(p=>['available','absent','starter','bench'].includes(p.selection_status));
  const allowed=confirmed;
  const fields=roster.filter(x=>!['absent'].includes(current.find(p=>p.player_id===x.player_id)?.selection_status)).map(x=>{
@@ -410,7 +412,7 @@ export function matchLineup(ctx,m){
  }).join('');
  return '<section class="staff-subpanel lineup-minimal">'+
  (allowed?'':'<p class="staff-help">Conferma prima le convocazioni nella relativa sezione per abilitare la formazione.</p>')+
- '<form data-staff-form="lineup" data-lineup-match="'+esc(m.id)+'" data-lineup-enabled="'+allowed+'">'+
+ '<form data-staff-form="lineup" data-lineup-match="'+esc(m.id)+'" data-lineup-enabled="'+allowed+'" data-lineup-kit="'+esc(JSON.stringify(activeJersey))+'">'+
  '<div class="lineup-split"><div class="lineup-pitch-column">'+
  '<label class="lineup-formation-select"><select name="formation" aria-label="Modulo" '+(allowed?'':'disabled')+'>'+
  [...new Set([...formationModules,...(m.formation&&!formationModules.includes(m.formation)?[m.formation]:[])])].map(f=>option(f,f,m.formation||'4-4-2')).join('')+
@@ -588,8 +590,8 @@ export async function staffClick(e,button,ctx){
    openKitConfigurator(club,async kits=>{
     const payload={kits};
     // Keep the existing first-team jersey consumers compatible with home kit.
-    if(own){payload.kit_style=kits.home.style;payload.kit_primary_color=kits.home.primary;
-     payload.kit_secondary_color=kits.home.secondary;payload.kit_number_color=kits.home.number;}
+    if(own){const first=kits.home||Object.values(kits)[0];payload.kit_style=first.style;payload.kit_primary_color=first.primary;
+     payload.kit_secondary_color=first.secondary;payload.kit_number_color=first.number;}
     await adminWrite(own?'teams':'app_opponents','PATCH',payload,{id:club.id});
     await ctx.reloadAll();ctx.toast('Divise salvate per '+club.name);
    });
