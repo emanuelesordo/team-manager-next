@@ -73,12 +73,12 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
  const label=match?.formation||'4-4-2';
  const positions=pitchPositions(label);
  const occupied=new Map(starters.map(row=>[Number(row.tactical_slot),row]));
- const pitch='<div class="visual-lineup"><div class="visual-field ov-tactical-field" aria-label="Formazione iniziale">'+
+ const pitch='<div class="visual-lineup"><div class="visual-field ov-tactical-field ov-pitch" aria-label="Formazione iniziale">'+
   '<span class="field-circle"></span><span class="field-midline"></span>'+
   positions.map(pos=>{const row=occupied.get(pos.slot);if(!row)return '';
    const p=byId.get(row.player_id),name=matchPlayerLabel(p);
    return '<div class="field-slot occupied" style="left:'+pos.x+'%;top:'+pos.y+'%" title="'+escapeHtml(name)+'">'+
-   '<strong>'+escapeHtml(row.shirt_number??'·')+'</strong><span>'+escapeHtml(name)+'</span></div>';
+   '<strong>'+escapeHtml(row.shirt_number??'·')+'</strong><span>'+escapeHtml(name)+'</span>'+renderPlayer(row)+'</div>';
   }).join('')+'</div></div>';
  return '<section class="ov-lineup lineup-minimal ov-shared-field"><div class="ov-section-heading"><h3>Formazione titolare</h3><small>'+escapeHtml(label)+' · '+starters.length+' titolari'+(match.lineup_confirmed_at?' · confermata':' · provvisoria')+'</small></div>'+
   (starters.length?pitch:'<div class="empty">Formazione iniziale non registrata.</div>')+
