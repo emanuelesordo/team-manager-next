@@ -34,7 +34,7 @@ function integrityPanel(){
 }
 
 const areas=[['team','Squadra'],['seasons','Stagioni'],['competitions','Competizioni'],['opponents','Avversarie'],['players','Rosa'],['fixtures','Calendario'],['import','Importa CSV'],['integrity','Integrità'],['availability','Disponibilità'],['users','Utenti']];
-const types=[['starter','Titolare'],['bench','Panchina'],['available','Da definire'],['absent','Non convocato']];
+const types=[['available','Disponibile'],['starter','Titolare'],['bench','Panchina'],['absent','Indisponibile / non convocato']];
 const reasons=[['','—'],...unavailabilityReasons];
 const events=[['goal','Gol'],['own_goal','Autogol'],['penalty_scored','Rigore segnato'],['penalty_missed','Rigore sbagliato'],['yellow_card','Ammonizione'],['blue_card','Cartellino blu'],['blue_return','Rientro blu'],['red_card','Espulsione'],['substitution','Sostituzione / Uscita'],['period_end','Fine periodo'],['other','Altro']];
 const statuses=[['scheduled','Programmata'],['live','In corso'],['finished','Terminata'],['postponed','Rinviata'],['cancelled','Annullata']];
