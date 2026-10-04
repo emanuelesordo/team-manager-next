@@ -109,7 +109,8 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
   competitionLinks:['tm_app_competition_links','select=app_competition_id,general_competition_id&limit=300'],
   generalSeasons:['seasons','select=id,team_id,name,start_date,end_date&order=start_date.desc'],
   injuries:['injuries','select=*&order=injury_date.desc&limit=500'],
-  suspensions:['suspensions','select=*&order=issued_date.desc&limit=500']
+  suspensions:['suspensions','select=*&order=issued_date.desc&limit=500'],
+  priorSelections:['app_match_players','select=match_id,player_id,selection_status,unavailability_reason&limit=5000']
  });
  if(includeAdmin)Object.assign(requests,{profiles:['profiles','select=id,username,display_name,is_active,must_change_password&limit=200'],passwordRequests:['tm_password_reset_requests','select=id,user_id,status,requested_at,reviewed_at&order=requested_at.desc&limit=200'],userRoles:['app_user_roles','select=user_id,role,player_id&limit=300']});
  const names=Object.keys(requests),arr=await Promise.allSettled(names.map(k=>get(...requests[k])));
