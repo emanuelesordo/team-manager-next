@@ -75,20 +75,22 @@ export function projectLeague(config,fixtures,standings,iterations=10000){
   initialPoints[i]=Math.round(Number(r?.points??0));
   currentRank.set(teams[i],1+table.filter(x=>Number(x.points??0)>Number(r?.points??0)).length);
  }
- const sumsP=new Float64Array(n),sumsR=new Float64Array(n),ranks=teams.map(()=>[]);
+ const sumsP=new Float64Array(n),sumsR=new Float64Array(n),sumsGF=new Float64Array(n),sumsGS=new Float64Array(n),ranks=teams.map(()=>[]);
  const pairs=remaining.map(f=>({h:index.get(homeId(f)),a:index.get(awayId(f))}))
   .filter(x=>Number.isInteger(x.h)&&Number.isInteger(x.a)&&x.h!==x.a);
  for(let simulation=0;simulation<iterations;simulation++){
   const p=Int32Array.from(initialPoints);
+  const gf=new Int32Array(n),gs=new Int32Array(n);
   for(const {h,a} of pairs){
    const diff=scores.get(teams[h]).strength-scores.get(teams[a]).strength;
    const home=Math.max(.15,Math.min(4.3,avgGoal*1.1*Math.exp(diff*.85)));
    const away=Math.max(.15,Math.min(4.3,avgGoal*.93*Math.exp(-diff*.85)));
    const hg=poisson(home,rand),ag=poisson(away,rand);
    p[h]+=points(hg,ag,config);p[a]+=points(ag,hg,config);
+   gf[h]+=hg;gs[h]+=ag;gf[a]+=ag;gs[a]+=hg;
   }
   for(let i=0;i<n;i++){
-   sumsP[i]+=p[i];let greater=0;
+   sumsP[i]+=p[i];sumsGF[i]+=gf[i];sumsGS[i]+=gs[i];let greater=0;
    for(let j=0;j<n;j++)if(p[j]>p[i])greater++;
    const position=1+greater;
    ranks[i].push(position);sumsR[i]+=position;
@@ -102,7 +104,9 @@ export function projectLeague(config,fixtures,standings,iterations=10000){
    const ordered=ranks[i].sort((a,b)=>a-b),q=p=>ordered[Math.floor((ordered.length-1)*p)];
    return{club_id:team,team:table.find(row=>standingId(row)===team)?.team||team,position:sumsR[i]/iterations,expectedPoints:sumsP[i]/iterations,
     lowerPosition:q(.2),upperPosition:q(.8),currentPosition:currentRank.get(team),
-    existingPoints:initialPoints[i],gamesCompleted:scores.get(team)?.games??0};
+    existingPoints:initialPoints[i],gamesCompleted:scores.get(team)?.games??0,
+    expectedGoalsFor:(scores.get(team)?.gf??0)+sumsGF[i]/iterations,
+    expectedGoalsAgainst:(scores.get(team)?.ga??0)+sumsGS[i]/iterations};
   }).sort((a,b)=>a.position-b.position||a.team.localeCompare(b.team,'it'))
  };
  memo.set(key,output);if(memo.size>KEY_LIMIT)memo.delete(memo.keys().next().value);
