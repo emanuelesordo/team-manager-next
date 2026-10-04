@@ -291,3 +291,72 @@
   .ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 5px)}
   .ov-shared-field .field-slot .ov-marker-count{font-size:8px;height:12px;min-width:12px}
 }
+
+
+/* Solo smartphone · hero partita: metadati compatti e senza colonne alte. */
+@media (max-width: 650px) {
+  .match-detail-head .match-expanded {
+    padding: 14px 14px 18px;
+  }
+  .match-detail-head .match-header-meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-items: start;
+    justify-items: stretch;
+    align-content: start;
+    column-gap: 14px;
+    row-gap: 9px;
+    height: auto;
+    min-height: 0;
+    margin: 0 0 18px;
+    padding: 0;
+  }
+  .match-detail-head .match-header-meta .match-meta-group {
+    display: contents;
+  }
+  .match-detail-head .match-header-meta .match-meta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
+    gap: 2px;
+    min-width: 0;
+    max-width: 100%;
+    height: auto;
+    margin: 0;
+  }
+  .match-detail-head .match-header-meta .match-meta-left .match-meta-item:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .match-detail-head .match-header-meta .match-meta-center .match-meta-item:first-child {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .match-detail-head .match-header-meta .match-meta-left .match-meta-item:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .match-detail-head .match-header-meta .match-meta-center .match-meta-item:nth-child(2) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .match-detail-head .match-header-meta .match-meta-right .match-meta-item {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    align-items: flex-start;
+    text-align: left;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+  .match-detail-head .match-header-meta .match-meta-item strong {
+    font-size: 12px;
+    line-height: 1.28;
+    overflow-wrap: anywhere;
+  }
+  .match-detail-head .match-detail-score {
+    margin-top: 0;
+  }
+}
