@@ -445,7 +445,7 @@ function render(){
  if(state.page==='home'&&previousHomeScroll.length===2){
   document.querySelectorAll('.home-feature>.feature-primary,.home-feature>.home-side-stack').forEach((column,index)=>{column.scrollTop=previousHomeScroll[index]||0});
  }
- if(state.page==='competitions'&&!state.loading){const scroller=document.querySelector('[data-rounds-scroll]');const focus=scroller?.querySelector('[data-round-focus]');if(scroller&&focus){const next=scroller.querySelector('[data-round-next]');const bottom=next?next.offsetTop+next.offsetHeight:focus.offsetTop+focus.offsetHeight;const top=focus.offsetTop;scroller.style.height=Math.ceil(bottom-top+12)+'px';scroller.scrollTop=top-scroller.offsetTop;}}
+ if(state.page==='competitions'&&!state.loading){const scroller=document.querySelector('[data-rounds-scroll]');const focus=scroller?.querySelector('[data-round-focus]');if(scroller&&focus){const next=scroller.querySelector('[data-round-next]');const bounds=scroller.getBoundingClientRect();const first=focus.getBoundingClientRect();const last=(next||focus).getBoundingClientRect();const top=first.top-bounds.top+scroller.scrollTop;const visibleHeight=last.bottom-first.top+12;scroller.style.height=Math.ceil(visibleHeight)+'px';scroller.scrollTop=Math.max(0,top);}}
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading)paintMatchHeaderCompact();
  if(state.page==='home'&&!state.loading)void hydrateHomeRatings();
