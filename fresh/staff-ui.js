@@ -213,6 +213,12 @@ export function adminPage(ctx){
  if(memory.area==='players'){
   const list=[...players].sort((a,b)=>String(a.last_name).localeCompare(String(b.last_name),'it'));
   const p=idOf(players,S.players);const r=data.roster?.find(x=>x.player_id===p?.id);
+  const season=seasons.find(x=>x.id===ctx.state.season);
+  const contract=(data.contracts||[]).filter(x=>x.player_id===p?.id&&x.season_id===ctx.state.season).sort((a,b)=>String(b.start_date).localeCompare(String(a.start_date)))[0];
+  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const firstDay=p?(p.created_at?.slice(0,10)>season?.start_date?p.created_at.slice(0,10):season?.start_date):today;
+  const starting=contract?.start_date||firstDay||today;
+  const ending=contract?.actual_end_date||contract?.planned_end_date||season?.end_date||'';
   form=wrapForm('players','Gestione anagrafica e rosa',
    selectExisting('players',list,'last_name')+
    '<div class="staff-form-grid">'+input('first_name','Nome',p?.first_name||'','text','required')+
@@ -220,8 +226,10 @@ export function adminPage(ctx){
    selection('generic_role_manual','Ruolo',[['','Non specificato'],['P','Portiere'],['D','Difensore'],['C','Centrocampista'],['A','Attaccante']],p?.generic_role_manual||'')+
    selection('preferred_foot','Piede',[['','Non indicato'],['right','Destro'],['left','Sinistro'],['both','Ambidestro']],p?.preferred_foot||'')+
    input('height_cm','Altezza (cm)',p?.height_cm??'','number','min="100" max="245"')+
-   selection('active','Nella rosa della stagione',[['true','Sì'],['false','No']],r?.active===false?'false':'true')+'</div>',
-   'L’identità del giocatore resta invariata fra stagioni. La rimozione dalla rosa non elimina lo storico.');
+   selection('active','Nella rosa della stagione',[['true','Sì'],['false','No']],r?.active===false?'false':'true')+
+   input('contract_start','In rosa dal',starting,'date','required')+
+   input('contract_end','In rosa fino al',ending,'date','required')+'</div>',
+   'Le date delimitano le gare in cui il giocatore è convocabile. Fuori da questo periodo non compare fra disponibili o indisponibili. La modifica non cancella lo storico.');
  }
  if(memory.area==='users'){
   if(roleOf(ctx)!=='admin'){
@@ -330,10 +338,18 @@ const callupReasons=[
  ['personal','Assente','person'],
  ['technical_choice','Escluso','minus']
 ];
+function playerEligibleAt(data,row,kickoff){
+ if(!kickoff||!Number.isFinite(Date.parse(kickoff)))return true;
+ const day=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(kickoff));
+ const contracts=(data.contracts||[]).filter(c=>c.player_id===row.player_id&&c.season_id===row.season_id);
+ if(contracts.length)return contracts.some(c=>c.status!=='cancelled'&&c.status!=='rejected'&&c.start_date<=day&&day<=(c.actual_end_date&&c.actual_end_date<c.planned_end_date?c.actual_end_date:c.planned_end_date||'9999-12-31'));
+ const person=row.person;const season=(data.seasonStart||'0000-01-01');const created=person?.created_at?.slice(0,10)||season;
+ return day>=(created>season?created:season);
+}
 function matchCallups(ctx,m){
  const data=ctx.state.data||{},current=ctx.state.matchData?.players||[];
  const roster=(data.roster||[]).filter(r=>r.active!==false).map(r=>({...r,person:(data.players||[]).find(p=>p.id===r.player_id)}))
-  .filter(r=>r.person).sort((a,b)=>String(a.person.last_name||'').localeCompare(String(b.person.last_name||''),'it'));
+  .filter(r=>r.person&&playerEligibleAt({...data,seasonStart:ctx.state.base?.seasons?.find(s=>s.id===ctx.state.season)?.start_date},r,m.kickoff_at)).sort((a,b)=>String(a.person.last_name||'').localeCompare(String(b.person.last_name||''),'it'));
  const rows=roster.map(row=>{
   const saved=current.find(p=>p.player_id===row.player_id);
   const proposal=availabilityDefault({saved,injuries:data.injuries||[],suspensions:data.suspensions||[],
@@ -363,7 +379,7 @@ function matchCallups(ctx,m){
 function matchLineup(ctx,m){
  const players=ctx.state.data?.players||[],roster=(ctx.state.data?.roster||[]).filter(r=>r.active!==false),
   current=ctx.state.matchData?.players||[];
- const rostered=roster.map(x=>({...x,person:players.find(p=>p.id===x.player_id)})).filter(x=>x.person)
+ const rostered=roster.map(x=>({...x,person:players.find(p=>p.id===x.player_id)})).filter(x=>x.person&&playerEligibleAt({...ctx.state.data,seasonStart:ctx.state.base?.seasons?.find(s=>s.id===ctx.state.season)?.start_date},x,m.kickoff_at))
    .sort((a,b)=>String(a.person.last_name).localeCompare(String(b.person.last_name),'it'));
  const allowed=Number.isFinite(Date.parse(m.kickoff_at))&&Date.now()>=Date.parse(m.kickoff_at);
  const fields=rostered.filter(row=>{
@@ -826,10 +842,14 @@ export async function staffSubmit(e,ctx){
    return true;
   }
   if(kind==='players'){
-   const d=dataForm(form),payload={...d,id:memory.selected.players||null,
+   const d=dataForm(form),{contract_start,contract_end,...raw}=d;
+   if(!contract_start||!contract_end||contract_start>contract_end)throw Error('Periodo di appartenenza non valido');
+   const payload={...raw,id:memory.selected.players||null,
     active:d.active==='true',height_cm:d.height_cm===''?null:Number(d.height_cm)};
-   await pendingFn(form,()=>rpc('tm_app_save_player',{p_season_id:ctx.state.season,p_data:payload}));
-   await ctx.reloadAll();ctx.toast('Giocatore e rosa aggiornati');return true;
+   const playerId=await pendingFn(form,()=>rpc('tm_app_save_player',{p_season_id:ctx.state.season,p_data:payload}));
+   await pendingFn(form,()=>rpc('tm_app_set_player_period',{p_season_id:ctx.state.season,p_player_id:playerId,p_start_date:contract_start,p_end_date:contract_end}));
+   memory.selected.players=playerId;
+   await ctx.reloadAll();ctx.toast('Giocatore e periodo di rosa aggiornati');return true;
   }
   const obj=adminPayload(form,ctx);
   if(!obj.table)throw Error('Modulo sconosciuto');
