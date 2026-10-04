@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock} from './staff-ui.js?callups=20261004v2';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer} from './staff-ui.js?callups=20261004v2';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004compact';
@@ -48,7 +48,7 @@ const ico=(n,size=20)=>{const paths={
  spark:'<path d="m2 16 6-6 4 3 9-9m-6 0h6v6"/>'
  };return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[n]||paths.home}</svg>`};
 const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar','calendar','Calendario'],['roster','users','Rosa'],['stats','chart','Numeri']];
-const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'overview',scoreEditing:false,matchData:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
+const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'overview',scoreEditing:false,matchData:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',rosterView:'cards',rosterSort:'name',rosterDesc:false,theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
 let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
 let verifiedEventCache=null,analyticsBusy=false;
 async function pollLive(){
@@ -201,10 +201,15 @@ function calendar(){
  return `${heading('MATCH SCHEDULE','Calendario','Le gare della squadra, dalle prossime date ai risultati passati.')}<div class="filters"><div class="segmented">${[['all','Tutte'],['upcoming','Da giocare'],['results','Risultati']].map(([k,v])=>`<button data-filter="${k}" class="${state.filter===k?'active':''}">${v}</button>`).join('')}</div><select aria-label="Competizione" class="filter-select" data-comp-select><option value="">Tutte le competizioni</option>${comps().map(c=>`<option value="${E(c.id)}" ${state.comp===c.id?'selected':''}>${E(competitionLabel(c))}</option>`).join('')}</select></div><div class="calendar-groups">${Object.entries(grouped).map(([month,a])=>`<section class="glass panel month-card"><div class="month-heading"><h2>${E(month)}</h2><span>${a.length} ${a.length===1?'gara':'gare'}</span></div><div class="fixture-list">${a.map(f=>fixtureRow(f)).join('')}</div></section>`).join('')||'<div class="glass panel empty">Nessuna partita per questo filtro.</div>'}</div>`
 }
 function roster(){
- const roster=(state.data?.roster||[]).filter(r=>r.active!==false),all=(state.data?.players||[]),stats=state.data?.playerStats||[];
- const items=roster.map(r=>{const p=all.find(p=>p.id===r.player_id);return p?{...p,roster:r,stats:stats.find(s=>s.player_id===p.id)||null}:null}).filter(Boolean).filter(p=>state.role==='all'||roleName(p.generic_role_manual||p.stats?.position_group)===state.role);
- items.sort((a,b)=>(a.last_name||'').localeCompare(b.last_name||'','it'));
- return `${heading('I PROTAGONISTI','La rosa','Giocatori della stagione selezionata, con dati collegati al profilo originale.')}<div class="filters roster-filters"><div class="segmented">${[['all','Tutti'],['P','Portieri'],['D','Difensori'],['C','Centrocampisti'],['A','Attaccanti']].map(([k,l])=>`<button data-role="${k}" class="${state.role===k?'active':''}">${l}</button>`).join('')}</div><label class="local-search">${ico('search',18)}<input id="player-search" placeholder="Cerca giocatore" value="${E(state.q)}" aria-label="Cerca giocatore"></label></div><div class="player-grid">${items.map(p=>playerCard(p)).join('')||'<div class="empty">Nessun giocatore in questa categoria.</div>'}</div><p class="muted small" id="roster-empty" hidden>Nessun giocatore corrisponde alla ricerca.</p>`;
+ const roster=(state.data?.roster||[]).filter(r=>r.active!==false),all=state.data?.players||[],stats=state.data?.playerStats||[];
+ const items=roster.map(r=>{const p=all.find(p=>p.id===r.player_id);return p?{...p,roster:r,stats:stats.find(s=>s.player_id===p.id)||{}}:null}).filter(Boolean).filter(p=>state.role==='all'||roleName(p.generic_role_manual||p.stats?.position_group)===state.role);
+ const columns=[['name','Giocatore'],['role','Ruolo'],['shirt','N°'],['appearances','Pres.'],['goals','Gol'],['avg_rating','Voto']];
+ const val=(p,key)=>key==='name'?(p.last_name||'')+' '+(p.first_name||''):key==='role'?roleName(p.generic_role_manual||p.stats?.position_group):key==='shirt'?(state.data?.habitual||[]).find(h=>h.player_id===p.id)?.shirt_number??p.roster.shirt_number:key==='avg_rating'?p.stats?.avg_rating:p.stats?.[key];
+ items.sort((a,b)=>{const x=val(a,state.rosterSort),y=val(b,state.rosterSort),nx=Number(x),ny=Number(y);const result=x==null||x===''?(y==null||y===''?0:1):y==null||y===''?-1:Number.isFinite(nx)&&Number.isFinite(ny)?nx-ny:String(x).localeCompare(String(y),'it',{sensitivity:'base',numeric:true});return (state.rosterDesc?-result:result)||(a.last_name||'').localeCompare(b.last_name||'','it')});
+ const query=normalized(state.q);const shown=items.filter(p=>normalized((p.first_name||'')+' '+(p.last_name||'')).includes(query));
+ const number=v=>v==null?'—':E(v);
+ const table=`<div class="table-scroller roster-table-wrap"><table class="standing-table roster-table"><thead><tr>${columns.map(([key,label])=>`<th><button type="button" data-roster-sort="${key}" aria-label="Ordina per ${label}" aria-sort="${state.rosterSort===key?(state.rosterDesc?'descending':'ascending'):'none'}">${label} ${state.rosterSort===key?(state.rosterDesc?'↓':'↑'):''}</button></th>`).join('')}</tr></thead><tbody>${shown.map(p=>`<tr data-search-name="${E(normalized((p.first_name||'')+' '+(p.last_name||'')))}"><td><button type="button" class="roster-player-link" data-player="${E(p.id)}">${E((p.last_name||'')+' '+(p.first_name||''))}</button></td><td>${E(roleName(p.generic_role_manual||p.stats?.position_group))}</td><td>${number(val(p,'shirt'))}</td><td>${number(p.stats?.appearances)}</td><td>${number(p.stats?.goals)}</td><td>${p.stats?.avg_rating!=null?Number(p.stats.avg_rating).toFixed(1):'—'}</td></tr>`).join('')}</tbody></table></div>`;
+ return `${heading('I PROTAGONISTI','La rosa','Giocatori della stagione selezionata, con dati collegati al profilo originale.')}<div class="filters roster-filters"><div class="segmented">${[['all','Tutti'],['P','Portieri'],['D','Difensori'],['C','Centrocampisti'],['A','Attaccanti']].map(([k,l])=>`<button data-role="${k}" class="${state.role===k?'active':''}">${l}</button>`).join('')}</div><div class="roster-tools"><div class="segmented roster-view-toggle"><button data-roster-view="cards" class="${state.rosterView==='cards'?'active':''}" aria-pressed="${state.rosterView==='cards'}">Schede</button><button data-roster-view="table" class="${state.rosterView==='table'?'active':''}" aria-pressed="${state.rosterView==='table'}">Tabella</button></div><label class="local-search">${ico('search',18)}<input id="player-search" placeholder="Cerca giocatore" value="${E(state.q)}" aria-label="Cerca giocatore"></label>${isStaff(staffContext())?'<button class="roster-add" type="button" data-roster-new>+ Nuovo</button>':''}</div></div>${state.rosterView==='table'?table:`<div class="player-grid">${shown.map(p=>playerCard(p)).join('')}</div>`}${shown.length===0?'<p class="muted small" id="roster-empty">Nessun giocatore corrisponde ai filtri.</p>':''}`;
 }
 function playerCard(p){const s=p.stats||{};const name=(p.first_name||'')+' '+(p.last_name||'');return `<button class="player-card glass" data-player="${E(p.id)}" data-search-name="${E(normalized(name))}"><div class="player-image">${safeUrl(p.photo_url)?`<img src="${safeUrl(p.photo_url)}" alt="" loading="lazy">`:`<span>${E((p.first_name||'?')[0])}${E((p.last_name||'?')[0])}</span>`}<b>${E(state.data?.habitual?.find(x=>x.player_id===p.id)?.shirt_number??p.roster.shirt_number??'·')}</b></div><div class="player-info"><span class="eyebrow">${E(roleName(p.generic_role_manual||s.position_group))} · ${E(p.generic_role_manual||s.position_group||'Giocatore')}</span><h3>${E(name)}</h3><div class="player-metrics"><span>${s.appearances??'—'} <small>pres.</small></span><span>${s.goals??'—'} <small>gol</small></span><span>${s.avg_rating!=null?Number(s.avg_rating).toFixed(1):'—'} <small>voto</small></span></div></div>${ico('chevron',16)}</button>`}
 function player(){
@@ -547,6 +552,9 @@ document.addEventListener('click',async e=>{
  if(staffTarget&&await staffClick(e,staffTarget,staffContext()))return;
  const x=e.target.closest('button,[data-dismiss]');if(!x)return;
  if(x.dataset.dismiss!==undefined&&e.target===x){state.overlay=null;render();return}
+ if(x.dataset.rosterNew!==undefined){if(isStaff(staffContext())){openNewPlayer();navigate('admin')}return}
+ if(x.dataset.rosterView){state.rosterView=x.dataset.rosterView;render();return}
+ if(x.dataset.rosterSort){const k=x.dataset.rosterSort;state.rosterDesc=state.rosterSort===k?!state.rosterDesc:['appearances','goals','avg_rating'].includes(k);state.rosterSort=k;render();return}
  if(x.dataset.page){navigate(x.dataset.page);return}
  if(x.dataset.scoreEdit!==undefined){if(state.identity?.role?.role==='admin'&&!involvesTeam(resolveMatch().fixture,team())){if(!state.scoreEditing){state.scoreEditing=true;render()}else await saveExtraScore()}return}
  if(x.dataset.scoreCancel!==undefined){state.scoreEditing=false;render();return}
@@ -594,7 +602,7 @@ document.addEventListener('input',e=>{
  if(staffLogoEvent(e))return;
  if(e.target.id==='player-search'){
   state.q=e.target.value;const query=normalized(state.q);let visible=0;
-  document.querySelectorAll('.player-card').forEach(el=>{const show=el.dataset.searchName.includes(query);el.hidden=!show;if(show)visible++});
+  document.querySelectorAll('[data-search-name]').forEach(el=>{const show=el.dataset.searchName.includes(query);el.hidden=!show;if(show)visible++});
   const missing=$('#roster-empty');if(missing)missing.hidden=visible>0;
  }
 });
