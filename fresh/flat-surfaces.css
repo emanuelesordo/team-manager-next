@@ -230,13 +230,10 @@
   display:block;width:44px;height:49px;margin:0;
 }
 .ov-shared-field .field-slot .ov-field-shirt .kit-svg{filter:drop-shadow(0 2px 3px #0008)}
-/* Rating: stessa etichetta semitrasparente della panchina anche sulla maglia.
-   Qui cambia solo il posizionamento; dimensioni e colori seguono .ov-rating. */
+/* Identica label .ov-rating della panchina: nessuna variante grafica sul campo. */
 .ov-rating-elite{background:rgba(69,142,228,.26);border-color:rgba(69,142,228,.46)}
 .ov-shared-field .field-slot .ov-marker-art > .ov-rating{
-  position:absolute;z-index:5;bottom:-5px;left:50%;transform:translateX(-50%);
-  padding:2px 6px;font-size:11px;
-  color:var(--ink);text-shadow:none;box-shadow:none;
+ position:absolute;z-index:5;bottom:-5px;left:50%;transform:translateX(-50%);
 }
 .ov-shared-field .field-slot .ov-player-pitch > .ov-player-name{
   display:block;max-width:105px;width:max-content;
@@ -293,6 +290,5 @@
   .ov-shared-field .field-slot .ov-marker-side{gap:1px;width:16px;bottom:11px}
   .ov-shared-field .field-slot .ov-marker-side-left{right:calc(100% - 5px)}
   .ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 5px)}
-  .ov-shared-field .field-slot .ov-marker-art > .ov-rating{font-size:10px;padding:2px 4px}
   .ov-shared-field .field-slot .ov-marker-count{font-size:8px;height:12px;min-width:12px}
 }
