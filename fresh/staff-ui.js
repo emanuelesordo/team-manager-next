@@ -12,6 +12,7 @@ import {storedEventMinute} from './match-minutes.js';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 
 export const staffLogoEvent=handleLogoEditorEvent;
+export function openNewPlayer(){memory.area='players';memory.selected.players='';}
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const attrs=(rows,key,label)=>rows.map(row=>'<option value="'+esc(row[key])+'">'+esc(row[label])+'</option>').join('');
 const option=(value,label,selected)=>'<option value="'+esc(value)+'"'+(String(value)===String(selected)?' selected':'')+'>'+esc(label)+'</option>';
