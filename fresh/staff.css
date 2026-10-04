@@ -327,3 +327,7 @@
 .callup-cross{font-size:18px}
 .callup-red{color:#ef6666;font-size:16px}
 @media(max-width:900px){.callup-columns{grid-template-columns:minmax(0,1fr);row-gap:16px}.callup-person{min-height:36px}.callup-reason{width:30px;flex-basis:30px;height:30px}}
+
+/* Explicit write status, not a false local-only selection. */
+.callup-person[data-saving="true"]{opacity:.6}
+.callup-person[data-save-error="true"]{background:color-mix(in srgb,#e35d5d 15%,transparent);outline:1px solid #e35d5d}
