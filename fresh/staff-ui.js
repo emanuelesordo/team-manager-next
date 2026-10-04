@@ -3,7 +3,7 @@ import {roundRobinDraft} from './phase-scheduler.js';
 import {openKitConfigurator} from './kit-editor.js';
 import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge} from './api.js?callups=20261004v2';
 import {importPanel} from './calendar-import.js';
-import {pitchMarkup} from './lineup-pitch.js?callups=20261004v2';
+import {pitchMarkup,formationModules} from './lineup-pitch.js?callups=20261004moduli';
 import {availabilityDefault,normalizedReason,unavailabilityReasons} from './availability.js';
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
@@ -413,7 +413,7 @@ function matchLineup(ctx,m){
  }).join('');
  return '<section class="staff-subpanel">'+title('CALCIO D’INIZIO','Formazione e panchina')+
  help('Questa sezione è separata dalle convocazioni. Imposta titolari, posizioni sul campo e panchina al calcio d’inizio o ricostruisci la formazione a posteriori; le modifiche non cancellano gli eventi registrati.')+
- '<form data-staff-form="lineup"><div class="staff-top-fields">'+input('formation','Modulo',m.formation||'4-4-2','text','maxlength="32" '+(allowed?'':'disabled'))+'</div>'+
+ '<form data-staff-form="lineup"><div class="staff-top-fields">'+'<label class="staff-field"><span>Modulo</span><select name="formation" aria-label="Modulo tattico"'+(allowed?'':' disabled')+'>'+[...new Set([...formationModules,...(m.formation&&!formationModules.includes(m.formation)?[m.formation]:[])])].map(f=>option(f,f,m.formation||'4-4-2')).join('')+'</select></label>'+'</div>'+
  pitchMarkup()+'<div class="lineup-header"><span>Giocatore</span><span>Disponibilità</span><span>N°</span><span>Slot</span><span>Cap.</span><span>Motivo</span></div>'+
  '<div class="lineup-rows">'+fields+'</div>'+(allowed?submit('Salva formazione e panchina'):help('La formazione si compila dal calcio d’inizio. Prima di allora completa soltanto le convocazioni.'))+'</form></section>';
 }
