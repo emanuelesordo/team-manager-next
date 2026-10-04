@@ -29,17 +29,24 @@ export function updateProjection(config,allFixtures,allStandings){
 export function renderProjection(result){
  if(!result)return '<p class="empty">Dati insufficienti per stimare il torneo.</p>';
  if(result.complete)return '<p class="empty">Calendario concluso: consulta la classifica ufficiale.</p>';
- const n=number=>Number(number).toLocaleString('it-IT',{maximumFractionDigits:1,minimumFractionDigits:1});
- const rows=result.rows.map(r=>'<tr><td>'+escape(r.team)+'</td>'+
-  '<td class="tabular">'+n(r.position)+'</td>'+
-  '<td class="tabular">'+n(r.expectedPoints)+'</td>'+
-  '<td class="tabular">'+r.lowerPosition+'–'+r.upperPosition+'</td>'+
-  '<td class="tabular">'+(r.currentPosition?'#'+r.currentPosition:'—')+'</td></tr>').join('');
+ const n=number=>Math.round(Number(number)).toLocaleString('it-IT');
+ const rows=result.rows.map((r,i)=>{
+  const projectedRank=i+1;
+  const change=Number(r.currentPosition)-projectedRank;
+  const movement=change>0?'<span class="projection-move up">▲ +'+change+'</span>':change<0?'<span class="projection-move down">▼ '+change+'</span>':'<span class="projection-move flat">—</span>';
+  const gf=Number(r.expectedGoalsFor),gs=Number(r.expectedGoalsAgainst);
+  return '<tr><td>'+projectedRank+'</td><td>'+escape(r.team)+'</td>'+
+   '<td class="points">'+n(r.expectedPoints)+'</td>'+
+   '<td class="tabular">'+n(gf)+'</td>'+
+   '<td class="tabular">'+n(gs)+'</td>'+
+   '<td class="tabular">'+n(gf-gs)+'</td>'+
+   '<td class="tabular">'+movement+'</td></tr>';
+ }).join('');
  return '<div class="projection-numbers"><span><b>'+result.iterations.toLocaleString('it-IT')+'</b><small>Simulazioni</small></span>'+
   '<span><b>'+result.remaining+'</b><small>Gare residue</small></span>'+
   '<span><b>'+result.reliability+'%</b><small>Stagione disputata*</small></span></div>'+
   '<div class="table-scroller"><table class="standing-table projection-table"><thead><tr>'+
-  '<th>Squadra</th><th>Pos. media</th><th>Pt attesi</th><th>Pos. P20–P80</th><th>Ora</th>'+
+  '<th>#</th><th>Squadra</th><th>Pt</th><th>GF</th><th>GS</th><th>DR</th><th>+/-</th>'+
   '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
-  '<p class="subnote">Stima euristica, non classifica ufficiale. Le squadre a pari punti condividono la posizione indicativa finché non sono applicati i criteri di spareggio. *L’indicatore mostra solo la quota di gare già disputate, non una probabilità di previsione corretta.</p>';
+  '<p class="subnote">Valori attesi da 10.000 simulazioni, arrotondati. +/- indica le posizioni guadagnate o perse rispetto alla classifica attuale; l’ordine proiettato segue la posizione media simulata. Gli spareggi ufficiali non sono simulati. *La percentuale indica le gare disputate, non l’accuratezza della previsione.</p>';
 }
