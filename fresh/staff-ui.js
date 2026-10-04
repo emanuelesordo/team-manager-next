@@ -350,7 +350,7 @@ function playerEligibleAt(data,row,kickoff){
 }
 function matchCallups(ctx,m){
  const data=ctx.state.data||{},current=ctx.state.matchData?.players||[];
- const roster=(data.roster||[]).filter(r=>r.active!==false).map(r=>({...r,person:(data.players||[]).find(p=>p.id===r.player_id)}))
+ const roster=(data.roster||[]).map(r=>({...r,person:(data.players||[]).find(p=>p.id===r.player_id)}))
   .filter(r=>r.person&&playerEligibleAt({...data,seasonStart:ctx.state.base?.seasons?.find(s=>s.id===ctx.state.season)?.start_date},r,m.kickoff_at)).sort((a,b)=>String(a.person.last_name||'').localeCompare(String(b.person.last_name||''),'it'));
  const rows=roster.map(row=>{
   const saved=current.find(p=>p.player_id===row.player_id);
@@ -379,7 +379,7 @@ function matchCallups(ctx,m){
  '</div><div class="callup-store" data-callup-store>'+rows+'</div>'+submit('Salva convocazioni')+'</form></section>';
 }
 function matchLineup(ctx,m){
- const players=ctx.state.data?.players||[],roster=(ctx.state.data?.roster||[]).filter(r=>r.active!==false),
+ const players=ctx.state.data?.players||[],roster=(ctx.state.data?.roster||[]),
   current=ctx.state.matchData?.players||[];
  const rostered=roster.map(x=>({...x,person:players.find(p=>p.id===x.player_id)})).filter(x=>x.person&&playerEligibleAt({...ctx.state.data,seasonStart:ctx.state.base?.seasons?.find(s=>s.id===ctx.state.season)?.start_date},x,m.kickoff_at))
    .sort((a,b)=>String(a.person.last_name).localeCompare(String(b.person.last_name),'it'));
