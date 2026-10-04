@@ -105,7 +105,7 @@ export function installLineupPitch(){
    changeShirt(form,occupied);return;
   }
   const target=e.target.closest('[data-pitch-slot]');if(target){
-   if(!activePlayer){if(target.dataset.playerId){const row=rowList(form).find(r=>r.dataset.lineupPlayer===target.dataset.playerId);if(row){getStatus(row).value='bench';getSlot(row).value='';paintLineupPitch();changed(form)}}return}
+   if(!activePlayer){if(target.dataset.playerId){activePlayer=target.dataset.playerId;paintLineupPitch()}return}
    assign(Number(target.dataset.pitchSlot),activePlayer);return;
   }
   const name=e.target.closest('.lineup-name');
