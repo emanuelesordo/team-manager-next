@@ -72,7 +72,7 @@ async def test_view(browser, width, height):
  await page.locator("#login-form button[type=submit]").click()
  await page.locator(".hero-panel").wait_for()
  # Open historical fixture and verify actual Match Center markup.
- await page.goto("http://127.0.0.1:8765/#calendar",wait_until="domcontentloaded")
+ await page.goto("http://127.0.0.1:8765/#competitions",wait_until="domcontentloaded")
  await page.locator("button[data-match]").first.click()
  await page.locator(".match-detail-head").wait_for(timeout=15000)
  assert page.url.endswith("#match/"+FIXTURE),page.url
