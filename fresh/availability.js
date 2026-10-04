@@ -22,7 +22,7 @@ export function availabilityDefault({saved,injuries=[],suspensions=[],playerId,f
 }
 export function normalizedReason(status,reason){
  if(status!=='absent')return null;
- return ['injury','suspension','personal','technical_choice'].includes(reason)?reason:'technical_choice';
+ return ['injury','suspension','personal','illness','technical_choice'].includes(reason)?reason:'technical_choice';
 }
 
 /* In the absence of a registered sanction, derive a PREVIEW from recorded cards.
