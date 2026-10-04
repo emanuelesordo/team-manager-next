@@ -442,6 +442,18 @@ function matchLive(ctx,m,competition){
 }
 function matchEvents(ctx,m){const fixture=ctx.resolveMatch().fixture,competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id);return reviewPanel({match:m,fixture,competition,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
 
+export function staffMatchSection(ctx,f,m,section){
+ if(!isStaff(ctx))return '';
+ if(!['callups','lineup','live','events','tactics'].includes(section))return '';
+ if((!m||!m.fixture_id)&&['finished','live'].includes(f?.status))
+  return '<section class="glass panel staff-root"><p class="data-warning">Tabellino operativo non collegato: verifica il collegamento prima di modificare la partita.</p></section>';
+ if(!m||!m.fixture_id)return '<section class="glass panel staff-root">'+
+  help('Per iniziare collega un unico tabellino operativo alla partita.')+btn('ensure','Prepara tabellino')+'</section>';
+ const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===f.competition_id);
+ const content=section==='callups'?matchCallups(ctx,m):section==='lineup'?matchLineup(ctx,m):
+  section==='live'?matchLive(ctx,m,competition):section==='tactics'?staffTacticsPanel(ctx,m):matchEvents(ctx,m);
+ return '<section class="staff-root staff-direct-section">'+content+'</section>';
+}
 export function staffMatchPanel(ctx,f,m){
  if(!isStaff(ctx))return '';
  if((!m||!m.fixture_id)&&['finished','live'].includes(f?.status))return '<section class="glass panel staff-root"><h2>Verifica collegamento partita</h2><p class="data-warning">Questa gara è già in corso o conclusa ma non ha un tabellino operativo collegato con certezza. Per evitare duplicazioni è necessario riconciliare manualmente risultati e provenienza dei dati.</p></section>';
