@@ -1,5 +1,7 @@
 /** Editor tattico accessibile: tap-to-place mobile, drag-and-drop desktop. */
 const START='starter';
+/** Moduli ammessi per lo schieramento (10 giocatori di movimento). */
+export const formationModules=Object.freeze(["4-4-2","4-3-3","4-5-1","3-4-3","3-5-2","3-1-5-1","5-3-2","5-4-1","4-2-2-2","4-2-3-1","2-4-4","2-5-3"]);
 const basePositions=formation=>{
  const numbers=String(formation||'').split(/[-–]/).map(Number);
  const lines=numbers.length>=2&&numbers.length<=5&&numbers.every(n=>Number.isInteger(n)&&n>0&&n<=6)&&numbers.reduce((a,b)=>a+b,0)===10?numbers:[4,4,2];
