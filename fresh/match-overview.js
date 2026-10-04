@@ -1,4 +1,5 @@
 import {matchPlayerLabel} from './match-player-label.js';
+import {pitchPositions} from './lineup-pitch.js';
 import {displayEventMinute,cumulativeEventMinute} from './match-minutes.js';
 
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -69,18 +70,18 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
    '<span class="ov-player-name">'+escapeHtml(name)+(row.is_captain?' <small class="ov-captain">C</small>':'')+'</span>'+
    '<span class="ov-personal-events">'+eventMarkup+'</span>'+ratingMarkup+'</div>';
  };
- const rawFormation=String(match?.formation||'4-4-2').split('-').map(Number);
- const valid=rawFormation.length>=2&&rawFormation.length<=5&&rawFormation.every(x=>Number.isInteger(x)&&x>0)&&rawFormation.reduce((a,b)=>a+b,0)===10;
- const arrangement=valid?rawFormation:[4,4,2];
- let offset=1,lines=[];
- for(const qty of arrangement){lines.push(starters.slice(offset,offset+qty));offset+=qty}
- const rest=starters.slice(offset);
- // For an 11-player formation, render attack first and goalkeeper closest to the bottom.
- const pitchRows=[...lines.reverse(),starters.slice(0,1),...(rest.length?[rest]:[])];
- const pitch=pitchRows.map((line,index)=>'<div class="ov-pitch-line" data-line="'+index+'">'+line.map(renderPlayer).join('')+'</div>').join('');
  const label=match?.formation||'4-4-2';
- return '<section class="ov-lineup"><div class="ov-section-heading"><h3>Formazione titolare</h3><small>'+escapeHtml(label)+' · '+starters.length+' titolari</small></div>'+
-  (starters.length?'<div class="ov-pitch" aria-label="Formazione iniziale">'+pitch+'</div>':'<div class="empty">Formazione iniziale non registrata.</div>')+
+ const positions=pitchPositions(label);
+ const occupied=new Map(starters.map(row=>[Number(row.tactical_slot),row]));
+ const pitch='<div class="visual-lineup"><div class="visual-field ov-tactical-field" aria-label="Formazione iniziale">'+
+  '<span class="field-circle"></span><span class="field-midline"></span>'+
+  positions.map(pos=>{const row=occupied.get(pos.slot);if(!row)return '';
+   const p=byId.get(row.player_id),name=matchPlayerLabel(p);
+   return '<div class="field-slot occupied" style="left:'+pos.x+'%;top:'+pos.y+'%" title="'+escapeHtml(name)+'">'+
+   '<strong>'+escapeHtml(row.shirt_number??'·')+'</strong><span>'+escapeHtml(name)+'</span></div>';
+  }).join('')+'</div></div>';
+ return '<section class="ov-lineup lineup-minimal ov-shared-field"><div class="ov-section-heading"><h3>Formazione titolare</h3><small>'+escapeHtml(label)+' · '+starters.length+' titolari'+(match.lineup_confirmed_at?' · confermata':' · provvisoria')+'</small></div>'+
+  (starters.length?pitch:'<div class="empty">Formazione iniziale non registrata.</div>')+
   '<div class="ov-section-heading ov-bench-heading"><h3>Panchina</h3><small>'+bench.length+' giocatori</small></div>'+
   (bench.length?'<div class="ov-bench">'+bench.map(renderPlayer).join('')+'</div>':'<div class="empty">Nessun giocatore in panchina registrato.</div>')+
   '<p class="subnote">Il voto è confrontato con la media personale stagionale, quando disponibile. Le icone riportano gli eventi individuali effettivamente registrati.</p></section>';
