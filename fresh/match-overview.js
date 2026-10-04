@@ -1,5 +1,6 @@
 import {matchPlayerLabel} from './match-player-label.js';
 import {pitchPositions} from './lineup-pitch.js';
+import {shirtSvg} from './kit-editor.js';
 import {displayEventMinute,cumulativeEventMinute} from './match-minutes.js';
 
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -38,7 +39,7 @@ export function relativeRating(playerId,matchData,seasonStats=[]){
  const level=score>=8.5?'high':score>=7?'above':score>=6?'even':score>=5?'below':'low';
  return {score,level,votes};
 }
-export function overviewLineup(match,matchData,people=[],seasonStats=[],competition=null){
+export function overviewLineup(match,matchData,people=[],seasonStats=[],competition=null,kit=null){
  const roster=(matchData?.players||[]).filter(x=>x.selection_status!=='absent');
  const starters=roster.filter(x=>x.started||x.selection_status==='starter')
   .sort((a,b)=>(a.tactical_slot??99)-(b.tactical_slot??99)||(a.shirt_number??999)-(b.shirt_number??999));
@@ -69,7 +70,7 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
   positions.map(pos=>{const row=occupied.get(pos.slot);if(!row)return '';
    const p=byId.get(row.player_id),name=matchPlayerLabel(p);
    return '<div class="field-slot occupied" style="left:'+pos.x+'%;top:'+pos.y+'%" title="'+escapeHtml(name)+'">'+
-   '<strong>'+escapeHtml(row.shirt_number??'·')+'</strong>'+renderPlayer(row,true)+'</div>';
+   '<span class="ov-field-shirt">'+shirtSvg(kit||{},'overview-'+pos.slot,false,row.shirt_number)+'</span>'+renderPlayer(row,true)+'</div>';
   }).join('')+'</div></div>';
  return '<section class="ov-lineup lineup-minimal ov-shared-field"><div class="ov-section-heading"><h3>Formazione titolare</h3><small>'+escapeHtml(label)+' · '+starters.length+' titolari'+(match.lineup_confirmed_at?' · confermata':' · provvisoria')+'</small></div>'+
   (starters.length?pitch:'<div class="empty">Formazione iniziale non registrata.</div>')+
