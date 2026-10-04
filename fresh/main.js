@@ -365,9 +365,9 @@ function match(){
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+
   '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>'+
   '</div>';
- const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato da verificare'):'';
+ const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato in attesa di conferma'):'';
  const notice=(pending?'<p class="data-warning">'+pending+' eventi ancora da ufficializzare.</p>':'')+
-  (resultStatus?'<p class="staff-help">'+E(resultStatus)+'</p>':'');
+  (resultStatus&&selectedTab==='info'?'<p class="staff-help">'+E(resultStatus)+'</p>':'');
  const canEditInfo=state.identity?.role?.role==='admin';
  const infoField=(key,label,value)=>'<label class="staff-field"><span>'+label+'</span><input data-extra-field="'+key+'" aria-label="'+label+'" value="'+E(value??'')+'" '+(canEditInfo?'':'disabled')+'></label>';
  const kits=team()?.kits||{};
@@ -375,7 +375,11 @@ function match(){
  const kitSelect=staffAccess&&!extraMatch&&m?'<label class="staff-field"><span>Maglia utilizzata</span><select data-match-kit aria-label="Maglia utilizzata">'+
   '<option value="">Non specificata</option>'+kitKeys.map(key=>'<option value="'+E(key)+'"'+(m.match_kit_key===key?' selected':'')+'>'+E(({home:'Casa',away:'Trasferta',goalkeeper:'Portiere'})[key]||key)+'</option>').join('')+
   '</select></label>':'';
- const infoContent='<div class="match-info-editor">'+
+ const reviewAction=canEditInfo&&m&&f.status==='finished'&&m.status==='finished'&&!extraMatch?
+  (m.result_review_status==='confirmed'?'<div class="match-result-decision"><strong>Risultato ufficiale confermato</strong><button type="button" class="staff-soft" data-staff-action="review-result-reopen">Riapri verifica</button></div>':
+  '<div class="match-result-decision"><strong>Risultato in attesa di conferma</strong>'+(pending?'<small>Prima ufficializza i '+pending+' eventi in sospeso dalla scheda Eventi.</small>':'')+
+  '<button type="button" class="staff-submit" data-staff-action="review-result-confirm"'+(pending?' disabled title="Ufficializza prima gli eventi"':'')+'>Conferma risultato</button></div>'):'';
+ const infoContent='<div class="match-info-editor">'+reviewAction+
   (extraMatch&&canEditInfo?'<button type="button" class="staff-soft" data-score-edit="true">'+(state.scoreEditing?'Salva risultato':'Modifica risultato ed eventi')+'</button>':'')+
   '<div class="staff-form-grid">'+infoField('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):'')+
   infoField('venue_name','Campo',f.venue_name||venue)+infoField('venue_address','Indirizzo',f.venue_address||address)+
