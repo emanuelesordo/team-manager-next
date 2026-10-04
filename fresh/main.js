@@ -1,11 +1,11 @@
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get} from './api.js?venues=20261003kits';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get} from './api.js?availability=20261004';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261003id';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock} from './staff-ui.js?layout=20261003kits';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock} from './staff-ui.js?availability=20261004';
 import {overviewLineup} from './match-overview.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch} from './lineup-pitch.js';
@@ -13,7 +13,7 @@ import {projectionContainer,updateProjection} from './projection-ui.js?clubs=202
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?clubs=20261003id';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
-import {loadFixtureEvents} from './api.js?venues=20261003kits';
+import {loadFixtureEvents} from './api.js?availability=20261004';
 
 import {matchScorerRows,renderMatchScorers} from './match-scorers.js?clubs=20261003id';
 import {matchPlayerLabel} from './match-player-label.js';
