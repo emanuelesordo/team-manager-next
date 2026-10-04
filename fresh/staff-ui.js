@@ -118,7 +118,7 @@ export function adminPage(ctx){
    selection('playoff_playout_enabled','Playoff e playout',[['false','No'],['true','Sì']],String(c?.playoff_playout_enabled??false))+
    selection('general_competition_id','Competizione gestionale collegata',
     [['','Nessuna (blocco conservativo delle squalifiche attive)'],...generalCandidates.map(x=>[x.id,x.name])],
-    chosenBridge?.general_competition_id||'')+'</div>'+( ['league','tournament','cup'].includes(c?.kind||'league')?tieMarkup:'' )
+    chosenBridge?.general_competition_id||'')+'</div>'+( ['league','tournament','cup'].includes(c?.kind||'league')?tieMarkup:'' ),
    'Le competizioni conservano la propria durata e regole. Non vengono cancellati calendario o partite.');
   if(c){
    const linked=new Set((data.competitionOpponents||[]).filter(x=>x.competition_id===c.id).map(x=>x.opponent_id));
