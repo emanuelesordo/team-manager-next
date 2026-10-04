@@ -379,43 +379,36 @@ function matchCallups(ctx,m){
  '</div><div class="callup-store" data-callup-store>'+rows+'</div><p class="staff-help" role="status">Salvataggio automatico a ogni modifica.</p></form></section>';
 }
 function matchLineup(ctx,m){
- const players=ctx.state.data?.players||[],roster=(ctx.state.data?.roster||[]),
-  current=ctx.state.matchData?.players||[];
- const rostered=roster.map(x=>({...x,person:players.find(p=>p.id===x.player_id)})).filter(x=>x.person&&playerEligibleAt({...ctx.state.data,seasonStart:ctx.state.base?.seasons?.find(s=>s.id===ctx.state.season)?.start_date},x,m.kickoff_at))
-   .sort((a,b)=>String(a.person.last_name).localeCompare(String(b.person.last_name),'it'));
- const allowed=Number.isFinite(Date.parse(m.kickoff_at))&&Date.now()>=Date.parse(m.kickoff_at);
- const fields=rostered.filter(row=>{
-  const p=current.find(x=>x.player_id===row.player_id);
-  return !p||p.selection_status!=='absent';
- }).map(row=>{
-  const old=current.find(x=>x.player_id===row.player_id);
-  const proposal=availabilityDefault({saved:old,injuries:ctx.state.data?.injuries||[],suspensions:ctx.state.data?.suspensions||[],playerId:row.player_id,fixtureDate:m.kickoff_at,priorSelections:ctx.state.data?.priorSelections||[],matches:ctx.state.data?.matches||[],matchId:m.id,disciplinaryEvents:ctx.state.data?.disciplinaryEvents||[],competitionId:m.competition_id,competitionRules:(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id)?.discipline_rules||{},competitionLinks:ctx.state.data?.competitionLinks||[]});
-  const status=proposal.status==='absent'?'available':proposal.status;
-  const cap=Boolean(old?.is_captain);
-  const code=esc(row.player_id);
-  const activeInjury=(ctx.state.data?.injuries||[]).find(i=>i.player_id===row.player_id&&['active','recovering'].includes(i.status)&&!i.actual_return);
-  const alerts=[];
-  if((ctx.state.data?.injuries||[]).some(i=>i.player_id===row.player_id&&['active','recovering'].includes(i.status)&&!i.actual_return))
-   alerts.push('Infortunio segnalato');
-  if(proposal.source==='previous_match')alerts.push('Infortunio dalla gara precedente (verificare rientro)');
-  if(proposal.source==='cards')alerts.push('Possibile squalifica calcolata dai cartellini: verificare con lo staff');
-  if((ctx.state.data?.suspensions||[]).some(s=>s.player_id===row.player_id&&s.status==='active'&&Number(s.matches_served)<Number(s.matches_count)))
-   alerts.push('Squalifica attiva');
-  const columns=[
-   '<div class="lineup-name" draggable="true" role="button" tabindex="0" aria-label="Seleziona per il campo"><strong>'+esc(playerText(row.person))+'</strong><small>'+esc(row.person.generic_role_manual||'—')+'</small>'+alerts.map(a=>'<em class="lineup-alert">'+esc(a)+'</em>').join('')+(allowed&&activeInjury?'<button type="button" class="staff-soft" data-staff-action="recover-player" data-injury-id="'+esc(activeInjury.id)+'">Segna rientrato</button>':'')+'</div>',
-   '<select name="status" aria-label="Impiego '+esc(playerText(row.person))+'" '+(allowed?'':'disabled')+'>'+types.filter(v=>v[0]!=='absent').map(v=>option(v[0],v[1],status)).join('')+'</select>',
-   '<input type="number" name="shirt" aria-label="Maglia" placeholder="N°" min="1" max="99" value="'+esc(old?.shirt_number??row.shirt_number??'')+'" '+(allowed?'':'disabled')+'>',
-   '<input type="number" name="slot" aria-label="Posizione" placeholder="1–11" min="1" max="11" value="'+esc(old?.tactical_slot??'')+'" '+(allowed?'':'disabled')+'>',
-   '<label class="captain-check"><input type="radio" name="captain" value="'+code+'" '+(cap?'checked':'')+' '+(allowed?'':'disabled')+'> C</label>',
-   '<input type="hidden" name="reason" value="">',
-  ];
-  return '<div class="lineup-row" data-lineup-player="'+code+'">'+columns.join('')+'</div>';
+ const data=ctx.state.data||{},players=data.players||[],current=ctx.state.matchData?.players||[];
+ const roster=(data.roster||[]).map(x=>({...x,person:players.find(p=>p.id===x.player_id)}))
+  .filter(x=>x.person&&playerEligibleAt({...data,seasonStart:ctx.state.base?.seasons?.find(s=>s.id===ctx.state.season)?.start_date},x,m.kickoff_at))
+  .sort((a,b)=>String(a.person.last_name||'').localeCompare(String(b.person.last_name||''),'it')||String(a.person.first_name||'').localeCompare(String(b.person.first_name||''),'it'));
+ const confirmed=current.some(p=>['available','absent','starter','bench'].includes(p.selection_status));
+ const allowed=confirmed;
+ const fields=roster.filter(x=>!['absent'].includes(current.find(p=>p.player_id===x.player_id)?.selection_status)).map(x=>{
+  const old=current.find(p=>p.player_id===x.player_id);
+  const status=['starter','bench'].includes(old?.selection_status)?old.selection_status:'available';
+  const shirt=old?.shirt_number??x.shirt_number??x.person?.shirt_number??'';
+  return '<div class="lineup-row" data-lineup-player="'+esc(x.player_id)+'">'+
+   '<button type="button" class="lineup-name" draggable="'+allowed+'" aria-label="Posiziona '+esc(playerText(x.person))+'" '+(allowed?'':'disabled')+'><strong>'+esc(playerText(x.person))+'</strong></button>'+
+   '<span class="lineup-list-number">'+esc(shirt||'—')+'</span>'+
+   '<select name="status" aria-label="Impiego '+esc(playerText(x.person))+'" '+(allowed?'':'disabled')+'>'+[['available','Disponibile'],['starter','Titolare'],['bench','Panchina']].map(v=>option(v[0],v[1],status)).join('')+'</select>'+
+   '<input type="hidden" name="shirt" value="'+esc(shirt)+'">'+
+   '<input type="hidden" name="slot" value="'+esc(old?.tactical_slot??'')+'">'+
+   '<input type="hidden" name="reason" value="">'+
+   '<input type="radio" name="captain" value="'+esc(x.player_id)+'" aria-label="Capitano '+esc(playerText(x.person))+'" '+(old?.is_captain?'checked':'')+' '+(allowed?'':'disabled')+'>'+
+   '</div>';
  }).join('');
- return '<section class="staff-subpanel">'+title('CALCIO D’INIZIO','Formazione e panchina')+
- help('Questa sezione è separata dalle convocazioni. Imposta titolari, posizioni sul campo e panchina al calcio d’inizio o ricostruisci la formazione a posteriori; le modifiche non cancellano gli eventi registrati.')+
- '<form data-staff-form="lineup"><div class="staff-top-fields">'+'<label class="staff-field"><span>Modulo</span><select name="formation" aria-label="Modulo tattico"'+(allowed?'':' disabled')+'>'+[...new Set([...formationModules,...(m.formation&&!formationModules.includes(m.formation)?[m.formation]:[])])].map(f=>option(f,f,m.formation||'4-4-2')).join('')+'</select></label>'+'</div>'+
- pitchMarkup()+'<div class="lineup-header"><span>Giocatore</span><span>Disponibilità</span><span>N°</span><span>Slot</span><span>Cap.</span><span>Motivo</span></div>'+
- '<div class="lineup-rows">'+fields+'</div>'+(allowed?submit('Salva formazione e panchina'):help('La formazione si compila dal calcio d’inizio. Prima di allora completa soltanto le convocazioni.'))+'</form></section>';
+ return '<section class="staff-subpanel lineup-minimal">'+
+ (allowed?'':'<p class="staff-help">Conferma prima le convocazioni nella relativa sezione per abilitare la formazione.</p>')+
+ '<form data-staff-form="lineup" data-lineup-match="'+esc(m.id)+'" data-lineup-enabled="'+allowed+'">'+
+ '<div class="lineup-split"><div class="lineup-pitch-column">'+
+ '<label class="lineup-formation-select"><select name="formation" aria-label="Modulo" '+(allowed?'':'disabled')+'>'+
+ [...new Set([...formationModules,...(m.formation&&!formationModules.includes(m.formation)?[m.formation]:[])])].map(f=>option(f,f,m.formation||'4-4-2')).join('')+
+ '</select></label>'+pitchMarkup()+'</div>'+
+ '<div class="lineup-player-column"><div class="lineup-rows">'+fields+'</div></div></div>'+
+ '<span class="lineup-save-status" data-lineup-save-status role="status" aria-live="polite"></span>'+
+ '</form></section>';
 }
 function scoreForm(m){
  return '<form data-staff-form="score" class="live-score-editor"><label>Casa<input name="home_score" type="number" min="0" max="99" required value="'+esc(m.home_score??0)+'"></label><strong>:</strong><label>Ospite<input name="away_score" type="number" min="0" max="99" required value="'+esc(m.away_score??0)+'"></label>'+submit('Aggiorna risultato')+'</form>';
@@ -715,6 +708,20 @@ export async function persistCallupChange({matchId,playerId,status,reason},notif
  callupWrites.set(key,run);
  try{const result=await run;notify?.(null);return result}catch(error){notify?.(error);throw error}finally{if(callupWrites.get(key)===run)callupWrites.delete(key)}
 }
+let lineupWrite=Promise.resolve();
+export function persistLineupSnapshot(snapshot,notify){
+ const task=lineupWrite.catch(()=>{}).then(async()=>{
+  if(!snapshot?.matchId||!snapshot.rows?.length)throw Error('Formazione incompleta');
+  const n=snapshot.rows.filter(x=>x.selection_status==='starter').length;
+  if(n>11)throw Error('Massimo undici titolari');
+  const slots=snapshot.rows.filter(x=>x.tactical_slot!=null).map(x=>x.tactical_slot);
+  if(new Set(slots).size!==slots.length)throw Error('Posizioni duplicate');
+  await rpc('tm_app_save_formation',{p_match_id:snapshot.matchId,p_rows:snapshot.rows,p_formation:snapshot.formation});
+  notify?.(null);
+ });
+ lineupWrite=task;
+ return task.catch(e=>{notify?.(e);throw e});
+}
 export async function staffSubmit(e,ctx){
  const form=e.target,kind=form.dataset.staffForm;if(!kind)return false;
  e.preventDefault();
@@ -763,7 +770,7 @@ export async function staffSubmit(e,ctx){
   }
   if(kind==='lineup'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
-   if(!Number.isFinite(Date.parse(m.kickoff_at))||Date.now()<Date.parse(m.kickoff_at))throw Error('La formazione è modificabile dal calcio d’inizio');
+   if(!ctx.state.matchData?.players?.some(p=>['available','absent','starter','bench'].includes(p.selection_status)))throw Error('Conferma prima le convocazioni');
    const rows=[...form.querySelectorAll('[data-lineup-player]')].map(el=>{
     const query=name=>el.querySelector('[name="'+name+'"]').value;
     const st=query('status');
