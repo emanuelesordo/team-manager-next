@@ -661,6 +661,9 @@ document.addEventListener('tm-callup-change',e=>{
    }else{
     current.dataset.persistedStatus=detail.status;
     current.dataset.persistedReason=detail.status==='absent'?detail.reason:'';
+    const savedPlayer=state.matchData?.players?.find(p=>p.player_id===detail.playerId);
+    if(savedPlayer){savedPlayer.selection_status=detail.status;savedPlayer.unavailability_reason=detail.status==='absent'?detail.reason:null}
+    else if(state.matchData?.players)state.matchData.players.push({player_id:detail.playerId,selection_status:detail.status,unavailability_reason:detail.status==='absent'?detail.reason:null});
    }
   }
   toast(error?'Convocazione NON salvata: '+error.message:'Convocazione salvata');
