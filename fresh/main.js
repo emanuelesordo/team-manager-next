@@ -331,9 +331,12 @@ function match(){
    titleInfo('Luogo',address||'—')+
    titleInfo('Campo',venue||'—')+'</div></div>';
  const scorers=matchScorerRows(activeEvents,f,team(),playerName,comp);
+ const recordedGoals=(state.fixtureEvents||[]).filter(e=>e.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
+ const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
+ const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
  const scoreText=hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
  const editableScore=extraMatch&&state.identity?.role?.role==='admin';
- const headerScore=editableScore?'<button type="button" class="match-score-trigger" data-score-edit="true" title="Modifica il risultato" aria-label="Modifica il risultato">'+scoreText+'</button>':scoreText;
+ const headerScore=editableScore?'<button type="button" class="match-score-trigger'+(scoreMismatch?' score-pending':'')+'" data-score-edit="true" title="Modifica il risultato" aria-label="Modifica il risultato">'+scoreText+'</button>':scoreText;
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
@@ -359,7 +362,8 @@ function match(){
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E});
  else body=extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
   '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>';
- if(extraMatch&&editableScore&&state.scoreEditing)body='<form data-extra-score-form class="inner-card match-score-form"><h3>Modifica risultato ufficiale</h3><label>Casa <input type="number" min="0" max="99" name="home_score" required value="'+E(f.home_score??0)+'"></label><label>Ospiti <input type="number" min="0" max="99" name="away_score" required value="'+E(f.away_score??0)+'"></label><button type="submit">Salva</button><button type="button" data-score-cancel>Annulla</button></form>'+body;
+ if(extraMatch&&editableScore){body='<div class="extra-score-summary">Gol registrati: <strong>'+eventGoals.home+'–'+eventGoals.away+'</strong> · Risultato ufficiale: <strong>'+E(f.home_score??'—')+'–'+E(f.away_score??'—')+'</strong>'+(scoreMismatch?' · <span>Verifica necessaria</span>':' · Coerente')+'</div>'+body;
+ if(state.scoreEditing)body+='<div class="extra-score-backdrop"><form data-extra-score-form class="extra-score-dialog" role="dialog" aria-modal="true" aria-label="Conferma risultato"><button type="button" class="extra-score-close" data-score-cancel aria-label="Chiudi">×</button><h2>Conferma risultato</h2><p>Il risultato viene verificato rispetto ai gol registrati. Puoi renderlo definitivo anche con marcatori incompleti.</p><div class="extra-score-values"><label>Casa<input type="number" min="0" max="99" name="home_score" required value="'+E(f.home_score??eventGoals.home)+'"></label><strong>–</strong><label>Ospiti<input type="number" min="0" max="99" name="away_score" required value="'+E(f.away_score??eventGoals.away)+'"></label></div><p class="extra-score-check">Gol dagli eventi: '+eventGoals.home+'–'+eventGoals.away+(scoreMismatch?' · Differenza rispetto al risultato ufficiale':' · Dati coerenti')+'</p><div class="extra-score-actions"><button type="button" data-score-cancel>Annulla</button><button type="submit">Rendi definitivo</button></div></form></div>'; }
  return '<button class="back-link" data-page="calendar">'+ico('back')+' Torna al calendario</button>'+
   '<div class="match-header-sentinel" aria-hidden="true"></div>'+header+compactHeader+'<section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">'+
   tabs.map(([id,label])=>'<button role="tab" aria-selected="'+(selectedTab===id)+'" data-tab="'+id+
@@ -586,6 +590,8 @@ document.addEventListener('submit',async e=>{
   e.preventDefault();if(state.identity?.role?.role!=='admin')return;
   const f=resolveMatch().fixture;if(!f||involvesTeam(f,team()))return;
   const form=new FormData(e.target),home=Number(form.get('home_score')),away=Number(form.get('away_score'));
+  const goals=(state.fixtureEvents||[]).filter(x=>x.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(x.event_type)).reduce((a,x)=>{const side=x.event_type==='own_goal'?(x.side==='home'?'away':'home'):x.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
+  if(home<goals.home||away<goals.away){toast('Il risultato non può essere inferiore ai gol già registrati. Correggi prima gli eventi.');return}
   if(![home,away].every(n=>Number.isInteger(n)&&n>=0&&n<=99)){toast('Risultato non valido');return}
   try{await adminWrite('app_competition_fixtures','PATCH',{home_score:home,away_score:away},{id:f.id});state.scoreEditing=false;await refreshLive();toast('Risultato aggiornato')}
   catch(error){toast('Salvataggio non riuscito: '+(error.message||error))}return;
