@@ -320,16 +320,17 @@ function match(){
  const selectedTab=extraMatch&&!['overview','staff'].includes(requestedTab)?'overview':requestedTab;
  const titleInfo=(label,value)=>value?'<span class="match-meta-item" title="'+E(label)+'"><small class="sr-only">'+E(label)+'</small><strong>'+E(value)+'</strong></span>':'';
  const {name:venue,address}=fixtureVenueDetails(f,fixtureHomeClub(f));
+ const editor=extraMatch&&state.scoreEditing&&state.identity?.role?.role==='admin';
+ const field=(name,label,value)=>'<label class="extra-meta-field">'+label+'<input data-extra-field="'+name+'" aria-label="'+label+'" value="'+E(value??'')+'"></label>';
+ const placeLink=address?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(address):'';
  const matchMeta='<div class="match-header-meta" aria-label="Dettagli partita">'+
   '<div class="match-meta-group match-meta-left">'+
    titleInfo('Competizione',comp?.name||'—')+
    titleInfo('Giornata',f.round_no!=null?f.round_no:'—')+'</div>'+
   '<div class="match-meta-group match-meta-center">'+
-   titleInfo('Data',weekday(f.kickoff_at))+
-   titleInfo('Ora',time(f.kickoff_at))+'</div>'+
+   (editor?field('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):''):titleInfo('Data',weekday(f.kickoff_at))+titleInfo('Ora',time(f.kickoff_at)))+'</div>'+
   '<div class="match-meta-group match-meta-right">'+
-   titleInfo('Luogo',address||'—')+
-   titleInfo('Campo',venue||'—')+'</div></div>';
+   (editor?field('venue_name','Campo',f.venue_name||venue)+field('venue_address','Luogo',f.venue_address||address):(placeLink?'<a class="match-meta-item" target="_blank" rel="noopener noreferrer" href="'+E(placeLink)+'" title="Apri il luogo su Maps"><strong>'+E(venue||address||'—')+'</strong></a>':titleInfo('Campo',venue||'—')))+'</div></div>';
  const scorers=matchScorerRows(activeEvents,f,team(),playerName,comp);
  const recordedGoals=(state.fixtureEvents||[]).filter(e=>e.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
  const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
@@ -343,11 +344,12 @@ function match(){
   '<b class="match-compact-score">'+headerScore+'</b>'+
   '<div class="match-compact-club match-compact-away"><strong>'+E(f.away_team)+'</strong>'+
   club(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+'</div></div>';
+ const statusEditor=editor?'<select data-extra-status aria-label="Stato partita">'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,text])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+text+'</option>').join('')+'</select>':null;
  const header='<div class="match-detail-head glass">'+
   '<div class="match-expanded">'+matchMeta+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
-  '<div class="match-big-score"><div class="match-score-status">'+status(f)+'</div><b>'+headerScore+'</b></div>'+
+  '<div class="match-big-score"><div class="match-score-status">'+(statusEditor||status(f))+'</div><b>'+headerScore+'</b></div>'+
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+
   '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>'+
   '</div>';
@@ -568,6 +570,14 @@ document.addEventListener('click',async e=>{
  case 'account':state.overlay=hasSession()?null:'login';if(hasSession())navigate('account');else render();break;
  case 'logout':await logoutUser();break;
  }
+});
+document.addEventListener('change',async e=>{
+ if(e.target.matches('[data-extra-field]')){
+  const key=e.target.dataset.extraField;let value=e.target.value;
+  if(key==='kickoff_at'){const d=new Date(value);if(!Number.isFinite(d.getTime())){toast('Data non valida');return}value=d.toISOString()}
+  if(['kickoff_at','venue_name','venue_address'].includes(key))await saveExtraDetail(key,value||null);
+ }
+ if(e.target.matches('[data-extra-status]'))await saveExtraDetail('status',e.target.value);
 });
 document.addEventListener('change',e=>{
  if(staffLogoEvent(e))return;
