@@ -397,3 +397,5 @@
 .lineup-minimal .field-slot:hover .pitch-remove,.lineup-minimal .field-slot:focus-visible .pitch-remove{display:flex}
 @media(hover:none){.lineup-minimal .field-slot.occupied .pitch-remove{display:flex}}
 @media(max-width:760px){.lineup-minimal .lineup-sort-head{grid-template-columns:25px 23px minmax(0,1fr) 29px;gap:3px}.lineup-minimal .lineup-sort-head button{font-size:9px}}
+
+.lineup-minimal .field-slot.duplicate-shirt strong{background:#b91c1c;color:#fff}
