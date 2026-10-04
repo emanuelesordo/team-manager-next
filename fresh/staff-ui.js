@@ -4,6 +4,7 @@ import {openKitConfigurator} from './kit-editor.js';
 import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge} from './api.js?venues=20261003kits';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup} from './lineup-pitch.js';
+import {availabilityDefault,normalizedReason,unavailabilityReasons} from './availability.js';
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js';
@@ -34,7 +35,7 @@ function integrityPanel(){
 
 const areas=[['team','Squadra'],['seasons','Stagioni'],['competitions','Competizioni'],['opponents','Avversarie'],['players','Rosa'],['fixtures','Calendario'],['import','Importa CSV'],['integrity','Integrità'],['availability','Disponibilità'],['users','Utenti']];
 const types=[['starter','Titolare'],['bench','Panchina'],['available','Da definire'],['absent','Non convocato']];
-const reasons=[['','Nessuno'],['injury','Infortunio'],['suspension','Squalifica'],['work','Lavoro'],['personal','Personale'],['illness','Malattia'],['travel','Viaggio'],['technical_choice','Scelta tecnica'],['physical','Condizione fisica'],['other','Altro']];
+const reasons=[['','—'],...unavailabilityReasons];
 const events=[['goal','Gol'],['own_goal','Autogol'],['penalty_scored','Rigore segnato'],['penalty_missed','Rigore sbagliato'],['yellow_card','Ammonizione'],['blue_card','Cartellino blu'],['blue_return','Rientro blu'],['red_card','Espulsione'],['substitution','Sostituzione / Uscita'],['period_end','Fine periodo'],['other','Altro']];
 const statuses=[['scheduled','Programmata'],['live','In corso'],['finished','Terminata'],['postponed','Rinviata'],['cancelled','Annullata']];
 const idOf=(list,id)=>list.find(x=>x.id===id)||null;
@@ -326,7 +327,8 @@ function matchLineup(ctx,m){
  const allowed=m.status==='scheduled';
  const fields=rostered.map(row=>{
   const old=current.find(x=>x.player_id===row.player_id);
-  const status=old?.started?'starter':old?.selection_status||'available';
+  const proposal=availabilityDefault({saved:old,injuries:ctx.state.data?.injuries||[],suspensions:ctx.state.data?.suspensions||[],playerId:row.player_id,fixtureDate:m.kickoff_at});
+  const status=proposal.status;
   const cap=Boolean(old?.is_captain);
   const code=esc(row.player_id);
   const alerts=[];
@@ -340,12 +342,12 @@ function matchLineup(ctx,m){
    '<input type="number" name="shirt" aria-label="Maglia" placeholder="N°" min="1" max="99" value="'+esc(old?.shirt_number??row.shirt_number??'')+'" '+(allowed?'':'disabled')+'>',
    '<input type="number" name="slot" aria-label="Posizione" placeholder="1–11" min="1" max="11" value="'+esc(old?.tactical_slot??'')+'" '+(allowed?'':'disabled')+'>',
    '<label class="captain-check"><input type="radio" name="captain" value="'+code+'" '+(cap?'checked':'')+' '+(allowed?'':'disabled')+'> C</label>',
-   '<select name="reason" aria-label="Motivo indisponibilità" '+(allowed?'':'disabled')+'>'+reasons.map(x=>option(x[0],x[1],old?.unavailability_reason||'')).join('')+'</select>',
+   '<select name="reason" aria-label="Motivo indisponibilità" '+(allowed&&status==='absent'?'':'disabled')+'>'+reasons.map(x=>option(x[0],x[1],status==='absent'?(proposal.reason||'technical_choice'):'')).join('')+'</select>',
   ];
   return '<div class="lineup-row" data-lineup-player="'+code+'">'+columns.join('')+'</div>';
  }).join('');
  return '<section class="staff-subpanel">'+title('PREPARTITA','Convocazioni e undici iniziale')+
- help('Stati disponibili, maglia storica, slot tattico da 1 a 11, capitano e indisponibilità. Squalifica attiva: blocco server; infortunio: segnalazione.')+
+ help('Per ogni giocatore scegli Disponibile (anche per convocarlo), Titolare, Panchina o Non convocato. Gli infortuni aperti e le squalifiche registrate sono proposti automaticamente; puoi correggere la scelta. Senza un motivo specifico, il non convocato è una scelta tecnica. Le squalifiche effettive vengono comunque controllate dal server e si rettificano in Amministrazione → Disponibilità; gli infortuni si chiudono nella stessa sezione con data di rientro.')+
  '<form data-staff-form="lineup"><div class="staff-top-fields">'+input('formation','Modulo',m.formation||'4-4-2','text','maxlength="32" '+(allowed?'':'disabled'))+'</div>'+
  pitchMarkup()+'<div class="lineup-header"><span>Giocatore</span><span>Disponibilità</span><span>N°</span><span>Slot</span><span>Cap.</span><span>Motivo</span></div>'+
  '<div class="lineup-rows">'+fields+'</div>'+(!allowed?help('La formazione iniziale è bloccata dopo il fischio. Usa gli eventi live per le sostituzioni.'):submit('Salva convocazioni e formazione'))+'</form></section>';
@@ -657,7 +659,7 @@ export async function staffSubmit(e,ctx){
     return {player_id:el.dataset.lineupPlayer,selection_status:st,
      shirt_number:numberOrNull(query('shirt')),tactical_slot:st==='starter'?numberOrNull(query('slot')):null,
      is_captain:form.querySelector('[name=captain]:checked')?.value===el.dataset.lineupPlayer&&st==='starter',
-     unavailability_reason:st==='absent'?query('reason')||null:null,unavailability_note:null};
+     unavailability_reason:normalizedReason(st,query('reason')),unavailability_note:null};
    });
    const num=rows.filter(x=>x.selection_status==='starter').length;
    if(num>11)throw Error('Massimo undici titolari');
