@@ -327,7 +327,7 @@ function matchLineup(ctx,m){
  const allowed=m.status==='scheduled';
  const fields=rostered.map(row=>{
   const old=current.find(x=>x.player_id===row.player_id);
-  const proposal=availabilityDefault({saved:old,injuries:ctx.state.data?.injuries||[],suspensions:ctx.state.data?.suspensions||[],playerId:row.player_id,fixtureDate:m.kickoff_at,priorSelections:ctx.state.data?.priorSelections||[],matches:ctx.state.data?.matches||[],matchId:m.id});
+  const proposal=availabilityDefault({saved:old,injuries:ctx.state.data?.injuries||[],suspensions:ctx.state.data?.suspensions||[],playerId:row.player_id,fixtureDate:m.kickoff_at,priorSelections:ctx.state.data?.priorSelections||[],matches:ctx.state.data?.matches||[],matchId:m.id,disciplinaryEvents:ctx.state.data?.disciplinaryEvents||[],competitionId:m.competition_id,competitionRules:(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id)?.discipline_rules||{}});
   const status=proposal.status;
   const cap=Boolean(old?.is_captain);
   const code=esc(row.player_id);
@@ -335,6 +335,7 @@ function matchLineup(ctx,m){
   if((ctx.state.data?.injuries||[]).some(i=>i.player_id===row.player_id&&['active','recovering'].includes(i.status)&&!i.actual_return))
    alerts.push('Infortunio segnalato');
   if(proposal.source==='previous_match')alerts.push('Infortunio dalla gara precedente (verificare rientro)');
+  if(proposal.source==='cards')alerts.push('Possibile squalifica calcolata dai cartellini: verificare con lo staff');
   if((ctx.state.data?.suspensions||[]).some(s=>s.player_id===row.player_id&&s.status==='active'&&Number(s.matches_served)<Number(s.matches_count)))
    alerts.push('Squalifica attiva');
   const columns=[
