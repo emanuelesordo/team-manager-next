@@ -36,7 +36,7 @@ let activePlayer=null,attached=false;
 function changed(form){if(form?.dataset.lineupEnabled==='true')document.dispatchEvent(new CustomEvent('tm-lineup-change',{detail:{form}}))}
 function currentForm(){return document.querySelector('form[data-staff-form="lineup"]')}
 function rowList(form){return [...form.querySelectorAll('[data-lineup-player]')]}
-function getStatus(row){return row.querySelector('select[name="status"]')}
+function getStatus(row){return row.querySelector('[name="status"]')}
 function getSlot(row){return row.querySelector('input[name="slot"]')}
 function getName(row){return row.querySelector('.lineup-name strong')?.textContent?.trim()||'Giocatore'}
 function slotOf(row){return Number(getSlot(row)?.value||0)}
@@ -56,6 +56,7 @@ export function paintLineupPitch(){
   cell.append(number,caption);cell.title=(row?getName(row):'Slot '+pos.slot)+' · posizione '+pos.slot;
   cell.disabled=form.dataset.lineupEnabled!=='true';
   cell.dataset.playerId=row?.dataset.lineupPlayer||'';
+  cell.draggable=Boolean(row)&&form.dataset.lineupEnabled==='true';
  }
  for(const row of rows)row.classList.toggle('pitch-armed',row.dataset.lineupPlayer===activePlayer);
 }
@@ -122,8 +123,9 @@ export function installLineupPitch(){
   paintLineupPitch();changed(form);
  });
  document.addEventListener('dragstart',e=>{
-  const name=e.target.closest('.lineup-name');const row=name?.closest('[data-lineup-player]');
-  if(row&&row.querySelector('select[name=status]')&&!getStatus(row).disabled){
+  const cell=e.target.closest('[data-lineup-pitch] .field-slot');
+  const name=e.target.closest('.lineup-name');const row=cell&&cell.dataset.playerId?rowList(currentForm()).find(r=>r.dataset.lineupPlayer===cell.dataset.playerId):name?.closest('[data-lineup-player]');
+  if(row&&row.querySelector('[name=status]')&&!getStatus(row).disabled){
     e.dataTransfer?.setData('text/plain',row.dataset.lineupPlayer);activePlayer=row.dataset.lineupPlayer}
  });
  document.addEventListener('dragover',e=>{if(e.target.closest('[data-lineup-pitch] .field-slot'))e.preventDefault()});
