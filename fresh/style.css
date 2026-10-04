@@ -747,20 +747,31 @@ body[data-logo-shape="rounded"] .home-feature .month-matches .crest{border-radiu
 body[data-logo-shape="circle"] .home-feature .month-matches .crest{border-radius:50%}
 body[data-logo-shape="square"] .home-feature .month-matches .crest{border-radius:0}
 
-/* Center every day in the same invisible crest-size slot, even with no fixture. */
+/* Calendar: one column per weekday, with the same crest row and number row.
+   The day label is never absolutely positioned outside its own cell. */
 .home-feature .month-days .month-cell{
- display:grid;place-items:center;padding:0;isolation:isolate
+ display:grid;
+ grid-template-columns:minmax(0,1fr);
+ grid-template-rows:minmax(0,1fr) 16px;
+ align-items:stretch;justify-items:center;
+ min-width:0;min-height:0;padding:1px 0;
+ overflow:visible;
 }
-.home-feature .month-days .month-cell>.month-number{
- grid-area:1/1;position:relative;align-self:center;justify-self:center;
- font-variant-numeric:tabular-nums;margin:0;z-index:1
+.home-feature .month-days .month-cell>.month-matches,
+.home-feature .month-days .month-cell.with-game>.month-matches{
+ grid-column:1;grid-row:1;
+ width:100%;height:100%;min-width:0;min-height:0;
+ margin:0;display:flex;align-items:center;
+ align-content:center;justify-content:center;gap:2px;
 }
-.home-feature .month-days .month-cell>.month-matches{
- grid-area:1/1;display:flex;place-content:center;place-items:center;
- width:100%;height:100%;min-height:0;margin:0
-}
+.home-feature .month-days .month-cell>.month-number,
 .home-feature .month-days .month-cell.with-game>.month-number{
- position:absolute;right:0;bottom:0;align-self:auto;justify-self:auto;
- padding:2px 4px;line-height:1.1
+ grid-column:1;grid-row:2;
+ position:static;inset:auto;transform:none;
+ align-self:center;justify-self:center;
+ display:block;min-width:0;margin:0;
+ padding:0;border:0;background:transparent;box-shadow:none;
+ font-size:11px;line-height:16px;text-align:center;
+ font-variant-numeric:tabular-nums;
 }
 .home-feature .month-days .month-cell:not(.with-game)>.month-matches{visibility:hidden}
