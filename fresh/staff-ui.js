@@ -455,13 +455,14 @@ function matchLive(ctx,m,competition){
  picker('player_id','Giocatore principale / uscente',playerOpts,'')+
  picker('secondary_player_id','Assist / subentrante',playerOpts,'')+
  input('minute','Minuto del periodo (facoltativo)',minuteValue,'number','min="0" max="300" placeholder="'+(m.live_period==='second_half'?'Es. 16':'Es. 28')+'"')+
+ picker('minute_mode','Se il minuto resta vuoto',[['now_estimated','È avvenuto ora · stima da orario inizio'],['past_unknown','Evento passato · minuto sconosciuto']],'now_estimated')+
  input('stoppage_minute','Recupero', '','number','min="0" max="30" placeholder="—"')+
  picker('substitution_reason','Motivo del cambio',[['tactical','Tattico'],['injury','Infortunio'],['technical','Tecnico'],['other','Altro']],'tactical')+
  input('notes','Note (facoltative)','','text','maxlength="400"')+'</div>'+
  '<label class="staff-check"><input type="checkbox" name="count_score" checked> Aggiorna il tabellone quando l’evento diventa ufficiale</label>'+
  help(mins?(m.live_clock_running?
   'Il minuto è relativo al periodo ed è precompilato dal timer. Puoi correggerlo per eventi avvenuti prima; oltre ±5 minuti dal timestamp l’evento richiede conferma in gestione.':
-  'Timer fermo o non avviato: puoi lasciare il minuto vuoto. Il timestamp viene comunque registrato e il minuto potrà essere completato in gestione.'):'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
+  'Timer fermo o non avviato: se il fatto è appena avvenuto lascia il minuto vuoto e scegli la stima dall’orario di inizio; verrà salvato un minuto provvisorio. Se invece stai recuperando un evento passato di cui non sai il minuto, scegli «Evento passato»: resterà senza minuto e andrà completato in gestione.'):'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
  submit('Registra evento')+'</form>':help('L’inserimento live è disponibile dall’orario di inizio della partita.');
  const staff=isStaff(ctx);
  const staffTools=staff?displayClock(m,competition)+liveControls(m)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':''):'';
@@ -842,7 +843,7 @@ export async function staffSubmit(e,ctx){
     minute,stoppage_minute:numberOrNull(d.stoppage_minute),
     substitution_reason:d.substitution_reason,notes:d.notes,
     count_score:Boolean(d.count_score),captured_at:d.captured_at||new Date().toISOString(),
-    request_key:crypto.randomUUID()};
+    minute_mode:d.minute_mode||'now_estimated',request_key:crypto.randomUUID()};
    if(payload.event_type==='substitution'&&!payload.player_id)throw Error('Indica chi esce');
    const saved=await pendingFn(form,()=>rpc('tm_app_submit_live_event',{p_match_id:m.id,p_event:payload}));
    await reloadMatch(ctx);
