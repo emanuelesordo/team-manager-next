@@ -708,35 +708,40 @@
 }
 
 
-/* Mobile formazione: nomi panchina sempre leggibili per intero. */
+/* Mobile formazione: campo invariato, panchina più compatta e nomi interi. */
 @media(max-width:760px){
- .lineup-minimal .lineup-split{grid-template-columns:minmax(0,.92fr) minmax(158px,1.08fr);gap:7px}
+ .lineup-minimal .lineup-split{grid-template-columns:minmax(0,1fr) minmax(130px,.8fr);gap:6px}
  .lineup-minimal .lineup-row,.lineup-minimal .lineup-sort-head{
-  grid-template-columns:16px 20px 22px minmax(0,1fr) 25px;
-  gap:2px;
+  grid-template-columns:13px 18px 20px minmax(0,1fr) 23px;
+  gap:1px;
  }
+ .lineup-minimal .lineup-row{min-height:34px;padding:3px 0}
+ .lineup-minimal .lineup-sort-head{padding:2px 0 5px}
+ .lineup-minimal .lineup-sort-head button{font-size:7.5px;padding:1px 0}
  .lineup-minimal .lineup-name{
+  min-width:0;
   overflow:visible;
   text-overflow:clip;
   white-space:normal;
-  line-height:1.08;
-  padding:4px 1px;
+  line-height:1.02;
+  padding:2px 0;
  }
  .lineup-minimal .lineup-name strong{
   overflow:visible;
   text-overflow:clip;
   white-space:normal;
   display:block;
-  font-size:10.5px;
-  line-height:1.12;
+  font-size:8.8px;
+  line-height:1.05;
+  letter-spacing:-.02em;
   overflow-wrap:anywhere;
  }
- .lineup-minimal .lineup-role,.lineup-minimal .lineup-rating{font-size:8.5px}
- .lineup-minimal button.lineup-list-number{font-size:10px}
- .lineup-minimal .lineup-bench,.lineup-minimal .lineup-bench-svg{width:14px;height:14px}
- .lineup-minimal .lineup-row{min-height:39px}
+ .lineup-minimal .lineup-role,.lineup-minimal .lineup-rating{font-size:7.5px}
+ .lineup-minimal button.lineup-list-number{font-size:9px;padding:2px 0}
+ .lineup-minimal .lineup-bench,.lineup-minimal .lineup-bench-svg{width:12px;height:12px}
 }
 @media(max-width:390px){
- .lineup-minimal .lineup-split{grid-template-columns:minmax(0,.88fr) minmax(154px,1.12fr);gap:5px}
- .lineup-minimal .lineup-name strong{font-size:10px}
+ .lineup-minimal .lineup-split{grid-template-columns:minmax(0,1fr) minmax(126px,.8fr);gap:5px}
+ .lineup-minimal .lineup-row,.lineup-minimal .lineup-sort-head{grid-template-columns:12px 17px 19px minmax(0,1fr) 22px}
+ .lineup-minimal .lineup-name strong{font-size:8.3px}
 }
