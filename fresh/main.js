@@ -4,7 +4,7 @@ import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankR
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
-import {votesPanel,saveVote} from './votes.js?ratings=20261005compact6';
+import {votesPanel,saveVote,deleteVote} from './votes.js?ratings=20261006sv1';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005publicclock1';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
@@ -748,6 +748,32 @@ document.addEventListener('click',async e=>{
    await refreshLive();
    toast(result?.status==='official'?'Evento confermato':result?.status==='disputed'?'Errore segnalato · evento da rivedere':'Conferma registrata · revisione gestione necessaria');
   }catch(err){eventReaction.disabled=false;toast('Validazione non riuscita: '+err.message)}
+  return;
+ }
+ const voteSv=e.target.closest('[data-vote-sv]');
+ if(voteSv){
+  e.preventDefault();
+  if(!hasSession()){state.overlay='login';render();return}
+  const m=resolveMatch().operational;if(!m)return;
+  voteSv.disabled=true;
+  try{
+   await saveVote(m.id,voteSv.dataset.votePlayer,'SV');
+   state.matchData=await loadMatchInfo(m.id);
+   render();toast('Voto impostato su SV');
+  }catch(error){voteSv.disabled=false;toast('SV non salvato: '+(error.message||error))}
+  return;
+ }
+ const voteClear=e.target.closest('[data-vote-clear]');
+ if(voteClear){
+  e.preventDefault();
+  if(!hasSession())return;
+  const m=resolveMatch().operational;if(!m)return;
+  voteClear.disabled=true;
+  try{
+   await deleteVote(m.id,voteClear.dataset.votePlayer);
+   state.matchData=await loadMatchInfo(m.id);
+   render();toast('Voto annullato');
+  }catch(error){voteClear.disabled=false;toast('Voto non annullato: '+(error.message||error))}
   return;
  }
  const tournamentScoreTarget=e.target.closest('[data-tournament-score]');
