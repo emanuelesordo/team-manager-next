@@ -37,15 +37,19 @@ test('status is above result with explicit dash; substitutions are tight',()=>{
 });
 
 
-test('compact layout preserves crest, name, result, name, crest order',()=>{
+test('compact layout preserves full identity normally and score plus timer during live',()=>{
  assert.match(matchSource,/class="match-expanded"/);
  assert.match(matchSource,/class="match-compact-bar glass"/);
  const compact=matchSource.slice(matchSource.indexOf("const compactHeader="),matchSource.indexOf(" const header=",matchSource.indexOf("const compactHeader=")));
- assert.ok(compact.indexOf("club(f.home_team")<compact.indexOf("E(f.home_team)"));
- assert.ok(compact.indexOf("E(f.home_team)")<compact.indexOf("headerScore"));
- assert.ok(compact.indexOf("headerScore")<compact.indexOf("E(f.away_team)"));
- assert.ok(compact.indexOf("E(f.away_team)")<compact.indexOf("club(f.away_team"));
+ assert.ok(compact.includes("matchIsLive?'':("));
+ assert.ok(compact.includes("club(f.home_team"));
+ assert.ok(compact.includes("E(f.home_team)"));
+ assert.ok(compact.includes("headerScore"));
+ assert.ok(compact.includes("headerTimer"));
+ assert.ok(compact.includes("E(f.away_team)"));
+ assert.ok(compact.includes("club(f.away_team"));
  assert.match(css,/\.match-compact-bar\.glass\{\s*position:sticky/);
+ assert.match(css,/body\[data-match-header-mode="live-compact"\] \.match-compact-bar\.is-live/);
  assert.match(css,/margin-top:calc\(0px - var\(--match-compact-height,74px\) - 12px\)/);
  assert.match(css,/\.match-detail-head\.glass\{\s*position:relative/);
  assert.match(css,/@media\(max-width:650px\)/);
