@@ -12,20 +12,22 @@ test('match player names use N. Cognome with stable fallback',()=>{
  assert.equal(matchPlayerLabel({first_name:'',last_name:'Cabassa'}),'Cabassa');
  assert.equal(matchPlayerLabel(null),'Giocatore non censito');
 });
-test('match header keeps date/time over status and small metadata at the bottom corners',()=>{
+test('match header keeps date/time over status and centered compact footer metadata',()=>{
  assert.ok(matchSource.includes('match-header-footer-meta'));
- assert.ok(matchSource.includes('match-footer-info-left'));
- assert.ok(matchSource.includes('match-footer-info-right'));
- assert.ok(matchSource.indexOf('<small>Competizione</small>')<matchSource.indexOf('<small>Giornata</small>'));
- assert.ok(matchSource.includes('<small>Campo</small>'));
+ assert.ok(matchSource.includes('match-footer-competition'));
+ assert.ok(matchSource.includes('match-footer-venue'));
+ assert.ok(matchSource.includes("ico('trophy',15)"));
+ assert.ok(matchSource.includes("ico('pin',15)"));
+ assert.ok(matchSource.includes("' · Giornata '"));
  const headerBlock=matchSource.slice(matchSource.indexOf('const header='),matchSource.indexOf('const resultStatus='));
  assert.ok(headerBlock.indexOf('match-score-datetime')<headerBlock.indexOf('match-score-status'));
  assert.ok(headerBlock.includes('shortDate(f.kickoff_at)'));
  assert.ok(headerBlock.includes('time(f.kickoff_at)'));
  assert.doesNotMatch(headerBlock,/match-header-meta/);
  assert.doesNotMatch(matchSource,/<span>Match Center<\/span>/);
- assert.match(css,/match-header-footer-meta\{[^}]*display:flex/);
- assert.match(css,/match-score-datetime\{[^}]*font-size:10px/);
+ assert.match(css,/match-header-footer-meta\{[^}]*justify-content:center/);
+ assert.match(css,/match-header-footer-meta\{[^}]*border:0/);
+ assert.match(css,/match-score-datetime\{[^}]*font-size:11px/);
 });
 test('status is above result with explicit dash; substitutions are tight',()=>{
  assert.ok(matchSource.includes('<div class="match-score-status">'));
