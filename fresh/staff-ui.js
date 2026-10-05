@@ -1224,7 +1224,9 @@ function tickClock(){
   if(regulation>0&&n>regulation){
    const extraSeconds=Math.max(0,n-regulation);
    const extraMin=Math.floor(extraSeconds/60),extraSec=extraSeconds%60;
-   el.textContent=String(periodLength*periodNo).padStart(2,'0')+':00 + '+String(extraMin).padStart(2,'0')+':'+String(extraSec).padStart(2,'0');
+   const regulationText=String(periodLength*periodNo).padStart(2,'0')+':00';
+   const recoveryText=String(extraMin).padStart(2,'0')+':'+String(extraSec).padStart(2,'0');
+   el.innerHTML='<span class="live-clock-regulation">'+regulationText+'</span><span class="live-clock-plus"> + </span><span class="live-clock-recovery">'+recoveryText+'</span>';
   }else el.textContent=String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
   const label=el.parentElement?.querySelector?.('[data-staff-period-label]');
   if(label){
