@@ -10,9 +10,17 @@ test('SV escluso dal rating medio ed esplicito',()=>{
  assert.deepEqual(ratingSummary([{rating:7},{rating:8.5},{rating:null}]),{average:7.75,count:2,sv:1});
  assert.deepEqual(ratingSummary([{rating:null}]),{average:null,count:0,sv:1});
 });
-test('valori permessi 1-10, step 0.5 e SV',()=>{
- assert.equal(parseVote('SV'),null);assert.equal(parseVote('1.5'),1.5);assert.equal(parseVote('10'),10);
- for(const bad of ['',undefined,'0','10.5','7.25','nan'])assert.throws(()=>parseVote(bad));
+test('input voto testuale: vuoto SV, separatori flessibili, compatto e arrotondamento a mezzi punti',()=>{
+ assert.equal(parseVote(''),null);
+ assert.equal(parseVote(undefined),null);
+ assert.equal(parseVote('SV'),null);
+ assert.equal(parseVote('6,5'),6.5);
+ assert.equal(parseVote('6.5'),6.5);
+ assert.equal(parseVote('65'),6.5);
+ assert.equal(parseVote('6,3'),6.5);
+ assert.equal(parseVote('6,2'),6);
+ assert.equal(parseVote('10'),10);
+ for(const bad of ['0','10.5','nan'])assert.throws(()=>parseVote(bad));
 });
 
 test('public match panel uses aggregate ratings without leaking voters',async()=>{
