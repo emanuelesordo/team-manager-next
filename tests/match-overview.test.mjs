@@ -23,7 +23,7 @@ test('overview includes starters and bench, individual events, not invented oppo
  assert.match(html,/ov-pitch/);
  assert.match(html,/ov-bench/);
  assert.match(html,/ov-icon-goal/);
- assert.match(html,/ov-assist/);
+ assert.match(html,/ov-icon-assist/);
  assert.match(html,/ov-rating-above/);
  assert.match(html,/ov-rating-below/);
 });
@@ -77,7 +77,8 @@ test('rating colors differentiate excellent from exceptional and double sanction
  const html=overviewLineup({formation:'4-4-2'},richer,people,season,competition);
  assert.match(html,/ov-rating-elite/);
  assert.match(html,/ov-icon-double_card/);
- assert.match(html,/ov-double-cards is-blue/);
+ assert.match(html,/ov-event-double-card/);
+ assert.match(html,/#378be7/);
 });
 
 test('an explicit assist and a goal-linked assist at the same minute count once',()=>{
@@ -95,7 +96,8 @@ test('pitch event icons are naked glyphs and substitutions preserve in/out direc
  const html=overviewLineup({formation:'4-4-2'},sample,people,season,competition);
  assert.match(html,/ov-icon-sub_out/);
  assert.equal(playerMatchEvents('b',sample.events,competition).some(x=>x.kind==='sub_in'),true);
- assert.match(html,/ov-card-yellow/);
+ assert.match(html,/ov-icon-yellow_card/);
+ assert.match(html,/ov-event-card/);
  assert.match(html,/ov-icon-goal/);
  assert.doesNotMatch(html,/ov-marker-badge/);
 });
