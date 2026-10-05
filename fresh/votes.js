@@ -106,15 +106,12 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
   const focusValue=personalValue!==null?personalValue:6;
   const picker=values.map(value=>{
    const label=String(value).replace('.',',');
-   return '<button type="button" class="vote-picker-option'+(personalValue===value?' active':'')+'" data-vote-pick data-vote-player="'+e(id)+'" data-vote-value="'+e(value)+'" data-vote-focus="'+(value===focusValue?'true':'false')+'" aria-pressed="'+(personalValue===value)+'">'+e(label)+'</button>';
+   const clear=personalValue===value?'<button type="button" class="vote-picker-clear" data-vote-clear data-vote-player="'+e(id)+'" aria-label="Rimuovi voto e imposta SV">×</button>':'';
+   return clear+'<button type="button" class="vote-picker-option'+(personalValue===value?' active':'')+'" data-vote-pick data-vote-player="'+e(id)+'" data-vote-value="'+e(value)+'" data-vote-focus="'+(value===focusValue?'true':'false')+'" aria-pressed="'+(personalValue===value)+'">'+e(label)+'</button>';
   }).join('');
   const control=canVote?
    '<div class="vote-control'+stateClass+'" data-vote-control>'+
-    '<div class="vote-picker-wrap">'+
-     (personalValue!==null?'<button type="button" class="vote-picker-clear" data-vote-clear data-vote-player="'+e(id)+'" aria-label="Rimuovi voto e imposta SV">×</button>':'<span class="vote-picker-clear-spacer" aria-hidden="true"></span>')+
-     '<div class="vote-picker" data-vote-picker>'+picker+'</div>'+
-    '</div>'+
-    '<small class="vote-save-state" data-vote-save-state>'+(personalValue!==null?'Il tuo voto '+e(displayValue):personalIsSv?'Il tuo voto SV':'Nessun voto · SV')+'</small>'+
+    '<div class="vote-picker-wrap"><div class="vote-picker" data-vote-picker>'+picker+'</div></div>'+
    '</div>':
    '<div class="vote-control is-disabled"><small class="vote-save-state">'+(unused?'Non applicabile':'Non disponibile')+'</small></div>';
   const ratingLevel=average===null?'unrated':average>=9?'elite':average>=8?'high':average>=7?'above':average>=6?'even':average>=5?'below':'low';
