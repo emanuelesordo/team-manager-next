@@ -12,7 +12,7 @@ import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261005callup-lineup-sync1';
 import {projectionContainer,updateProjection} from './projection-ui.js?clubs=20261003id';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
-import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?clubs=20261003id';
+import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261005legacy1';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
 
@@ -245,9 +245,7 @@ function player(){
  return `<button class="back-link" data-page="roster">${ico('back')} Torna alla rosa</button><section class="glass player-detail"><div class="player-detail-cover"><div class="big-player-avatar">${safeUrl(p.photo_url)?`<img src="${safeUrl(p.photo_url)}" alt="">`:`<span>${E((p.first_name||'?')[0])}${E((p.last_name||'?')[0])}</span>`}</div><div><p class="eyebrow">SCHEDA GIOCATORE · ${E(roleName(p.generic_role_manual||s.position_group))}</p><h1>${E(name)}</h1><p>${E(p.generic_role_manual||s.position_group||'Ruolo non specificato')} · ${habitual?.shirt_number!=null?'Maglia abituale #'+E(habitual.shirt_number)+' ('+E(habitual.occurrences)+' gare)':r?.shirt_number!=null?'Maglia stagionale #'+E(r.shirt_number):'Numero non disponibile'}</p></div></div><div class="detail-kpis">${[['appearances','Presenze'],['starts','Da titolare'],['minutes','Minuti'],['goals','Gol'],['assists','Assist'],['avg_rating','Voto medio']].map(([k,l])=>`<div><b>${s[k]!=null?(k==='avg_rating'?Number(s[k]).toFixed(2):E(s[k])):'—'}</b><small>${l}</small></div>`).join('')}</div><div class="detail-biography"><div><span>Piede</span><b>${E(p.preferred_foot||'—')}</b></div><div><span>Altezza</span><b>${p.height_cm?E(p.height_cm)+' cm':'—'}</b></div><div><span>Nazionalità</span><b>${E(p.nationality_code||'—')}</b></div><div><span>Gialli / Rossi</span><b>${E(s.yellow_cards??'—')} / ${E(s.red_cards??'—')}</b></div></div></section>${playerTrendPanel(p)}`
 }
 function stats(){
- const s=summary(realFixtures(),team()),p=state.data?.playerStats||[],sorted=(key)=>[...p].filter(x=>x[key]!=null).sort((a,b)=>Number(b[key])-Number(a[key])).slice(0,7);
- const ranking=(title,key,unit='')=>`<section class="glass panel leaderboard">${panelTitle(title)}${sorted(key).length?sorted(key).map((r,i)=>`<div class="leader-row"><span class="leader-position">${String(i+1).padStart(2,'0')}</span><strong>${E((r.first_name||'')+' '+(r.last_name||''))}</strong><div class="leader-bar"><span style="width:${Math.max(3,Math.round(Number(r[key])/(Number(sorted(key)[0][key])||1)*100))}%"></span></div><b>${key==='avg_rating'?Number(r[key]).toFixed(2):E(r[key])}${unit}</b></div>`).join(''):'<div class="empty">Dato non disponibile.</div>'}</section>`;
- return `${heading('DATA & PERFORMANCE','Statistiche','Indicatori calcolati soltanto da risultati ed eventi effettivamente registrati.')}${kpis()}${teamAnalyticsPanel(realFixtures(),team())}${eventAnalyticsPlaceholder()}<div class="stats-intro glass panel"><div><span class="eyebrow">STAGIONE IN NUMERI</span><h2>${s.gf} gol segnati <span>/</span> ${s.ga} subiti</h2><p>${s.played} gare concluse con risultato valido</p></div><div class="stats-form">${miniForm()}</div></div><div class="leaderboard-grid">${ranking('Classifica marcatori','goals')}${ranking('Più presenti','appearances')}${ranking('Media voti','avg_rating')}</div>`;
+ return `${heading('DATA & PERFORMANCE','Statistiche','Numeri stagionali ricostruiti da risultati, tabellini ed eventi registrati.')}${eventAnalyticsPlaceholder()}`;
 }
 function resolveMatch(){const f=fixtures().find(x=>x.id===state.match);const exact=state.data?.matches?.find(m=>m.fixture_id===f?.id);return {fixture:f,operational:f?(exact||fixtureToMatch(f,state.data?.matches||[],state.base.opponents,team())):null}}
 function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll,refreshLive,logoutUser}}
@@ -657,20 +655,20 @@ async function fillAnalytics(){
  const box=document.querySelector('[data-event-analysis]');if(!box||!state.data)return;
  if(verifiedEventCache?.season===state.season){
   const matches=(state.data.matches||[]).filter(m=>!m.is_test);
-  box.innerHTML=renderEventAnalytics(realFixtures(),matches,verifiedEventCache.events.filter(e=>matches.some(m=>m.id===e.match_id)),team(),state.data.competitions||[]);return;
+  box.innerHTML=renderEventAnalytics(realFixtures(),matches,verifiedEventCache.events.filter(e=>matches.some(m=>m.id===e.match_id)),team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[]);return;
  }
  if(analyticsBusy)return;
  const chosen=state.season,matches=(state.data.matches||[]).filter(m=>!m.is_test),ids=matches.map(m=>m.id).filter(Boolean);
- if(!ids.length){verifiedEventCache={season:chosen,events:[]};box.innerHTML=renderEventAnalytics(realFixtures(),matches,[],team(),state.data.competitions||[]);return}
+ if(!ids.length){verifiedEventCache={season:chosen,events:[]};box.innerHTML=renderEventAnalytics(realFixtures(),matches,[],team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[]);return}
  analyticsBusy=true;
  try{
-  const query='select=match_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&match_id=in.('+
+  const query='select=match_id,event_type,minute,stoppage_minute,team_side,side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+
    ids.map(encodeURIComponent).join(',')+')&limit=1000';
   const events=await get('app_match_events',query);
   if(chosen!==state.season)return;
   verifiedEventCache={season:chosen,events};
   const current=document.querySelector('[data-event-analysis]');
-  if(current)current.innerHTML=renderEventAnalytics(realFixtures(),matches,events,team(),state.data.competitions||[]);
+  if(current)current.innerHTML=renderEventAnalytics(realFixtures(),matches,events,team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[]);
  }catch(error){const current=document.querySelector('[data-event-analysis]');if(current)current.textContent='Eventi non leggibili: '+error.message}
  finally{analyticsBusy=false}
 }
