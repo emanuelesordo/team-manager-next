@@ -315,7 +315,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
    let j=i+1;while(j<items.length&&sameMoment(items[i],items[j]))j++;
    const group=items.slice(i,j),first=group[0].event;
    const contentFor=which=>group.filter(x=>side(x.event)===which||(which==='away'&&side(x.event)==='unknown'))
-    .map(x=>'<div class="mt-group-item event-'+eventState(x.event)+'">'+eventContent(x)+'</div>').join('');
+    .map(x=>{const stateClass=eventState(x.event);return '<div class="mt-group-item'+(stateClass==='official'?'':' event-'+stateClass)+'">'+eventContent(x)+'</div>'}).join('');
    output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
    i=j;
   }
