@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?callups=20261004official2';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005anchors3';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
@@ -16,7 +16,7 @@ import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtur
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
 
-import {matchScorerRows,renderMatchScorers} from './match-scorers.js?clubs=20261003id';
+import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=20261005proposed';
 import {matchPlayerLabel} from './match-player-label.js';
 import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
@@ -285,7 +285,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+
    (stateLabel?'<small class="mt-event-state">'+E(stateLabel)+'</small>':'')+timingInfo(e)+'</span>';
   const trusted=['admin','player'].includes(state.identity?.role?.role);
-  const canReact=trusted&&['proposed','community_confirmed','disputed'].includes(e.validation_status);
+  const canReact=trusted&&['official','proposed','community_confirmed','disputed'].includes(e.validation_status);
   const reactions=canReact?'<span class="mt-event-reactions">'+
    '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(e.id)+'" aria-label="Conferma evento">+'+E(Number(e.support_count)||0)+'</button>'+
    '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(e.id)+'" aria-label="Segnala errore">−'+E(Number(e.dispute_count)||0)+'</button></span>':'';
