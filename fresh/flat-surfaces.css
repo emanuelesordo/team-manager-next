@@ -249,23 +249,23 @@
 }
 .ov-shared-field .field-slot .ov-marker-side-left{right:calc(100% - 5px)}
 .ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 5px)}
-.ov-shared-field .field-slot .ov-marker-icon{
+.ov-marker-icon{
   position:relative;display:inline-flex;align-items:center;justify-content:center;
   flex:0 0 auto;width:18px;height:18px;padding:0;
   border:0;border-radius:0;background:none;box-shadow:none;
   color:inherit;white-space:nowrap;text-shadow:none;
 }
-.ov-shared-field .field-slot .ov-event-svg{
+.ov-event-svg{
   display:block;width:18px;height:18px;overflow:visible;
   filter:drop-shadow(0 1px 1px #0007);
 }
-.ov-shared-field .field-slot .ov-event-ball{width:16px;height:16px}
-.ov-shared-field .field-slot .ov-event-card{width:13px;height:18px}
-.ov-shared-field .field-slot .ov-event-double-card{width:17px;height:18px}
-.ov-shared-field .field-slot .ov-event-assist{width:18px;height:16px}
-.ov-shared-field .field-slot .ov-event-sub{width:18px;height:18px}
-.ov-shared-field .field-slot .ov-event-return{width:18px;height:18px}
-.ov-shared-field .field-slot .ov-marker-count{
+.ov-event-ball{width:15px!important;height:15px!important}
+.ov-event-card{width:13px!important;height:18px!important}
+.ov-event-double-card{width:17px!important;height:18px!important}
+.ov-event-assist{width:18px!important;height:16px!important}
+.ov-event-sub{width:18px!important;height:18px!important}
+.ov-event-return{width:18px!important;height:18px!important}
+.ov-marker-count{
   position:absolute;top:-5px;right:-7px;
   padding:0;border:0;border-radius:0;background:none;box-shadow:none;
   color:#fff;font:900 9px/1 'Manrope',sans-serif;text-shadow:0 1px 2px #000;
@@ -349,4 +349,18 @@
   .match-detail-head .match-detail-score {
     margin-top: 0;
   }
+}
+
+/* Same event component for pitch and bench. */
+.ov-bench-events{
+  display:flex;align-items:center;justify-content:flex-start;gap:5px;
+  min-height:18px;flex-wrap:nowrap;
+}
+.ov-bench-events .ov-marker-icon{width:18px;height:18px}
+.ov-bench-events .ov-marker-count{top:-5px;right:-5px}
+@media(max-width:550px){
+  .ov-bench-events{gap:4px;min-height:18px}
+  .ov-bench-events .ov-marker-icon{width:18px;height:18px}
+  .ov-event-ball{width:15px!important;height:15px!important}
+  .ov-event-sub{width:18px!important;height:18px!important}
 }
