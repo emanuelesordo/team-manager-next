@@ -4,7 +4,7 @@ import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankR
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
-import {votesPanel,saveVote} from './votes.js?ratings=20261005compact5';
+import {votesPanel,saveVote} from './votes.js?ratings=20261005compact6';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005second-card-header14';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
@@ -766,25 +766,32 @@ document.addEventListener('click',async e=>{
  case 'logout':await logoutUser();break;
  }
 });
+async function persistVoteRange(input){
+ if(!input?.matches?.('[data-vote-range]')||input.dataset.voteSaving==='1')return;
+ if(String(input.dataset.voteSavedValue??'')===String(input.value))return;
+ const control=input.closest('[data-vote-control]'),stateEl=control?.querySelector('[data-vote-save-state]');
+ if(!hasSession()){state.overlay='login';render();return}
+ const m=resolveMatch().operational,activeFixture=state.match;
+ if(!m){toast('Tabellino non disponibile');return}
+ input.dataset.voteSaving='1';
+ control?.classList.add('is-saving');control?.classList.remove('is-error','is-saved');
+ if(stateEl)stateEl.textContent='Salvataggio…';
+ try{
+  await saveVote(m.id,input.dataset.votePlayer,input.value);
+  input.dataset.voteSavedValue=String(input.value);
+  const updated=await loadMatchInfo(m.id);
+  if(activeFixture===state.match){state.matchData=updated;render()}
+  toast('Valutazione salvata');
+ }catch(error){
+  delete input.dataset.voteSaving;
+  control?.classList.remove('is-saving');control?.classList.add('is-error');
+  if(stateEl)stateEl.textContent='Salvataggio non riuscito';
+  toast('Voto non salvato: '+(error.message||error));
+ }
+}
 document.addEventListener('change',async e=>{
  if(e.target.matches('[data-vote-range]')){
-  const input=e.target,control=input.closest('[data-vote-control]'),stateEl=control?.querySelector('[data-vote-save-state]');
-  if(!hasSession()){state.overlay='login';render();return}
-  const m=resolveMatch().operational,activeFixture=state.match;
-  if(!m){toast('Tabellino non disponibile');return}
-  control?.classList.add('is-saving');control?.classList.remove('is-error','is-saved');
-  if(stateEl)stateEl.textContent='Salvataggio…';
-  input.disabled=true;
-  try{
-   await saveVote(m.id,input.dataset.votePlayer,input.value);
-   const updated=await loadMatchInfo(m.id);
-   if(activeFixture===state.match){state.matchData=updated;render()}
-   toast('Valutazione salvata');
-  }catch(error){
-   input.disabled=false;control?.classList.remove('is-saving');control?.classList.add('is-error');
-   if(stateEl)stateEl.textContent='Salvataggio non riuscito';
-   toast('Voto non salvato: '+(error.message||error));
-  }
+  await persistVoteRange(e.target);
   return;
  }
  if(e.target.matches('[data-match-kit]')){
@@ -817,12 +824,16 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('pointerdown',e=>{
  const voteRange=e.target.closest?.('[data-vote-range]');
- if(voteRange){const control=voteRange.closest('[data-vote-control]');control?.classList.add('is-active');}
+ if(voteRange){const control=voteRange.closest('[data-vote-control]');control?.classList.add('is-active');control?.classList.remove('is-unrated');}
  const submit=e.target.closest?.('form[data-staff-form="event"] [type="submit"]');
  const form=submit?.closest?.('form[data-staff-form="event"]');
  const captured=form?.querySelector?.('input[name="captured_at"]');
  if(captured&&!captured.value)captured.value=new Date().toISOString();
 },{capture:true,passive:true});
+document.addEventListener('pointerup',e=>{
+ const voteRange=e.target.closest?.('[data-vote-range]');
+ if(voteRange)void persistVoteRange(voteRange);
+},{capture:true});
 document.addEventListener('paste',e=>{staffLogoEvent(e)});
 for(const type of ['pointerdown','pointermove','pointerup','pointercancel','dragstart','dragover','drop']){
  document.addEventListener(type,e=>{staffLogoEvent(e)});
