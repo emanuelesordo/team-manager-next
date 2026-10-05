@@ -27,6 +27,6 @@ export function matchScorerRows(events=[],fixture={},team={},playerName=()=>null
 }
 export function renderMatchScorers(rows,side,escapeHtml=x=>String(x??'')){
  return '<div class="match-header-scorers match-header-scorers-'+side+'" aria-label="Marcatori '+(side==='home'?'casa':'ospiti')+'">'+
-  (rows?.[side]||[]).map(item=>'<div class="match-header-scorer '+(item.status==='official'?'':'is-proposed')+'"><b class="match-scorer-minute">'+escapeHtml(item.minuteText)+'</b><span class="match-scorer-name">'+escapeHtml(item.name)+'</span></div>').join('')+
+  (rows?.[side]||[]).map(item=>'<div class="match-header-scorer'+(item.status==='official'?'':' is-proposed')+'"><b class="match-scorer-minute">'+escapeHtml(item.minuteText)+'</b><span class="match-scorer-name">'+escapeHtml(item.name)+'</span></div>').join('')+
   '</div>';
 }
