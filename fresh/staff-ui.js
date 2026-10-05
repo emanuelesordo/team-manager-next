@@ -388,9 +388,19 @@ export function matchLineup(ctx,m){
  const activeJersey=savedKits[m.match_kit_key]||savedKits.home||Object.values(savedKits)[0];
  const confirmed=current.some(p=>['available','absent','starter','bench'].includes(p.selection_status));
  const allowed=confirmed;
- const fields=roster.filter(x=>!['absent'].includes(current.find(p=>p.player_id===x.player_id)?.selection_status)).map(x=>{
-  const old=current.find(p=>p.player_id===x.player_id);
-  const status=['starter','bench'].includes(old?.selection_status)?old.selection_status:'available';
+ const lineupRoster=roster.map(x=>{
+  const saved=current.find(p=>p.player_id===x.player_id);
+  const availability=availabilityDefault({saved,injuries:data.injuries||[],suspensions:data.suspensions||[],
+   playerId:x.player_id,fixtureDate:m.kickoff_at,priorSelections:data.priorSelections||[],
+   matches:data.matches||[],matchId:m.id,disciplinaryEvents:data.disciplinaryEvents||[],
+   competitionId:m.competition_id,competitionRules:(data.competitions||[]).find(c=>c.id===m.competition_id)?.discipline_rules||{},
+   competitionLinks:data.competitionLinks||[]});
+  return {...x,saved,availability};
+ }).filter(x=>x.availability.status!=='absent');
+ const fields=lineupRoster.map(x=>{
+  const old=x.saved;
+  // In Formazione every convocato not in the XI is a bench player, never a generic "available".
+  const status=old?.selection_status==='starter'?'starter':'bench';
   const shirt=old?.shirt_number??(data.habitual||[]).find(h=>h.player_id===x.player_id)?.shirt_number??x.shirt_number??x.person?.shirt_number??'';
   const stat=(data.playerStats||[]).find(p=>p.player_id===x.player_id||p.id===x.player_id);
   const avg=stat?.avg_rating??stat?.rating_average??null;
