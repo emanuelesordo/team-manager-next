@@ -48,10 +48,7 @@ function participation(row,events,match,competition){
  if(active&&nominal>0)total+=Math.max(0,nominal-(start??0));
  const inEvents=transitions.filter(x=>x.kind==='sub_in');
  const outEvents=transitions.filter(x=>x.kind==='sub_out');
- const flow=[
-  ...(row.started===true||row.selection_status==='starter'?[{kind:'sub_in',time:'0′'}]:[]),
-  ...transitions
- ].map(x=>'<span class="vote-flow '+(x.kind==='sub_in'?'in':'out')+'">'+(x.kind==='sub_in'?'↑':'↓')+' '+String(x.time||'—')+'</span>').join('');
+ const flow=transitions.map(x=>'<span class="vote-flow '+(x.kind==='sub_in'?'in':'out')+'">'+(x.kind==='sub_in'?'↑':'↓')+' '+String(x.time||'—')+'</span>').join('');
  return {minutes:Math.round(total),flow,inEvents,outEvents};
 }
 
@@ -107,7 +104,8 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
     '<small class="vote-save-state" data-vote-save-state>'+(personalValue!==null?'Il tuo voto '+e(String(personalValue).replace('.',',')):'Tocca la barra')+'</small>'+
    '</div>':
    '<div class="vote-control is-disabled"><div class="vote-track" aria-hidden="true">'+meanMarker+'</div><small class="vote-save-state">'+(unused?'Non applicabile':'Non disponibile')+'</small></div>';
-  const avgLabel='<span class="vote-average-label '+(average!==null?'has-average':'')+'" title="'+(stats.count?e(stats.count+' voti'+(stats.sv?' · '+stats.sv+' SV':'')):'Nessun voto')+'"><b>'+e(averageText)+'</b><small>MEDIA</small></span>';
+  const ratingLevel=average===null?'unrated':average>=9?'elite':average>=8?'high':average>=7?'above':average>=6?'even':average>=5?'below':'low';
+  const avgLabel='<span class="ov-rating ov-rating-'+ratingLevel+(average===null?' ov-no-rating':'')+'" title="'+(stats.count?e('Voto medio partita: '+averageText+' ('+stats.count+' voti'+(stats.sv?' · '+stats.sv+' SV':'')+')'):'Nessun voto registrato')+'">'+e(averageText)+'</span>';
   const shirt='<span class="vote-shirt">'+shirtSvg(kit||{},'vote-'+id,false,row.shirt_number)+'<b>'+e(row.shirt_number??'—')+'</b></span>';
   return '<article class="vote-row'+(unused?' vote-row-unused':'')+'">'+
    '<div class="vote-shirt-cell">'+shirt+'</div>'+
