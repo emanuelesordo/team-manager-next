@@ -76,7 +76,7 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
  });
  const finished=match.status==='finished';
  const enteredCount=roster.filter(x=>x.entered).length;
- const intro='<div class="votes-intro"><div><span class="eyebrow">VALUTAZIONI</span><h3>Pagelle della partita</h3><p>Voto automatico al rilascio · scala 1–10 con mezzi punti.</p></div><span class="votes-pill">'+enteredCount+' valutabili</span></div>';
+ const intro='<div class="votes-intro"><div><span class="eyebrow">VALUTAZIONI</span><h3>Pagelle della partita</h3><p>Inserisci 1–10 · vuoto = SV · accetta 6,5 / 6.5 / 65.</p></div><span class="votes-pill">'+enteredCount+' valutabili</span></div>';
  if(!roster.length)return intro+'<div class="empty padded">Nessun giocatore nella formazione registrata.</div>';
  const banner=!finished?'<p class="vote-notice">I voti saranno disponibili al termine ufficiale della partita.</p>':
   !loggedIn?'<div class="vote-notice">Accedi per esprimere il tuo voto.<button data-action="account" type="button" class="soft-btn">Accedi</button></div>':'';
@@ -101,19 +101,16 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
    if(kind==='second_yellow')kind='double_card';
    return '<span class="vote-event-item">'+eventIcon(kind)+'<small>'+e(x.time||'')+'</small></span>';
   }).join(''):'<span class="vote-events-empty">—</span>';
-  const meanMarker=average!==null?'<i class="vote-mean-marker" style="--vote-mean:'+votePosition(average)+'" title="Media '+e(averageText)+'"></i>':'';
+  const displayValue=personalValue!==null?String(personalValue).replace('.',','):'';
   const control=canVote?
    '<div class="vote-control'+stateClass+'" data-vote-control>'+
-    '<div class="vote-scale"><div class="vote-track" aria-hidden="true"><span class="vote-six-marker"><b>6</b></span>'+meanMarker+'</div>'+
-     '<input class="vote-range" data-vote-range data-vote-player="'+e(id)+'" data-vote-saved-value="'+(personalValue!==null?e(personalValue):'')+'" type="range" min="1" max="10" step="0.5" value="'+e(initial)+'" aria-label="Voto per '+e(fullName)+'" style="--vote-pos:'+votePosition(initial)+'">'+
-     '<output class="vote-bubble" data-vote-bubble style="--vote-pos:'+votePosition(initial)+'">'+e(String(initial).replace('.',','))+'</output></div>'+
-    '<div class="vote-actions">'+
-      '<button type="button" class="vote-action'+(personalIsSv?' active':'')+'" data-vote-sv data-vote-player="'+e(id)+'">SV</button>'+
-      (personalExists?'<button type="button" class="vote-action vote-clear" data-vote-clear data-vote-player="'+e(id)+'" aria-label="Annulla il voto">×</button>':'')+
+    '<div class="vote-text-wrap">'+
+     '<input class="vote-text-input" data-vote-input data-vote-player="'+e(id)+'" data-vote-saved-value="'+(personalValue!==null?e(personalValue):personalIsSv?'SV':'')+'" type="text" inputmode="decimal" autocomplete="off" maxlength="4" value="'+e(displayValue)+'" placeholder="SV" aria-label="Voto per '+e(fullName)+'">'+
+     (personalValue!==null?'<button type="button" class="vote-input-clear" data-vote-clear data-vote-player="'+e(id)+'" aria-label="Rimuovi voto e imposta SV">×</button>':'')+
     '</div>'+
-    '<small class="vote-save-state" data-vote-save-state>'+(personalValue!==null?'Il tuo voto '+e(String(personalValue).replace('.',',')):personalIsSv?'Il tuo voto SV':'Tocca la barra o scegli SV')+'</small>'+
+    '<small class="vote-save-state" data-vote-save-state>'+(personalValue!==null?'Il tuo voto '+e(displayValue):personalIsSv?'Il tuo voto SV':'Vuoto = SV')+'</small>'+
    '</div>':
-   '<div class="vote-control is-disabled"><div class="vote-track" aria-hidden="true">'+meanMarker+'</div><small class="vote-save-state">'+(unused?'Non applicabile':'Non disponibile')+'</small></div>';
+   '<div class="vote-control is-disabled"><small class="vote-save-state">'+(unused?'Non applicabile':'Non disponibile')+'</small></div>';
   const ratingLevel=average===null?'unrated':average>=9?'elite':average>=8?'high':average>=7?'above':average>=6?'even':average>=5?'below':'low';
   const avgLabel='<span class="ov-rating ov-rating-'+ratingLevel+(average===null?' ov-no-rating':'')+'" title="'+(stats.count?e('Voto medio partita: '+averageText+' ('+stats.count+' voti'+(stats.sv?' · '+stats.sv+' SV':'')+')'):'Nessun voto registrato')+'">'+e(averageText)+'</span>';
   const shirt='<span class="vote-shirt">'+shirtSvg(kit||{},'vote-'+id,false,row.shirt_number)+'<b>'+e(row.shirt_number??'—')+'</b></span>';
