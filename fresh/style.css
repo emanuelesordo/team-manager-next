@@ -1166,3 +1166,5 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
   font-size:7px;
  }
 }
+
+.fixture-result.editable-time{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
