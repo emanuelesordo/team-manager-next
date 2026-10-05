@@ -805,10 +805,13 @@ export async function staffSubmit(e,ctx){
    const ev=ctx.state.matchData?.events?.find(x=>x.id===form.dataset.eventId);
    if(!ev||ev.validation_status!==form.dataset.eventStatus)throw Error('Evento cambiato: ricarica la partita');
    const d=dataForm(form);
+   const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
+   const relativeMinute=numberOrNull(d.minute);
+   const cumulativeMinute=cumulativeMinuteFromPeriod(relativeMinute,ev.payload?.period||m.live_period,competition);
    const changes={event_type:d.event_type,team_side:d.team_side,
     player_id:d.team_side==='team'?d.player_id||null:null,
     secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
-    minute:storedEventMinute(ev,numberOrNull(d.minute),(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id)),stoppage_minute:numberOrNull(d.stoppage_minute),
+    minute:storedEventMinute(ev,cumulativeMinute,competition),stoppage_minute:numberOrNull(d.stoppage_minute),
     substitution_reason:d.substitution_reason||null,notes:d.notes||''};
    await pendingFn(form,()=>rpc('tm_app_amend_event',{p_match_id:m.id,p_event_id:ev.id,
     p_expected_status:ev.validation_status,p_changes:changes,p_reason:d.reason||''}));
