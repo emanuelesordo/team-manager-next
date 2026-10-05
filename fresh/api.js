@@ -103,8 +103,11 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
   playerStats:['app_player_season_stats','select=*&season_id=eq.'+id],
   habitual:['tm_player_habitual_shirts','select=player_id,shirt_number,occurrences,last_used&limit=1000'],
   matches:['app_matches','select=*&season_id=eq.'+id],
-  players:['players','select=id,team_id,first_name,last_name,photo_url,generic_role_manual,preferred_foot,height_cm,birth_date,nationality_code,created_at&limit=1000']
+  // Names used by tabellino/storico must also work for non-staff members and
+  // during an auth refresh. Keep this query limited to columns readable safely.
+  players:['players','select=id,first_name,last_name,photo_url,generic_role_manual,preferred_foot&limit=1000']
  };
+ if(hasSession())requests.playerDetails=['players','select=id,team_id,height_cm,birth_date,nationality_code,created_at&limit=1000'];
  if(includePrivate)Object.assign(requests,{
   generalCompetitions:['competitions','select=id,name,season_id&limit=300'],
   competitionLinks:['tm_app_competition_links','select=app_competition_id,general_competition_id&limit=300'],
@@ -118,6 +121,14 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
  const names=Object.keys(requests),arr=await Promise.allSettled(names.map(k=>get(...requests[k])));
  const output={errors:{}};
  names.forEach((n,i)=>{const x=arr[i];output[n]=x.status==='fulfilled'?x.value:[];if(x.status==='rejected')output.errors[n]=x.reason.message});
+ // Enrich player identities when private columns are available, but never let
+ // a private-detail failure remove the names needed by match history/timeline.
+ if(Array.isArray(output.playerDetails)){
+  const details=new Map(output.playerDetails.map(p=>[p.id,p]));
+  output.players=(output.players||[]).map(p=>({...p,...(details.get(p.id)||{})}));
+  delete output.playerDetails;
+  delete output.errors.playerDetails;
+ }
  return output;
 }
 /** Source-separated calendar timeline. */
