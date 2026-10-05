@@ -616,9 +616,17 @@ function render(){
  }
  if(state.page==='competitions'&&!state.loading){const scroller=document.querySelector('[data-rounds-scroll]');const focus=scroller?.querySelector('[data-round-focus]');if(scroller&&focus){const next=scroller.querySelector('[data-round-next]');const bounds=scroller.getBoundingClientRect();const first=focus.getBoundingClientRect();const last=(next||focus).getBoundingClientRect();const top=first.top-bounds.top+scroller.scrollTop;const visibleHeight=last.bottom-first.top+12;scroller.style.height=Math.ceil(visibleHeight)+'px';scroller.scrollTop=Math.max(0,top);}}
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
- if(state.page==='match'&&!state.loading)paintMatchHeaderCompact();
+ if(state.page==='match'&&!state.loading){paintMatchHeaderCompact();requestAnimationFrame(centerVotePickers)}
  if(state.page==='home'&&!state.loading)void hydrateHomeRatings();
  manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[],(row)=>{const match=(state.data?.standings||[]).find(x=>('team:'+x.team_id===row.club_id&&x.team_id)||('opponent:'+x.opponent_id===row.club_id&&x.opponent_id));return match?club(row.team,'tiny',{team_id:match.team_id,opponent_id:match.opponent_id}):''});paintLineupPitch();paintCallups();if(state.page==='match'&&!state.loading)startStaffClock(isStaff(staffContext())?staffContext():null);
+}
+function centerVotePickers(){
+ document.querySelectorAll('[data-vote-picker]').forEach(picker=>{
+  const active=picker.querySelector('.vote-picker-option.active');
+  if(!active)return;
+  const left=active.offsetLeft-(picker.clientWidth-active.offsetWidth)/2;
+  picker.scrollLeft=Math.max(0,left);
+ });
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
 function navigate(page){
@@ -750,6 +758,20 @@ document.addEventListener('click',async e=>{
   }catch(err){eventReaction.disabled=false;toast('Validazione non riuscita: '+err.message)}
   return;
  }
+ const votePick=e.target.closest('[data-vote-pick]');
+ if(votePick){
+  e.preventDefault();
+  if(!hasSession()){state.overlay='login';render();return}
+  const m=resolveMatch().operational;if(!m)return;
+  const value=Number(votePick.dataset.voteValue);
+  votePick.disabled=true;
+  try{
+   await saveVote(m.id,votePick.dataset.votePlayer,value);
+   state.matchData=await loadMatchInfo(m.id);
+   render();toast('Valutazione '+String(value).replace('.',',')+' salvata');
+  }catch(error){votePick.disabled=false;toast('Voto non salvato: '+(error.message||error))}
+  return;
+ }
  const voteClear=e.target.closest('[data-vote-clear]');
  if(voteClear){
   e.preventDefault();
@@ -803,58 +825,7 @@ document.addEventListener('click',async e=>{
  case 'logout':await logoutUser();break;
  }
 });
-async function persistVoteInput(input){
- if(!input?.matches?.('[data-vote-input]')||input.dataset.voteSaving==='1')return;
- const control=input.closest('[data-vote-control]'),stateEl=control?.querySelector('[data-vote-save-state]');
- if(!hasSession()){state.overlay='login';render();return}
- const m=resolveMatch().operational,activeFixture=state.match;
- if(!m){toast('Tabellino non disponibile');return}
- let normalized;
- try{normalized=parseVoteInputValue(input.value)}
- catch(error){
-  const saved=input.dataset.voteSavedValue||'';
-  input.value=saved==='SV'?'':saved.replace('.',',');
-  control?.classList.add('is-error');
-  if(stateEl)stateEl.textContent=error.message;
-  toast(error.message);
-  return;
- }
- const saveKey=normalized===null?'SV':String(normalized);
- if(String(input.dataset.voteSavedValue??'')===saveKey)return;
- input.dataset.voteSaving='1';
- control?.classList.add('is-saving');control?.classList.remove('is-error','is-saved');
- if(stateEl)stateEl.textContent='Salvataggio…';
- try{
-  await saveVote(m.id,input.dataset.votePlayer,normalized===null?'':normalized);
-  input.dataset.voteSavedValue=saveKey;
-  input.value=normalized===null?'':String(normalized).replace('.',',');
-  const updated=await loadMatchInfo(m.id);
-  if(activeFixture===state.match){state.matchData=updated;render()}
-  toast(normalized===null?'Voto impostato su SV':'Valutazione salvata');
- }catch(error){
-  delete input.dataset.voteSaving;
-  control?.classList.remove('is-saving');control?.classList.add('is-error');
-  if(stateEl)stateEl.textContent='Salvataggio non riuscito';
-  toast('Voto non salvato: '+(error.message||error));
- }
-}
-function parseVoteInputValue(value){
- let raw=String(value??'').trim().toUpperCase();
- if(raw===''||raw==='SV')return null;
- raw=raw.replace(',','.');
- if(/^\d{2}$/.test(raw)&&raw!=='10'){
-  const compact=Number(raw)/10;
-  if(compact>=1&&compact<=10)raw=String(compact);
- }
- const n=Number(raw);
- if(!Number.isFinite(n)||n<1||n>10)throw Error('Inserisci un voto da 1 a 10 oppure lascia vuoto per SV');
- return Math.round(n*2)/2;
-}
 document.addEventListener('change',async e=>{
- if(e.target.matches('[data-vote-input]')){
-  await persistVoteInput(e.target);
-  return;
- }
  if(e.target.matches('[data-match-kit]')){
   const m=resolveMatch().operational;if(!m)return;
   try{await rpc('tm_app_match_details',{p_match_id:m.id,p_kit_key:e.target.value||null});m.match_kit_key=e.target.value;toast('Divisa salvata')}
@@ -895,10 +866,6 @@ for(const type of ['pointerdown','pointermove','pointerup','pointercancel','drag
 }
 document.addEventListener('input',e=>{
  if(staffLogoEvent(e))return;
- if(e.target.matches('[data-vote-input]')){
-  e.target.value=e.target.value.replace(/[^0-9.,]/g,'').slice(0,4);
-  return;
- }
  if(e.target.id==='player-search'){
   state.q=e.target.value;const query=normalized(state.q);let visible=0;
   document.querySelectorAll('[data-search-name]').forEach(el=>{const show=el.dataset.searchName.includes(query);el.hidden=!show;if(show)visible++});
