@@ -8,6 +8,10 @@ export async function saveVote(matchId,playerId,value){
  if(!matchId||!playerId)throw Error('Partita o giocatore non disponibile');
  return rpc('tm_app_save_rating',{p_match_id:matchId,p_player_id:playerId,p_rating:parseVote(value)});
 }
+export async function deleteVote(matchId,playerId){
+ if(!matchId||!playerId)throw Error('Partita o giocatore non disponibile');
+ return rpc('tm_app_delete_rating',{p_match_id:matchId,p_player_id:playerId});
+}
 
 function roleRank(player,row){
  const role=String(player?.generic_role_manual||row?.role||row?.generic_role_manual||'').toLowerCase();
@@ -80,13 +84,15 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
   const id=player.id,group=ratings.filter(x=>x.player_id===id),agg=aggregates.find(x=>x.player_id===id);
   const stats=agg?{count:Number(agg.votes||0),sv:Number(agg.sv||0),average:agg.avg_rating==null?null:Number(agg.avg_rating)}:ratingSummary(group);
   const personal=loggedIn?group.find(x=>x.voter_id===userId):undefined;
-  const personalValue=personal&&personal.rating!==null&&personal.rating!==undefined?Number(personal.rating):null;
+  const personalExists=Boolean(personal);
+  const personalIsSv=personalExists&&(personal.rating===null||personal.rating===undefined);
+  const personalValue=personalExists&&!personalIsSv?Number(personal.rating):null;
   const average=stats.count&&Number.isFinite(stats.average)?Number(stats.average):null;
   const averageText=average!==null?average.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
   const fullName=matchPlayerLabel(player);
   const canVote=finished&&loggedIn&&entered;
   const initial=personalValue??6;
-  const stateClass=personalValue!==null?' has-vote':' is-unrated';
+  const stateClass=personalValue!==null?' has-vote':personalIsSv?' is-sv':' is-unrated';
   const playerEvents=playerMatchEvents(id,events,competition);
   const played=participation(row,playerEvents,match,competition);
   const visibleEvents=playerEvents.filter(x=>!['sub_in','sub_out','blue_return'].includes(x.kind));
@@ -101,7 +107,11 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
     '<div class="vote-scale"><div class="vote-track" aria-hidden="true"><span class="vote-six-marker"><b>6</b></span>'+meanMarker+'</div>'+
      '<input class="vote-range" data-vote-range data-vote-player="'+e(id)+'" data-vote-saved-value="'+(personalValue!==null?e(personalValue):'')+'" type="range" min="1" max="10" step="0.5" value="'+e(initial)+'" aria-label="Voto per '+e(fullName)+'" style="--vote-pos:'+votePosition(initial)+'">'+
      '<output class="vote-bubble" data-vote-bubble style="--vote-pos:'+votePosition(initial)+'">'+e(String(initial).replace('.',','))+'</output></div>'+
-    '<small class="vote-save-state" data-vote-save-state>'+(personalValue!==null?'Il tuo voto '+e(String(personalValue).replace('.',',')):'Tocca la barra')+'</small>'+
+    '<div class="vote-actions">'+
+      '<button type="button" class="vote-action'+(personalIsSv?' active':'')+'" data-vote-sv data-vote-player="'+e(id)+'">SV</button>'+
+      (personalExists?'<button type="button" class="vote-action vote-clear" data-vote-clear data-vote-player="'+e(id)+'" aria-label="Annulla il voto">×</button>':'')+
+    '</div>'+
+    '<small class="vote-save-state" data-vote-save-state>'+(personalValue!==null?'Il tuo voto '+e(String(personalValue).replace('.',',')):personalIsSv?'Il tuo voto SV':'Tocca la barra o scegli SV')+'</small>'+
    '</div>':
    '<div class="vote-control is-disabled"><div class="vote-track" aria-hidden="true">'+meanMarker+'</div><small class="vote-save-state">'+(unused?'Non applicabile':'Non disponibile')+'</small></div>';
   const ratingLevel=average===null?'unrated':average>=9?'elite':average>=8?'high':average>=7?'above':average>=6?'even':average>=5?'below':'low';
