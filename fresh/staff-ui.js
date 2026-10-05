@@ -708,9 +708,14 @@ function delayedLiveSuggestion(fixture,competition,m=null){
  if(elapsed>=length+15)return {period:'second_half',minute:Math.max(0,elapsed-length-15)};
  return {period:'first_half',minute:Math.min(length,elapsed)};
 }
+function clearLiveSheetPortal(){
+ document.querySelectorAll('body > .live-sheet-backdrop').forEach(node=>node.remove());
+}
 function mountLiveSheet(){
  requestAnimationFrame(()=>{
-  const backdrop=document.querySelector('.live-sheet-backdrop');
+  const candidates=[...document.querySelectorAll('.live-sheet-backdrop')];
+  const backdrop=candidates.find(node=>node.parentElement!==document.body)||candidates.at(-1);
+  document.querySelectorAll('body > .live-sheet-backdrop').forEach(node=>{if(node!==backdrop)node.remove()});
   if(backdrop&&backdrop.parentElement!==document.body)document.body.append(backdrop);
  });
 }
@@ -732,7 +737,7 @@ export async function staffClick(e,button,ctx){
   const m=ctx.resolveMatch().operational;if(!m)return true;
   if(preAction==='live-close'){
    if(button.classList?.contains('live-sheet-backdrop')&&e.target!==button)return false;
-   memory.liveDraft=null;ctx.render();return true
+   memory.liveDraft=null;clearLiveSheetPortal();ctx.render();return true
   }
   if(preAction==='live-recovery-open'){
    if(!isStaff(ctx))return true;
@@ -1061,7 +1066,7 @@ export async function staffSubmit(e,ctx){
    const d=dataForm(form),minutes=Number(d.minutes);
    if(!Number.isInteger(minutes)||minutes<0||minutes>30)throw Error('Recupero non valido');
    await pendingFn(form,()=>rpc('tm_app_set_live_recovery',{p_match_id:m.id,p_minutes:minutes}));
-   memory.liveDraft=null;await reloadMatch(ctx);ctx.toast(minutes?('Recupero: +'+minutes+"'"):'Recupero azzerato');return true;
+   memory.liveDraft=null;clearLiveSheetPortal();await reloadMatch(ctx);ctx.toast(minutes?('Recupero: +'+minutes+"'"):'Recupero azzerato');return true;
   }
   if(kind==='event'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
@@ -1091,7 +1096,7 @@ export async function staffSubmit(e,ctx){
     const merge=window.confirm('Evento simile già registrato '+seconds+' s fa.\n\nOK = unisci al precedente\nAnnulla = mantieni come evento separato');
     if(merge){
      saved=await pendingFn(form,()=>rpc('tm_app_merge_event_submission',{p_match_id:m.id,p_event_id:duplicate.event_id,p_event:payload}));
-     memory.liveDraft=null;
+     memory.liveDraft=null;clearLiveSheetPortal();
      await reloadMatch(ctx);
      const conflicts=saved?.conflicts&&Object.keys(saved.conflicts).length;
      ctx.toast(conflicts?'Evento unificato · alcuni dati discordanti restano da verificare':'Evento unificato al precedente');
@@ -1099,7 +1104,7 @@ export async function staffSubmit(e,ctx){
     }
    }
    saved=await pendingFn(form,()=>rpc('tm_app_submit_live_event',{p_match_id:m.id,p_event:payload}));
-   memory.liveDraft=null;
+   memory.liveDraft=null;clearLiveSheetPortal();
    await reloadMatch(ctx);
    ctx.toast(saved?.status==='official'?'Evento registrato e confermato':'Evento registrato · in attesa di conferma');
    return true;
