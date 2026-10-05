@@ -123,7 +123,14 @@ function header(){
 function currentMatchIsLive(){
  if(state.page!=='match'||!state.match)return false;
  const {fixture,operational}=resolveMatch();
- return Boolean(fixture&&(isLive(fixture)||operational?.status==='live'));
+ const live=liveFixture();
+ return Boolean(
+  fixture&&(
+   isLive(fixture)||
+   operational?.status==='live'||
+   (live&&String(live.id)===String(fixture.id))
+  )
+ );
 }
 function liveScoreHeader(){
  const f=liveFixture();if(!f||currentMatchIsLive())return '';
@@ -456,11 +463,11 @@ function match(){
    '<div class="match-header-live-clock"><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+E(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+E(m.id)+'" data-blue-min="'+Number(comp?.discipline_rules?.blue_duration_minutes||0)+'" data-period-len="'+Number(rules?.minutes_per_period||0)+'" data-period-no="'+Math.max(1,Number(m.live_period_no||1))+'">00:00</strong>'+
    '<small data-staff-period-label data-base-label="'+E(livePeriodLabel)+'" data-recovery="'+E(liveRecovery)+'">'+E(livePeriodLabel)+'</small></div>'):'';
  const compactHeader='<div class="match-compact-bar glass'+(matchIsLive?' is-live':'')+'" aria-hidden="true">'+
-  '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
-  '<strong>'+E(f.home_team)+'</strong></div>'+
+  (matchIsLive?'':('<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
+  '<strong>'+E(f.home_team)+'</strong></div>'))+
   '<div class="match-compact-center"><b class="match-compact-score">'+headerScore+'</b>'+headerTimer+'</div>'+
-  '<div class="match-compact-club match-compact-away"><strong>'+E(f.away_team)+'</strong>'+
-  club(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+'</div></div>';
+  (matchIsLive?'':('<div class="match-compact-club match-compact-away"><strong>'+E(f.away_team)+'</strong>'+
+  club(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+'</div>'))+'</div>';
  const statusEditor=editor?'<select data-extra-status aria-label="Stato partita">'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,text])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+text+'</option>').join('')+'</select>':null;
  const testNotice=f.is_test?'<div class="match-test-banner"><strong>TEST PRIVATO</strong> · solo tuo · '+E(rules.periods)+'×'+E(rules.minutes_per_period)+"'"+' · cambi '+(rules.rolling_substitutions?'rotanti':'non rotanti')+' · escluso da classifiche e statistiche</div>':'';
  const header=testNotice+'<div class="match-detail-head glass">'+
@@ -596,6 +603,7 @@ function render(){
  document.body.dataset.logoShape=['circle','rounded','square'].includes(state.base.team?.logo_shape)?state.base.team.logo_shape:'rounded';
  document.body.dataset.live=liveFixture()?'true':'false';
  document.body.dataset.currentMatchLive=currentMatchIsLive()?'true':'false';
+ document.body.dataset.matchHeaderMode=currentMatchIsLive()?'live-compact':'default';
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}${liveScoreHeader()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
  if(state.page==='home'&&previousHomeScroll.length===2){
   document.querySelectorAll('.home-feature>.feature-primary,.home-feature>.home-side-stack').forEach((column,index)=>{column.scrollTop=previousHomeScroll[index]||0});
