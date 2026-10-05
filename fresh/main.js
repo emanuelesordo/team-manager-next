@@ -147,7 +147,10 @@ function panelTitle(title,action,label='Vedi tutto'){return `<div class="panel-h
 function scorecard(f,compact=false){if(!f)return '<div class="empty">Nessun incontro disponibile.</div>';
  return `<button class="scorecard ${compact?'compact':''} ${f.is_test?'is-test':''}" data-match="${E(f.id)}"><div class="scorecard-top">${status(f)}${f.is_test?'<span class="test-badge">TEST PRIVATO</span>':''}<span>${E(competition(f.competition_id)?.name||'Partita')} · ${f.round_no!=null?'Giornata '+E(f.round_no):'Calendario'}</span></div><div class="scorecard-main"><div class="scoreclub">${club(f.home_team,compact?'sm':'lg',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong></div><div class="scorecentre"><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="scoreclub">${club(f.away_team,compact?'sm':'lg',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}<strong>${E(f.away_team)}</strong></div></div><div class="scorecard-foot">${ico('pin',14)} <span>${E(fixtureVenueDetails(f,fixtureHomeClub(f)).name||'Campo da definire')}</span><span class="match-cta">Dettagli ${ico('chevron',15)}</span></div></button>`
 }
-function fixtureRow(f,short=false){return `<button class="fixture-row ${f.is_test?'is-test':''}" data-match="${E(f.id)}"><span class="fixture-date"><b>${date(f.kickoff_at).split(' ')[0]}</b><small>${date(f.kickoff_at).split(' ').slice(1).join(' ')}</small></span><div class="fixture-main"><div class="fixture-clubs">${club(f.home_team,'tiny',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong><span class="fixture-separator">—</span><strong>${E(f.away_team)}</strong>${club(f.away_team,'tiny',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}</div>${short?'':`<small>${E(competition(f.competition_id)?.name||'Partita')} ${f.round_no!=null?' · G'+E(f.round_no):''} · ${E(fixtureVenueDetails(f,fixtureHomeClub(f)).name||'Campo da definire')}</small>`}</div>${f.is_test?'<span class="test-badge">TEST</span>':''}<span class="fixture-result ${hasScore(f)?'played':''}">${hasScore(f)?E(f.home_score)+'–'+E(f.away_score):time(f.kickoff_at)}</span>${ico('chevron',15)}</button>`}
+function fixtureRow(f,short=false){
+ const editableTournamentTime=short&&state.identity?.role?.role==='admin'&&!hasScore(f);
+ return `<button class="fixture-row ${f.is_test?'is-test':''}" data-match="${E(f.id)}"><span class="fixture-date"><b>${date(f.kickoff_at).split(' ')[0]}</b><small>${date(f.kickoff_at).split(' ').slice(1).join(' ')}</small></span><div class="fixture-main"><div class="fixture-clubs">${club(f.home_team,'tiny',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong><span class="fixture-separator">—</span><strong>${E(f.away_team)}</strong>${club(f.away_team,'tiny',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}</div>${short?'':`<small>${E(competition(f.competition_id)?.name||'Partita')} ${f.round_no!=null?' · G'+E(f.round_no):''} · ${E(fixtureVenueDetails(f,fixtureHomeClub(f)).name||'Campo da definire')}</small>`}</div>${f.is_test?'<span class="test-badge">TEST</span>':''}<span class="fixture-result ${hasScore(f)?'played':''}${editableTournamentTime?' editable-time':''}" ${editableTournamentTime?'data-tournament-score="'+E(f.id)+'" title="Inserisci risultato finale"':''}>${hasScore(f)?E(f.home_score)+'–'+E(f.away_score):time(f.kickoff_at)}</span>${ico('chevron',15)}</button>`
+}
 function standings(comp,limit=0){
  const all=rankRows((state.data?.standings||[]).filter(x=>x.competition_id===comp?.id),comp,fixtures());const rows=limit?all.slice(0,limit):all;
  if(!rows.length)return '<div class="empty">Classifica non disponibile per questa competizione.</div>';
@@ -747,6 +750,12 @@ document.addEventListener('click',async e=>{
   }catch(err){eventReaction.disabled=false;toast('Validazione non riuscita: '+err.message)}
   return;
  }
+ const tournamentScoreTarget=e.target.closest('[data-tournament-score]');
+ if(tournamentScoreTarget){
+  e.preventDefault();e.stopPropagation();
+  await enterTournamentFinalScore(tournamentScoreTarget.dataset.tournamentScore);
+  return;
+ }
  const staffTarget=e.target.closest('[data-staff-action],[data-staff-area],[data-staff-match-tab]');
  if(staffTarget&&await staffClick(e,staffTarget,staffContext()))return;
  const x=e.target.closest('button,[data-dismiss]');if(!x)return;
@@ -869,6 +878,28 @@ document.addEventListener('input',e=>{
   const missing=$('#roster-empty');if(missing)missing.hidden=visible>0;
  }
 });
+async function enterTournamentFinalScore(fixtureId){
+ if(state.identity?.role?.role!=='admin')return;
+ const f=fixtures().find(x=>String(x.id)===String(fixtureId));if(!f)return;
+ const raw=window.prompt('Risultato finale · '+f.home_team+' — '+f.away_team+'\nInserisci nel formato 2-1','0-0');
+ if(raw===null)return;
+ const match=String(raw).trim().match(/^(\d{1,2})\s*[-–:]\s*(\d{1,2})$/);
+ if(!match){toast('Formato non valido. Usa ad esempio 2-1');return}
+ const home=Number(match[1]),away=Number(match[2]);
+ if(home>99||away>99){toast('Punteggio non valido');return}
+ try{
+  await adminWrite('app_competition_fixtures','PATCH',{home_score:home,away_score:away,status:'finished'},{id:f.id});
+  f.home_score=home;f.away_score=away;f.status='finished';
+  const operational=(state.data?.matches||[]).find(m=>m.fixture_id===f.id);
+  if(operational){
+   try{
+    await adminWrite('app_matches','PATCH',{home_score:home,away_score:away,status:'finished'},{id:operational.id});
+    Object.assign(operational,{home_score:home,away_score:away,status:'finished'});
+   }catch(error){console.warn('Tabellino operativo non allineato al risultato torneo:',error.message)}
+  }
+  render();toast('Risultato finale salvato');
+ }catch(error){toast('Risultato non salvato: '+error.message)}
+}
 async function saveExtraScore(){
  const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
  const goals=(state.fixtureEvents||[]).filter(x=>x.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(x.event_type)).reduce((a,x)=>{const side=x.event_type==='own_goal'?(x.side==='home'?'away':'home'):x.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
