@@ -830,7 +830,7 @@ export async function staffSubmit(e,ctx){
    const d=dataForm(form);
    const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
    const relativeMinute=numberOrNull(d.minute);
-   const cumulativeMinute=cumulativeMinuteFromPeriod(relativeMinute,ev.payload?.period||m.live_period,competition);
+   const cumulativeMinute=cumulativeMinuteFromPeriod(relativeMinute,ev.payload?.period_no||ev.payload?.period||m.live_period_no||m.live_period,matchRules(m,competition));
    const changes={event_type:d.event_type,team_side:d.team_side,
     player_id:d.team_side==='team'?d.player_id||null:null,
     secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
