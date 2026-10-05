@@ -19,7 +19,7 @@ export function matchScorerRows(events=[],fixture={},team={},playerName=()=>null
   rows[side].push({
    id:event.id||null,minute:cumulativeEventMinute(event,competition),
    minuteText:displayEventMinute(event,competition,'—'),
-   name
+   name,status:event.validation_status||'official'
   });
  }
  for(const side of ['home','away'])rows[side].sort((a,b)=>(a.minute??999)-(b.minute??999));
@@ -27,6 +27,6 @@ export function matchScorerRows(events=[],fixture={},team={},playerName=()=>null
 }
 export function renderMatchScorers(rows,side,escapeHtml=x=>String(x??'')){
  return '<div class="match-header-scorers match-header-scorers-'+side+'" aria-label="Marcatori '+(side==='home'?'casa':'ospiti')+'">'+
-  (rows?.[side]||[]).map(item=>'<div class="match-header-scorer"><b class="match-scorer-minute">'+escapeHtml(item.minuteText)+'</b><span class="match-scorer-name">'+escapeHtml(item.name)+'</span></div>').join('')+
+  (rows?.[side]||[]).map(item=>'<div class="match-header-scorer '+(item.status==='official'?'':'is-proposed')+'"><b class="match-scorer-minute">'+escapeHtml(item.minuteText)+'</b><span class="match-scorer-name">'+escapeHtml(item.name)+'</span></div>').join('')+
   '</div>';
 }
