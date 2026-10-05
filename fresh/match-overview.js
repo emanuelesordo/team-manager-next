@@ -119,8 +119,7 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
   const name=matchPlayerLabel(p);
   const rating=relativeRating(row.player_id,matchData,seasonStats);
   const events=playerMatchEvents(row.player_id,matchData?.events||[],competition);
-  const eventMarkup=events.map(x=>'<span class="ov-event ov-'+escapeHtml(x.kind)+'" title="'+escapeHtml(x.name+' · '+x.time)+'" aria-label="'+escapeHtml(x.name+' '+x.time)+'">'+
-   (['yellow_card','blue_card','red_card'].includes(x.kind)?'<i></i>':escapeHtml(x.label))+'</span>').join('');
+  const benchEventMarkup=eventBadges(events,'left')+eventBadges(events,'right');
   const ratingMarkup=rating?'<span class="ov-rating ov-rating-'+rating.level+'" title="Voto medio partita: '+rating.score.toFixed(2)+' ('+rating.votes+' voti)">'+rating.score.toFixed(1).replace('.',',')+'</span>':
    '<span class="ov-rating ov-no-rating" title="Nessun voto registrato">—</span>';
   const caption='<span class="ov-player-name">'+escapeHtml(name)+(row.is_captain?' <small class="ov-captain">(C)</small>':'')+'</span>';
@@ -132,7 +131,7 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
     ratingMarkup+'</div>'+caption+'</div>';
   }
   return '<div class="ov-player" data-player-id="'+escapeHtml(row.player_id)+'"><span class="ov-shirt">'+escapeHtml(row.shirt_number??'·')+'</span>'+
-   caption+'<span class="ov-personal-events">'+eventMarkup+'</span>'+ratingMarkup+'</div>';
+   caption+'<span class="ov-personal-events ov-bench-events">'+benchEventMarkup+'</span>'+ratingMarkup+'</div>';
  };
  const label=match?.formation||'4-4-2';
  const positions=pitchPositions(label);
