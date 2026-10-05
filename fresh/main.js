@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005live-clean5';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005period-end6';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
@@ -255,6 +255,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  };
  const recovery=e=>Math.max(0,Number(e.stoppage_minute)||0);
  const order=e=>{const n=absoluteMinute(e);return n===null?Infinity:n+recovery(e)/100};
+ const periodEnds=[...(events||[])].filter(e=>type(e)==='period_end'&&e.validation_status!=='rejected');
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
@@ -297,11 +298,18 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return (goal(e)?'':'<span class="mt-icon">'+icon(e)+'</span>')+score+names;
  };
  const minutes=e=>E(displayEventMinute(e,competitionSettings).replace('′',"'"));
- const recoveryByPeriod=new Map();
- for(const e of events||[]){if(type(e)==='period_end'){const p=periodNo(e);const n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;recoveryByPeriod.set(p,Math.max(n,recoveryByPeriod.get(p)||0))}}
+ const recoveryByPeriod=new Map(),periodEndByPeriod=new Map();
+ for(const e of periodEnds){
+  const p=periodNo(e),n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;
+  recoveryByPeriod.set(p,Math.max(n,recoveryByPeriod.get(p)||0));
+  if(!periodEndByPeriod.has(p)||String(periodEndByPeriod.get(p).created_at||'')<String(e.created_at||''))periodEndByPeriod.set(p,e);
+ }
  for(const e of ordered){if(recovery(e)){const p=periodNo(e);recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0))}}
  const halfGoals=tracked.filter(x=>periodNo(x.event)===1&&!['rejected','disputed'].includes(x.event.validation_status)&&x.event.payload?.count_score!==false&&goal(x.event));
- const halfScore=halfGoals.some(x=>absoluteMinute(x.event)===null)?'? - ?':
+ const halfEnd=periodEndByPeriod.get(1);
+ const halfScore=Number.isInteger(Number(halfEnd?.payload?.score_home))&&Number.isInteger(Number(halfEnd?.payload?.score_away))?
+  Number(halfEnd.payload.score_home)+' - '+Number(halfEnd.payload.score_away):
+  halfGoals.some(x=>absoluteMinute(x.event)===null)?'? - ?':
   halfGoals.reduce((scores,x)=>{let s=side(x.event);if(type(x.event)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')scores[0]++;if(s==='away')scores[1]++;return scores},[0,0]).join(' - ');
  const complete=['finished','completed','full_time','ft'].includes(norm(fixture.status));
  const maxPeriod=Math.max(1,...tracked.map(x=>periodNo(x.event)),...Array.from(recoveryByPeriod.keys()).map(Number));
@@ -324,14 +332,21 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   const base=duration===null?null:p*duration;
   const added=x=>{const n=absoluteMinute(x.event);return recovery(x.event)>0||(base!==null&&n!==null&&n>=base)};
   const stoppage=entries.filter(added),regular=entries.filter(x=>!added(x));
-  const declared=Number(recoveryByPeriod.get(p))||0;
-  let output=groupedRows(stoppage);
-  if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO');
+  const declared=Number(recoveryByPeriod.get(p))||0,endEvent=periodEndByPeriod.get(p);
+  let output='';
+  if(endEvent){
+   const label=String(endEvent.payload?.label||('FINE '+p+'° TEMPO'));
+   const scoreHome=Number(endEvent.payload?.score_home),scoreAway=Number(endEvent.payload?.score_away);
+   const scoreText=Number.isFinite(scoreHome)&&Number.isFinite(scoreAway)?' '+scoreHome+' - '+scoreAway:'';
+   output+=heading(label+scoreText+(declared>0?' · RECUPERO +'+declared+"'":''));
+  }
+  output+=groupedRows(stoppage);
+  if(!endEvent&&(declared>0||stoppage.length))output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO');
   return output+groupedRows(regular);
  };
  let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI');
  if(maxPeriod===2){
-  parts+=renderPeriod(2)+heading('HT '+halfScore)+renderPeriod(1);
+  parts+=renderPeriod(2)+(periodEndByPeriod.has(1)?'':heading('HT '+halfScore))+renderPeriod(1);
  }else if(maxPeriod>2){
   for(let p=maxPeriod;p>=1;p--){
    parts+=renderPeriod(p);
@@ -408,7 +423,7 @@ function match(){
  const liveRecovery=(m?.status==='live'&&Number(m?.live_recovery_period_no)===Math.max(1,Number(m?.live_period_no||1)))?Number(m?.live_recovery_minutes||0):0;
  const headerTimer=m&&m.status==='live'?
   '<div class="match-header-live-clock"><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+E(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+E(m.id)+'" data-blue-min="'+Number(comp?.discipline_rules?.blue_duration_minutes||0)+'" data-period-len="'+Number(rules?.minutes_per_period||0)+'" data-period-no="'+Math.max(1,Number(m.live_period_no||1))+'">00:00</strong>'+
-  '<small>'+E(livePeriodLabel)+(liveRecovery>0?' · +'+E(liveRecovery)+"'":'')+'</small></div>':'';
+  '<small data-staff-period-label data-base-label="'+E(livePeriodLabel)+'" data-recovery="'+E(liveRecovery)+'">'+E(livePeriodLabel)+'</small></div>':'';
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
