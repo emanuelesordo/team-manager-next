@@ -428,28 +428,46 @@ export function matchLineup(ctx,m){
 function scoreForm(m){
  return '<form data-staff-form="score" class="live-score-editor"><label>Casa<input name="home_score" type="number" min="0" max="99" required value="'+esc(m.home_score??0)+'"></label><strong>:</strong><label>Ospite<input name="away_score" type="number" min="0" max="99" required value="'+esc(m.away_score??0)+'"></label>'+submit('Aggiorna risultato')+'</form>';
 }
-function liveControls(m){
+function matchRules(m,competition){
+ return {...(competition||{}),
+  periods:Number(m?.periods_override||competition?.periods||2),
+  minutes_per_period:Number(m?.minutes_per_period_override||competition?.minutes_per_period||40),
+  rolling_substitutions:Boolean(m?.rolling_substitutions)};
+}
+function liveControls(m,competition){
  let controls='';
+ const rules=matchRules(m,competition);
  if(m.status==='scheduled')controls=btn('start','Avvia partita');
- else if(m.status==='live')controls=btn(m.live_clock_running?'pause':'resume',m.live_clock_running?'Pausa cronometro':'Riprendi cronometro')+
+ else if(m.status==='live'&&m.is_test){
+  const current=Math.max(1,Number(m.live_period_no||1));
+  if(m.live_period==='halftime'){
+   controls=current<rules.periods?btn('test-period-next','Avvia '+(current+1)+'° tempo'):btn('finish','Termina partita');
+  }else{
+   controls=btn(m.live_clock_running?'pause':'resume',m.live_clock_running?'Pausa cronometro':'Riprendi cronometro')+
+    (current<rules.periods?btn('test-period-end','Fine '+current+'° tempo'):btn('finish','Termina partita'));
+  }
+ }else if(m.status==='live')controls=btn(m.live_clock_running?'pause':'resume',m.live_clock_running?'Pausa cronometro':'Riprendi cronometro')+
   btn('halftime','Intervallo')+btn('second_half','Secondo tempo')+btn('extra','Supplementari')+btn('penalties','Rigori')+btn('finish','Termina partita');
  else if(m.status==='finished')controls=btn('reopen','Riapri per correzioni');
  return '<div class="live-action-row">'+controls+'</div>';
 }
 function liveClockMinute(m,competition){
  if(!m?.live_clock_running)return null;
+ const rules=matchRules(m,competition);
  const base=Number(m.live_clock_seconds||0),anchor=Date.parse(m.live_clock_anchor||'');
  const seconds=base+(Number.isFinite(anchor)?Math.max(0,Math.floor((Date.now()-anchor)/1000)):0);
- return periodRelativeMinute(Math.floor(seconds/60),m.live_period,competition);
+ const periodKey=m.is_test&&m.live_period_no?Number(m.live_period_no):m.live_period;
+ return periodRelativeMinute(Math.floor(seconds/60),periodKey,rules);
 }
 function matchLive(ctx,m,competition){
+ const rules=matchRules(m,competition);
  const people=ctx.state.data?.players||[],rows=ctx.state.matchData?.players||[],present=rows.filter(r=>['starter','bench'].includes(r.selection_status)||r.started);
  const playerOpts=[['','Non indicato']].concat(present.map(x=>[x.player_id,playerText(people.find(p=>p.id===x.player_id))]));
  const fixture=ctx.resolveMatch().fixture;
  const kickoff=Date.parse(fixture?.kickoff_at||'');
  const active=m.status==='live'||(m.status==='scheduled'&&Number.isFinite(kickoff)&&Date.now()>=kickoff);
- const mins=Number(competition?.minutes_per_period)>0?Number(competition.minutes_per_period):null;
- const suggested=active&&mins?liveClockMinute(m,competition):null;
+ const mins=Number(rules?.minutes_per_period)>0?Number(rules.minutes_per_period):null;
+ const suggested=active&&mins?liveClockMinute(m,rules):null;
  const minuteValue=suggested==null?'':String(Math.max(0,suggested));
  const eventForm=active?'<form data-staff-form="event" class="staff-form live-event-form"><input type="hidden" name="captured_at" value="">'+
  '<div class="staff-form-grid">'+
@@ -467,7 +485,7 @@ function matchLive(ctx,m,competition){
   'Timer fermo o non avviato: se il fatto è appena avvenuto lascia il minuto vuoto e scegli la stima dall’orario di inizio; verrà salvato un minuto provvisorio. Se invece stai recuperando un evento passato di cui non sai il minuto, scegli «Evento passato»: resterà senza minuto e andrà completato in gestione.'):'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
  submit('Registra evento')+'</form>':help('L’inserimento live è disponibile dall’orario di inizio della partita.');
  const staff=isStaff(ctx);
- const staffTools=staff?displayClock(m,competition)+liveControls(m)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':''):'';
+ const staffTools=staff?displayClock(m,rules)+liveControls(m,rules)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':''):'';
  const score=staff?'<div class="staff-live-panel"><h3>Risultato della partita</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(fixture||m))+'</div>':'';
  return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+staffTools+
  '<div class="staff-live-grid">'+score+'<div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
@@ -569,8 +587,9 @@ function adminPayload(form,ctx){
  return {table:null,id:null,payload:data};
 }
 const pendingFn=async(form,fn)=>{const button=form.querySelector('[type="submit"]');if(button){button.disabled=true;button.textContent='Salvataggio…'}try{return await fn()}finally{if(button){button.disabled=false;button.textContent='Salva'}}};
-function delayedLiveSuggestion(fixture,competition){
- const length=Number(competition?.minutes_per_period);
+function delayedLiveSuggestion(fixture,competition,m=null){
+ const rules=matchRules(m,competition);
+ const length=Number(rules?.minutes_per_period);
  const kickoff=Date.parse(fixture?.kickoff_at||'');
  if(!Number.isFinite(length)||length<=0||!Number.isFinite(kickoff))return {period:'first_half',minute:0};
  const elapsed=Math.max(0,Math.floor((Date.now()-kickoff)/60000));
@@ -725,7 +744,7 @@ export async function staffClick(e,button,ctx){
     await rpc('tm_app_start_live_v2',{p_match_id:m.id,p_mode:'realtime',p_period:'first_half',p_approx_minute:0});
     await reloadMatch(ctx);ctx.toast('LIVE avviato in tempo reale');return true;
    }
-   const suggestion=delayedLiveSuggestion(fixture,competition);
+   const suggestion=delayedLiveSuggestion(fixture,competition,m);
    const suggestedSecond=suggestion.period==='second_half';
    const second=window.confirm('Periodo attuale suggerito: '+(suggestedSecond?'2° tempo':'1° tempo')+'.\n\nOK = 2° tempo\nAnnulla = 1° tempo');
    const period=second?'second_half':'first_half';
@@ -754,6 +773,10 @@ export async function staffClick(e,button,ctx){
   }
   const map={void:'void_event',approve:'approve_event'};
   if(action==='sync-blue'){const count=await rpc('tm_app_sync_blue',{p_match_id:m.id});await reloadMatch(ctx);ctx.toast(count>0?count+' rientri blu registrati':'Nessun rientro necessario');return true;}
+  if(action==='test-period-end'||action==='test-period-next'){
+   await rpc('tm_app_test_period_action',{p_match_id:m.id,p_action:action==='test-period-end'?'end':'next'});
+   await reloadMatch(ctx);ctx.toast(action==='test-period-end'?'Tempo concluso':'Tempo successivo avviato');return true;
+  }
   if(['halftime','second_half','extra','penalties'].includes(action))
    await rpc('tm_app_set_period_v2',{p_match_id:m.id,p_period:action});
   else await rpc('tm_app_match_action',{p_match_id:m.id,p_action:map[action]||action,p_payload:payload});
@@ -867,12 +890,13 @@ export async function staffSubmit(e,ctx){
   if(kind==='event'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
    const d=dataForm(form),c=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
-   const period=m.live_period;
-   const configuredMinutes=Number(c?.minutes_per_period);
-   if(!Number.isFinite(configuredMinutes)||configuredMinutes<=0)throw Error('Durata dei tempi non configurata nella competizione: controlla Setup → Competizioni');
+   const rules=matchRules(m,c);
+   const period=m.is_test&&m.live_period_no?Number(m.live_period_no):m.live_period;
+   const configuredMinutes=Number(rules?.minutes_per_period);
+   if(!Number.isFinite(configuredMinutes)||configuredMinutes<=0)throw Error('Durata dei tempi non configurata');
    const relativeMinute=numberOrNull(d.minute);
-   const minute=cumulativeMinuteFromPeriod(relativeMinute,period,c);
-   const timerMinute=m.live_clock_running?liveClockMinute(m,c):null;
+   const minute=cumulativeMinuteFromPeriod(relativeMinute,period,rules);
+   const timerMinute=m.live_clock_running?liveClockMinute(m,rules):null;
    const minuteOrigin=relativeMinute===null?
     (d.minute_mode==='past_unknown'?'past_unknown':'live_estimated'):
     (timerMinute!==null&&relativeMinute===timerMinute?'timer':'manual');
