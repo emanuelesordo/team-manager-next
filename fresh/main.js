@@ -254,7 +254,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
- const tracked=ordered.map(e=>{const counts=['official','proposed','community_confirmed'].includes(e.validation_status)&&e.payload?.count_score!==false;if(counts&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:counts&&goal(e)?(e.validation_status==='official'&&snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
+ const tracked=ordered.map(e=>{const counts=!['rejected','disputed'].includes(e.validation_status)&&e.payload?.count_score!==false;if(counts&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:counts&&goal(e)?(e.validation_status==='official'&&snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
  const heading=label=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
  const cards=e=>{
   const t=type(e),shirt=String(e.payload?.opponent_shirt_number||'');
@@ -302,7 +302,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const recoveryByPeriod=new Map();
  for(const e of events||[]){if(type(e)==='period_end'){const p=periodNo(e);const n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;recoveryByPeriod.set(p,Math.max(n,recoveryByPeriod.get(p)||0))}}
  for(const e of ordered){if(recovery(e)){const p=periodNo(e);recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0))}}
- const halfGoals=tracked.filter(x=>periodNo(x.event)===1&&['official','proposed','community_confirmed'].includes(x.event.validation_status)&&x.event.payload?.count_score!==false&&goal(x.event));
+ const halfGoals=tracked.filter(x=>periodNo(x.event)===1&&!['rejected','disputed'].includes(x.event.validation_status)&&x.event.payload?.count_score!==false&&goal(x.event));
  const halfScore=halfGoals.some(x=>absoluteMinute(x.event)===null)?'? - ?':
   halfGoals.reduce((scores,x)=>{let s=side(x.event);if(type(x.event)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')scores[0]++;if(s==='away')scores[1]++;return scores},[0,0]).join(' - ');
  const complete=['finished','completed','full_time','ft'].includes(norm(fixture.status));
@@ -323,7 +323,9 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  };
  const renderPeriod=p=>{
   const entries=descending.filter(x=>periodNo(x.event)===p);
-  const stoppage=entries.filter(x=>recovery(x.event)>0),regular=entries.filter(x=>recovery(x.event)<=0);
+  const base=duration===null?null:p*duration;
+  const added=x=>{const n=absoluteMinute(x.event);return recovery(x.event)>0||(base!==null&&n!==null&&n>=base)};
+  const stoppage=entries.filter(added),regular=entries.filter(x=>!added(x));
   const declared=Number(recoveryByPeriod.get(p))||0;
   let output=groupedRows(stoppage);
   if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO');
