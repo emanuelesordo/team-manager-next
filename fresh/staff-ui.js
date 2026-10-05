@@ -22,7 +22,7 @@ const help=text=>'<p class="staff-help">'+esc(text)+'</p>';
 const title=(name,text)=>'<div class="staff-panel-heading"><div><span class="eyebrow">'+esc(name)+'</span><h2>'+esc(text)+'</h2></div></div>';
 const btn=(action,label)=>'<button type="button" class="staff-soft" data-staff-action="'+esc(action)+'">'+esc(label)+'</button>';
 const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</button>';
-const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'callups',busy:false};
+const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'callups',busy:false,liveDraft:null};
 const memory=initial;
 let reviewEditEvent=null,reviewHistoryEvent=null,reviewHistoryEntries=[];
 let scoreAuditRows=[],scoreAuditOpen=false;
@@ -468,37 +468,125 @@ function liveClockMinute(m,competition){
  const periodKey=m.is_test&&m.live_period_no?Number(m.live_period_no):m.live_period;
  return periodRelativeMinute(Math.floor(seconds/60),periodKey,rules);
 }
-function matchLive(ctx,m,competition){
- const rules=matchRules(m,competition);
- const people=ctx.state.data?.players||[],rows=ctx.state.matchData?.players||[],present=rows.filter(r=>['starter','bench'].includes(r.selection_status)||r.started);
- const playerOpts=[['','Non indicato']].concat(present.map(x=>[x.player_id,playerText(people.find(p=>p.id===x.player_id))]));
- const fixture=ctx.resolveMatch().fixture;
- const kickoff=Date.parse(fixture?.kickoff_at||'');
- const active=m.status==='live'||(m.status==='scheduled'&&Number.isFinite(kickoff)&&Date.now()>=kickoff);
- const mins=Number(rules?.minutes_per_period)>0?Number(rules.minutes_per_period):null;
- const suggested=active&&mins?liveClockMinute(m,rules):null;
- const minuteValue=suggested==null?'':String(Math.max(0,suggested));
- const eventForm=active?'<form data-staff-form="event" class="staff-form live-event-form"><input type="hidden" name="captured_at" value="">'+
- '<div class="staff-form-grid">'+
- picker('event_type','Evento',events,'goal')+picker('team_side','Squadra',[['team','Nostra squadra'],['opponent','Avversaria']],'team')+
- picker('player_id','Giocatore principale / uscente',playerOpts,'')+
- picker('secondary_player_id','Assist / subentrante',playerOpts,'')+
- input('minute','Minuto del periodo (facoltativo)',minuteValue,'number','min="0" max="300" placeholder="Es. '+Math.min(28,Math.max(1,Number(rules.minutes_per_period||40)-12))+'"')+
- picker('minute_mode','Se il minuto resta vuoto',[['now_estimated','È avvenuto ora · stima da orario inizio'],['past_unknown','Evento passato · minuto sconosciuto']],'now_estimated')+
- input('stoppage_minute','Recupero', '','number','min="0" max="30" placeholder="—"')+
- picker('substitution_reason','Motivo del cambio',[['tactical','Tattico'],['injury','Infortunio'],['technical','Tecnico'],['other','Altro']],'tactical')+
- input('notes','Note (facoltative)','','text','maxlength="400"')+'</div>'+
- '<label class="staff-check"><input type="checkbox" name="count_score" checked> Aggiorna il tabellone quando l’evento diventa ufficiale</label>'+
- help(mins?(m.live_clock_running?
-  'Il minuto è relativo al periodo ed è precompilato dal timer. Puoi correggerlo per eventi avvenuti prima; oltre ±5 minuti dal timestamp l’evento richiede conferma in gestione.':
-  'Timer fermo o non avviato: se il fatto è appena avvenuto lascia il minuto vuoto e scegli la stima dall’orario di inizio; verrà salvato un minuto provvisorio. Se invece stai recuperando un evento passato di cui non sai il minuto, scegli «Evento passato»: resterà senza minuto e andrà completato in gestione.'):'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
- submit('Registra evento')+'</form>':help('L’inserimento live è disponibile dall’orario di inizio della partita.');
- const staff=isStaff(ctx);
- const staffTools=staff?displayClock(m,rules)+liveControls(m,rules)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':''):'';
- const score=staff?'<div class="staff-live-panel"><h3>Risultato della partita</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(fixture||m))+'</div>':'';
- return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+staffTools+
- '<div class="staff-live-grid">'+score+'<div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
+
+function liveClockSeconds(m){
+ const base=Number(m?.live_clock_seconds||0),anchor=Date.parse(m?.live_clock_anchor||'');
+ return base+(m?.live_clock_running&&Number.isFinite(anchor)?Math.max(0,Math.floor((Date.now()-anchor)/1000)):0);
 }
+function livePeriodName(m){
+ const n=Math.max(1,Number(m?.live_period_no||1));
+ if(m?.live_period==='halftime')return 'Intervallo';
+ if(m?.live_period==='penalties')return 'Rigori';
+ return n+'° tempo';
+}
+function livePlayers(ctx,m){
+ const rows=ctx.state.matchData?.players||[],events=(ctx.state.matchData?.events||[])
+  .filter(e=>e.validation_status!=='rejected')
+  .slice().sort((a,b)=>(Number(a.minute??999)-Number(b.minute??999))||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+ const inField=new Set(rows.filter(r=>r.started||r.selection_status==='starter').map(r=>r.player_id));
+ for(const e of events){
+  if(e.team_side!=='team')continue;
+  if(e.event_type==='substitution'){if(e.player_id)inField.delete(e.player_id);if(e.secondary_player_id)inField.add(e.secondary_player_id)}
+  if(e.event_type==='red_card'&&e.player_id)inField.delete(e.player_id);
+ }
+ const people=ctx.state.data?.players||[];
+ const all=rows.filter(r=>['starter','bench'].includes(r.selection_status)||r.started).map(r=>({...r,person:people.find(p=>p.id===r.player_id)})).filter(x=>x.person);
+ const sorter=(a,b)=>(Number(a.tactical_slot??99)-Number(b.tactical_slot??99))||String(a.person.last_name||'').localeCompare(String(b.person.last_name||''),'it');
+ return {field:all.filter(x=>inField.has(x.player_id)).sort(sorter),bench:all.filter(x=>!inField.has(x.player_id)).sort(sorter)};
+}
+function liveQuickButton(type,label,icon,disabled=false){
+ return '<button type="button" class="live-quick live-quick-'+esc(type)+'" data-staff-action="live-event-open" data-live-event="'+esc(type)+'" '+(disabled?'disabled':'')+'>'+
+  '<span class="live-quick-icon" aria-hidden="true">'+icon+'</span><span>'+esc(label)+'</span></button>';
+}
+function liveDraftSheet(ctx,m,rules,field,bench){
+ const d=memory.liveDraft;if(!d)return '';
+ const people=ctx.state.data?.players||[],person=id=>people.find(p=>p.id===id);
+ if(d.kind==='recovery'){
+  return '<div class="live-sheet-backdrop" data-staff-action="live-close"><section class="live-event-sheet" role="dialog" aria-modal="true" aria-label="Recupero">'+
+   '<div class="live-sheet-handle"></div><div class="live-sheet-head"><h3>Recupero</h3><button type="button" data-staff-action="live-close" aria-label="Chiudi">×</button></div>'+
+   '<form data-staff-form="live-recovery" class="live-sheet-form"><label class="staff-field"><span>Minuti di recupero</span><input name="minutes" inputmode="numeric" type="number" min="0" max="30" required value="'+esc(d.recovery??m.live_recovery_minutes??0)+'"></label>'+
+   '<p class="live-sheet-note">Informativo: il cronometro continua oltre il tempo regolamentare e si ferma solo manualmente.</p>'+
+   '<div class="live-sheet-actions"><button type="button" class="staff-soft" data-staff-action="live-close">Annulla</button><button type="submit" class="staff-submit">Salva recupero</button></div></form></section></div>';
+ }
+ const type=d.type||'goal',side=d.side||'team',selected=d.playerId||'';
+ const minute=d.minute==null?'':d.minute;
+ const fieldOptions=[['','Seleziona giocatore'],...field.map(x=>[x.player_id,playerText(x.person)])];
+ const benchOptions=[['','Seleziona giocatore'],...bench.map(x=>[x.player_id,playerText(x.person)])];
+ const assistOptions=[['','Nessun assist / da indicare'],...field.filter(x=>x.player_id!==selected).map(x=>[x.player_id,playerText(x.person)])];
+ const labels={goal:'Gol',yellow_card:'Cartellino',substitution:'Cambio',red_card:'Espulsione'};
+ const icons={goal:'⚽',yellow_card:'▮',substitution:'↔',red_card:'▮'};
+ const playerLabel=type==='substitution'?'Giocatore esce':type==='goal'?'Marcatore':'Giocatore';
+ const secondary=type==='goal'?picker('secondary_player_id','Assist',assistOptions,''):
+  type==='substitution'?picker('secondary_player_id','Giocatore entra',benchOptions,''):'';
+ const reason=type==='substitution'?picker('substitution_reason','Motivo cambio',
+  [['tactical','Scelta tattica'],['injury','Infortunio'],['technical','Scelta tecnica'],['injury_prevention','Prevenzione infortunio'],['disciplinary_prevention','Prevenzione disciplinare'],['other','Altro']],'tactical'):'';
+ const playerField=side==='team'?picker('player_id',playerLabel,fieldOptions,selected):'';
+ const cardExtra=type==='yellow_card'?'<button type="button" class="live-type-mini" data-staff-action="live-event-switch" data-live-event="red_card" title="Passa a rosso">🟥 Rosso</button>':'';
+ return '<div class="live-sheet-backdrop" data-staff-action="live-close"><section class="live-event-sheet" role="dialog" aria-modal="true" aria-label="Aggiungi evento">'+
+  '<div class="live-sheet-handle"></div><div class="live-sheet-head"><div><small>AGGIUNGI EVENTO</small><h3>'+esc(labels[type]||'Evento')+'</h3></div><button type="button" data-staff-action="live-close" aria-label="Chiudi">×</button></div>'+
+  '<div class="live-type-strip">'+
+   [['substitution','↔'],['goal','⚽'],['yellow_card','▮']].map(([k,i])=>'<button type="button" class="'+(type===k?'active':'')+'" data-staff-action="live-event-switch" data-live-event="'+k+'" aria-label="'+esc(labels[k])+'">'+i+'</button>').join('')+
+   '</div>'+
+  '<form data-staff-form="event" class="staff-form live-sheet-form">'+
+   '<input type="hidden" name="event_type" value="'+esc(type)+'"><input type="hidden" name="captured_at" value="'+esc(d.capturedAt||new Date().toISOString())+'">'+
+   '<input type="hidden" name="period_key" value="'+esc(d.period||m.live_period_no||m.live_period||1)+'"><input type="hidden" name="minute_mode" value="now_estimated"><input type="hidden" name="count_score" value="on">'+
+   '<div class="live-team-toggle"><label><input type="radio" name="team_side" value="team" '+(side==='team'?'checked':'')+'><span>Nostra squadra</span></label>'+
+   '<label><input type="radio" name="team_side" value="opponent" '+(side==='opponent'?'checked':'')+'><span>Avversario</span></label></div>'+
+   '<div class="live-sheet-grid"><label class="staff-field"><span>Tempo</span><input value="'+esc(livePeriodName(m))+'" disabled></label>'+
+   '<label class="staff-field"><span>Minuto prenotato</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+esc(minute)+'"></label>'+
+   playerField+secondary+reason+'</div>'+cardExtra+
+   '<label class="staff-field live-notes"><span>Note / motivazione (facoltative)</span><input name="notes" maxlength="400" placeholder="Aggiungi solo se serve"></label>'+
+   '<p class="live-sheet-note">Timestamp bloccato al tap: <strong>'+esc(d.clockLabel||'—')+'</strong>. Puoi completare i dati senza perdere il momento dell’evento.</p>'+
+   '<div class="live-sheet-actions"><button type="button" class="staff-soft" data-staff-action="live-close">Annulla</button><button type="submit" class="staff-submit">Salva evento</button></div>'+
+  '</form></section></div>';
+}
+function matchLive(ctx,m,competition){
+ const rules=matchRules(m,competition),fixture=ctx.resolveMatch().fixture,staff=isStaff(ctx);
+ const active=m.status==='live'||(m.status==='scheduled'&&Date.now()>=Date.parse(fixture?.kickoff_at||''));
+ const roster=livePlayers(ctx,m),seconds=liveClockSeconds(m);
+ const recovery=Number(m.live_recovery_period_no)===Math.max(1,Number(m.live_period_no||1))?Number(m.live_recovery_minutes||0):0;
+ const playerRows=roster.field.map(x=>{
+  const shirt=x.shirt_number||'—',name=playerText(x.person);
+  return '<div class="live-player-row"><span class="live-player-number">'+esc(shirt)+'</span><strong>'+esc(name)+'</strong>'+
+   '<span class="live-player-actions">'+
+    '<button type="button" data-staff-action="live-event-open" data-live-event="goal" data-live-player="'+esc(x.player_id)+'" aria-label="Gol '+esc(name)+'">⚽</button>'+
+    '<button type="button" class="live-card-action" data-staff-action="live-event-open" data-live-event="yellow_card" data-live-player="'+esc(x.player_id)+'" aria-label="Cartellino '+esc(name)+'"><i></i></button>'+
+    '<button type="button" data-staff-action="live-event-open" data-live-event="substitution" data-live-player="'+esc(x.player_id)+'" aria-label="Cambio '+esc(name)+'">↔</button>'+
+   '</span></div>';
+ }).join('');
+ const eventNames={goal:'Gol',own_goal:'Autogol',penalty_scored:'Gol su rigore',penalty_missed:'Rigore sbagliato',yellow_card:'Ammonizione',red_card:'Espulsione',blue_card:'Cartellino blu',substitution:'Cambio',period_end:'Fine periodo',other:'Evento'};
+ const recent=(ctx.state.matchData?.events||[]).filter(e=>e.validation_status!=='rejected').slice().reverse().slice(0,6).map(e=>{
+  const who=e.player_id?playerText((ctx.state.data?.players||[]).find(p=>p.id===e.player_id)):'';
+  return '<div class="live-recent-row"><span class="live-recent-minute">'+esc(e.minute==null?'—':e.minute+"'")+'</span><strong>'+esc(eventNames[e.event_type]||e.event_type)+(who?' · '+esc(who):'')+'</strong></div>';
+ }).join('');
+ let periodAction='',periodLabel='';
+ if(staff){
+  if(m.status==='scheduled'){periodAction='start';periodLabel='Inizio periodo'}
+  else if(m.status==='live'&&m.live_clock_running){periodAction=m.is_test?'test-period-end':'pause';periodLabel='Fine periodo'}
+  else if(m.status==='live'){
+   if(m.is_test&&m.live_period==='halftime'){periodAction='test-period-next';periodLabel='Inizio periodo'}
+   else if(!m.is_test&&m.live_period==='halftime'){periodAction='second_half';periodLabel='Inizio 2° tempo'}
+   else {periodAction='resume';periodLabel='Riprendi'}
+  }
+ }
+ const clock='<div class="live-mobile-clock"><span class="status '+(m.status==='live'?'live':'end')+'">'+(m.status==='live'?'LIVE':m.status==='finished'?'FINALE':'PRE')+'</span>'+
+  '<strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+esc(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+esc(m.id)+'" data-blue-min="'+Number(competition?.discipline_rules?.blue_duration_minutes||0)+'">00:00</strong>'+
+  '<span>'+esc(livePeriodName(m))+(recovery>0?' · +'+recovery+"'":'')+'</span></div>';
+ const consoleHtml='<div class="live-fast-console">'+
+   liveQuickButton('goal','Gol','⚽',!active)+liveQuickButton('yellow_card','Cartellino','▮',!active)+liveQuickButton('substitution','Cambio','↔',!active)+
+   (staff?'<button type="button" class="live-quick live-quick-recovery" data-staff-action="live-recovery-open" '+(m.status!=='live'?'disabled':'')+'><span class="live-quick-icon">◴</span><span>Recupero</span></button>':'')+
+   (staff?'<button type="button" class="live-quick live-quick-period" data-staff-action="'+esc(periodAction)+'" '+(!periodAction?'disabled':'')+'><span class="live-quick-icon">▶Ⅱ</span><span>'+esc(periodLabel||'Periodo')+'</span></button>':'')+
+  '</div>';
+ return '<section class="staff-subpanel live-mobile">'+clock+consoleHtml+
+  '<p class="live-fast-help">Tocca un evento: minuto e timestamp vengono prenotati subito, poi completi i dettagli con calma.</p>'+
+  '<section class="live-players"><div class="live-section-head"><h3>In campo <span>'+roster.field.length+'</span></h3><small>azioni rapide sul giocatore</small></div>'+
+   '<div class="live-player-list">'+(playerRows||'<p class="staff-help">Nessun titolare disponibile. Conferma la formazione iniziale.</p>')+'</div>'+
+   '<details class="live-bench"><summary>Panchina <span>'+roster.bench.length+'</span></summary><div>'+roster.bench.map(x=>'<span>'+esc(x.shirt_number||'—')+' · '+esc(playerText(x.person))+'</span>').join('')+'</div></details>'+
+  '</section>'+
+  '<section class="live-recent"><div class="live-section-head"><h3>Ultimi eventi</h3></div>'+(recent||'<p class="staff-help">Nessun evento registrato.</p>')+'</section>'+
+  liveDraftSheet(ctx,m,rules,roster.field,roster.bench)+'</section>';
+}
+
 function matchEvents(ctx,m){const fixture=ctx.resolveMatch().fixture,competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id),rules=matchRules(m,competition);return reviewPanel({match:m,fixture,competition:rules,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
 
 export function staffMatchSection(ctx,f,m,section){
@@ -616,12 +704,31 @@ async function reloadMatch(ctx){
  ctx.render();
 }
 export async function staffClick(e,button,ctx){
+ const preAction=button.dataset.staffAction;
+ const liveUser=Boolean(ctx.state.identity?.user);
+ if(liveUser&&['live-event-open','live-event-switch','live-close','live-recovery-open'].includes(preAction)){
+  const m=ctx.resolveMatch().operational;if(!m)return true;
+  if(preAction==='live-close'){memory.liveDraft=null;ctx.render();return true}
+  if(preAction==='live-recovery-open'){
+   if(!isStaff(ctx))return true;
+   memory.liveDraft={kind:'recovery',recovery:Number(m.live_recovery_minutes||0)};ctx.render();return true;
+  }
+  const competition=(ctx.state.data?.competitions||[]).find(x=>x.id===m.competition_id),rules=matchRules(m,competition);
+  const seconds=liveClockSeconds(m),relative=periodRelativeMinute(Math.floor(seconds/60),m.live_period_no||m.live_period,rules);
+  if(preAction==='live-event-switch'&&memory.liveDraft){
+   memory.liveDraft={...memory.liveDraft,type:button.dataset.liveEvent||memory.liveDraft.type,playerId:null};ctx.render();return true;
+  }
+  memory.liveDraft={kind:'event',type:button.dataset.liveEvent||'goal',playerId:button.dataset.livePlayer||null,side:'team',
+   capturedAt:new Date().toISOString(),minute:relative,period:m.live_period_no||m.live_period||1,
+   clockLabel:String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0')};
+  ctx.render();return true;
+ }
  if(!isStaff(ctx))return false;
  if(button.dataset.staffArea){
   memory.area=button.dataset.staffArea;ctx.render();return true;
  }
  if(button.dataset.staffMatchTab){
-  memory.matchTab=button.dataset.staffMatchTab;ctx.render();return true;
+  memory.matchTab=button.dataset.staffMatchTab;memory.liveDraft=null;ctx.render();return true;
  }
  const action=button.dataset.staffAction;if(!action)return false;
  if(memory.busy)return true;
@@ -895,11 +1002,19 @@ export async function staffSubmit(e,ctx){
    await pendingFn(form,()=>rpc('tm_app_save_formation',{p_match_id:m.id,p_rows:rows,p_formation:dataForm(form).formation||null}));
    await reloadMatch(ctx);ctx.toast('Formazione e panchina salvate');return true;
   }
+  if(kind==='live-recovery'){
+   if(!isStaff(ctx))throw Error('Operazione riservata allo staff');
+   const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
+   const d=dataForm(form),minutes=Number(d.minutes);
+   if(!Number.isInteger(minutes)||minutes<0||minutes>30)throw Error('Recupero non valido');
+   await pendingFn(form,()=>rpc('tm_app_set_live_recovery',{p_match_id:m.id,p_minutes:minutes}));
+   memory.liveDraft=null;await reloadMatch(ctx);ctx.toast(minutes?('Recupero: +'+minutes+"'"):'Recupero azzerato');return true;
+  }
   if(kind==='event'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
    const d=dataForm(form),c=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
    const rules=matchRules(m,c);
-   const period=m.is_test&&m.live_period_no?Number(m.live_period_no):m.live_period;
+   const period=d.period_key||((m.is_test&&m.live_period_no)?Number(m.live_period_no):m.live_period);
    const configuredMinutes=Number(rules?.minutes_per_period);
    if(!Number.isFinite(configuredMinutes)||configuredMinutes<=0)throw Error('Durata dei tempi non configurata');
    const relativeMinute=numberOrNull(d.minute);
