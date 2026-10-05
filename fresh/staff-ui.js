@@ -314,10 +314,8 @@ export function adminPage(ctx){
     selection('home_club_id','Squadra di casa',[[t.id,t.name],...opps.map(o=>[o.id,o.name])],t.id)+
     selection('away_club_id','Ospite',[[t.id,t.name],...opps.map(o=>[o.id,o.name])],opps[0]?.id)+
     input('kickoff_at','Data e ora (Italia)','', 'datetime-local','required')+
-    input('venue_name','Campo','')+input('venue_address','Indirizzo','')+
-    selection('is_test','Tipo partita',[['false','Normale / ufficiale'],['true','TEST privato · visibile solo a me']],'false')+'</div>':
+    input('venue_name','Campo','')+input('venue_address','Indirizzo','')+'</div>':
    '<div class="staff-form-grid">'+input('kickoff_at','Data e ora',local,'datetime-local','required')+
-   (f.is_test?'<div class="staff-field"><span>Tipo partita</span><strong>TEST privato · solo tu</strong></div>':'')+
    input('venue_name','Campo',f.venue_name||'')+
    input('venue_address','Indirizzo',f.venue_address||'')+
    input('home_score','Gol casa',f.home_score??'','number','min="0" max="99"')+
@@ -575,8 +573,7 @@ function adminPayload(form,ctx){
     kickoff_at:parseKickoff(data.kickoff_at),home_team:home.name,
     away_team:away.name,
     ...clubFields(home,'home'),...clubFields(away,'away'),
-    venue_name:data.venue_name||null,venue_address:data.venue_address||null,
-    is_test:data.is_test==='true'
+    venue_name:data.venue_name||null,venue_address:data.venue_address||null
    }};
   }
   const d=cleaned(data,['venue_name','venue_address','status']);
@@ -1009,14 +1006,8 @@ export async function staffSubmit(e,ctx){
   if(!obj.table)throw Error('Modulo sconosciuto');
   if(obj.table==='new-fixture'){
    if(!(ctx.state.data?.competitions||[]).some(c=>c.id===obj.payload.competition_id))throw Error('Competizione non appartenente alla stagione');
-   const {competition_id,is_test,...row}=obj.payload;
-   if(is_test){
-    if(roleOf(ctx)!=='admin')throw Error('I match di test privati sono riservati agli amministratori');
-    if(!window.confirm('Creare un match di TEST privato? Sarà visibile solo al tuo account e non conterà in classifiche o statistiche.'))return true;
-    await pendingFn(form,()=>rpc('tm_app_create_test_fixture',{p_competition_id:competition_id,p_row:row}));
-    await ctx.reloadAll();ctx.toast('Match di test privato creato');return true;
-   }
-   if(!window.confirm('Inserire la nuova partita nel calendario?'))return true;
+   const {competition_id,...row}=obj.payload;
+   if(!window.confirm('Inserire la nuova partita nel calendario ufficiale? Per amichevoli/test privati usa + Nuovo direttamente dal Calendario.'))return true;
    const result=await pendingFn(form,()=>rpc('tm_app_import_fixtures',{p_competition_id:competition_id,p_rows:[row],p_dry_run:false}));
    if(result?.new!==1)throw Error('Partita già presente nel calendario');
    await ctx.reloadAll();ctx.toast('Nuova partita inserita');return true;
