@@ -22,7 +22,7 @@ test('overview includes starters and bench, individual events, not invented oppo
  assert.match(html,/L\. Verdi/);
  assert.match(html,/ov-pitch/);
  assert.match(html,/ov-bench/);
- assert.match(html,/ov-badge-goal/);
+ assert.match(html,/ov-icon-goal/);
  assert.match(html,/ov-assist/);
  assert.match(html,/ov-rating-above/);
  assert.match(html,/ov-rating-below/);
@@ -60,10 +60,10 @@ test('multiple goals and assists aggregate into right-side counters without dupl
  const field=html.slice(html.indexOf('class="visual-field'),html.indexOf('</div></div></div></div>')+24);
  assert.match(html,/ov-marker-side-left/);
  assert.match(html,/ov-marker-side-right/);
- assert.match(html,/ov-badge-goal[^"]*"[^>]*>[\s\S]*?ov-marker-count">2<\/small>/);
- assert.match(html,/ov-badge-assist[^"]*"[^>]*>[\s\S]*?ov-marker-count">2<\/small>/);
- assert.match(html,/ov-badge-yellow_card/);
- assert.match(html,/ov-badge-substitution/);
+ assert.match(html,/ov-icon-goal[^"]*"[^>]*>[\s\S]*?ov-marker-count">2<\/small>/);
+ assert.match(html,/ov-icon-assist[^"]*"[^>]*>[\s\S]*?ov-marker-count">2<\/small>/);
+ assert.match(html,/ov-icon-yellow_card/);
+ assert.match(html,/ov-icon-sub_out/);
  assert.match(html,/ov-marker-art/);
  assert.match(html,/Voto medio partita: 7.20/);
  assert.doesNotMatch(field,/class="ov-shirt"/);
@@ -76,7 +76,7 @@ test('rating colors differentiate excellent from exceptional and double sanction
  ],ratingMeans:[{player_id:'a',avg_rating:9.2,votes:5}]};
  const html=overviewLineup({formation:'4-4-2'},richer,people,season,competition);
  assert.match(html,/ov-rating-elite/);
- assert.match(html,/ov-badge-double_card/);
+ assert.match(html,/ov-icon-double_card/);
  assert.match(html,/ov-double-blue/);
 });
 
@@ -84,4 +84,18 @@ test('an explicit assist and a goal-linked assist at the same minute count once'
  const combined=[{event_type:'goal',player_id:'a',secondary_player_id:'b',minute:20,validation_status:'official'},
   {event_type:'assist',player_id:'b',minute:20,validation_status:'official'}];
  assert.equal(playerMatchEvents('b',combined,competition).filter(x=>x.kind==='assist').length,1);
+});
+
+test('pitch event icons are naked glyphs and substitutions preserve in/out direction',()=>{
+ const sample={...game,events:[
+  {event_type:'substitution',player_id:'a',secondary_player_id:'b',minute:60,validation_status:'official'},
+  {event_type:'yellow_card',player_id:'a',minute:30,validation_status:'official'},
+  {event_type:'goal',player_id:'a',minute:40,validation_status:'official'}
+ ]};
+ const html=overviewLineup({formation:'4-4-2'},sample,people,season,competition);
+ assert.match(html,/ov-icon-sub_out/);
+ assert.match(html,/ov-icon-sub_in/);
+ assert.match(html,/ov-card-yellow/);
+ assert.match(html,/ov-icon-goal/);
+ assert.doesNotMatch(html,/ov-marker-badge/);
 });
