@@ -122,6 +122,7 @@ function header(){
 }
 function liveScoreHeader(){
  const f=liveFixture();if(!f)return '';
+ if(state.page==='match'&&state.match===f.id)return '';
  return `<button type="button" class="global-live-score" data-match="${E(f.id)}" aria-label="Apri partita live: ${E(f.home_team)} ${E(f.home_score??0)} a ${E(f.away_score??0)} ${E(f.away_team)}">
   <span class="global-live-label"><i></i> LIVE</span>
   <span class="global-live-club global-live-home">${club(f.home_team,'tiny',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong></span>
@@ -450,7 +451,7 @@ function match(){
    '<div class="match-header-live-clock match-header-interval"><small>Intervallo</small></div>':
    '<div class="match-header-live-clock"><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+E(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+E(m.id)+'" data-blue-min="'+Number(comp?.discipline_rules?.blue_duration_minutes||0)+'" data-period-len="'+Number(rules?.minutes_per_period||0)+'" data-period-no="'+Math.max(1,Number(m.live_period_no||1))+'">00:00</strong>'+
    '<small data-staff-period-label data-base-label="'+E(livePeriodLabel)+'" data-recovery="'+E(liveRecovery)+'">'+E(livePeriodLabel)+'</small></div>'):'';
- const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
+ const compactHeader='<div class="match-compact-bar glass'+(matchIsLive?' is-live':'')+'" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
   '<div class="match-compact-center"><b class="match-compact-score">'+headerScore+'</b>'+headerTimer+'</div>'+
