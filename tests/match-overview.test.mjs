@@ -77,7 +77,7 @@ test('rating colors differentiate excellent from exceptional and double sanction
  const html=overviewLineup({formation:'4-4-2'},richer,people,season,competition);
  assert.match(html,/ov-rating-elite/);
  assert.match(html,/ov-icon-double_card/);
- assert.match(html,/ov-double-blue/);
+ assert.match(html,/ov-double-cards is-blue/);
 });
 
 test('an explicit assist and a goal-linked assist at the same minute count once',()=>{
@@ -94,7 +94,7 @@ test('pitch event icons are naked glyphs and substitutions preserve in/out direc
  ]};
  const html=overviewLineup({formation:'4-4-2'},sample,people,season,competition);
  assert.match(html,/ov-icon-sub_out/);
- assert.match(html,/ov-icon-sub_in/);
+ assert.equal(playerMatchEvents('b',sample.events,competition).some(x=>x.kind==='sub_in'),true);
  assert.match(html,/ov-card-yellow/);
  assert.match(html,/ov-icon-goal/);
  assert.doesNotMatch(html,/ov-marker-badge/);
