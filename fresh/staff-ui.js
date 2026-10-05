@@ -561,11 +561,18 @@ function matchLive(ctx,m,competition){
  }).join('');
  let periodAction='',periodLabel='';
  if(staff){
+  const currentPeriod=Math.max(1,Number(m.live_period_no||1));
   if(m.status==='scheduled'){periodAction='start';periodLabel='Inizio periodo'}
-  else if(m.status==='live'&&m.live_clock_running){periodAction=m.is_test?'test-period-end':'pause';periodLabel='Fine periodo'}
-  else if(m.status==='live'){
-   if(m.is_test&&m.live_period==='halftime'){periodAction='test-period-next';periodLabel='Inizio periodo'}
+  else if(m.status==='live'&&m.live_clock_running){
+   if(m.is_test)periodAction='test-period-end';
+   else if(currentPeriod<rules.periods&&currentPeriod===1)periodAction='halftime';
+   else periodAction='pause';
+   periodLabel='Fine periodo';
+  }else if(m.status==='live'){
+   if(m.is_test&&m.live_period==='halftime'&&currentPeriod<rules.periods){periodAction='test-period-next';periodLabel='Inizio '+(currentPeriod+1)+'° tempo'}
+   else if(m.is_test&&currentPeriod>=rules.periods){periodAction='finish';periodLabel='Termina partita'}
    else if(!m.is_test&&m.live_period==='halftime'){periodAction='second_half';periodLabel='Inizio 2° tempo'}
+   else if(!m.is_test&&currentPeriod>=rules.periods){periodAction='finish';periodLabel='Termina partita'}
    else {periodAction='resume';periodLabel='Riprendi'}
   }
  }
