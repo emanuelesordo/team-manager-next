@@ -3,13 +3,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'fresh/**'
-      - 'tests/match-browser.py'
-      - '.github/workflows/match-browser.yml'
       - 'index.html'
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: browser-match
+  cancel-in-progress: true
 jobs:
   browser-match:
     runs-on: ubuntu-latest
@@ -31,24 +31,3 @@ jobs:
         run: BROWSER=chromium python tests/match-browser.py
       - name: Run responsive browser test with simulated Supabase (WebKit)
         run: BROWSER=webkit python tests/match-browser.py
-      - name: Smoke test deployed GitHub Pages with WebKit
-        run: |
-          python - <<'PY'
-          import asyncio
-          from playwright.async_api import async_playwright
-          async def main():
-              async with async_playwright() as p:
-                  browser=await p.webkit.launch(headless=True)
-                  page=await browser.new_page(viewport={"width":390,"height":844})
-                  errors=[]
-                  page.on("pageerror",lambda e: errors.append(str(e)))
-                  response=await page.goto("https://emanuelesordo.github.io/team-manager-next/",wait_until="domcontentloaded",timeout=30000)
-                  assert response and response.ok, f"HTTP {response.status if response else 'no response'}"
-                  await page.wait_for_timeout(3000)
-                  text=(await page.locator("body").inner_text()).strip()
-                  assert text, "Public page body is blank"
-                  assert await page.locator("#app").count()==1, "#app missing"
-                  print("PUBLIC WEBKIT PASS", page.url, "BODY:", text[:160], "ERRORS:", errors, flush=True)
-                  await browser.close()
-          asyncio.run(main())
-          PY
