@@ -47,10 +47,10 @@ export function reviewPanel({match,fixture,competition,events=[],players=[],edit
    '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(ev.id)+'" aria-label="Conferma evento">+'+E(Number(ev.support_count)||0)+'</button>'+
    '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(ev.id)+'" aria-label="Segnala errore">−'+E(Number(ev.dispute_count)||0)+'</button></div>':'';
   const canApprove=isPending&&editable&&ev.validation_status!=='disputed';
-  const actions=isPending&&editable?
+  const actions=editable?
    '<div class="staff-event-buttons">'+quick+
-   (canApprove?'<button type="button" class="staff-soft" data-staff-action="review-approve" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Ufficializza</button>':'<small>Evento contestato: rettifica i dati prima di riconfermare.</small>')+
-   (scoreApplied?'<small>Per scartare: rettificare prima il risultato</small>':'<button type="button" class="staff-danger" data-staff-action="review-reject" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Scarta</button>')+'</div>':'';
+   (isPending?(canApprove?'<button type="button" class="staff-soft" data-staff-action="review-approve" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Ufficializza</button>':'<small>Evento contestato: rettifica i dati prima di riconfermare.</small>'):'')+
+   (isPending?(scoreApplied?'<small>Per scartare: rettificare prima il risultato</small>':'<button type="button" class="staff-danger" data-staff-action="review-reject" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Scarta</button>'):'')+'</div>':'';
   const mergeInfo=Number(ev.payload?.merged_reports)>0?'<small class="event-merge-info">'+E(Number(ev.payload.merged_reports)+1)+' segnalazioni unificate'+(ev.payload?.merge_conflicts&&Object.keys(ev.payload.merge_conflicts).length?' · dati discordanti':'')+'</small>':'';
   const extra=editable?mergeInfo+'<button type="button" class="staff-soft" data-staff-action="review-edit" data-event-id="'+E(ev.id)+'">Rettifica</button><button type="button" class="staff-soft" data-staff-action="review-history" data-event-id="'+E(ev.id)+'">Storico</button>':mergeInfo;
   const stateClass=ev.validation_status==='official'?'event-official':ev.validation_status==='disputed'?'event-disputed':'event-pending';
