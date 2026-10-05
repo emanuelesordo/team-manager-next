@@ -32,3 +32,25 @@ test('score-counted event requires manual scoreboard review before rejection',()
  assert.match(html,/rettificare prima il risultato/);
  assert.doesNotMatch(html,/data-staff-action="review-reject" data-event-id="c"/);
 });
+
+test('pending events are faded, reactable and expose timing delay',()=>{
+ const html=reviewPanel({match:{...match,status:'live'},fixture,events:[{
+  id:'late',event_type:'goal',team_side:'team',minute:55,validation_status:'proposed',
+  timing_consistent:false,timing_delta_seconds:720,payload:{count_score:true,score_applied:false}
+ }]});
+ assert.match(html,/event-pending/);
+ assert.match(html,/data-event-reaction="1"/);
+ assert.match(html,/data-event-reaction="-1"/);
+ assert.match(html,/12 min dopo/);
+ assert.match(html,/Ufficializza/);
+});
+test('disputed event must be corrected before management confirmation',()=>{
+ const html=reviewPanel({match:{...match,status:'live'},fixture,events:[{
+  id:'bad',event_type:'yellow_card',team_side:'team',minute:null,validation_status:'disputed',
+  payload:{dispute_note:'Minuto errato'}
+ }]});
+ assert.match(html,/event-disputed/);
+ assert.match(html,/rettifica i dati prima di riconfermare/);
+ assert.doesNotMatch(html,/data-staff-action="review-approve" data-event-id="bad"/);
+ assert.match(html,/Timestamp salvato/);
+});
