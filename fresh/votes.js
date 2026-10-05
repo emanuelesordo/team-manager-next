@@ -71,7 +71,7 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e}){
     '</div>'+
     '<div class="vote-meta"><span data-vote-save-state>'+(personalValue!==null?'Il tuo voto '+e(String(personalValue).replace('.',',')):'Tocca la barra per votare')+'</span><span>Media '+e(averageText)+(stats.count?' · '+stats.count+' voti':'')+'</span></div>'+
    '</div>':
-   '<div class="vote-control is-disabled"><div class="vote-track" aria-hidden="true"><span class="vote-six-marker"><b>6</b></span>'+meanMarker+'</div><div class="vote-meta"><span>'+(unused?'Voto non applicabile':'Votazione non disponibile')+'</span><span>Media '+e(averageText)+(stats.count?' · '+stats.count+' voti':'')+'</span></div></div>';
+   '<div class="vote-control is-disabled"><div class="vote-track" aria-hidden="true"><span class="vote-six-marker"><b>6</b></span>'+meanMarker+'</div><div class="vote-meta"><span>'+(unused?'Voto non applicabile':'Votazione non disponibile')+'</span><span>Media '+e(averageText)+(stats.count?' · '+stats.count+' voti':'')+(stats.sv?' · '+stats.sv+' SV':'')+'</span></div></div>';
   return '<article class="vote-row'+(unused?' vote-row-unused':'')+'">'+
    '<div class="vote-identity"><span class="vote-avatar">'+e(((player.first_name||'?')[0]+(player.last_name||'?')[0]).toUpperCase())+'</span><div><strong>'+e(fullName)+'</strong><small>'+e(roleLabel(player,row))+' · '+groupLabel+'</small></div></div>'+
    control+'</article>';
