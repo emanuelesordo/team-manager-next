@@ -1094,3 +1094,34 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
  .match-detail-head .match-footer-venue{justify-content:flex-end;text-align:right}
  .match-detail-head .match-footer-item svg{width:12px;height:12px}
 }
+
+
+/* Live match: use the existing shrinking match header instead of the global live strip. */
+.match-compact-bar.is-live .match-compact-center{
+ display:grid;
+ justify-items:center;
+ align-items:center;
+ gap:2px;
+}
+.match-compact-bar.is-live .match-header-live-clock{
+ margin:0;
+ display:flex;
+ align-items:baseline;
+ justify-content:center;
+ gap:6px;
+}
+.match-compact-bar.is-live .match-header-live-clock strong{
+ font-size:clamp(12px,1.15vw,16px);
+ line-height:1;
+ font-variant-numeric:tabular-nums;
+}
+.match-compact-bar.is-live .match-header-live-clock small{
+ font-size:8px;
+ line-height:1;
+ white-space:nowrap;
+}
+@media(max-width:650px){
+ .match-compact-bar.is-live .match-header-live-clock{gap:4px}
+ .match-compact-bar.is-live .match-header-live-clock strong{font-size:11px}
+ .match-compact-bar.is-live .match-header-live-clock small{font-size:7px}
+}
