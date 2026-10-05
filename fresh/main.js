@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005viewport-sheet12';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005sync-close13';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
@@ -59,20 +59,24 @@ async function pollLive(){
   const updated=await get('app_competition_fixtures','select=*&season_id=eq.'+encodeURIComponent(currentSeason)+'&order=kickoff_at.asc&limit=1000');
   if(currentSeason!==state.season)return;
   const old=state.data?.fixtures||[];
-  const changed=updated.length!==old.length||updated.some((f,i)=>f.id!==old[i]?.id||f.status!==old[i]?.status||f.home_score!==old[i]?.home_score||f.away_score!==old[i]?.away_score);
+  let changed=updated.length!==old.length||updated.some((f,i)=>f.id!==old[i]?.id||f.status!==old[i]?.status||f.home_score!==old[i]?.home_score||f.away_score!==old[i]?.away_score);
   if(changed)state.data.fixtures=updated;
+
   if(state.page==='match'&&state.match){
-   const m=resolveMatch().operational;
-   if(m&&['live','finished'].includes(m.status)){
-    const changes=await loadMatchInfo(m.id);
-    const present=state.matchData||{};
-    const eventVersion=JSON.stringify(changes.events||[]);
-    const oldVersion=JSON.stringify(present.events||[]);
-    if(eventVersion!==oldVersion){
-     state.matchData=changes;
-     if(!changed&&!document.querySelector('.live-event-sheet'))render();
-     return
+   const operational=resolveMatch().operational;
+   if(operational?.id){
+    const matchRows=await get('app_matches','select=*&id=eq.'+encodeURIComponent(operational.id));
+    if(matchRows.length){
+     const freshMatch=matchRows[0],index=(state.data?.matches||[]).findIndex(x=>x.id===freshMatch.id);
+     const prior=index>=0?state.data.matches[index]:null;
+     const matchChanged=!prior||JSON.stringify(freshMatch)!==JSON.stringify(prior);
+     if(index>=0)state.data.matches[index]=freshMatch;else state.data.matches.push(freshMatch);
+     changed=changed||matchChanged;
     }
+    const changes=await loadMatchInfo(operational.id);
+    const present=state.matchData||{};
+    const infoChanged=JSON.stringify(changes)!==JSON.stringify(present);
+    if(infoChanged){state.matchData=changes;changed=true}
    }
   }
   if(changed&&!document.querySelector('.live-event-sheet'))render();
@@ -82,7 +86,7 @@ async function pollLive(){
 function manageLivePolling(){
  clearInterval(livePollTimer);livePollTimer=null;
  if(state.loading||!state.data||!state.season)return;
- if(!fixtures().some(f=>isLive(f)))return;
+ if(state.page!=='match'&&!fixtures().some(f=>isLive(f)))return;
  livePollTimer=setInterval(pollLive,30000);
 }
 function comps(){return [...(state.data?.competitions||[])].filter(c=>c?.phase_rules?.system_private_test!==true).sort((a,b)=>
