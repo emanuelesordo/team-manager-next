@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js?ratings=20261005compact6';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005prelive5min16';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005eventfix1';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
