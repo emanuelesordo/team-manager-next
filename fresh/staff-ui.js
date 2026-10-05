@@ -1280,7 +1280,12 @@ function tickClock(){
      .finally(()=>{syncBusy=false});
  }
 }
-export function startStaffClock(ctx){clockContext=ctx;if(clockInterval)return;clockInterval=setInterval(tickClock,1000);tickClock()}
+export function startStaffClock(ctx=null){
+ clockContext=ctx&&isStaff(ctx)?ctx:null;
+ if(clockInterval)return;
+ clockInterval=setInterval(tickClock,1000);
+ tickClock();
+}
 
 /* Riordino criteri di classifica: drag and drop desktop e frecce accessibili su touch. */
 function syncTieList(list){
