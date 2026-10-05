@@ -1,9 +1,5 @@
 name: Browser Match Center (mocked APIs)
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'index.html'
   workflow_dispatch:
 permissions:
   contents: read
