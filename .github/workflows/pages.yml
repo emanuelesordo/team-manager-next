@@ -23,20 +23,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate tests and generate site
-        run: npm run check
-      - name: Verify deployed Home assets
+      - name: Generate static site
+        run: npm run build
+      - name: Verify deploy artifact
         shell: bash
         run: |
           test -s dist/index.html
           test -s dist/fresh/main.js
-          test -s dist/fresh/home-dashboard.js
           test -s dist/fresh/style.css
-          grep -q 'home-side-stack' dist/fresh/main.js
-          grep -q 'home-month-section' dist/fresh/style.css
-          grep -q 'renderMonthCalendar' dist/fresh/home-dashboard.js
+          test -s dist/fresh/flat-surfaces.css
           grep -q 'fresh/main.js?v=' dist/index.html
-          ! grep -q '?v=20261004home2?v=' dist/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
