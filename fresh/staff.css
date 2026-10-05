@@ -745,3 +745,56 @@
  .lineup-minimal .lineup-row,.lineup-minimal .lineup-sort-head{grid-template-columns:12px 17px 19px minmax(0,1fr) 22px}
  .lineup-minimal .lineup-name strong{font-size:8.3px}
 }
+
+
+/* Mobile formazione: campo sopra, panchina sotto. */
+@media(max-width:760px){
+ .lineup-minimal .lineup-split{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  align-items:start;
+ }
+ .lineup-minimal .lineup-pitch-column{
+  width:100%;
+ }
+ .lineup-minimal .lineup-player-column{
+  position:relative;
+  overflow:visible;
+  min-height:0;
+  width:100%;
+ }
+ .lineup-minimal .lineup-sort-head{
+  position:relative;
+  top:auto;
+  z-index:1;
+  grid-template-columns:18px 28px 28px minmax(0,1fr) 32px;
+  gap:3px;
+  padding:3px 2px 5px;
+ }
+ .lineup-minimal .lineup-rows{
+  position:relative;
+  top:auto;
+  right:auto;
+  bottom:auto;
+  left:auto;
+  max-height:none;
+  overflow:visible;
+ }
+ .lineup-minimal .lineup-row{
+  grid-template-columns:18px 28px 28px minmax(0,1fr) 32px;
+  gap:3px;
+  min-height:35px;
+  padding:3px 2px;
+ }
+ .lineup-minimal .lineup-name strong{
+  font-size:10px;
+  line-height:1.08;
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+ }
+ .lineup-minimal .lineup-role,.lineup-minimal .lineup-rating{font-size:8.5px}
+ .lineup-minimal button.lineup-list-number{font-size:10px}
+ .lineup-minimal .lineup-bench,.lineup-minimal .lineup-bench-svg{width:14px;height:14px}
+}
