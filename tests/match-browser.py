@@ -102,7 +102,12 @@ async def test_view(browser, width, height):
 
 async def main():
  async with async_playwright() as pw:
-  browser=await pw.chromium.launch(headless=True,args=["--no-sandbox"])
+  engine=os.environ.get("BROWSER","chromium").strip().lower()
+  browser_type=getattr(pw,engine)
+  launch_args={"headless":True}
+  if engine=="chromium":
+   launch_args["args"]=["--no-sandbox"]
+  browser=await browser_type.launch(**launch_args)
   try:
    await test_view(browser,1440,900)
    await test_view(browser,390,844)
