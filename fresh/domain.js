@@ -8,7 +8,7 @@ export const isOurs=(teamId,team)=>Boolean(team?.id&&teamId===team.id);
 export const involvesTeam=(f,team)=>Boolean(team?.id&&(f?.home_team_id===team.id||f?.away_team_id===team.id));
 export function summary(fixtures,team){
  const result={played:0,wins:0,draws:0,losses:0,gf:0,ga:0,form:[]};
- for(const f of [...fixtures].filter(f=>involvesTeam(f,team)&&isFinished(f)&&hasScore(f)).sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))){
+ for(const f of [...fixtures].filter(f=>!f.is_test&&involvesTeam(f,team)&&isFinished(f)&&hasScore(f)).sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))){
    const home=f.home_team_id===team.id,goals=home?f.home_score:f.away_score,against=home?f.away_score:f.home_score;
    const value=goals>against?'V':goals<against?'S':'P'; result.played++;result.gf+=goals;result.ga+=against;
    if(value==='V')result.wins++;else if(value==='S')result.losses++;else result.draws++;
@@ -25,7 +25,7 @@ const rowId=r=>r.team_id?'team:'+r.team_id:r.opponent_id?'opponent:'+r.opponent_
 const gameId=(f,side)=>f[side+'_team_id']?'team:'+f[side+'_team_id']:f[side+'_opponent_id']?'opponent:'+f[side+'_opponent_id']:null;
 export function rankRows(rows,comp=null,fixtures=[]){
  const criteria=tieBreakOrder(comp);
- const played=fixtures.filter(f=>f.competition_id===comp?.id&&f.status==='finished'&&Number.isInteger(f.home_score)&&Number.isInteger(f.away_score));
+ const played=fixtures.filter(f=>!f.is_test&&f.competition_id===comp?.id&&f.status==='finished'&&Number.isInteger(f.home_score)&&Number.isInteger(f.away_score));
  const mini=(tied)=>{
   const keys=new Set(tied.map(rowId)),out=new Map([...keys].map(id=>[id,{pt:0,gd:0,gf:0,gs:0,games:0}]));
   for(const f of played){const home=gameId(f,'home'),away=gameId(f,'away');if(!keys.has(home)||!keys.has(away))continue;
