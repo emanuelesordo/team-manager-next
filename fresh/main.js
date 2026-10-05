@@ -409,7 +409,7 @@ function match(){
  const staffAccess=isStaff(staffContext());
  const matchIsLive=m?.status==='live'||f.status==='live';
  const kickoffMs=Date.parse(f.kickoff_at||'');
- const liveEntryOpen=matchIsLive||(m?.status==='scheduled'&&Number.isFinite(kickoffMs)&&Date.now()>=kickoffMs);
+ const liveEntryOpen=matchIsLive||(m?.status==='scheduled'&&Number.isFinite(kickoffMs)&&Date.now()>=kickoffMs-5*60000);
  const canLiveContribute=Boolean(state.identity?.user)&&!extraMatch&&Boolean(m)&&liveEntryOpen;
  const tabs=extraMatch?[['info','Info'],['overview','Overview'] ]:[['info','Info'],...(staffAccess?[['callups','Disponibilità']]:[]),['ratings','Voti'],...(canLiveContribute?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[])];
  const requestedTab=state.matchTab==='summary'?'overview':state.matchTab;
