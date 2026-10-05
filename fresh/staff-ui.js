@@ -7,7 +7,7 @@ import {pitchMarkup,formationModules} from './lineup-pitch.js?callups=20261004mo
 import {availabilityDefault,normalizedReason,unavailabilityReasons} from './availability.js';
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
-import {reviewPanel} from './postmatch-review.js';
+import {reviewPanel} from './postmatch-review.js?live=20261005merge2';
 import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute} from './match-minutes.js';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 
