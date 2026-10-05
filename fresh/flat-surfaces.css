@@ -251,19 +251,19 @@
 .ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 5px)}
 .ov-shared-field .field-slot .ov-marker-icon{
   position:relative;display:inline-flex;align-items:center;justify-content:center;
-  flex:0 0 auto;width:20px;height:20px;padding:0;
+  flex:0 0 auto;width:18px;height:18px;padding:0;
   border:0;border-radius:0;background:none;box-shadow:none;
   color:inherit;white-space:nowrap;text-shadow:none;
 }
 .ov-shared-field .field-slot .ov-event-svg{
-  display:block;width:20px;height:20px;overflow:visible;
+  display:block;width:18px;height:18px;overflow:visible;
   filter:drop-shadow(0 1px 1px #0007);
 }
-.ov-shared-field .field-slot .ov-event-ball{width:21px;height:21px}
-.ov-shared-field .field-slot .ov-event-card{width:15px;height:20px}
-.ov-shared-field .field-slot .ov-event-double-card{width:20px;height:21px}
-.ov-shared-field .field-slot .ov-event-assist{width:21px;height:19px}
-.ov-shared-field .field-slot .ov-event-sub{width:21px;height:21px}
+.ov-shared-field .field-slot .ov-event-ball{width:16px;height:16px}
+.ov-shared-field .field-slot .ov-event-card{width:13px;height:18px}
+.ov-shared-field .field-slot .ov-event-double-card{width:17px;height:18px}
+.ov-shared-field .field-slot .ov-event-assist{width:18px;height:16px}
+.ov-shared-field .field-slot .ov-event-sub{width:18px;height:18px}
 .ov-shared-field .field-slot .ov-event-return{width:18px;height:18px}
 .ov-shared-field .field-slot .ov-marker-count{
   position:absolute;top:-5px;right:-7px;
