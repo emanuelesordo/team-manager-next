@@ -708,7 +708,7 @@ export async function staffClick(e,button,ctx){
    if(!m)throw Error('Tabellino non disponibile');
    const eventId=button.dataset.eventId,expected=button.dataset.eventStatus;
    const decision=action==='review-approve'?'approve':'reject';
-   const question=decision==='approve'?'Confermare questo evento come ufficiale? Il risultato non verrà modificato.':'Scartare logicamente questo evento? Resterà consultabile nello storico e il risultato non cambierà.';
+   const question=decision==='approve'?'Confermare questo evento come ufficiale? Se è un gol valido entrerà nel risultato ufficiale.':'Scartare logicamente questo evento? Resterà consultabile nello storico.';
    if(!window.confirm(question))return true;
    await rpc('tm_app_review_event',{p_match_id:m.id,p_event_id:eventId,p_decision:decision,p_expected_status:expected});
    await reloadMatch(ctx);ctx.toast(decision==='approve'?'Evento ufficializzato':'Evento scartato senza eliminazione');return true;
