@@ -12,23 +12,37 @@ async function adminContext(){
 }
 
 function installButton(ctx){
- if(document.body.dataset.page!=='calendar')return;
+ if(document.body.dataset.page!=='calendar')return false;
  const toolbar=q('.calendar-toolbar')||q('.filters');
- if(!toolbar)return;
- toolbar.querySelector('.segmented')?.remove();
+ if(!toolbar)return false;
+ let changed=false;
+
+ const segmented=toolbar.querySelector('.segmented');
+ if(segmented){segmented.remove();changed=true}
+
  const select=toolbar.querySelector('[data-comp-select]');
  if(select){
   select.classList.add('calendar-comp-filter');
-  toolbar.prepend(select);
+  // Do not reinsert an element that is already in the correct place:
+  // MutationObserver would otherwise trigger itself forever.
+  if(select.parentElement!==toolbar){
+   toolbar.prepend(select);changed=true;
+  }else if(toolbar.firstElementChild!==select){
+   toolbar.insertBefore(select,toolbar.firstElementChild);changed=true;
+  }
  }
- if(toolbar.querySelector('[data-calendar-private-fallback]'))return;
- const button=document.createElement('button');
- button.type='button';
- button.className='roster-add calendar-new';
- button.dataset.calendarPrivateFallback='1';
- button.textContent='+ Nuovo';
- button.addEventListener('click',()=>openModal(ctx));
- toolbar.append(button);
+
+ if(!toolbar.querySelector('[data-calendar-private-fallback]')){
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='roster-add calendar-new';
+  button.dataset.calendarPrivateFallback='1';
+  button.textContent='+ Nuovo';
+  button.addEventListener('click',()=>openModal(ctx));
+  toolbar.append(button);
+  changed=true;
+ }
+ return changed;
 }
 
 async function openModal(ctx){
@@ -82,8 +96,16 @@ async function openModal(ctx){
 async function init(){
  const ctx=await adminContext();
  if(!ctx)return;
- const apply=()=>installButton(ctx);
- apply();
+ let queued=false;
+ const apply=()=>{
+  if(queued)return;
+  queued=true;
+  requestAnimationFrame(()=>{
+   queued=false;
+   installButton(ctx);
+  });
+ };
+ installButton(ctx);
  const observer=new MutationObserver(apply);
  observer.observe(document.getElementById('app')||document.body,{subtree:true,childList:true});
 }
