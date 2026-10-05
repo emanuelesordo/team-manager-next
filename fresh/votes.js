@@ -103,9 +103,10 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
   }).join(''):'<span class="vote-events-empty">—</span>';
   const displayValue=personalValue!==null?String(personalValue).replace('.',','):'';
   const values=Array.from({length:19},(_,i)=>1+i*.5);
+  const focusValue=personalValue!==null?personalValue:6;
   const picker=values.map(value=>{
    const label=String(value).replace('.',',');
-   return '<button type="button" class="vote-picker-option'+(personalValue===value?' active':'')+'" data-vote-pick data-vote-player="'+e(id)+'" data-vote-value="'+e(value)+'" aria-pressed="'+(personalValue===value)+'">'+e(label)+'</button>';
+   return '<button type="button" class="vote-picker-option'+(personalValue===value?' active':'')+'" data-vote-pick data-vote-player="'+e(id)+'" data-vote-value="'+e(value)+'" data-vote-focus="'+(value===focusValue?'true':'false')+'" aria-pressed="'+(personalValue===value)+'">'+e(label)+'</button>';
   }).join('');
   const control=canVote?
    '<div class="vote-control'+stateClass+'" data-vote-control>'+
