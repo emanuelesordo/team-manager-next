@@ -510,7 +510,11 @@ function liveDraftSheet(ctx,m,rules,field,bench){
  }
  const type=d.type||'goal',side=d.side||'team',selected=d.playerId||'';
  const minute=d.minute==null?'':d.minute,stoppage=Number(d.stoppage||0);
- const allPlayers=[...field,...bench].filter((x,i,a)=>x?.player_id&&a.findIndex(y=>y.player_id===x.player_id)===i);
+ const matchPlayers=(ctx.state.matchData?.players||[])
+  .filter(row=>row.player_id&&row.selection_status!=='absent')
+  .map(row=>({...row,person:people.find(p=>p.id===row.player_id)}))
+  .filter(x=>x.person);
+ const allPlayers=[...field,...bench,...matchPlayers].filter((x,i,a)=>x?.player_id&&a.findIndex(y=>y.player_id===x.player_id)===i);
  const fieldOptions=[['','Seleziona giocatore'],...field.map(x=>[x.player_id,playerText(x.person)])];
  const cardOptions=[['','Seleziona giocatore'],...allPlayers.map(x=>[x.player_id,playerText(x.person)])];
  const benchOptions=[['','Seleziona giocatore'],...bench.map(x=>[x.player_id,playerText(x.person)])];
