@@ -254,7 +254,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
- const tracked=ordered.map(e=>{const counts=!['rejected','disputed'].includes(e.validation_status)&&e.payload?.count_score!==false;if(counts&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:counts&&goal(e)?(e.validation_status==='official'&&snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
+ const tracked=ordered.map(e=>{const counts=!['rejected','disputed'].includes(e.validation_status)&&e.payload?.count_score!==false;if(counts&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:counts&&goal(e)?(snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
  const heading=label=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
  const cards=e=>{
   const t=type(e),shirt=String(e.payload?.opponent_shirt_number||'');
@@ -274,7 +274,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return '<span class="mt-card-stack" aria-label="Cartellino">'+colors.map(c=>'<i class="mt-card-'+c+'"></i>').join('')+'</span>';
  };
  const icon=e=>{const t=type(e);if(goal(e))return '';if(['yellow_card','red_card','blue_card','second_yellow'].includes(t))return cards(e);if(['substitution','sub_out','sub_in'].includes(t))return '<span class="mt-change" aria-label="Sostituzione"><span class="mt-sub-in">→</span><span class="mt-sub-out">←</span></span>';if(t==='blue_return')return '<span class="mt-generic">↩</span>';return '<span class="mt-generic">◆</span>'};
- const eventState=e=>e.validation_status==='official'?'official':e.validation_status==='disputed'?'disputed':'pending';
+ const eventState=e=>!e.validation_status||e.validation_status==='official'?'official':e.validation_status==='disputed'?'disputed':'pending';
  const timingInfo=e=>{
   if(e.minute==null)return '<small class="mt-event-meta">Evento passato · timestamp salvato, minuto da completare</small>';
   if(e.payload?.minute_provisional===true)return '<small class="mt-event-meta timing-provisional">Minuto provvisorio stimato dall’orario di inizio</small>';
