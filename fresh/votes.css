@@ -42,22 +42,46 @@
 .vote-control.is-active .vote-bubble{opacity:1}
 .vote-save-state{font-size:7px;color:var(--muted);line-height:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vote-control.is-disabled .vote-track{position:relative;top:auto;transform:none;height:6px;filter:saturate(.35);opacity:.45;margin-top:10px}
-.vote-average-label{display:grid;place-items:center;gap:0;width:44px;min-height:34px;padding:4px 3px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted)}
-.vote-average-label b{font-size:12px;line-height:1}.vote-average-label small{font-size:6px;letter-spacing:.05em}.vote-average-label.has-average{color:var(--ink)}
 .vote-notice{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:9px;color:var(--muted)}
 @media(min-width:1380px){
  .vote-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
  .vote-row{grid-template-columns:40px 58px minmax(100px,.8fr) minmax(72px,.55fr) minmax(130px,1.2fr) 45px;gap:5px;padding:6px}
 }
 @media(max-width:900px){
- .vote-scroll{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:4px}
- .vote-list{min-width:610px}
- .vote-row{grid-template-columns:42px 62px 118px 90px minmax(170px,1fr) 46px}
+ .vote-scroll{overflow:visible;padding-bottom:0}
+ .vote-list{min-width:0;width:100%}
+ .vote-row{grid-template-columns:32px 42px minmax(74px,.85fr) minmax(58px,.62fr) minmax(92px,1.25fr) 38px;gap:3px;padding:5px 3px}
+ .vote-shirt{width:29px;height:31px}.vote-shirt svg{width:28px;height:31px}.vote-shirt>b{font-size:7px}
+ .vote-flow-cell{gap:1px 2px}.vote-flow{font-size:6.5px;gap:1px}
+ .vote-name-cell strong{font-size:9px}.vote-name-cell small{font-size:6.5px}
+ .vote-events-cell{gap:2px}.vote-event-item{gap:1px}.vote-event-item small{font-size:6px}
+ .vote-event{min-width:11px;height:11px;font-size:8px}.vote-event-card{width:6px;height:9px}.vote-event-double{width:10px;height:10px}
+ .vote-event-double i,.vote-event-double b{width:6px;height:9px}
+ .vote-scale{height:23px}.vote-range{height:23px}.vote-track{height:6px}
+ .vote-range::-webkit-slider-runnable-track{height:6px}.vote-range::-moz-range-track{height:6px}
+ .vote-range::-webkit-slider-thumb{width:16px;height:16px;margin-top:-5px;border-width:3px}
+ .vote-range::-moz-range-thumb{width:10px;height:10px;border-width:3px}
+ .vote-six-marker{top:-7px}.vote-save-state{font-size:6px}
+ .vote-average-cell .ov-rating{font-size:8px;padding:2px 4px;min-width:32px}
 }
 @media(max-width:650px){
- .votes-intro{align-items:flex-start;margin-bottom:9px}.votes-intro h3{font-size:15px}.votes-intro p{font-size:9px}.votes-pill{font-size:8px}
- .vote-row{padding:6px 7px;gap:6px}
- .vote-name-cell strong{font-size:10px}.vote-name-cell small{font-size:7px}
- .vote-scale{height:26px}.vote-range{height:26px}
- .vote-notice{flex-wrap:wrap}
+ .votes-intro{align-items:flex-start;margin-bottom:7px;gap:7px}.votes-intro h3{font-size:14px}.votes-intro p{font-size:8px}.votes-pill{font-size:7px;padding:5px 7px}
+ .vote-row{grid-template-columns:28px 37px minmax(66px,.8fr) minmax(50px,.55fr) minmax(84px,1.18fr) 34px;gap:2px;padding:4px 2px;border-radius:7px}
+ .vote-shirt{width:26px;height:28px}.vote-shirt svg{width:25px;height:28px}.vote-shirt>b{font-size:6.5px}
+ .vote-name-cell strong{font-size:8.5px}.vote-name-cell small{font-size:6px}
+ .vote-flow{font-size:6px}
+ .vote-events-cell{gap:1px}
+ .vote-event-item small{display:none}
+ .vote-scale{height:21px}.vote-range{height:21px}.vote-track{height:5px;border-width:1px}
+ .vote-bubble{min-width:20px;font-size:7px;padding:2px 3px}
+ .vote-save-state{font-size:5.5px}
+ .vote-average-cell .ov-rating{font-size:7.5px;padding:2px 3px;min-width:30px}
+ .vote-notice{flex-wrap:wrap;padding:8px;font-size:8px}
 }
+@media(max-width:380px){
+ .vote-row{grid-template-columns:25px 34px minmax(60px,.78fr) 44px minmax(76px,1.12fr) 31px;gap:1px}
+ .vote-events-cell .vote-event-item:nth-child(n+4){display:none}
+}
+
+.vote-average-cell{display:flex;align-items:center;justify-content:flex-end;min-width:0}
+.vote-average-cell .ov-rating{margin:0;min-width:36px;text-align:center}
