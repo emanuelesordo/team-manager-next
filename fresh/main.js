@@ -717,7 +717,8 @@ document.addEventListener('change',e=>{
  if(e.target.matches('[data-comp-select]')){state.comp=e.target.value||null;render()}
 });
 document.addEventListener('pointerdown',e=>{
- const form=e.target.closest?.('form[data-staff-form="event"]');
+ const submit=e.target.closest?.('form[data-staff-form="event"] [type="submit"]');
+ const form=submit?.closest?.('form[data-staff-form="event"]');
  const captured=form?.querySelector?.('input[name="captured_at"]');
  if(captured&&!captured.value)captured.value=new Date().toISOString();
 },{capture:true,passive:true});
@@ -796,6 +797,10 @@ document.addEventListener('tm-callup-change',e=>{
  }).catch(()=>{});
 });
 document.addEventListener('submit',async e=>{
+ if(e.target.matches('form[data-staff-form="event"]')){
+  const captured=e.target.querySelector('input[name="captured_at"]');
+  if(captured&&!captured.value)captured.value=new Date().toISOString();
+ }
  if(e.target.matches('[data-extra-event-form]')){
   e.preventDefault();if(state.identity?.role?.role!=='admin'||!state.scoreEditing)return;
   const f=resolveMatch().fixture;if(!f||involvesTeam(f,team()))return;
