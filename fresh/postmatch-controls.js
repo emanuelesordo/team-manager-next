@@ -1,4 +1,4 @@
-import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
+import {cumulativeEventMinute,displayEventMinute,periodRelativeMinute} from './match-minutes.js';
 const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const opts=(a,v)=>a.map(([k,n])=>'<option value="'+E(k)+'"'+(k===v?' selected':'')+'>'+E(n)+'</option>').join('');
 const types=['goal','own_goal','penalty_scored','penalty_missed','assist','substitution','yellow_card','blue_card','blue_return','red_card','period_end','other'].map(x=>[x,x]);
@@ -14,7 +14,7 @@ export function amendEventForm(ev,players=[],competition=null){
  '<div class="staff-form-grid">'+
  sel('event_type','Tipo evento',types,ev.event_type)+sel('team_side','Squadra',[['team','Nostra'],['opponent','Avversaria']],ev.team_side)+
  sel('player_id','Giocatore / uscente',people,ev.player_id||'')+sel('secondary_player_id','Assist / entrante',people,ev.secondary_player_id||'')+
- inp('minute','Minuto cumulativo',cumulativeEventMinute(ev,competition)??'','number','min="0" max="300" placeholder="Sconosciuto"')+
+ inp('minute','Minuto del periodo',periodRelativeMinute(cumulativeEventMinute(ev,competition),ev.payload?.period||'first_half',competition)??'','number','min="0" max="300" placeholder="Sconosciuto"')+
  inp('stoppage_minute','Recupero',ev.stoppage_minute??'','number','min="0" max="30"')+
  sel('substitution_reason','Motivo sostituzione',reasons,ev.substitution_reason||'')+
  inp('notes','Note',ev.payload?.notes||'','text','maxlength="400"')+
