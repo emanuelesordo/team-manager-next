@@ -513,19 +513,24 @@ function liveDraftSheet(ctx,m,rules,field,bench){
  const fieldOptions=[['','Seleziona giocatore'],...field.map(x=>[x.player_id,playerText(x.person)])];
  const benchOptions=[['','Seleziona giocatore'],...bench.map(x=>[x.player_id,playerText(x.person)])];
  const assistOptions=[['','Nessun assist / da indicare'],...field.filter(x=>x.player_id!==selected).map(x=>[x.player_id,playerText(x.person)])];
- const labels={goal:'Gol',yellow_card:'Cartellino',substitution:'Cambio',red_card:'Espulsione'};
- const icons={goal:'⚽',yellow_card:'▮',substitution:'↔',red_card:'▮'};
+ const labels={goal:'Gol',yellow_card:'Cartellino giallo',blue_card:'Cartellino blu',red_card:'Cartellino rosso',substitution:'Cambio'};
+ const icons={goal:'⚽',yellow_card:'▮',blue_card:'▮',red_card:'▮',substitution:'↔'};
  const playerLabel=type==='substitution'?'Giocatore esce':type==='goal'?'Marcatore':'Giocatore';
  const secondary=type==='goal'?picker('secondary_player_id','Assist',assistOptions,''):
   type==='substitution'?picker('secondary_player_id','Giocatore entra',benchOptions,''):'';
  const reason=type==='substitution'?picker('substitution_reason','Motivo cambio',
   [['','Nessun motivo'],['tactical','Scelta tattica'],['injury','Infortunio'],['technical','Scelta tecnica'],['injury_prevention','Prevenzione infortunio'],['disciplinary_prevention','Prevenzione disciplinare'],['other','Altro']],''):'';
  const playerField=side==='team'?picker('player_id',playerLabel,fieldOptions,selected):'';
- const cardExtra=type==='yellow_card'?'<button type="button" class="live-type-mini" data-staff-action="live-event-switch" data-live-event="red_card" title="Passa a rosso">🟥 Rosso</button>':'';
+ const cardExtra=['yellow_card','blue_card','red_card'].includes(type)?
+  '<div class="live-card-picker" role="group" aria-label="Tipo cartellino">'+
+   [['yellow_card','Giallo','yellow'],['blue_card','Blu','blue'],['red_card','Rosso','red']].map(([k,label,color])=>
+    '<button type="button" class="live-card-choice '+color+(type===k?' active':'')+'" data-staff-action="live-event-switch" data-live-event="'+k+'" aria-pressed="'+(type===k)+'"><i></i><span>'+label+'</span></button>'
+   ).join('')+
+  '</div>':'';
  return '<div class="live-sheet-backdrop" data-staff-action="live-close"><section class="live-event-sheet" role="dialog" aria-modal="true" aria-label="Aggiungi evento">'+
   '<div class="live-sheet-handle"></div><div class="live-sheet-head"><div><small>AGGIUNGI EVENTO</small><h3>'+esc(labels[type]||'Evento')+'</h3></div><button type="button" data-staff-action="live-close" aria-label="Chiudi">×</button></div>'+
   '<div class="live-type-strip">'+
-   [['substitution','↔'],['goal','⚽'],['yellow_card','▮']].map(([k,i])=>'<button type="button" class="'+(type===k?'active':'')+'" data-staff-action="live-event-switch" data-live-event="'+k+'" aria-label="'+esc(labels[k])+'">'+i+'</button>').join('')+
+   [['substitution','↔'],['goal','⚽'],['yellow_card','▮']].map(([k,i])=>'<button type="button" class="'+((k==='yellow_card'&&['yellow_card','blue_card','red_card'].includes(type))||type===k?'active':'')+'" data-staff-action="live-event-switch" data-live-event="'+k+'" aria-label="'+esc(k==='yellow_card'?'Cartellino':labels[k])+'">'+i+'</button>').join('')+
    '</div>'+
   '<form data-staff-form="event" class="staff-form live-sheet-form">'+
    '<input type="hidden" name="event_type" value="'+esc(type)+'"><input type="hidden" name="captured_at" value="'+esc(d.capturedAt||new Date().toISOString())+'">'+
