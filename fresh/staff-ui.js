@@ -749,9 +749,11 @@ export async function staffClick(e,button,ctx){
    const kickoff=Date.parse(ctx.resolveMatch().fixture?.kickoff_at||'');
    if((Date.now()-kickoff< -30*60000||Date.now()-kickoff>4*3600000)&&!payload.force_start)return true;
   }
-  const map={halftime:'period',second_half:'period',extra:'period',penalties:'period',void:'void_event',approve:'approve_event'};
+  const map={void:'void_event',approve:'approve_event'};
   if(action==='sync-blue'){const count=await rpc('tm_app_sync_blue',{p_match_id:m.id});await reloadMatch(ctx);ctx.toast(count>0?count+' rientri blu registrati':'Nessun rientro necessario');return true;}
-  await rpc('tm_app_match_action',{p_match_id:m.id,p_action:map[action]||action,p_payload:payload});
+  if(['halftime','second_half','extra','penalties'].includes(action))
+   await rpc('tm_app_set_period_v2',{p_match_id:m.id,p_period:action});
+  else await rpc('tm_app_match_action',{p_match_id:m.id,p_action:map[action]||action,p_payload:payload});
   await reloadMatch(ctx);ctx.toast('Operazione registrata');
   return true;
  }catch(err){ctx.toast('Errore: '+(err.message||err));return true}
