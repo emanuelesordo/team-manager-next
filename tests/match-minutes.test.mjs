@@ -27,21 +27,21 @@ test('live entry uses period-relative minute but stores cumulative minute exactl
  assert.throws(()=>cumulativeMinuteFromPeriod(16,'second_half',null),/Durata/);
 });
 
-test('editing displays cumulative minute but saves unchanged legacy storage convention',()=>{
+test('editing accepts period-relative minute and saves unchanged legacy storage convention',()=>{
  assert.equal(storedEventMinute(legacy,68,competition),28);
  assert.equal(storedEventMinute(live,68,competition),68);
  assert.equal(storedEventMinute(legacy,null,competition),null);
  assert.throws(()=>storedEventMinute(legacy,25,competition),/secondo tempo/);
  assert.throws(()=>storedEventMinute(legacy,68,null),/Durata/);
 });
-test('review, editor and revision history show 68 and not raw 28 minutes',()=>{
+test('review and history show cumulative minute while editor uses period-relative minute',()=>{
  const match={id:'m',home_away:'home',status:'finished'};
  const fixture={status:'finished',home_score:0,away_score:1};
  const review=reviewPanel({match,fixture,competition,events:[legacy]});
  assert.match(review,/68′/);
  assert.doesNotMatch(review,/28′/);
  const edit=amendEventForm(legacy,[],competition);
- assert.match(edit,/name="minute"[^>]*value="68"/);
+ assert.match(edit,/name="minute"[^>]*value="28"/);
  const history=revisionHistory([{reason:'Test',created_at:'2026-09-30T20:00:00Z',previous_record:legacy,next_record:{...legacy,minute:29}}],competition);
  assert.match(history,/68′/);assert.match(history,/69′/);
 });
