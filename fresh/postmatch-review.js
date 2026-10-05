@@ -44,8 +44,8 @@ export function reviewPanel({match,fixture,competition,events=[],players=[],edit
     'Inserito '+Math.max(1,Math.round(Math.abs(Number(ev.timing_delta_seconds))/60))+' min '+(Number(ev.timing_delta_seconds)>0?'dopo':'prima')+' rispetto al minutaggio · verifica richiesta':
     ev.timing_consistent===true?'Timestamp coerente (±5 min)':'';
   const quick=isPending&&editable?'<div class="event-review-votes">'+
-   '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(ev.id)+'" aria-label="Conferma evento">+</button>'+
-   '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(ev.id)+'" aria-label="Segnala errore">−</button></div>':'';
+   '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(ev.id)+'" aria-label="Conferma evento">+'+E(Number(ev.support_count)||0)+'</button>'+
+   '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(ev.id)+'" aria-label="Segnala errore">−'+E(Number(ev.dispute_count)||0)+'</button></div>':'';
   const canApprove=isPending&&editable&&ev.validation_status!=='disputed';
   const actions=isPending&&editable?
    '<div class="staff-event-buttons">'+quick+
