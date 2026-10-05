@@ -14,7 +14,7 @@ export function amendEventForm(ev,players=[],competition=null){
  '<div class="staff-form-grid">'+
  sel('event_type','Tipo evento',types,ev.event_type)+sel('team_side','Squadra',[['team','Nostra'],['opponent','Avversaria']],ev.team_side)+
  sel('player_id','Giocatore / uscente',people,ev.player_id||'')+sel('secondary_player_id','Assist / entrante',people,ev.secondary_player_id||'')+
- inp('minute','Minuto del periodo',periodRelativeMinute(cumulativeEventMinute(ev,competition),ev.payload?.period||'first_half',competition)??'','number','min="0" max="300" placeholder="Sconosciuto"')+
+ inp('minute','Minuto del periodo',periodRelativeMinute(cumulativeEventMinute(ev,competition),ev.payload?.period_no||ev.payload?.period||'first_half',competition)??'','number','min="0" max="300" placeholder="Sconosciuto"')+
  inp('stoppage_minute','Recupero',ev.stoppage_minute??'','number','min="0" max="30"')+
  sel('substitution_reason','Motivo sostituzione',reasons,ev.substitution_reason||'')+
  inp('notes','Note',ev.payload?.notes||'','text','maxlength="400"')+
