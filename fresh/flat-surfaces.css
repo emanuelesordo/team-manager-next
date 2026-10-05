@@ -373,7 +373,6 @@
 .global-live-result{
   white-space:nowrap;font-size:24px;line-height:1;font-variant-numeric:tabular-nums;
 }
-body[data-live="true"] .match-compact-bar{display:none}
 @media(max-width:760px){
   .global-live-score{
     top:70px;
