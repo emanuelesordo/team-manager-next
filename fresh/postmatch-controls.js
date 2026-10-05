@@ -19,7 +19,7 @@ export function amendEventForm(ev,players=[],competition=null){
  sel('substitution_reason','Motivo sostituzione',reasons,ev.substitution_reason||'')+
  inp('notes','Note',ev.payload?.notes||'','text','maxlength="400"')+
  inp('reason','Motivo rettifica','','text','required minlength="5" maxlength="500"')+
- '</div><div class="staff-event-buttons"><button class="staff-submit" type="submit">Salva rettifica</button><button class="staff-soft" type="button" data-staff-action="review-cancel-edit">Annulla</button></div></form>';
+ '</div><div class="staff-event-buttons"><button class="staff-submit" type="submit">Salva rettifica</button><button class="staff-danger" type="button" data-staff-action="review-void" data-event-id="'+E(ev.id)+'">Annulla evento</button><button class="staff-soft" type="button" data-staff-action="review-cancel-edit">Chiudi</button></div></form>';
 }
 export function revisionHistory(rows=[],competition=null){
  if(!rows.length)return '<p class="staff-help">Nessuna rettifica registrata.</p>';
