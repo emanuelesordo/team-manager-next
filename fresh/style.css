@@ -945,3 +945,6 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
 .match-score-trigger.score-proposed{display:inline-grid;justify-items:center;gap:2px}
 .match-proposed-label{font:800 8px 'Manrope',sans-serif;letter-spacing:.12em;color:var(--muted)}
 .mt-event-meta.timing-provisional{color:#a97728}
+
+.match-header-scorer.is-proposed{opacity:.58}
+.event-react{min-width:38px;width:auto;padding:0 8px;font-size:14px}
