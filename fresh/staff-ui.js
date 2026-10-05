@@ -489,7 +489,7 @@ function matchLive(ctx,m,competition){
  return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+staffTools+
  '<div class="staff-live-grid">'+score+'<div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
 }
-function matchEvents(ctx,m){const fixture=ctx.resolveMatch().fixture,competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id);return reviewPanel({match:m,fixture,competition,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
+function matchEvents(ctx,m){const fixture=ctx.resolveMatch().fixture,competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id),rules=matchRules(m,competition);return reviewPanel({match:m,fixture,competition:rules,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
 
 export function staffMatchSection(ctx,f,m,section){
  const staff=isStaff(ctx),liveContributor=section==='live'&&Boolean(ctx.state.identity?.user);
