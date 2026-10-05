@@ -413,12 +413,9 @@ function match(){
  const field=(name,label,value)=>'<label class="extra-meta-field">'+label+'<input data-extra-field="'+name+'" aria-label="'+label+'" value="'+E(value??'')+'"></label>';
  const placeLink=address?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(address):'';
  const matchMeta='<div class="match-header-footer-meta" aria-label="Dettagli partita">'+
-  '<div class="match-footer-info match-footer-info-left">'+
-   '<span><small>Competizione</small><strong>'+E(comp?.name||'—')+'</strong></span>'+
-   '<span><small>Giornata</small><strong>'+E(f.round_no!=null?f.round_no:'—')+'</strong></span></div>'+
-  '<div class="match-footer-info match-footer-info-right">'+
-   (placeLink?'<a target="_blank" rel="noopener noreferrer" href="'+E(placeLink)+'" title="Apri il luogo su Maps"><small>Campo</small><strong>'+E(venue||address||'—')+'</strong></a>':'<span><small>Campo</small><strong>'+E(venue||'—')+'</strong></span>')+
-  '</div></div>';
+  '<span class="match-footer-item match-footer-competition">'+ico('trophy',15)+'<strong>'+E((comp?.name||'—')+(f.round_no!=null?' · Giornata '+f.round_no:''))+'</strong></span>'+
+  (placeLink?'<a class="match-footer-item match-footer-venue" target="_blank" rel="noopener noreferrer" href="'+E(placeLink)+'" title="Apri il luogo su Maps">'+ico('pin',15)+'<strong>'+E(venue||address||'—')+'</strong></a>':'<span class="match-footer-item match-footer-venue">'+ico('pin',15)+'<strong>'+E(venue||'—')+'</strong></span>')+
+  '</div>';
  const scorers=matchScorerRows(activeEvents.filter(e=>['official','proposed','community_confirmed'].includes(e.validation_status)),f,team(),playerName,rules);
  const recordedGoals=(state.fixtureEvents||[]).filter(e=>e.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
  const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
