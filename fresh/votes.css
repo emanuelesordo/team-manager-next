@@ -128,3 +128,19 @@
  .vote-picker-clear,.vote-picker-clear-spacer{width:15px;height:15px}
  .vote-picker-clear{font-size:12px}
 }
+
+/* Picker refinement: maximize horizontal space and keep clear immediately before selected vote. */
+.vote-picker-wrap{display:block;min-width:0}
+.vote-picker{gap:2px;padding:1px 0}
+.vote-picker-option{min-width:26px;height:24px;padding:0 5px;border-radius:6px;font-size:8px}
+.vote-picker-clear{flex:0 0 auto;width:15px;height:24px;margin-right:0;display:grid;place-items:center;padding:0;border:0;background:transparent;color:var(--muted);font:300 12px/1 sans-serif;scroll-snap-align:center}
+.vote-average-cell{margin-left:2px}
+@media(max-width:900px){
+ .vote-row{grid-template-columns:29px 34px minmax(68px,.78fr) minmax(46px,.48fr) minmax(118px,1.62fr) 31px}
+}
+@media(max-width:650px){
+ .vote-row{grid-template-columns:25px 29px minmax(60px,.72fr) minmax(40px,.42fr) minmax(112px,1.7fr) 27px}
+ .vote-picker-option{min-width:22px;height:21px;padding:0 4px;border-radius:5px;font-size:7px}
+ .vote-picker-clear{width:13px;height:21px;font-size:11px}
+ .vote-average-cell{margin-left:1px}
+}
