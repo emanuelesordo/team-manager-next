@@ -27,6 +27,7 @@ const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl=u=>{try{const x=new URL(String(u));return ['https:','http:'].includes(x.protocol)?E(x.href):''}catch{return ''}};
 const date=v=>v?new Intl.DateTimeFormat(LOCALE,{day:'2-digit',month:'short',timeZone:TIME_ZONE}).format(new Date(v)):'—';
+const shortDate=v=>v?new Intl.DateTimeFormat(LOCALE,{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:TIME_ZONE}).format(new Date(v)):'—';
 const weekday=v=>v?new Intl.DateTimeFormat(LOCALE,{weekday:'long',day:'numeric',month:'long',timeZone:TIME_ZONE}).format(new Date(v)):'Data da definire';
 const time=v=>v?new Intl.DateTimeFormat(LOCALE,{hour:'2-digit',minute:'2-digit',timeZone:TIME_ZONE}).format(new Date(v)):'—';
 const ico=(n,size=20)=>{const paths={
@@ -411,14 +412,13 @@ function match(){
  const editor=false; // Modifica metadati esclusivamente nella scheda Info
  const field=(name,label,value)=>'<label class="extra-meta-field">'+label+'<input data-extra-field="'+name+'" aria-label="'+label+'" value="'+E(value??'')+'"></label>';
  const placeLink=address?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(address):'';
- const matchMeta='<div class="match-header-meta" aria-label="Dettagli partita">'+
-  '<div class="match-meta-group match-meta-left">'+
-   titleInfo('Competizione',comp?.name||'—')+
-   titleInfo('Giornata',f.round_no!=null?f.round_no:'—')+'</div>'+
-  '<div class="match-meta-group match-meta-center">'+
-   (editor?field('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):''):titleInfo('Data',weekday(f.kickoff_at))+titleInfo('Ora',time(f.kickoff_at)))+'</div>'+
-  '<div class="match-meta-group match-meta-right">'+
-   (editor?field('venue_name','Campo',f.venue_name||venue)+field('venue_address','Luogo',f.venue_address||address):(placeLink?'<a class="match-meta-item" target="_blank" rel="noopener noreferrer" href="'+E(placeLink)+'" title="Apri il luogo su Maps"><strong>'+E(venue||address||'—')+'</strong></a>':titleInfo('Campo',venue||'—')))+'</div></div>';
+ const matchMeta='<div class="match-header-footer-meta" aria-label="Dettagli partita">'+
+  '<div class="match-footer-info match-footer-info-left">'+
+   '<span><small>Competizione</small><strong>'+E(comp?.name||'—')+'</strong></span>'+
+   '<span><small>Giornata</small><strong>'+E(f.round_no!=null?f.round_no:'—')+'</strong></span></div>'+
+  '<div class="match-footer-info match-footer-info-right">'+
+   (placeLink?'<a target="_blank" rel="noopener noreferrer" href="'+E(placeLink)+'" title="Apri il luogo su Maps"><small>Campo</small><strong>'+E(venue||address||'—')+'</strong></a>':'<span><small>Campo</small><strong>'+E(venue||'—')+'</strong></span>')+
+  '</div></div>';
  const scorers=matchScorerRows(activeEvents.filter(e=>['official','proposed','community_confirmed'].includes(e.validation_status)),f,team(),playerName,rules);
  const recordedGoals=(state.fixtureEvents||[]).filter(e=>e.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
  const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
@@ -454,12 +454,12 @@ function match(){
  const statusEditor=editor?'<select data-extra-status aria-label="Stato partita">'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,text])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+text+'</option>').join('')+'</select>':null;
  const testNotice=f.is_test?'<div class="match-test-banner"><strong>TEST PRIVATO</strong> · solo tuo · '+E(rules.periods)+'×'+E(rules.minutes_per_period)+"'"+' · cambi '+(rules.rolling_substitutions?'rotanti':'non rotanti')+' · escluso da classifiche e statistiche</div>':'';
  const header=testNotice+'<div class="match-detail-head glass">'+
-  '<div class="match-expanded">'+matchMeta+
+  '<div class="match-expanded">'+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
-  '<div class="match-big-score"><div class="match-score-status">'+(statusEditor||status(f))+'</div><b>'+headerScore+'</b>'+headerTimer+'</div>'+
+  '<div class="match-big-score"><div class="match-score-datetime">'+E(shortDate(f.kickoff_at))+' '+E(time(f.kickoff_at))+'</div><div class="match-score-status">'+(statusEditor||status(f))+'</div><b>'+headerScore+'</b>'+headerTimer+'</div>'+
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+
-  '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>'+
+  '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div>'+matchMeta+'</div>'+
   '</div>';
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato in attesa di conferma'):'';
  const notice=(pending?'<p class="data-warning">'+pending+' eventi ancora da ufficializzare.</p>':'')+
