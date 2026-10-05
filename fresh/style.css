@@ -993,33 +993,80 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
 }
 
 
-/* Match detail hero v16: shorter hero, date/time over status, compact metadata at bottom corners. */
-.match-detail-head .match-expanded{padding:0}
-.match-detail-head .match-detail-score{align-items:start}
-.match-detail-head .match-big-score{gap:3px}
+/* Match detail hero v18: desktop scoreboard inspired by compact live-score headers. */
+.match-detail-head.glass{
+ padding:18px clamp(28px,3.6vw,56px) 15px;
+ overflow:hidden;
+}
+.match-detail-head .match-expanded{padding:0;display:flex;flex-direction:column;gap:12px}
+.match-detail-head .match-detail-score{
+ grid-template-columns:minmax(0,1fr) minmax(170px,.58fr) minmax(0,1fr);
+ align-items:start;
+ gap:clamp(20px,3vw,52px);
+ margin:0;
+}
+.match-detail-head .match-header-team{gap:6px}
+.match-detail-head .match-header-team .crest.xl{
+ width:clamp(78px,7.2vw,108px);
+ height:clamp(78px,7.2vw,108px);
+}
+.match-detail-head .match-header-team>strong{
+ font-size:clamp(16px,1.45vw,23px);
+ line-height:1.14;
+ text-align:center;
+}
+.match-detail-head .match-big-score{gap:3px;padding-top:0}
 .match-detail-head .match-score-datetime{
- font-size:10px;line-height:1.1;font-weight:800;letter-spacing:.035em;
+ font-size:11px;line-height:1.1;font-weight:800;letter-spacing:.035em;
  color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap
 }
-.match-detail-head .match-score-status{min-height:20px}
+.match-detail-head .match-score-status{min-height:22px}
+.match-detail-head .match-score-status .status{padding:4px 10px;font-size:10px}
+.match-detail-head .match-big-score b{
+ font-size:clamp(56px,6vw,88px);
+ line-height:.96;
+}
+.match-detail-head .match-header-scorers{margin-top:4px;gap:2px}
+.match-detail-head .match-header-scorer{
+ font-size:clamp(11px,1vw,14px);
+ line-height:1.15;
+}
 .match-detail-head .match-header-footer-meta{
- display:flex;align-items:flex-end;justify-content:space-between;gap:18px;
- margin-top:8px;padding-top:7px;border-top:1px solid color-mix(in srgb,var(--border) 72%,transparent);
- min-width:0
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ flex-wrap:wrap;
+ gap:8px clamp(24px,4vw,54px);
+ min-width:0;
+ margin-top:2px;
+ padding:3px clamp(22px,4vw,72px) 0;
+ border:0;
 }
-.match-detail-head .match-footer-info{display:flex;align-items:flex-end;gap:12px;min-width:0}
-.match-detail-head .match-footer-info-right{margin-left:auto;justify-content:flex-end;text-align:right;max-width:52%}
-.match-detail-head .match-footer-info span,
-.match-detail-head .match-footer-info a{display:flex;align-items:baseline;gap:5px;min-width:0;color:inherit;text-decoration:none}
-.match-detail-head .match-footer-info small{
- font-size:8px;line-height:1;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle);font-weight:800
+.match-detail-head .match-footer-item{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ gap:8px;
+ min-width:0;
+ max-width:min(46%,560px);
+ color:var(--muted);
+ text-decoration:none;
+ font-size:clamp(11px,.95vw,14px);
+ line-height:1.2;
 }
-.match-detail-head .match-footer-info strong{
- font-size:10px;line-height:1.15;color:var(--muted);font-weight:750;min-width:0;overflow-wrap:anywhere
+.match-detail-head .match-footer-item svg{flex:0 0 auto;opacity:.78}
+.match-detail-head .match-footer-item strong{
+ min-width:0;
+ overflow:hidden;
+ text-overflow:ellipsis;
+ white-space:nowrap;
+ color:inherit;
+ font:800 inherit 'Manrope',sans-serif;
 }
-.match-detail-head .match-footer-info-right a:hover strong{text-decoration:underline}
+.match-detail-head a.match-footer-item:hover{color:var(--ink);text-decoration:none}
 @media(max-width:650px){
  .match-detail-head.glass{padding:9px 10px 10px}
+ .match-detail-head .match-expanded{gap:7px}
  .match-detail-head .match-detail-score{grid-template-columns:minmax(0,1fr) minmax(72px,.58fr) minmax(0,1fr);gap:4px}
  .match-detail-head .match-header-team{gap:3px}
  .match-detail-head .match-header-team .crest.xl{width:50px;height:50px}
@@ -1031,11 +1078,19 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
  .match-detail-head .match-big-score b{font-size:clamp(31px,8vw,43px)}
  .match-detail-head .match-header-scorers{margin-top:2px;gap:1px}
  .match-detail-head .match-header-scorer{font-size:9px;line-height:1.08}
- .match-detail-head .match-header-footer-meta{gap:8px;margin-top:6px;padding-top:6px}
- .match-detail-head .match-footer-info{gap:8px}
- .match-detail-head .match-footer-info-right{max-width:48%}
- .match-detail-head .match-footer-info span,
- .match-detail-head .match-footer-info a{display:grid;gap:1px}
- .match-detail-head .match-footer-info small{font-size:7px}
- .match-detail-head .match-footer-info strong{font-size:8.5px;line-height:1.12}
+ .match-detail-head .match-header-footer-meta{
+  justify-content:space-between;
+  flex-wrap:nowrap;
+  gap:8px;
+  margin-top:4px;
+  padding:3px 4px 0;
+ }
+ .match-detail-head .match-footer-item{
+  max-width:48%;
+  justify-content:flex-start;
+  gap:5px;
+  font-size:8.5px;
+ }
+ .match-detail-head .match-footer-venue{justify-content:flex-end;text-align:right}
+ .match-detail-head .match-footer-item svg{width:12px;height:12px}
 }
