@@ -1,4 +1,4 @@
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc} from './api.js?callups=20261004v2';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc} from './api.js?callups=20261005rpc-v2';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
