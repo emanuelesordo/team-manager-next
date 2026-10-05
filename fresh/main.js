@@ -335,13 +335,14 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   const declared=Number(recoveryByPeriod.get(p))||0,endEvent=periodEndByPeriod.get(p);
   let output='';
   if(endEvent){
-   const label=String(endEvent.payload?.label||('FINE '+p+'° TEMPO'));
+   const label=String(endEvent.payload?.label||(p===1?'HT':'FINE '+p+'° TEMPO'));
    const scoreHome=Number(endEvent.payload?.score_home),scoreAway=Number(endEvent.payload?.score_away);
-   const scoreText=Number.isFinite(scoreHome)&&Number.isFinite(scoreAway)?' '+scoreHome+' - '+scoreAway:'';
-   output+=heading(label+scoreText+(declared>0?' · RECUPERO +'+declared+"'":''));
+   const scoreText=Number.isFinite(scoreHome)&&Number.isFinite(scoreAway)?
+    scoreHome+' - '+scoreAway:(p===1?halfScore:'');
+   output+=heading(label+(scoreText?' '+scoreText:''));
   }
   output+=groupedRows(stoppage);
-  if(!endEvent&&(declared>0||stoppage.length))output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO');
+  if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO');
   return output+groupedRows(regular);
  };
  let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI');
