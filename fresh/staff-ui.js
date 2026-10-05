@@ -1069,6 +1069,7 @@ export async function staffSubmit(e,ctx){
     const merge=window.confirm('Evento simile già registrato '+seconds+' s fa.\n\nOK = unisci al precedente\nAnnulla = mantieni come evento separato');
     if(merge){
      saved=await pendingFn(form,()=>rpc('tm_app_merge_event_submission',{p_match_id:m.id,p_event_id:duplicate.event_id,p_event:payload}));
+     memory.liveDraft=null;
      await reloadMatch(ctx);
      const conflicts=saved?.conflicts&&Object.keys(saved.conflicts).length;
      ctx.toast(conflicts?'Evento unificato · alcuni dati discordanti restano da verificare':'Evento unificato al precedente');
