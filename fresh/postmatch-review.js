@@ -1,6 +1,6 @@
 import {matchPlayerLabel} from './match-player-label.js';
 /** Post-match review. The official fixture score and proposed event history are independent. */
-import {amendEventForm,revisionHistory,resultReviewSection,resultReconciliationHistory} from './postmatch-controls.js?live=20261005relative';
+import {amendEventForm,revisionHistory,resultReviewSection,resultReconciliationHistory} from './postmatch-controls.js?live=20261005eventfix1';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const reviewable=new Set(['proposed','community_confirmed','disputed']);
