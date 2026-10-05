@@ -244,40 +244,45 @@
 .ov-shared-field .field-slot .ov-captain{font-size:9px;color:#fff}
 .ov-shared-field .field-slot .ov-marker-side{
   position:absolute;z-index:4;bottom:13px;
-  display:flex;flex-direction:column-reverse;align-items:center;gap:2px;
-  width:20px;min-height:18px;
+  display:flex;flex-direction:column-reverse;align-items:center;gap:3px;
+  width:18px;min-height:18px;
 }
-.ov-shared-field .field-slot .ov-marker-side-left{right:calc(100% - 6px)}
-.ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 6px)}
-.ov-shared-field .field-slot .ov-marker-badge{
-  position:relative;box-sizing:border-box;display:grid;place-items:center;
-  flex:0 0 auto;width:19px;height:19px;border:1px solid #9eabb2;
-  border-radius:50%;background:#f6f8f9;color:#202b35;
-  font:bold 12px/1 Arial,sans-serif;white-space:nowrap;
-  text-shadow:none;box-shadow:0 1px 3px #0008;
+.ov-shared-field .field-slot .ov-marker-side-left{right:calc(100% - 5px)}
+.ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 5px)}
+.ov-shared-field .field-slot .ov-marker-icon{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;min-width:15px;min-height:15px;padding:0;
+  border:0;border-radius:0;background:none;box-shadow:none;
+  color:#fff;font:900 15px/1 Arial,sans-serif;white-space:nowrap;text-shadow:0 1px 2px #0009;
 }
-.ov-shared-field .field-slot .ov-marker-badge svg{width:14px;height:14px;display:block}
-.ov-shared-field .field-slot .ov-badge-goal{font-size:13px}
-.ov-shared-field .field-slot .ov-badge-own_goal{font-size:9px;color:#bb2733}
-.ov-shared-field .field-slot .ov-mini-card{
-  display:block;width:9px;height:13px;border-radius:1px;background:#ebbf26;
-  border:1px solid #d7a715;
+.ov-shared-field .field-slot .ov-icon-ball{font-size:15px;line-height:1;filter:drop-shadow(0 1px 1px #0008)}
+.ov-shared-field .field-slot .ov-icon-own-goal{filter:hue-rotate(320deg) saturate(3) drop-shadow(0 1px 1px #0008)}
+.ov-shared-field .field-slot .ov-icon-assist{font-size:15px;filter:grayscale(1) brightness(3) drop-shadow(0 1px 1px #0008)}
+.ov-shared-field .field-slot .ov-icon-sub{font:900 20px/.78 Arial,sans-serif;text-shadow:0 1px 2px #000b}
+.ov-shared-field .field-slot .ov-icon-sub-in{color:#31a65e}
+.ov-shared-field .field-slot .ov-icon-sub-out{color:#d84747}
+.ov-shared-field .field-slot .ov-icon-return{color:#4f9bff;font-size:17px}
+.ov-shared-field .field-slot .ov-card-icon{
+  display:block;width:9px;height:14px;border:0;border-radius:1px;
+  transform:rotate(10deg);box-shadow:0 1px 2px #0008;
 }
-.ov-shared-field .field-slot .ov-badge-blue_card .ov-mini-card{background:#2e84e8;border-color:#1c5db5}
-.ov-shared-field .field-slot .ov-badge-red_card .ov-mini-card{background:#da3648;border-color:#b21d30}
-.ov-shared-field .field-slot .ov-badge-double_card .ov-mini-card{background:linear-gradient(90deg,#d83748 0 75%,#e7bc22 75% 100%);border-color:#ae2331}
-.ov-shared-field .field-slot .ov-badge-double_card .ov-double-blue{background:linear-gradient(90deg,#d83748 0 75%,#3280de 75% 100%)}
-.ov-shared-field .field-slot .ov-badge-substitution .ov-swap-symbol{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:11px;line-height:7px;margin-top:-2px;
+.ov-shared-field .field-slot .ov-card-yellow{background:#f4c21f}
+.ov-shared-field .field-slot .ov-card-blue{background:#378be7}
+.ov-shared-field .field-slot .ov-card-red{background:#e34043}
+.ov-shared-field .field-slot .ov-double-cards{
+  position:relative;display:block;width:14px;height:15px;
 }
-.ov-shared-field .field-slot .ov-swap-symbol b:first-child{color:#34976a;font-weight:900}
-.ov-shared-field .field-slot .ov-swap-symbol b:last-child{color:#cf3e4c;font-weight:900}
+.ov-shared-field .field-slot .ov-double-cards i{
+  position:absolute;display:block;width:9px;height:14px;border-radius:1px;
+  transform:rotate(9deg);box-shadow:0 1px 2px #0008;
+}
+.ov-shared-field .field-slot .ov-double-cards i:first-child{left:0;top:1px;background:#f4c21f}
+.ov-shared-field .field-slot .ov-double-cards i:last-child{left:4px;top:0;background:#e34043}
+.ov-shared-field .field-slot .ov-double-cards.is-blue i:first-child{background:#378be7}
 .ov-shared-field .field-slot .ov-marker-count{
-  position:absolute;top:-5px;right:-6px;min-width:13px;height:13px;
-  display:grid;place-items:center;padding:0 2px;border-radius:8px;
-  color:#fff;background:#212b34;border:1px solid #fff;
-  font:800 9px/1 'Manrope',sans-serif;text-shadow:none;
+  position:absolute;top:-5px;right:-7px;
+  padding:0;border:0;border-radius:0;background:none;box-shadow:none;
+  color:#fff;font:900 9px/1 'Manrope',sans-serif;text-shadow:0 1px 2px #000;
 }
 @media(max-width:550px){
   .ov-shared-field .visual-field .field-slot.occupied{width:54px;min-height:72px}
@@ -285,11 +290,10 @@
   .ov-shared-field .field-slot .ov-field-shirt,
   .ov-shared-field .field-slot .ov-field-shirt .kit-svg{width:36px;height:41px}
   .ov-shared-field .field-slot .ov-player-pitch > .ov-player-name{font-size:8px;max-width:70px;margin-top:8px}
-  .ov-shared-field .field-slot .ov-marker-badge{width:16px;height:16px;font-size:10px}
-  .ov-shared-field .field-slot .ov-marker-side{gap:1px;width:16px;bottom:11px}
+    .ov-shared-field .field-slot .ov-marker-side{gap:1px;width:16px;bottom:11px}
   .ov-shared-field .field-slot .ov-marker-side-left{right:calc(100% - 5px)}
   .ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 5px)}
-  .ov-shared-field .field-slot .ov-marker-count{font-size:8px;height:12px;min-width:12px}
+   .ov-shared-field .field-slot .ov-marker-count{font-size:8px}
 }
 
 
