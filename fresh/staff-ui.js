@@ -8,7 +8,7 @@ import {availabilityDefault,normalizedReason,unavailabilityReasons} from './avai
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js?live=20261005merge2';
-import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute} from './match-minutes.js?live=20261005periods';
+import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 
 export const staffLogoEvent=handleLogoEditorEvent;
@@ -563,7 +563,7 @@ function matchLive(ctx,m,competition){
    e.payload?.minute_provisional===true?'Minuto stimato':
    e.timing_consistent===false?'Minuto da verificare':'';
   const votes=e.validation_status==='official'?'':(' · +'+Number(e.support_count||0)+' / −'+Number(e.dispute_count||0));
-  const minute=e.minute==null?'—':String(e.minute)+(Number(e.stoppage_minute)>0?'+'+Number(e.stoppage_minute):'')+"'";
+  const minute=displayEventMinute(e,rules,'—').replace('′',"'");
   return '<div class="live-recent-row"><span class="live-recent-minute">'+esc(minute)+'</span><div class="live-recent-main"><strong>'+esc(eventNames[e.event_type]||e.event_type)+(who?' · '+esc(who):'')+'</strong>'+
    '<small class="live-recent-meta '+(e.validation_status==='disputed'?'is-disputed':'')+'">'+esc(status+votes)+(timing?' · '+esc(timing):'')+'</small></div></div>';
  }).join('');
