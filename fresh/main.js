@@ -120,9 +120,13 @@ function topbarPage(){
 function header(){
  return `<header class="topbar"><div class="mobile-symbol">${club(team().name,'tiny',{team_id:team().id})}</div><div class="topbar-page"><span class="topbar-kicker">${E(topbarPage()[0])}</span><h1>${E(topbarPage()[1])}</h1></div><div class="top-actions"><span class="connection-pill"><i></i> Dati sincronizzati</span><button type="button" class="icon-btn theme-btn" data-action="theme" aria-label="Cambia aspetto">${ico(state.theme==='night'?'sun':'moon')}</button><button type="button" class="icon-btn" data-action="reload" aria-label="Aggiorna dati">${ico('refresh')}</button>${hasSession()?`<button type="button" class="icon-btn bell-btn" data-notifications-open aria-label="Notifiche">${ico("bell")}<span class="notification-count" hidden data-notification-badge></span></button>`:""}<button type="button" class="icon-btn user-btn" data-action="account" aria-label="Area personale">${ico('user')}</button><button type="button" class="icon-btn mobile-more" data-action="menu" aria-label="Apri menu">${ico('menu')}</button></div></header>`
 }
+function currentMatchIsLive(){
+ if(state.page!=='match'||!state.match)return false;
+ const {fixture,operational}=resolveMatch();
+ return Boolean(fixture&&(isLive(fixture)||operational?.status==='live'));
+}
 function liveScoreHeader(){
- const f=liveFixture();if(!f)return '';
- if(state.page==='match'&&state.match===f.id)return '';
+ const f=liveFixture();if(!f||currentMatchIsLive())return '';
  return `<button type="button" class="global-live-score" data-match="${E(f.id)}" aria-label="Apri partita live: ${E(f.home_team)} ${E(f.home_score??0)} a ${E(f.away_score??0)} ${E(f.away_team)}">
   <span class="global-live-label"><i></i> LIVE</span>
   <span class="global-live-club global-live-home">${club(f.home_team,'tiny',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong></span>
@@ -591,6 +595,7 @@ function render(){
  document.body.dataset.theme=state.theme;
  document.body.dataset.logoShape=['circle','rounded','square'].includes(state.base.team?.logo_shape)?state.base.team.logo_shape:'rounded';
  document.body.dataset.live=liveFixture()?'true':'false';
+ document.body.dataset.currentMatchLive=currentMatchIsLive()?'true':'false';
  $('#app').innerHTML=`<div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="shell">${sidebar()}<div class="workspace">${header()}${liveScoreHeader()}<main class="content" id="main">${state.loading?`<div class="loading-state"><div class="loader"></div>Caricamento dati stagione…</div>`:section()}${!state.loading&&Object.keys(state.data?.errors||{}).length?`<div class="data-warning">Alcune sezioni non sono accessibili al profilo attuale: ${E(Object.keys(state.data.errors).join(', '))}.</div>`:''}</main><footer class="footer">TEAM MANAGER <span>·</span> Dati sportivi da Supabase <span>·</span> ${E(state.base.seasons.find(s=>s.id===state.season)?.name||'')}</footer></div></div>${mobileNav()}<div id="modal-layer">${overlay()}</div><div id="toast" role="status" aria-live="polite"></div>`;
  if(state.page==='home'&&previousHomeScroll.length===2){
   document.querySelectorAll('.home-feature>.feature-primary,.home-feature>.home-side-stack').forEach((column,index)=>{column.scrollTop=previousHomeScroll[index]||0});
