@@ -36,13 +36,23 @@ export function reviewPanel({match,fixture,competition,events=[],players=[],edit
   const n=ev.player_id?names.get(ev.player_id)||'Giocatore non censito':'Marcatore / giocatore non indicato';
   const secondary=ev.secondary_player_id?names.get(ev.secondary_player_id)||'Giocatore non censito':'';
   const minute=displayEventMinute(ev,competition,'Minuto non noto');
-  const counted=ev.payload?.counted_in_score===true;
+  const scoreApplied=ev.payload?.score_applied===true||ev.payload?.counted_in_score===true;
   const editable=['live','finished'].includes(match?.status);
+  const timing=ev.minute==null?'Timestamp salvato · minuto da completare':
+   ev.timing_consistent===false&&Number.isFinite(Number(ev.timing_delta_seconds))?
+    'Inserito '+Math.max(1,Math.round(Math.abs(Number(ev.timing_delta_seconds))/60))+' min '+(Number(ev.timing_delta_seconds)>0?'dopo':'prima')+' rispetto al minutaggio · verifica richiesta':
+    ev.timing_consistent===true?'Timestamp coerente (±5 min)':'';
+  const quick=isPending&&editable?'<div class="event-review-votes">'+
+   '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(ev.id)+'" aria-label="Conferma evento">+</button>'+
+   '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(ev.id)+'" aria-label="Segnala errore">−</button></div>':'';
+  const canApprove=isPending&&editable&&ev.validation_status!=='disputed';
   const actions=isPending&&editable?
-   '<div class="staff-event-buttons"><button type="button" class="staff-soft" data-staff-action="review-approve" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Approva</button>'+
-   (counted?'<small>Per scartare: rettificare prima il risultato</small>':'<button type="button" class="staff-danger" data-staff-action="review-reject" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Scarta</button>')+'</div>':'';
+   '<div class="staff-event-buttons">'+quick+
+   (canApprove?'<button type="button" class="staff-soft" data-staff-action="review-approve" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Ufficializza</button>':'<small>Evento contestato: rettifica i dati prima di riconfermare.</small>')+
+   (scoreApplied?'<small>Per scartare: rettificare prima il risultato</small>':'<button type="button" class="staff-danger" data-staff-action="review-reject" data-event-id="'+E(ev.id)+'" data-event-status="'+E(ev.validation_status)+'">Scarta</button>')+'</div>':'';
   const extra=editable?'<button type="button" class="staff-soft" data-staff-action="review-edit" data-event-id="'+E(ev.id)+'">Rettifica</button><button type="button" class="staff-soft" data-staff-action="review-history" data-event-id="'+E(ev.id)+'">Storico</button>':'';
-  return '<div class="staff-event-row"><div><strong>'+E(minute)+' · '+E(label(ev.event_type))+'</strong><span>'+E(ev.team_side==='team'?'Nostra squadra':ev.team_side==='opponent'?'Avversaria':'Squadra non specificata')+' · '+E(n)+(secondary?' · '+E(secondary):'')+'</span><small>'+E(statusLabel(ev.validation_status))+'</small></div>'+actions+extra+'</div>'+(editingEventId===ev.id?amendEventForm(ev,players,competition):'')+(historyEventId===ev.id?revisionHistory(historyEntries,competition):'');
+  const stateClass=ev.validation_status==='official'?'event-official':ev.validation_status==='disputed'?'event-disputed':'event-pending';
+  return '<div class="staff-event-row '+stateClass+'"><div><strong>'+E(minute)+' · '+E(label(ev.event_type))+'</strong><span>'+E(ev.team_side==='team'?'Nostra squadra':ev.team_side==='opponent'?'Avversaria':'Squadra non specificata')+' · '+E(n)+(secondary?' · '+E(secondary):'')+'</span><small>'+E(statusLabel(ev.validation_status))+(timing?' · '+E(timing):'')+'</small></div>'+actions+extra+'</div>'+(editingEventId===ev.id?amendEventForm(ev,players,competition):'')+(historyEventId===ev.id?revisionHistory(historyEntries,competition):'');
  }).join('');
  return '<section class="staff-subpanel"><div class="staff-panel-heading"><div><span class="eyebrow">POSTPARTITA</span><h2>Revisione eventi</h2></div></div>'+
  '<p class="staff-help">Gli eventi inseriti direttamente dagli admin sono ufficiali; le proposte degli altri ruoli richiedono verifica. Gli eventi scartati rimangono nello storico. La revisione non assegna minuti, marcatori o assist sconosciuti e non riscrive i punteggi.</p>'+
