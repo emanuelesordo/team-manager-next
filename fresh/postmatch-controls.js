@@ -1,4 +1,4 @@
-import {cumulativeEventMinute,displayEventMinute,periodRelativeMinute} from './match-minutes.js';
+import {cumulativeEventMinute,displayEventMinute,periodRelativeMinute} from './match-minutes.js?live=20261005periods';
 const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const opts=(a,v)=>a.map(([k,n])=>'<option value="'+E(k)+'"'+(k===v?' selected':'')+'>'+E(n)+'</option>').join('');
 const types=['goal','own_goal','penalty_scored','penalty_missed','assist','substitution','yellow_card','blue_card','blue_return','red_card','period_end','other'].map(x=>[x,x]);
