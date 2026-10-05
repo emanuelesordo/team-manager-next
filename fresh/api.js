@@ -151,7 +151,7 @@ export async function saveFixture(id,fields){
 
 /** RPC server-side: autorizzazioni verificate da Supabase, non dal frontend. */
 export async function rpc(functionName,args={}){
- if(!/^[a-z_]+$/.test(functionName))throw new Error('Funzione non valida');
+ if(!/^[a-z_][a-z0-9_]*$/.test(functionName))throw new Error('Funzione non valida');
  if(!hasSession())throw new Error('Effettua l’accesso per modificare i dati');
  return authorized('/rest/v1/rpc/'+functionName,{method:'POST',body:args});
 }
