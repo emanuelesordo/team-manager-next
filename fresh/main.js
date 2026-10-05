@@ -294,7 +294,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const recoveryByPeriod=new Map();
  for(const e of events||[]){if(type(e)==='period_end'){const p=period(e);const n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;recoveryByPeriod.set(p,Math.max(n,recoveryByPeriod.get(p)||0))}}
  for(const e of ordered){if(recovery(e)){const p=period(e);recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0))}else{const n=absoluteMinute(e);if(n!==null){const p=period(e),end=p==='first_half'?duration:duration*2;if(duration!==null&&n>end)recoveryByPeriod.set(p,Math.max(n-end,recoveryByPeriod.get(p)||0))}}}
- const halfGoals=tracked.filter(x=>period(x.event)==='first_half'&&goal(x.event));
+ const halfGoals=tracked.filter(x=>period(x.event)==='first_half'&&x.event.validation_status==='official'&&goal(x.event));
  const halfScore=halfGoals.some(x=>absoluteMinute(x.event)===null)?'? - ?':
   halfGoals.reduce((scores,x)=>{let s=side(x.event);if(type(x.event)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')scores[0]++;if(s==='away')scores[1]++;return scores},[0,0]).join(' - ');
  const complete=['finished','completed','full_time','ft'].includes(norm(fixture.status));
