@@ -53,16 +53,14 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
  const byId=new Map((people||[]).map(p=>[p.id,p]));
 
  const eventBadges=(events,side)=>{
-  const kinds=side==='left'?['substitution','yellow_card','blue_card','double_card','red_card','blue_return']:['goal','assist','own_goal'];
+  const kinds=side==='left'?['sub_in','sub_out','yellow_card','blue_card','double_card','red_card','blue_return']:['goal','assist','own_goal'];
   const grouped=new Map();
   for(const e of events){
    // Some feeds provide a second-yellow entry plus its resulting red card.
-   // Both describe the same expulsion, not two expulsions.
    if(e.kind==='second_yellow'&&events.some(r=>r.kind==='red_card'&&
     ['second_yellow_blue','second_card','second_yellow'].includes(r.cardType)&&
     Math.abs((r.minute??-100)-(e.minute??100))<=1))continue;
    let kind=e.kind;
-   if(['sub_in','sub_out'].includes(kind))kind='substitution';
    if(['goal','penalty_scored'].includes(kind))kind='goal';
    if(kind==='second_yellow')kind='double_card';
    if(kind==='red_card'&&['second_yellow_blue','second_card','second_yellow'].includes(e.cardType))kind='double_card';
@@ -75,13 +73,24 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
   }
   return kinds.filter(kind=>grouped.has(kind)).map(kind=>{
    const {count,times,blue}=grouped.get(kind);
-   const names={substitution:'Sostituzione',yellow_card:'Ammonizione',blue_card:'Cartellino blu',double_card:'Doppia sanzione',red_card:'Espulsione',blue_return:'Rientro',goal:'Gol',assist:'Assist',own_goal:'Autogol'};
-   const icon=kind==='goal'?'⚽':kind==='assist'?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l5-2 4-7 3 2-1 5 6 4 1 4H3zM4 21h17" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>':
-    kind==='substitution'?'<span class="ov-swap-symbol"><b>↪</b><b>↩</b></span>':
-    ['yellow_card','blue_card','red_card','double_card'].includes(kind)?'<i class="ov-mini-card'+(kind==='double_card'?(blue?' ov-double-blue':' ov-double-yellow'):'')+'"></i>':
-    kind==='blue_return'?'↩':'AG';
+   const names={
+    sub_in:'Sostituzione · ingresso',sub_out:'Sostituzione · uscita',
+    yellow_card:'Cartellino giallo',blue_card:'Cartellino blu',
+    double_card:'Doppia sanzione',red_card:'Cartellino rosso',blue_return:'Rientro',
+    goal:'Gol',assist:'Assist',own_goal:'Autogol'
+   };
+   const icon=kind==='goal'?'<span class="ov-icon-ball">⚽</span>':
+    kind==='own_goal'?'<span class="ov-icon-ball ov-icon-own-goal">⚽</span>':
+    kind==='assist'?'<span class="ov-icon-assist" aria-hidden="true">🥾</span>':
+    kind==='sub_in'?'<span class="ov-icon-sub ov-icon-sub-in">↑</span>':
+    kind==='sub_out'?'<span class="ov-icon-sub ov-icon-sub-out">↓</span>':
+    kind==='yellow_card'?'<i class="ov-card-icon ov-card-yellow"></i>':
+    kind==='blue_card'?'<i class="ov-card-icon ov-card-blue"></i>':
+    kind==='red_card'?'<i class="ov-card-icon ov-card-red"></i>':
+    kind==='double_card'?'<span class="ov-double-cards'+(blue?' is-blue':'')+'"><i></i><i></i></span>':
+    kind==='blue_return'?'<span class="ov-icon-return">↩</span>':'';
    const title=names[kind]+' ('+count+') · '+times.join(', ');
-   return '<span class="ov-marker-badge ov-badge-'+kind+'" title="'+escapeHtml(title)+'" aria-label="'+escapeHtml(title)+'">'+icon+
+   return '<span class="ov-marker-icon ov-icon-'+kind+'" title="'+escapeHtml(title)+'" aria-label="'+escapeHtml(title)+'">'+icon+
     (count>1?'<small class="ov-marker-count">'+count+'</small>':'')+'</span>';
   }).join('');
  };
