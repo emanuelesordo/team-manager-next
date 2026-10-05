@@ -510,7 +510,9 @@ function liveDraftSheet(ctx,m,rules,field,bench){
  }
  const type=d.type||'goal',side=d.side||'team',selected=d.playerId||'';
  const minute=d.minute==null?'':d.minute,stoppage=Number(d.stoppage||0);
+ const allPlayers=[...field,...bench].filter((x,i,a)=>x?.player_id&&a.findIndex(y=>y.player_id===x.player_id)===i);
  const fieldOptions=[['','Seleziona giocatore'],...field.map(x=>[x.player_id,playerText(x.person)])];
+ const cardOptions=[['','Seleziona giocatore'],...allPlayers.map(x=>[x.player_id,playerText(x.person)])];
  const benchOptions=[['','Seleziona giocatore'],...bench.map(x=>[x.player_id,playerText(x.person)])];
  const assistOptions=[['','Nessun assist / da indicare'],...field.filter(x=>x.player_id!==selected).map(x=>[x.player_id,playerText(x.person)])];
  const labels={goal:'Gol',yellow_card:'Cartellino giallo',blue_card:'Cartellino blu',red_card:'Cartellino rosso',substitution:'Cambio'};
@@ -520,7 +522,8 @@ function liveDraftSheet(ctx,m,rules,field,bench){
   type==='substitution'?picker('secondary_player_id','Giocatore entra',benchOptions,''):'';
  const reason=type==='substitution'?picker('substitution_reason','Motivo cambio',
   [['','Nessun motivo'],['tactical','Scelta tattica'],['injury','Infortunio'],['technical','Scelta tecnica'],['injury_prevention','Prevenzione infortunio'],['disciplinary_prevention','Prevenzione disciplinare'],['other','Altro']],''):'';
- const playerField=side==='team'?picker('player_id',playerLabel,fieldOptions,selected):'';
+ const playerField=side==='team'?picker('player_id',playerLabel,
+  ['yellow_card','blue_card','red_card'].includes(type)?cardOptions:fieldOptions,selected):'';
  const cardExtra=['yellow_card','blue_card','red_card'].includes(type)?
   '<div class="live-card-picker" role="group" aria-label="Tipo cartellino">'+
    [['yellow_card','Giallo','yellow'],['blue_card','Blu','blue'],['red_card','Rosso','red']].map(([k,label,color])=>
@@ -858,6 +861,15 @@ export async function staffClick(e,button,ctx){
   if(action==='refresh-match'){await reloadMatch(ctx);return true}
   if(action==='review-edit'){reviewEditEvent=button.dataset.eventId;reviewHistoryEvent=null;ctx.render();return true;}
   if(action==='review-cancel-edit'){reviewEditEvent=null;ctx.render();return true;}
+  if(action==='review-void'){
+   if(!m)throw Error('Tabellino non disponibile');
+   const eventId=button.dataset.eventId;
+   if(!eventId)throw Error('Evento non identificato');
+   if(!window.confirm('Annullare questo evento? Verrà mantenuto nello storico e non sarà più conteggiato.'))return true;
+   await rpc('tm_app_match_action',{p_match_id:m.id,p_action:'void_event',p_payload:{event_id:eventId}});
+   reviewEditEvent=null;reviewHistoryEvent=null;
+   await reloadMatch(ctx);ctx.toast('Evento annullato');return true;
+  }
   if(action==='review-history'){
    if(!m)throw Error('Tabellino non disponibile');
    const eventId=button.dataset.eventId;
@@ -1089,6 +1101,8 @@ export async function staffSubmit(e,ctx){
     substitution_reason:d.substitution_reason,notes:d.notes,
     count_score:Boolean(d.count_score),captured_at:d.captured_at||new Date().toISOString(),
     minute_mode:d.minute_mode||'now_estimated',minute_origin:minuteOrigin,request_key:crypto.randomUUID()};
+   if(payload.team_side==='team'&&['goal','yellow_card','blue_card','red_card'].includes(payload.event_type)&&!payload.player_id)
+    throw Error('Seleziona il giocatore');
    if(payload.event_type==='substitution'&&!payload.player_id)throw Error('Indica chi esce');
    const duplicate=await rpc('tm_app_find_event_duplicate',{p_match_id:m.id,p_event:payload});
    let saved;
