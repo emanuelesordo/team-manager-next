@@ -268,7 +268,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const icon=e=>{const t=type(e);if(goal(e))return '';if(['yellow_card','red_card','blue_card','second_yellow'].includes(t))return cards(e);if(['substitution','sub_out','sub_in'].includes(t))return '<span class="mt-change" aria-label="Sostituzione"><span class="mt-sub-in">→</span><span class="mt-sub-out">←</span></span>';if(t==='blue_return')return '<span class="mt-generic">↩</span>';return '<span class="mt-generic">◆</span>'};
  const eventState=e=>e.validation_status==='official'?'official':e.validation_status==='disputed'?'disputed':'pending';
  const timingInfo=e=>{
-  if(e.minute==null)return '<small class="mt-event-meta">Timestamp salvato · minuto da completare</small>';
+  if(e.minute==null)return '<small class="mt-event-meta">Evento passato · timestamp salvato, minuto da completare</small>';
+  if(e.payload?.minute_provisional===true)return '<small class="mt-event-meta timing-provisional">Minuto provvisorio stimato dall’orario di inizio</small>';
   const delta=Number(e.timing_delta_seconds);
   if(e.timing_consistent===false&&Number.isFinite(delta)){
    const minutes=Math.max(1,Math.round(Math.abs(delta)/60));
@@ -370,9 +371,20 @@ function match(){
  const recordedGoals=(state.fixtureEvents||[]).filter(e=>e.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
  const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
  const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
- const scoreText=hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
+ const officialHome=Number.isInteger(f.home_score)?Number(f.home_score):0,officialAway=Number.isInteger(f.away_score)?Number(f.away_score):0;
+ const pendingGoals=activeEvents.filter(e=>['proposed','community_confirmed'].includes(e.validation_status)&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
+ const proposedScore=pendingGoals.reduce((score,e)=>{
+  let home=(m?.home_away==='home'&&e.team_side==='team')||(m?.home_away==='away'&&e.team_side==='opponent');
+  if(e.event_type==='own_goal')home=!home;
+  if(home)score.home++;else score.away++;
+  return score;
+ },{home:officialHome,away:officialAway});
+ const hasProposedScore=Boolean(matchIsLive&&pendingGoals.length);
+ const scoreText=hasProposedScore?
+  E(proposedScore.home)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(proposedScore.away):
+  hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
  const editableScore=extraMatch&&state.identity?.role?.role==='admin';
- const headerScore=isLive(f)?'<span class="match-score-trigger score-pending">'+scoreText+'</span>':scoreText;
+ const headerScore=isLive(f)?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+(hasProposedScore?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
