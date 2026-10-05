@@ -8,7 +8,7 @@ import {availabilityDefault,normalizedReason,unavailabilityReasons} from './avai
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js';
-import {storedEventMinute} from './match-minutes.js';
+import {storedEventMinute,cumulativeMinuteFromPeriod} from './match-minutes.js';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 
 export const staffLogoEvent=handleLogoEditorEvent;
@@ -442,12 +442,12 @@ function matchLive(ctx,m,competition){
  picker('event_type','Evento',events,'goal')+picker('team_side','Squadra',[['team','Nostra squadra'],['opponent','Avversaria']],'team')+
  picker('player_id','Giocatore principale / uscente',playerOpts,'')+
  picker('secondary_player_id','Assist / subentrante',playerOpts,'')+
- input('minute','Minuto cumulativo', '','number','min="0" max="300" placeholder="Es. 63"')+
+ input('minute','Minuto del periodo', '','number','min="0" max="300" placeholder="'+(m.live_period==='second_half'?'Es. 16':'Es. 28')+'"')+
  input('stoppage_minute','Recupero', '','number','min="0" max="30" placeholder="—"')+
  picker('substitution_reason','Motivo del cambio',[['tactical','Tattico'],['injury','Infortunio'],['technical','Tecnico'],['other','Altro']],'tactical')+
  input('notes','Note (facoltative)','','text','maxlength="400"')+'</div>'+
  '<label class="staff-check"><input type="checkbox" name="count_score" checked> Aggiorna anche il tabellone per gol, autogol e rigori segnati</label>'+
- help(mins?'Minuto cumulativo dall’inizio partita. Durata per tempo: '+mins+' minuti; secondo tempo dal '+mins+'′. Recupero separato.':'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
+ help(mins?'Inserisci il minuto relativo al periodo in corso: ogni tempo riparte da 0. Il live resta cumulativo (es. 56′ live = 16′ del 2° tempo con tempi da 40′). Il recupero resta separato.':'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
  submit('Registra evento')+'</form>':help('Gli eventi si registrano a match avviato. Una partita finalizzata richiede riapertura esplicita.');
  return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+displayClock(m,competition)+liveControls(m)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':'')+
  '<div class="staff-live-grid"><div class="staff-live-panel"><h3>Risultato della partita</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(ctx.resolveMatch().fixture||m))+
@@ -815,11 +815,9 @@ export async function staffSubmit(e,ctx){
    const d=dataForm(form),c=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
    const period=m.live_period;
    const configuredMinutes=Number(c?.minutes_per_period);
-    if(!Number.isFinite(configuredMinutes)||configuredMinutes<=0)throw Error('Durata dei tempi non configurata nella competizione: controlla Setup → Competizioni');
-    // Il minuto inserito è già cumulativo: nessun offset.
-   const minute=numberOrNull(d.minute);
-    if(minute!==null&&period==='second_half'&&minute<configuredMinutes)throw Error('Nel secondo tempo usa il minuto cumulativo da '+configuredMinutes+'′');
-    if(minute!==null&&period==='extra'&&minute<2*configuredMinutes)throw Error('Nei supplementari usa il minuto cumulativo');
+   if(!Number.isFinite(configuredMinutes)||configuredMinutes<=0)throw Error('Durata dei tempi non configurata nella competizione: controlla Setup → Competizioni');
+   const relativeMinute=numberOrNull(d.minute);
+   const minute=cumulativeMinuteFromPeriod(relativeMinute,period,c);
    const payload={event_type:d.event_type,team_side:d.team_side,
     player_id:d.team_side==='team'?d.player_id||null:null,
     secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
