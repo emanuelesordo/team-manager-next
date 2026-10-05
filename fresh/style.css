@@ -981,3 +981,13 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
  .calendar-filters-left .filter-select{flex:1 1 100%;min-width:0;width:100%}
  .calendar-new{margin-left:auto;align-self:flex-end}
 }
+
+/* Calendar toolbar: competition filter left, private match creation right. */
+.calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%}
+.calendar-comp-filter{min-width:230px;margin:0}
+.calendar-new{margin-left:auto;min-height:46px;padding-inline:18px;white-space:nowrap}
+@media(max-width:650px){
+ .calendar-toolbar{flex-direction:row;align-items:center;gap:10px}
+ .calendar-comp-filter{flex:1;min-width:0;width:auto}
+ .calendar-new{flex:0 0 auto;margin-left:0}
+}
