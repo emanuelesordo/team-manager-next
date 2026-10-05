@@ -79,16 +79,21 @@ export function overviewLineup(match,matchData,people=[],seasonStats=[],competit
     double_card:'Doppia sanzione',red_card:'Cartellino rosso',blue_return:'Rientro',
     goal:'Gol',assist:'Assist',own_goal:'Autogol'
    };
-   const icon=kind==='goal'?'<span class="ov-icon-ball">⚽</span>':
-    kind==='own_goal'?'<span class="ov-icon-ball ov-icon-own-goal">⚽</span>':
-    kind==='assist'?'<span class="ov-icon-assist" aria-hidden="true">🥾</span>':
-    kind==='sub_in'?'<span class="ov-icon-sub ov-icon-sub-in">↑</span>':
-    kind==='sub_out'?'<span class="ov-icon-sub ov-icon-sub-out">↓</span>':
-    kind==='yellow_card'?'<i class="ov-card-icon ov-card-yellow"></i>':
-    kind==='blue_card'?'<i class="ov-card-icon ov-card-blue"></i>':
-    kind==='red_card'?'<i class="ov-card-icon ov-card-red"></i>':
-    kind==='double_card'?'<span class="ov-double-cards'+(blue?' is-blue':'')+'"><i></i><i></i></span>':
-    kind==='blue_return'?'<span class="ov-icon-return">↩</span>':'';
+   const ballSvg=color=>'<svg class="ov-event-svg ov-event-ball" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="'+color+'"/><path d="M12 5.2 15.4 7.7 14.1 11.7 9.9 11.7 8.6 7.7ZM5.2 9.1 8.6 7.7 9.9 11.7 7.3 15 4.2 13.1ZM18.8 9.1 15.4 7.7 14.1 11.7 16.7 15 19.8 13.1ZM7.3 15 9.9 11.7 14.1 11.7 16.7 15 14.5 18.7H9.5Z" fill="'+(color==='#f0443e'?'#fff':'#111')+'"/><path d="M4.2 13.1 5.8 17.4 9.5 18.7M19.8 13.1 18.2 17.4 14.5 18.7M8.6 7.7 7.2 4.8M15.4 7.7 16.8 4.8" fill="none" stroke="'+(color==='#f0443e'?'#fff':'#111')+'" stroke-width="1.2"/></svg>';
+   const subSvg=(direction,color)=>'<svg class="ov-event-svg ov-event-sub" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="'+color+'"/><path d="'+(direction==='up'?'M12 17V7M8 11l4-4 4 4':'M12 7v10m-4-4 4 4 4-4')+'" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+   const cardSvg=color=>'<svg class="ov-event-svg ov-event-card" viewBox="0 0 18 24" aria-hidden="true"><rect x="4" y="2" width="10" height="19" rx="1.2" transform="rotate(10 9 12)" fill="'+color+'"/></svg>';
+   const doubleCardSvg='<svg class="ov-event-svg ov-event-double-card" viewBox="0 0 22 24" aria-hidden="true"><rect x="3" y="4" width="9" height="17" rx="1" transform="rotate(-6 7 12)" fill="#f0c323"/><rect x="9" y="2" width="9" height="18" rx="1" transform="rotate(8 13 11)" fill="#ef3e42"/></svg>';
+   const assistSvg='<svg class="ov-event-svg ov-event-assist" viewBox="0 0 28 24" aria-hidden="true"><path d="M4 15c4-1 6-4 7-9l4 1c0 4 2 7 7 9l2 4H5Z" fill="#f5f6f7"/><path d="M7 18h16M12 8l4 2m-5 2 4 2" fill="none" stroke="#202326" stroke-width="1.4" stroke-linecap="round"/></svg>';
+   const icon=kind==='goal'?ballSvg('#f5f6f7'):
+    kind==='own_goal'?ballSvg('#f0443e'):
+    kind==='assist'?assistSvg:
+    kind==='sub_in'?subSvg('up','#17843d'):
+    kind==='sub_out'?subSvg('down','#b82c2c'):
+    kind==='yellow_card'?cardSvg('#f4bf1b'):
+    kind==='blue_card'?cardSvg('#378be7'):
+    kind==='red_card'?cardSvg('#ef3e42'):
+    kind==='double_card'?doubleCardSvg:
+    kind==='blue_return'?'<svg class="ov-event-svg ov-event-return" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h8a5 5 0 0 1 0 10h-4" fill="none" stroke="#4f9bff" stroke-width="2.2" stroke-linecap="round"/><path d="m8 5-4 3 4 3" fill="none" stroke="#4f9bff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>':'';
    const title=names[kind]+' ('+count+') · '+times.join(', ');
    return '<span class="ov-marker-icon ov-icon-'+kind+'" title="'+escapeHtml(title)+'" aria-label="'+escapeHtml(title)+'">'+icon+
     (count>1?'<small class="ov-marker-count">'+count+'</small>':'')+'</span>';
