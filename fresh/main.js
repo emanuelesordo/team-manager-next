@@ -50,7 +50,7 @@ const ico=(n,size=20)=>{const paths={
  spark:'<path d="m2 16 6-6 4 3 9-9m-6 0h6v6"/>'
  };return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[n]||paths.home}</svg>`};
 const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar','calendar','Calendario'],['roster','users','Rosa'],['stats','chart','Numeri']];
-const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'overview',scoreEditing:false,matchData:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',rosterSort:'name',rosterDesc:false,theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
+const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'overview',scoreEditing:false,matchData:null,timelineEditor:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',rosterSort:'name',rosterDesc:false,theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
 let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
 let verifiedEventCache=null,analyticsBusy=false;
 async function pollLive(){
@@ -265,7 +265,7 @@ function stats(){
 function resolveMatch(){const f=fixtures().find(x=>x.id===state.match);const exact=state.data?.matches?.find(m=>m.fixture_id===f?.id);return {fixture:f,operational:f?(exact||fixtureToMatch(f,state.data?.matches||[],state.base.opponents,team())):null}}
 function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll,refreshLive,logoutUser}}
 function admin(){return adminPage(staffContext())}
-function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSettings,trustedReviewer=false,match=null){
+function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSettings,trustedReviewer=false,match=null,adminEdit=false){
  const norm=v=>String(v??'').trim().toLocaleLowerCase('it');
  const homeIsOurs=Boolean(ourTeam?.id&&fixture.home_team_id===ourTeam.id);
  const side=e=>{const s=norm(e.team_side||e.side);if(['home','casa'].includes(s))return 'home';if(['away','ospite'].includes(s))return 'away';if(['team','ours','own'].includes(s))return homeIsOurs?'home':'away';if(['opponent','opposition'].includes(s))return homeIsOurs?'away':'home';return 'unknown'};
@@ -363,8 +363,11 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
    let j=i+1;while(j<items.length&&sameMoment(items[i],items[j]))j++;
    const group=items.slice(i,j),first=group[0].event;
    const contentFor=which=>group.filter(x=>side(x.event)===which||(which==='away'&&side(x.event)==='unknown'))
-    .map(x=>'<div class="mt-group-item">'+eventContent(x)+'</div>').join('');
-   output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
+    .map(x=>adminEdit&&x.event.id?
+     '<button type="button" class="mt-group-item mt-editable-event" data-timeline-event="'+E(x.event.id)+'" title="Modifica evento">'+eventContent(x)+'</button>':
+     '<div class="mt-group-item">'+eventContent(x)+'</div>').join('');
+   output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>'+
+    (adminEdit?'<button type="button" class="mt-add-event" data-timeline-add data-minute="'+E(first.minute??'')+'" data-stoppage="'+E(first.stoppage_minute??0)+'" aria-label="Aggiungi evento qui">+</button>':'');
    i=j;
   }
   return output;
@@ -396,7 +399,9 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
    if(p>1)parts+=heading('FINE '+(p-1)+'° TEMPO');
   }
  }else parts+=renderPeriod(1);
- return '<div class="match-timeline" aria-label="Cronologia eventi della partita">'+(tracked.length||recoveryByPeriod.size?parts:parts+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>';
+ return '<div class="match-timeline'+(adminEdit?' is-admin-editable':'')+'" aria-label="Cronologia eventi della partita">'+
+  (tracked.length||recoveryByPeriod.size?parts:parts+'<div class="empty padded">Nessun evento registrato.</div>')+
+  (adminEdit&&!tracked.length?'<button type="button" class="mt-add-event mt-add-empty" data-timeline-add aria-label="Aggiungi evento">+</button>':'')+'</div>';
 }
 
 function matchRules(m,comp){
@@ -404,6 +409,34 @@ function matchRules(m,comp){
   periods:Number(m?.periods_override||comp?.periods||2),
   minutes_per_period:Number(m?.minutes_per_period_override||comp?.minutes_per_period||40),
   rolling_substitutions:Boolean(m?.rolling_substitutions)};
+}
+function timelineEventEditor(){
+ const edit=state.timelineEditor;if(!edit||state.identity?.role?.role!=='admin')return '';
+ const {fixture:f,operational:m}=resolveMatch();if(!f)return '';
+ const fixtureOnly=!m;
+ const source=fixtureOnly?(state.fixtureEvents||[]):((state.matchData?.events)||[]);
+ const ev=edit.eventId?source.find(x=>String(x.id)===String(edit.eventId)):null;
+ const sideValue=ev?.team_side||ev?.side||(fixtureOnly?'home':'team');
+ const minute=ev?.minute??edit.minute??'';
+ const stoppage=ev?.stoppage_minute??edit.stoppage??0;
+ const people=state.data?.players||[];
+ const playerOptions='<option value="">—</option>'+people.map(p=>'<option value="'+E(p.id)+'" '+(ev?.player_id===p.id?'selected':'')+'>'+E(matchPlayerLabel(p))+'</option>').join('');
+ const secondaryOptions='<option value="">—</option>'+people.map(p=>'<option value="'+E(p.id)+'" '+(ev?.secondary_player_id===p.id?'selected':'')+'>'+E(matchPlayerLabel(p))+'</option>').join('');
+ const types=[['goal','Gol'],['own_goal','Autogol'],['penalty_scored','Rigore segnato'],['penalty_missed','Rigore sbagliato'],['yellow_card','Giallo'],['blue_card','Blu'],['red_card','Rosso'],['substitution','Cambio'],['assist','Assist'],['other','Altro']];
+ const sideOptions=fixtureOnly?[['home','Casa'],['away','Ospiti']]:[['team','Nostra squadra'],['opponent','Avversario']];
+ return '<div class="live-sheet-backdrop timeline-editor-backdrop" data-timeline-close><section class="live-event-sheet timeline-event-sheet" role="dialog" aria-modal="true" aria-label="'+(ev?'Modifica evento':'Aggiungi evento')+'">'+
+  '<div class="live-sheet-handle"></div><div class="live-sheet-head"><div><small>TIMELINE</small><h3>'+(ev?'Modifica evento':'Aggiungi evento')+'</h3></div><button type="button" data-timeline-close aria-label="Chiudi">×</button></div>'+
+  '<form data-timeline-event-form class="staff-form live-sheet-form" data-event-id="'+E(ev?.id||'')+'" data-fixture-only="'+fixtureOnly+'">'+
+   '<div class="live-sheet-grid"><label class="staff-field"><span>Tipo</span><select name="event_type">'+types.map(([k,l])=>'<option value="'+k+'" '+((ev?.event_type||'goal')===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
+   '<label class="staff-field"><span>Squadra</span><select name="team_side">'+sideOptions.map(([k,l])=>'<option value="'+k+'" '+(sideValue===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
+   '<label class="staff-field"><span>Minuto</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+E(minute)+'"></label>'+
+   '<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+E(stoppage)+'"></label>'+
+   (!fixtureOnly?'<label class="staff-field"><span>Giocatore</span><select name="player_id">'+playerOptions+'</select></label><label class="staff-field"><span>Secondo giocatore</span><select name="secondary_player_id">'+secondaryOptions+'</select></label>':'')+
+   '<label class="staff-field live-notes"><span>Note</span><input name="notes" maxlength="400" value="'+E(ev?.payload?.notes||ev?.notes||'')+'"></label></div>'+
+   '<div class="live-sheet-actions">'+
+    (ev?'<button type="button" class="staff-danger" data-timeline-delete="'+E(ev.id)+'">Elimina</button>':'')+
+    '<button type="button" class="staff-soft" data-timeline-close>Annulla</button><button type="submit" class="staff-submit">'+(ev?'Salva modifiche':'Aggiungi evento')+'</button></div>'+
+  '</form></section></div>';
 }
 function match(){
  const {fixture:f,operational:m}=resolveMatch();if(!f)return '<section class="empty">Partita non disponibile.</section>';
@@ -414,8 +447,9 @@ function match(){
  const playerName=id=>matchPlayerLabel(people(id));
  const activeEvents=(data.events||[]).filter(e=>e.validation_status!=='rejected');
  const pending=activeEvents.filter(e=>['proposed','community_confirmed','disputed'].includes(e.validation_status)).length;
- const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),rules,['admin','player'].includes(state.identity?.role?.role),m):
-  (state.fixtureEvents?.length?fixtureEventsPanel(state.fixtureEvents,comp,f):'<div class="empty">Nessun tabellino associato.</div>');
+ const adminTimeline=state.identity?.role?.role==='admin';
+ const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),rules,['admin','player'].includes(state.identity?.role?.role),m,adminTimeline):
+  matchEventTimeline(state.fixtureEvents||[],f,playerName,team(),rules,false,null,adminTimeline);
  const extraMatch=!involvesTeam(f,team());
  const availableKits=collectionForClub(team()||{});
  const activeKit=availableKits[m?.match_kit_key]||availableKits.home||Object.values(availableKits)[0];
@@ -520,7 +554,7 @@ function match(){
   tabs.map(([id,label])=>'<button role="tab" aria-selected="'+(selectedTab===id)+'" data-tab="'+id+
    '" class="'+(selectedTab===id?'active':'')+'">'+label+'</button>').join('')+
   '</div><div class="match-tab-body">'+notice+body+(selectedTab==='lineup'?
-  tacticalHistory(data.tacticalChanges||[],state.data?.players||[]):'')+'</div></section>';
+  tacticalHistory(data.tacticalChanges||[],state.data?.players||[]):'')+'</div></section>'+timelineEventEditor();
 }
 function clubScreen(){return clubPage({team:team(),seasons:state.base.seasons,season:state.season,opponents:state.base.opponents,E,crest:club,heading,ico})}
 function settings(){
@@ -653,7 +687,7 @@ async function switchSeason(id){
 }
 async function openMatch(id){
  if(!fixtures().some(x=>x.id===id))return;
- state.match=id;state.matchTab='overview';state.scoreEditing=false;state.matchData=null;state.fixtureEvents=[];navigate('match');
+ state.match=id;state.matchTab='overview';state.scoreEditing=false;state.timelineEditor=null;state.matchData=null;state.fixtureEvents=[];navigate('match');
  const matched=resolveMatch().operational;
  const [op,fx]=await Promise.allSettled([matched?loadMatchInfo(matched.id):Promise.resolve(null),loadFixtureEvents(id)]);
  if(state.match!==id)return;
@@ -731,6 +765,32 @@ document.addEventListener('click',async e=>{
    lineupPendingSnapshot=null;
    toast('Formazione iniziale ufficialmente confermata');render();
   }catch(err){toast('Conferma non riuscita: '+err.message);confirm.disabled=false}
+  return;
+ }
+ const timelineClose=e.target.closest('[data-timeline-close]');
+ if(timelineClose){
+  if(timelineClose.classList?.contains('timeline-editor-backdrop')&&e.target!==timelineClose)return;
+  state.timelineEditor=null;render();return;
+ }
+ const timelineEvent=e.target.closest('[data-timeline-event]');
+ if(timelineEvent&&state.identity?.role?.role==='admin'){
+  state.timelineEditor={eventId:timelineEvent.dataset.timelineEvent};render();return;
+ }
+ const timelineAdd=e.target.closest('[data-timeline-add]');
+ if(timelineAdd&&state.identity?.role?.role==='admin'){
+  state.timelineEditor={eventId:null,minute:timelineAdd.dataset.minute||'',stoppage:timelineAdd.dataset.stoppage||0};render();return;
+ }
+ const timelineDelete=e.target.closest('[data-timeline-delete]');
+ if(timelineDelete&&state.identity?.role?.role==='admin'){
+  const {operational:m}=resolveMatch(),id=timelineDelete.dataset.timelineDelete;
+  if(!window.confirm('Eliminare questo evento dalla partita?'))return;
+  try{
+   if(m)await rpc('tm_app_match_action',{p_match_id:m.id,p_action:'void_event',p_payload:{event_id:id}});
+   else await adminWrite('app_match_events','PATCH',{validation_status:'rejected'},{id});
+   state.timelineEditor=null;
+   if(m)state.matchData=await loadMatchInfo(m.id);else state.fixtureEvents=await loadFixtureEvents(state.match);
+   render();toast('Evento eliminato');
+  }catch(error){toast('Eliminazione non riuscita: '+error.message)}
   return;
  }
  const eventReaction=e.target.closest('[data-event-reaction]');
@@ -983,6 +1043,38 @@ document.addEventListener('tm-callup-change',e=>{
  }).catch(()=>{});
 });
 document.addEventListener('submit',async e=>{
+ if(e.target.matches('[data-timeline-event-form]')){
+  e.preventDefault();
+  if(state.identity?.role?.role!=='admin')return;
+  const form=e.target,fd=new FormData(form),{fixture:f,operational:m}=resolveMatch();
+  if(!f)return;
+  const eventId=form.dataset.eventId||null;
+  const minuteRaw=String(fd.get('minute')??'').trim(),stoppageRaw=String(fd.get('stoppage_minute')??'').trim();
+  const minute=minuteRaw===''?null:Number(minuteRaw),stoppage=stoppageRaw===''?0:Number(stoppageRaw);
+  const type=String(fd.get('event_type')||'goal'),teamSide=String(fd.get('team_side')||(m?'team':'home'));
+  if(minute!==null&&(!Number.isInteger(minute)||minute<0||minute>300)){toast('Minuto non valido');return}
+  if(!Number.isInteger(stoppage)||stoppage<0||stoppage>30){toast('Recupero non valido');return}
+  try{
+   if(m){
+    if(eventId){
+     const ev=state.matchData?.events?.find(x=>String(x.id)===String(eventId));if(!ev)throw Error('Evento non trovato');
+     await rpc('tm_app_amend_event',{p_match_id:m.id,p_event_id:eventId,p_expected_status:ev.validation_status,
+      p_changes:{event_type:type,team_side:teamSide,player_id:fd.get('player_id')||null,secondary_player_id:fd.get('secondary_player_id')||null,minute,stoppage_minute:stoppage,notes:String(fd.get('notes')||'')},
+      p_reason:'Rettifica da timeline'});
+    }else{
+     await rpc('tm_app_submit_live_event',{p_match_id:m.id,p_event:{event_type:type,team_side:teamSide,player_id:fd.get('player_id')||null,secondary_player_id:fd.get('secondary_player_id')||null,minute,stoppage_minute:stoppage,notes:String(fd.get('notes')||''),count_score:true,captured_at:new Date().toISOString(),minute_mode:'manual',minute_origin:'manual',request_key:crypto.randomUUID()}});
+    }
+    state.matchData=await loadMatchInfo(m.id);
+   }else{
+    const payload={event_type:type,team_side:teamSide,minute,stoppage_minute:stoppage,source:'manual',source_raw:{},payload:{origin:'timeline_admin'},proposed_by:state.identity.user};
+    if(eventId)await adminWrite('app_match_events','PATCH',payload,{id:eventId});
+    else await adminWrite('app_match_events','POST',{...payload,fixture_id:f.id,match_id:null});
+    state.fixtureEvents=await loadFixtureEvents(f.id);
+   }
+   state.timelineEditor=null;render();toast(eventId?'Evento aggiornato':'Evento aggiunto');
+  }catch(error){toast('Evento non salvato: '+error.message)}
+  return;
+ }
  if(e.target.matches('form[data-staff-form="event"]')){
   const captured=e.target.querySelector('input[name="captured_at"]');
   if(captured&&!captured.value)captured.value=new Date().toISOString();
