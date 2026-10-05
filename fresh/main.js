@@ -293,14 +293,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   const primary=isChange&&e.secondary_player_id?playerName(e.secondary_player_id):e.player_id?playerName(e.player_id):goal(e)?'Gol avversario':e.payload?.opponent_shirt_number?'#'+e.payload.opponent_shirt_number:'Squadra';
   const secondary=isChange?(e.secondary_player_id&&e.player_id?playerName(e.player_id):''):(goal(e)&&e.secondary_player_id?playerName(e.secondary_player_id):'');
   const score=entry.score?'<span class="mt-score">'+E(entry.score)+'</span>':'';
-  const stateLabel=e.validation_status==='official'?'':e.validation_status==='disputed'?'Contestato':'Da confermare';
-  const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+
-   (stateLabel?'<small class="mt-event-state">'+E(stateLabel)+'</small>':'')+timingInfo(e)+'</span>';
-  const canReact=trustedReviewer&&['official','proposed','community_confirmed','disputed'].includes(e.validation_status);
-  const reactions=canReact?'<span class="mt-event-reactions">'+
-   '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(e.id)+'" aria-label="Conferma evento">+'+E(Number(e.support_count)||0)+'</button>'+
-   '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(e.id)+'" aria-label="Segnala errore">−'+E(Number(e.dispute_count)||0)+'</button></span>':'';
-  return (goal(e)?'':'<span class="mt-icon">'+icon(e)+'</span>')+score+names+reactions;
+  const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+'</span>';
+  return (goal(e)?'':'<span class="mt-icon">'+icon(e)+'</span>')+score+names;
  };
  const minutes=e=>E(displayEventMinute(e,competitionSettings).replace('′',"'"));
  const recoveryByPeriod=new Map();
@@ -319,7 +313,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
    let j=i+1;while(j<items.length&&sameMoment(items[i],items[j]))j++;
    const group=items.slice(i,j),first=group[0].event;
    const contentFor=which=>group.filter(x=>side(x.event)===which||(which==='away'&&side(x.event)==='unknown'))
-    .map(x=>{const stateClass=eventState(x.event);return '<div class="mt-group-item'+(stateClass==='official'?'':' event-'+stateClass)+'">'+eventContent(x)+'</div>'}).join('');
+    .map(x=>'<div class="mt-group-item">'+eventContent(x)+'</div>').join('');
    output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
    i=j;
   }
