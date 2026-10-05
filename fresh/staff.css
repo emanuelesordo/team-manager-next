@@ -625,3 +625,12 @@
  .match-big-score .match-header-live-clock small{font-size:8px}
  .match-compact-center{gap:6px}
 }
+
+
+/* Live match header readability */
+.match-detail-head .match-big-score>b{font-size:clamp(48px,6.8vw,82px)!important;line-height:.95}
+@media(max-width:650px){
+ .match-detail-head .match-detail-score{grid-template-columns:minmax(0,1fr) minmax(104px,.8fr) minmax(0,1fr)!important}
+ .match-detail-head .match-big-score>b{font-size:clamp(42px,12vw,58px)!important}
+ .match-compact-score{font-size:clamp(23px,6.4vw,31px)!important}
+}
