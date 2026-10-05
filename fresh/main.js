@@ -372,7 +372,7 @@ function match(){
  const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
  const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
  const officialHome=Number.isInteger(f.home_score)?Number(f.home_score):0,officialAway=Number.isInteger(f.away_score)?Number(f.away_score):0;
- const pendingGoals=activeEvents.filter(e=>['proposed','community_confirmed'].includes(e.validation_status)&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
+ const pendingGoals=activeEvents.filter(e=>['proposed','community_confirmed'].includes(e.validation_status)&&e.payload?.count_score!==false&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
  const proposedScore=pendingGoals.reduce((score,e)=>{
   let home=(m?.home_away==='home'&&e.team_side==='team')||(m?.home_away==='away'&&e.team_side==='opponent');
   if(e.event_type==='own_goal')home=!home;
@@ -384,7 +384,7 @@ function match(){
   E(proposedScore.home)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(proposedScore.away):
   hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
  const editableScore=extraMatch&&state.identity?.role?.role==='admin';
- const headerScore=isLive(f)?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+(hasProposedScore?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
+ const headerScore=matchIsLive?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+(hasProposedScore?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
