@@ -8,7 +8,7 @@ import {availabilityDefault,normalizedReason,unavailabilityReasons} from './avai
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js?live=20261005merge2';
-import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute} from './match-minutes.js';
+import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute} from './match-minutes.js?live=20261005periods';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 
 export const staffLogoEvent=handleLogoEditorEvent;
