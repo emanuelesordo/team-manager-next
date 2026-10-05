@@ -9,9 +9,18 @@ export function ratingSummary(rows=[]){
  return {average:scores.length?scores.reduce((sum,n)=>sum+n,0)/scores.length:null,count:scores.length,sv:rows.filter(row=>row.rating===null).length};
 }
 export function parseVote(value){
- if(value==='SV')return null;
- if(value==null||value==='')throw Error('Seleziona un voto o SV');
- const n=Number(value);
- if(!Number.isFinite(n)||n<1||n>10||n*2!==Math.trunc(n*2))throw Error('Voto non valido');
- return n;
+ if(value==null)return null;
+ let raw=String(value).trim().toUpperCase();
+ if(raw===''||raw==='SV')return null;
+ raw=raw.replace(',','.');
+ // Fast entry without decimal separator: 65 -> 6.5, 75 -> 7.5.
+ if(/^\d{2}$/.test(raw)&&raw!=='10'){
+  const compact=Number(raw)/10;
+  if(compact>=1&&compact<=10)raw=String(compact);
+ }
+ const n=Number(raw);
+ if(!Number.isFinite(n)||n<1||n>10)throw Error('Inserisci un voto da 1 a 10 oppure lascia vuoto per SV');
+ const rounded=Math.round(n*2)/2;
+ if(rounded<1||rounded>10)throw Error('Voto non valido');
+ return rounded;
 }
