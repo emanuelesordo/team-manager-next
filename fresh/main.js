@@ -616,15 +616,16 @@ function render(){
  }
  if(state.page==='competitions'&&!state.loading){const scroller=document.querySelector('[data-rounds-scroll]');const focus=scroller?.querySelector('[data-round-focus]');if(scroller&&focus){const next=scroller.querySelector('[data-round-next]');const bounds=scroller.getBoundingClientRect();const first=focus.getBoundingClientRect();const last=(next||focus).getBoundingClientRect();const top=first.top-bounds.top+scroller.scrollTop;const visibleHeight=last.bottom-first.top+12;scroller.style.height=Math.ceil(visibleHeight)+'px';scroller.scrollTop=Math.max(0,top);}}
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
- if(state.page==='match'&&!state.loading){paintMatchHeaderCompact();requestAnimationFrame(centerVotePickers)}
+ if(state.page==='match'&&!state.loading){paintMatchHeaderCompact();requestAnimationFrame(()=>requestAnimationFrame(centerVotePickers))}
  if(state.page==='home'&&!state.loading)void hydrateHomeRatings();
  manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[],(row)=>{const match=(state.data?.standings||[]).find(x=>('team:'+x.team_id===row.club_id&&x.team_id)||('opponent:'+x.opponent_id===row.club_id&&x.opponent_id));return match?club(row.team,'tiny',{team_id:match.team_id,opponent_id:match.opponent_id}):''});paintLineupPitch();paintCallups();if(state.page==='match'&&!state.loading)startStaffClock(isStaff(staffContext())?staffContext():null);
 }
 function centerVotePickers(){
  document.querySelectorAll('[data-vote-picker]').forEach(picker=>{
-  const active=picker.querySelector('.vote-picker-option.active');
-  if(!active)return;
-  const left=active.offsetLeft-(picker.clientWidth-active.offsetWidth)/2;
+  const target=picker.querySelector('.vote-picker-option.active')||picker.querySelector('[data-vote-focus="true"]');
+  if(!target)return;
+  const pickerRect=picker.getBoundingClientRect(),targetRect=target.getBoundingClientRect();
+  const left=picker.scrollLeft+(targetRect.left-pickerRect.left)-(picker.clientWidth-targetRect.width)/2;
   picker.scrollLeft=Math.max(0,left);
  });
 }
