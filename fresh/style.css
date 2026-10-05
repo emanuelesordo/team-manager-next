@@ -1125,3 +1125,44 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
  .match-compact-bar.is-live .match-header-live-clock strong{font-size:11px}
  .match-compact-bar.is-live .match-header-live-clock small{font-size:7px}
 }
+
+
+/* Reapplied live match collapse: once scrolled, keep only score + live timer. */
+body[data-match-header-mode="live-compact"] .match-compact-bar.is-live{
+ grid-template-columns:1fr;
+ justify-items:center;
+}
+body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-compact-center{
+ width:100%;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ gap:10px;
+}
+body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-compact-score{
+ font-size:clamp(24px,3vw,36px);
+}
+body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-header-live-clock{
+ margin:0;
+ display:flex;
+ flex-direction:column;
+ align-items:flex-start;
+ gap:1px;
+}
+@media(max-width:650px){
+ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live{
+  padding:5px 8px;
+ }
+ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-compact-center{
+  gap:8px;
+ }
+ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-compact-score{
+  font-size:24px;
+ }
+ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-header-live-clock strong{
+  font-size:11px;
+ }
+ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-header-live-clock small{
+  font-size:7px;
+ }
+}
