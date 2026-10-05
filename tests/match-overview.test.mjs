@@ -99,3 +99,17 @@ test('pitch event icons are naked glyphs and substitutions preserve in/out direc
  assert.match(html,/ov-icon-goal/);
  assert.doesNotMatch(html,/ov-marker-badge/);
 });
+
+test('pitch and bench use the same event icon renderer',()=>{
+ const shared={...game,events:[
+  {event_type:'substitution',player_id:'a',secondary_player_id:'b',minute:60,validation_status:'official'},
+  {event_type:'goal',player_id:'b',minute:68,validation_status:'official'}
+ ]};
+ const html=overviewLineup({formation:'4-4-2'},shared,people,season,competition,{primary:'#111',secondary:'#ffd400'});
+ const pitch=html.slice(html.indexOf('ov-player-pitch'),html.indexOf('</div></div>',html.indexOf('ov-player-pitch'))+12);
+ const bench=html.slice(html.indexOf('ov-bench'),html.indexOf('</section>'));
+ assert.match(pitch,/ov-marker-icon ov-icon-sub_out/);
+ assert.match(bench,/ov-marker-icon ov-icon-sub_in/);
+ assert.match(bench,/ov-marker-icon ov-icon-goal/);
+ assert.doesNotMatch(bench,/class="ov-event /);
+});
