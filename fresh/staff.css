@@ -609,3 +609,19 @@
  .live-sheet-grid{grid-template-columns:1fr}
  .live-sheet-grid .staff-field{grid-column:1!important}
 }
+
+
+/* Timer live nel centro dell'header partita */
+.match-header-live-clock{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;margin-top:3px}
+.match-header-live-clock strong{font:800 16px/1 Manrope,sans-serif;letter-spacing:.02em;color:inherit}
+.match-header-live-clock small{font-size:9px;line-height:1.1;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#6f8279);white-space:nowrap}
+.match-compact-center{display:flex;align-items:center;justify-content:center;gap:9px;min-width:0}
+.match-compact-center .match-header-live-clock{margin:0;gap:0}
+.match-compact-center .match-header-live-clock strong{font-size:12px}
+.match-compact-center .match-header-live-clock small{font-size:7px}
+@media(max-width:720px){
+ .match-big-score .match-header-live-clock{margin-top:1px}
+ .match-big-score .match-header-live-clock strong{font-size:14px}
+ .match-big-score .match-header-live-clock small{font-size:8px}
+ .match-compact-center{gap:6px}
+}
