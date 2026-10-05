@@ -750,19 +750,6 @@ document.addEventListener('click',async e=>{
   }catch(err){eventReaction.disabled=false;toast('Validazione non riuscita: '+err.message)}
   return;
  }
- const voteSv=e.target.closest('[data-vote-sv]');
- if(voteSv){
-  e.preventDefault();
-  if(!hasSession()){state.overlay='login';render();return}
-  const m=resolveMatch().operational;if(!m)return;
-  voteSv.disabled=true;
-  try{
-   await saveVote(m.id,voteSv.dataset.votePlayer,'SV');
-   state.matchData=await loadMatchInfo(m.id);
-   render();toast('Voto impostato su SV');
-  }catch(error){voteSv.disabled=false;toast('SV non salvato: '+(error.message||error))}
-  return;
- }
  const voteClear=e.target.closest('[data-vote-clear]');
  if(voteClear){
   e.preventDefault();
@@ -770,10 +757,10 @@ document.addEventListener('click',async e=>{
   const m=resolveMatch().operational;if(!m)return;
   voteClear.disabled=true;
   try{
-   await deleteVote(m.id,voteClear.dataset.votePlayer);
+   await saveVote(m.id,voteClear.dataset.votePlayer,'');
    state.matchData=await loadMatchInfo(m.id);
-   render();toast('Voto annullato');
-  }catch(error){voteClear.disabled=false;toast('Voto non annullato: '+(error.message||error))}
+   render();toast('Voto impostato su SV');
+  }catch(error){voteClear.disabled=false;toast('SV non salvato: '+(error.message||error))}
   return;
  }
  const tournamentScoreTarget=e.target.closest('[data-tournament-score]');
@@ -816,22 +803,34 @@ document.addEventListener('click',async e=>{
  case 'logout':await logoutUser();break;
  }
 });
-async function persistVoteRange(input){
- if(!input?.matches?.('[data-vote-range]')||input.dataset.voteSaving==='1')return;
- if(String(input.dataset.voteSavedValue??'')===String(input.value))return;
+async function persistVoteInput(input){
+ if(!input?.matches?.('[data-vote-input]')||input.dataset.voteSaving==='1')return;
  const control=input.closest('[data-vote-control]'),stateEl=control?.querySelector('[data-vote-save-state]');
  if(!hasSession()){state.overlay='login';render();return}
  const m=resolveMatch().operational,activeFixture=state.match;
  if(!m){toast('Tabellino non disponibile');return}
+ let normalized;
+ try{normalized=parseVoteInputValue(input.value)}
+ catch(error){
+  const saved=input.dataset.voteSavedValue||'';
+  input.value=saved==='SV'?'':saved.replace('.',',');
+  control?.classList.add('is-error');
+  if(stateEl)stateEl.textContent=error.message;
+  toast(error.message);
+  return;
+ }
+ const saveKey=normalized===null?'SV':String(normalized);
+ if(String(input.dataset.voteSavedValue??'')===saveKey)return;
  input.dataset.voteSaving='1';
  control?.classList.add('is-saving');control?.classList.remove('is-error','is-saved');
  if(stateEl)stateEl.textContent='Salvataggio…';
  try{
-  await saveVote(m.id,input.dataset.votePlayer,input.value);
-  input.dataset.voteSavedValue=String(input.value);
+  await saveVote(m.id,input.dataset.votePlayer,normalized===null?'':normalized);
+  input.dataset.voteSavedValue=saveKey;
+  input.value=normalized===null?'':String(normalized).replace('.',',');
   const updated=await loadMatchInfo(m.id);
   if(activeFixture===state.match){state.matchData=updated;render()}
-  toast('Valutazione salvata');
+  toast(normalized===null?'Voto impostato su SV':'Valutazione salvata');
  }catch(error){
   delete input.dataset.voteSaving;
   control?.classList.remove('is-saving');control?.classList.add('is-error');
@@ -839,9 +838,21 @@ async function persistVoteRange(input){
   toast('Voto non salvato: '+(error.message||error));
  }
 }
+function parseVoteInputValue(value){
+ let raw=String(value??'').trim().toUpperCase();
+ if(raw===''||raw==='SV')return null;
+ raw=raw.replace(',','.');
+ if(/^\d{2}$/.test(raw)&&raw!=='10'){
+  const compact=Number(raw)/10;
+  if(compact>=1&&compact<=10)raw=String(compact);
+ }
+ const n=Number(raw);
+ if(!Number.isFinite(n)||n<1||n>10)throw Error('Inserisci un voto da 1 a 10 oppure lascia vuoto per SV');
+ return Math.round(n*2)/2;
+}
 document.addEventListener('change',async e=>{
- if(e.target.matches('[data-vote-range]')){
-  await persistVoteRange(e.target);
+ if(e.target.matches('[data-vote-input]')){
+  await persistVoteInput(e.target);
   return;
  }
  if(e.target.matches('[data-match-kit]')){
@@ -873,29 +884,19 @@ document.addEventListener('change',e=>{
  if(e.target.matches('[data-comp-select]')){state.comp=e.target.value||null;render()}
 });
 document.addEventListener('pointerdown',e=>{
- const voteRange=e.target.closest?.('[data-vote-range]');
- if(voteRange){const control=voteRange.closest('[data-vote-control]');control?.classList.add('is-active');control?.classList.remove('is-unrated');}
  const submit=e.target.closest?.('form[data-staff-form="event"] [type="submit"]');
  const form=submit?.closest?.('form[data-staff-form="event"]');
  const captured=form?.querySelector?.('input[name="captured_at"]');
  if(captured&&!captured.value)captured.value=new Date().toISOString();
 },{capture:true,passive:true});
-document.addEventListener('pointerup',e=>{
- const voteRange=e.target.closest?.('[data-vote-range]');
- if(voteRange)void persistVoteRange(voteRange);
-},{capture:true});
 document.addEventListener('paste',e=>{staffLogoEvent(e)});
 for(const type of ['pointerdown','pointermove','pointerup','pointercancel','dragstart','dragover','drop']){
  document.addEventListener(type,e=>{staffLogoEvent(e)});
 }
 document.addEventListener('input',e=>{
  if(staffLogoEvent(e))return;
- if(e.target.matches('[data-vote-range]')){
-  const input=e.target,control=input.closest('[data-vote-control]'),bubble=control?.querySelector('[data-vote-bubble]');
-  const value=Number(input.value),pos=((value-1)/9*100).toFixed(3)+'%';
-  input.style.setProperty('--vote-pos',pos);
-  if(bubble){bubble.style.setProperty('--vote-pos',pos);bubble.value=String(value).replace('.',',');bubble.textContent=String(value).replace('.',',')}
-  control?.classList.add('is-active');control?.classList.remove('is-unrated');
+ if(e.target.matches('[data-vote-input]')){
+  e.target.value=e.target.value.replace(/[^0-9.,]/g,'').slice(0,4);
   return;
  }
  if(e.target.id==='player-search'){
