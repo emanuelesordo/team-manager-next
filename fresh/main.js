@@ -81,7 +81,7 @@ function manageLivePolling(){
  if(!fixtures().some(f=>isLive(f)))return;
  livePollTimer=setInterval(pollLive,20000);
 }
-function comps(){return [...(state.data?.competitions||[])].sort((a,b)=>
+function comps(){return [...(state.data?.competitions||[])].filter(c=>c?.phase_rules?.system_private_test!==true).sort((a,b)=>
  Number(a.tier_level??999)-Number(b.tier_level??999)||
  Number(Boolean(a.parent_competition_id))-Number(Boolean(b.parent_competition_id))||
  String(a.name).localeCompare(String(b.name),'it'))}
@@ -94,7 +94,7 @@ function fixtureHomeClub(f){return f?.home_team_id===team()?.id?team():(state.ba
 function ownFixtures(){return fixtures().filter(f=>involvesTeam(f,team())).sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))}
 function next(){const n=Date.now();return ownFixtures().filter(f=>!f.is_test).filter(f=>isLive(f)||(!isFinished(f)&&new Date(f.kickoff_at).getTime()>=n-3600000)).sort((a,b)=>Number(isLive(b))-Number(isLive(a))||new Date(a.kickoff_at)-new Date(b.kickoff_at))[0]||null}
 function previous(){return [...ownFixtures()].filter(f=>!f.is_test&&isFinished(f)).sort((a,b)=>new Date(b.kickoff_at)-new Date(a.kickoff_at))[0]||null}
-function competition(id){return comps().find(c=>c.id===id)}
+function competition(id){return (state.data?.competitions||[]).find(c=>c.id===id)}
 function currentComp(){return competition(state.comp)||comps()[0]}
 function club(n,sz='md',ref=null){const o=ref?.team_id? (ref.team_id===team()?.id?team():null):ref?.opponent_id?(state.base?.opponents||[]).find(o=>o.id===ref.opponent_id):null;const img=safeUrl(o?.logo_url);const bg=/^#[0-9a-f]{6}$/i.test(o?.logo_background_color||'')?o.logo_background_color:'';return `<span class="crest ${sz}"${bg?` style="background-color:${E(bg)}"`:''}>${img?`<img alt="" src="${img}" loading="lazy" decoding="async">`:`<span>${E(String(n||'?').slice(0,2)).toUpperCase()}</span>`}</span>`}
 function status(f){return isLive(f)?'<span class="status live"><i></i>LIVE</span>':isFinished(f)?'<span class="status end">Terminata</span>':'<span class="status upcoming">In programma</span>'}
@@ -200,7 +200,8 @@ function competitions(){
 function calendar(){
  const rows=ownFixtures().filter(f=>state.filter==='all'||(state.filter==='upcoming'?!isFinished(f):isFinished(f))).filter(f=>!state.comp||f.competition_id===state.comp);
  const grouped={};for(const f of rows){const key=new Intl.DateTimeFormat(LOCALE,{month:'long',year:'numeric',timeZone:TIME_ZONE}).format(new Date(f.kickoff_at));(grouped[key]??=[]).push(f)}
- return `${heading('MATCH SCHEDULE','Calendario','Le gare della squadra, dalle prossime date ai risultati passati.')}<div class="filters"><div class="segmented">${[['all','Tutte'],['upcoming','Da giocare'],['results','Risultati']].map(([k,v])=>`<button data-filter="${k}" class="${state.filter===k?'active':''}">${v}</button>`).join('')}</div><select aria-label="Competizione" class="filter-select" data-comp-select><option value="">Tutte le competizioni</option>${comps().map(c=>`<option value="${E(c.id)}" ${state.comp===c.id?'selected':''}>${E(competitionLabel(c))}</option>`).join('')}</select></div><div class="calendar-groups">${Object.entries(grouped).map(([month,a])=>`<section class="glass panel month-card"><div class="month-heading"><h2>${E(month)}</h2><span>${a.length} ${a.length===1?'gara':'gare'}</span></div><div class="fixture-list">${a.map(f=>fixtureRow(f)).join('')}</div></section>`).join('')||'<div class="glass panel empty">Nessuna partita per questo filtro.</div>'}</div>`
+ const canCreate=state.identity?.role?.role==='admin';
+ return `${heading('MATCH SCHEDULE','Calendario','Le gare della squadra, dalle prossime date ai risultati passati.')}<div class="filters calendar-toolbar"><div class="segmented">${[['all','Tutte'],['upcoming','Da giocare'],['results','Risultati']].map(([k,v])=>`<button data-filter="${k}" class="${state.filter===k?'active':''}">${v}</button>`).join('')}</div><div class="calendar-tools"><select aria-label="Competizione" class="filter-select" data-comp-select><option value="">Tutte le competizioni</option>${comps().map(c=>`<option value="${E(c.id)}" ${state.comp===c.id?'selected':''}>${E(competitionLabel(c))}</option>`).join('')}</select>${canCreate?'<button type="button" class="roster-add calendar-new" data-calendar-new>+ Nuovo</button>':''}</div></div><div class="calendar-groups">${Object.entries(grouped).map(([month,a])=>`<section class="glass panel month-card"><div class="month-heading"><h2>${E(month)}</h2><span>${a.length} ${a.length===1?'gara':'gare'}</span></div><div class="fixture-list">${a.map(f=>fixtureRow(f)).join('')}</div></section>`).join('')||'<div class="glass panel empty">Nessuna partita per questo filtro.</div>'}</div>`
 }
 function roster(){
  const roster=(state.data?.roster||[]),all=state.data?.players||[],stats=state.data?.playerStats||[];
@@ -331,15 +332,22 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  return '<div class="match-timeline" aria-label="Cronologia eventi della partita">'+(tracked.length||recoveryByPeriod.size?parts:parts+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>';
 }
 
+function matchRules(m,comp){
+ return {...(comp||{}),
+  periods:Number(m?.periods_override||comp?.periods||2),
+  minutes_per_period:Number(m?.minutes_per_period_override||comp?.minutes_per_period||40),
+  rolling_substitutions:Boolean(m?.rolling_substitutions)};
+}
 function match(){
  const {fixture:f,operational:m}=resolveMatch();if(!f)return '<section class="empty">Partita non disponibile.</section>';
  const data=state.matchData||{players:[],events:[],ratings:[],ratingMeans:[]};
  const comp=competition(f.competition_id);
+ const rules=matchRules(m,comp);
  const people=id=>(state.data?.players||[]).find(p=>p.id===id);
  const playerName=id=>matchPlayerLabel(people(id));
  const activeEvents=(data.events||[]).filter(e=>e.validation_status!=='rejected');
  const pending=activeEvents.filter(e=>['proposed','community_confirmed','disputed'].includes(e.validation_status)).length;
- const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),comp):
+ const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),rules):
   (state.fixtureEvents?.length?fixtureEventsPanel(state.fixtureEvents,comp,f):'<div class="empty">Nessun tabellino associato.</div>');
  const extraMatch=!involvesTeam(f,team());
  const availableKits=collectionForClub(team()||{});
@@ -368,7 +376,7 @@ function match(){
    (editor?field('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):''):titleInfo('Data',weekday(f.kickoff_at))+titleInfo('Ora',time(f.kickoff_at)))+'</div>'+
   '<div class="match-meta-group match-meta-right">'+
    (editor?field('venue_name','Campo',f.venue_name||venue)+field('venue_address','Luogo',f.venue_address||address):(placeLink?'<a class="match-meta-item" target="_blank" rel="noopener noreferrer" href="'+E(placeLink)+'" title="Apri il luogo su Maps"><strong>'+E(venue||address||'—')+'</strong></a>':titleInfo('Campo',venue||'—')))+'</div></div>';
- const scorers=matchScorerRows(activeEvents.filter(e=>['official','proposed','community_confirmed'].includes(e.validation_status)),f,team(),playerName,comp);
+ const scorers=matchScorerRows(activeEvents.filter(e=>['official','proposed','community_confirmed'].includes(e.validation_status)),f,team(),playerName,rules);
  const recordedGoals=(state.fixtureEvents||[]).filter(e=>e.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
  const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
  const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
@@ -393,7 +401,7 @@ function match(){
   '<div class="match-compact-club match-compact-away"><strong>'+E(f.away_team)+'</strong>'+
   club(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+'</div></div>';
  const statusEditor=editor?'<select data-extra-status aria-label="Stato partita">'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,text])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+text+'</option>').join('')+'</select>':null;
- const testNotice=f.is_test?'<div class="match-test-banner">TEST PRIVATO · visibile solo al tuo account · escluso da classifiche e statistiche</div>':'';
+ const testNotice=f.is_test?'<div class="match-test-banner"><strong>TEST PRIVATO</strong> · solo tuo · '+E(rules.periods)+'×'+E(rules.minutes_per_period)+"'"+' · cambi '+(rules.rolling_substitutions?'rotanti':'non rotanti')+' · escluso da classifiche e statistiche</div>':'';
  const header=testNotice+'<div class="match-detail-head glass">'+
   '<div class="match-expanded">'+matchMeta+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
@@ -451,6 +459,11 @@ function overlay(){
  if(!state.overlay)return '';
  if(state.overlay==='login')return `<div class="overlay" data-dismiss><section class="overlay-card" role="dialog" aria-modal="true" aria-label="Accedi"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><span class="eyebrow">AREA RISERVATA</span><h2>Bentornato in squadra.</h2><p>Accedi con le credenziali già configurate su Team Manager.</p><form id="login-form"><label>Username<input name="username" autocomplete="username" required placeholder="Il tuo username"></label><label>Password<input name="password" type="password" autocomplete="current-password" required placeholder="••••••••"></label><div id="login-error" class="form-error" aria-live="polite"></div><button type="submit" class="primary-btn">Accedi ${ico('arrow',17)}</button><button type="button" data-account-recover class="account-recover">Password dimenticata?</button></form></section></div>`;
  if(state.overlay==='menu')return `<div class="overlay" data-dismiss><section class="overlay-card menu-sheet" role="dialog" aria-modal="true" aria-label="Menu"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><h2>Esplora Team Manager</h2><label class="season-box dark"><span>Stagione</span><select data-season>${state.base.seasons.map(s=>`<option value="${E(s.id)}" ${s.id===state.season?'selected':''}>${E(s.name)}</option>`).join('')}</select></label>${nav.map(([id,ic,l])=>`<button class="menu-link" data-page="${id}">${ico(ic)} ${l} ${ico('chevron',16)}</button>`).join('')}<button class="menu-link" data-page="club">${ico('settings')} Squadra e avversarie ${ico('chevron',16)}</button>${isStaff(staffContext())?`<button class="menu-link" data-page="admin">${ico('settings')} Amministrazione ${ico('chevron',16)}</button>`:''}<button class="menu-link" data-page="account">${ico('user')} Profilo ${ico('chevron',16)}</button></section></div>`;
+ if(state.overlay==='new-test-match'){
+  const opponents=(state.base?.opponents||[]).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'it'));
+  const now=new Date(Date.now()+5*60000),local=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  return `<div class="overlay" data-dismiss><section class="overlay-card calendar-new-sheet" role="dialog" aria-modal="true" aria-label="Nuova amichevole o test"><button class="close-overlay" data-action="close" aria-label="Chiudi">${ico('close')}</button><span class="eyebrow">CALENDARIO</span><h2>Nuova amichevole / test</h2><p>Partita privata visibile solo al tuo account e esclusa dalle statistiche ufficiali.</p><form id="private-match-form" class="calendar-new-form"><label>Avversaria<select name="opponent_id" required><option value="">Seleziona</option>${opponents.map(o=>`<option value="${E(o.id)}">${E(o.name)}</option>`).join('')}</select></label><label>Casa / trasferta<select name="home_away"><option value="home">Casa</option><option value="away">Trasferta</option></select></label><label>Data e ora inizio<input name="kickoff_at" type="datetime-local" value="${E(local)}" required></label><label>Luogo<input name="venue_name" placeholder="Campo / impianto"></label><div class="calendar-rule-grid"><label>Numero tempi<input name="periods" type="number" min="1" max="6" value="2" required></label><label>Durata per tempo<input name="minutes_per_period" type="number" min="1" max="120" value="40" required></label></div><label class="staff-check calendar-rolling"><input type="checkbox" name="rolling_substitutions"> Cambi rotanti <small>un giocatore uscito può rientrare</small></label><div id="private-match-error" class="form-error" aria-live="polite"></div><button type="submit" class="primary-btn">Crea partita ${ico('arrow',17)}</button></form></section></div>`;
+ }
  return '';
 }
 // The expanded header keeps its natural size. Its separate compact sibling is
@@ -662,6 +675,10 @@ document.addEventListener('click',async e=>{
  const staffTarget=e.target.closest('[data-staff-action],[data-staff-area],[data-staff-match-tab]');
  if(staffTarget&&await staffClick(e,staffTarget,staffContext()))return;
  const x=e.target.closest('button,[data-dismiss]');if(!x)return;
+ if(x.dataset.calendarNew!==undefined){
+  if(state.identity?.role?.role==='admin'){state.overlay='new-test-match';render();}
+  return;
+ }
  if(x.dataset.dismiss!==undefined&&e.target===x){state.overlay=null;render();return}
  if(x.dataset.rosterNew!==undefined){if(isStaff(staffContext())){openNewPlayer();navigate('admin')}return}
  if(x.dataset.rosterSort){const k=x.dataset.rosterSort;state.rosterDesc=state.rosterSort===k?!state.rosterDesc:['shirt','age','appearances','goals','avg_rating'].includes(k);state.rosterSort=k;render();return}
@@ -815,6 +832,29 @@ document.addEventListener('submit',async e=>{
    await adminWrite('app_match_events',existing?'PATCH':'POST',existing?{event_type:kind,team_side:side,minute,source_raw:payload.source_raw,payload:payload.payload}:{...payload,fixture_id:f.id,match_id:null,proposed_by:state.identity.user},existing?{id:existing.id}:{});
    state.fixtureEvents=await loadFixtureEvents(f.id);render();toast('Evento salvato');
   }catch(error){toast('Evento non salvato: '+error.message)}return;
+ }
+ if(e.target.id==='private-match-form'){
+  e.preventDefault();
+  if(state.identity?.role?.role!=='admin')return;
+  const fd=new FormData(e.target),error=e.target.querySelector('#private-match-error'),button=e.target.querySelector('[type="submit"]');
+  const periods=Number(fd.get('periods')),minutes=Number(fd.get('minutes_per_period'));
+  const kickoff=new Date(String(fd.get('kickoff_at')||''));
+  if(!fd.get('opponent_id')){error.textContent='Seleziona un’avversaria.';return}
+  if(!Number.isFinite(kickoff.getTime())){error.textContent='Data e ora non valide.';return}
+  if(!Number.isInteger(periods)||periods<1||periods>6||!Number.isInteger(minutes)||minutes<1||minutes>120){error.textContent='Numero o durata dei tempi non validi.';return}
+  button.disabled=true;button.textContent='Creazione…';error.textContent='';
+  try{
+   const result=await rpc('tm_app_create_private_match',{
+    p_season_id:state.season,p_opponent_id:String(fd.get('opponent_id')),p_home_away:String(fd.get('home_away')||'home'),
+    p_kickoff_at:kickoff.toISOString(),p_venue_name:String(fd.get('venue_name')||'').trim()||null,p_venue_address:null,
+    p_periods:periods,p_minutes_per_period:minutes,p_rolling_substitutions:fd.get('rolling_substitutions')==='on'
+   });
+   state.overlay=null;
+   await switchSeason(state.season);
+   toast('Partita di test creata');
+   if(result?.fixture_id)await openMatch(result.fixture_id);
+  }catch(err){error.textContent=err.message||String(err);button.disabled=false;button.textContent='Crea partita'}
+  return;
  }
  if(e.target.matches('[data-vote-form]')){
   e.preventDefault();
