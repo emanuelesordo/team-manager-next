@@ -12,17 +12,20 @@ test('match player names use N. Cognome with stable fallback',()=>{
  assert.equal(matchPlayerLabel({first_name:'',last_name:'Cabassa'}),'Cabassa');
  assert.equal(matchPlayerLabel(null),'Giocatore non censito');
 });
-test('match header displays three top metadata pairs, no Match Center label or separators',()=>{
- assert.ok(matchSource.includes('match-meta-left'));
- assert.ok(matchSource.includes('match-meta-center'));
- assert.ok(matchSource.includes('match-meta-right'));
- assert.ok(matchSource.indexOf("titleInfo('Competizione'")<matchSource.indexOf("titleInfo('Giornata'"));
- assert.ok(matchSource.indexOf("titleInfo('Data'")<matchSource.indexOf("titleInfo('Ora'"));
- assert.ok(matchSource.indexOf("titleInfo('Luogo'")<matchSource.indexOf("titleInfo('Campo'"));
- assert.ok(matchSource.indexOf('const matchMeta=')<matchSource.indexOf('const header='));
+test('match header keeps date/time over status and small metadata at the bottom corners',()=>{
+ assert.ok(matchSource.includes('match-header-footer-meta'));
+ assert.ok(matchSource.includes('match-footer-info-left'));
+ assert.ok(matchSource.includes('match-footer-info-right'));
+ assert.ok(matchSource.indexOf('<small>Competizione</small>')<matchSource.indexOf('<small>Giornata</small>'));
+ assert.ok(matchSource.includes('<small>Campo</small>'));
+ const headerBlock=matchSource.slice(matchSource.indexOf('const header='),matchSource.indexOf('const resultStatus='));
+ assert.ok(headerBlock.indexOf('match-score-datetime')<headerBlock.indexOf('match-score-status'));
+ assert.ok(headerBlock.includes('shortDate(f.kickoff_at)'));
+ assert.ok(headerBlock.includes('time(f.kickoff_at)'));
+ assert.doesNotMatch(headerBlock,/match-header-meta/);
  assert.doesNotMatch(matchSource,/<span>Match Center<\/span>/);
- assert.match(css,/match-header-meta\{[^}]*display:grid/);
- assert.match(css,/match-header-meta\{[^}]*border:0/);
+ assert.match(css,/match-header-footer-meta\{[^}]*display:flex/);
+ assert.match(css,/match-score-datetime\{[^}]*font-size:10px/);
 });
 test('status is above result with explicit dash; substitutions are tight',()=>{
  assert.ok(matchSource.includes('<div class="match-score-status">'));
