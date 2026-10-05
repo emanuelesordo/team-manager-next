@@ -68,10 +68,14 @@ async function pollLive(){
     const present=state.matchData||{};
     const eventVersion=JSON.stringify(changes.events||[]);
     const oldVersion=JSON.stringify(present.events||[]);
-    if(eventVersion!==oldVersion){state.matchData=changes;if(!changed)render();return}
+    if(eventVersion!==oldVersion){
+     state.matchData=changes;
+     if(!changed&&!document.querySelector('.live-event-sheet'))render();
+     return
+    }
    }
   }
-  if(changed)render();
+  if(changed&&!document.querySelector('.live-event-sheet'))render();
  }catch(err){console.warn('Consultazione LIVE temporaneamente non sincronizzata:',err.message)}
  finally{pollBusy=false}
 }
@@ -79,7 +83,7 @@ function manageLivePolling(){
  clearInterval(livePollTimer);livePollTimer=null;
  if(state.loading||!state.data||!state.season)return;
  if(!fixtures().some(f=>isLive(f)))return;
- livePollTimer=setInterval(pollLive,20000);
+ livePollTimer=setInterval(pollLive,30000);
 }
 function comps(){return [...(state.data?.competitions||[])].filter(c=>c?.phase_rules?.system_private_test!==true).sort((a,b)=>
  Number(a.tier_level??999)-Number(b.tier_level??999)||
@@ -409,7 +413,7 @@ function match(){
   (m?.status==='live'?(Math.max(1,Number(m?.live_period_no||1))+'° tempo'):'');
  const liveRecovery=(m?.status==='live'&&Number(m?.live_recovery_period_no)===Math.max(1,Number(m?.live_period_no||1)))?Number(m?.live_recovery_minutes||0):0;
  const headerTimer=m&&m.status==='live'?
-  '<div class="match-header-live-clock"><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+E(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+E(m.id)+'" data-blue-min="'+Number(comp?.discipline_rules?.blue_duration_minutes||0)+'">00:00</strong>'+
+  '<div class="match-header-live-clock"><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+E(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+E(m.id)+'" data-blue-min="'+Number(comp?.discipline_rules?.blue_duration_minutes||0)+'" data-period-len="'+Number(rules?.minutes_per_period||0)+'" data-period-no="'+Math.max(1,Number(m.live_period_no||1))+'">00:00</strong>'+
   '<small>'+E(livePeriodLabel)+(liveRecovery>0?' · +'+E(liveRecovery)+"'":'')+'</small></div>':'';
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
