@@ -241,7 +241,7 @@ function stats(){
 function resolveMatch(){const f=fixtures().find(x=>x.id===state.match);const exact=state.data?.matches?.find(m=>m.fixture_id===f?.id);return {fixture:f,operational:f?(exact||fixtureToMatch(f,state.data?.matches||[],state.base.opponents,team())):null}}
 function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll,refreshLive,logoutUser}}
 function admin(){return adminPage(staffContext())}
-function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSettings,trustedReviewer=false){
+function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSettings,trustedReviewer=false,match=null){
  const norm=v=>String(v??'').trim().toLocaleLowerCase('it');
  const homeIsOurs=Boolean(ourTeam?.id&&fixture.home_team_id===ourTeam.id);
  const side=e=>{const s=norm(e.team_side||e.side);if(['home','casa'].includes(s))return 'home';if(['away','ospite'].includes(s))return 'away';if(['team','ours','own'].includes(s))return homeIsOurs?'home':'away';if(['opponent','opposition'].includes(s))return homeIsOurs?'away':'home';return 'unknown'};
@@ -302,13 +302,27 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return (goal(e)?'':'<span class="mt-icon">'+icon(e)+'</span>')+score+names;
  };
  const minutes=e=>E(displayEventMinute(e,competitionSettings).replace('′',"'"));
- const recoveryByPeriod=new Map(),periodEndByPeriod=new Map();
+ const recoveryByPeriod=new Map(),declaredRecoveryByPeriod=new Set(),periodEndByPeriod=new Map();
  for(const e of periodEnds){
-  const p=periodNo(e),n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;
-  recoveryByPeriod.set(p,Math.max(n,recoveryByPeriod.get(p)||0));
+  const p=periodNo(e);
+  const declared=Number(e.payload?.recovery_declared)||0;
+  const n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;
+  if(declared>0)declaredRecoveryByPeriod.add(p);
+  recoveryByPeriod.set(p,n);
   if(!periodEndByPeriod.has(p)||String(periodEndByPeriod.get(p).created_at||'')<String(e.created_at||''))periodEndByPeriod.set(p,e);
  }
- for(const e of ordered){if(recovery(e)){const p=periodNo(e);recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0))}}
+ const liveRecoveryPeriod=Math.max(1,Number(match?.live_recovery_period_no||0));
+ const liveRecovery=Number(match?.live_recovery_minutes)||0;
+ if(match?.status==='live'&&liveRecoveryPeriod>0&&liveRecovery>0){
+  recoveryByPeriod.set(liveRecoveryPeriod,liveRecovery);
+  declaredRecoveryByPeriod.add(liveRecoveryPeriod);
+ }
+ for(const e of ordered){
+  if(recovery(e)){
+   const p=periodNo(e);
+   if(!declaredRecoveryByPeriod.has(p))recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0));
+  }
+ }
  const halfGoals=tracked.filter(x=>periodNo(x.event)===1&&!['rejected','disputed'].includes(x.event.validation_status)&&x.event.payload?.count_score!==false&&goal(x.event));
  const halfEnd=periodEndByPeriod.get(1);
  const halfScore=Number.isInteger(Number(halfEnd?.payload?.score_home))&&Number.isInteger(Number(halfEnd?.payload?.score_away))?
@@ -376,7 +390,7 @@ function match(){
  const playerName=id=>matchPlayerLabel(people(id));
  const activeEvents=(data.events||[]).filter(e=>e.validation_status!=='rejected');
  const pending=activeEvents.filter(e=>['proposed','community_confirmed','disputed'].includes(e.validation_status)).length;
- const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),rules,['admin','player'].includes(state.identity?.role?.role)):
+ const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),rules,['admin','player'].includes(state.identity?.role?.role),m):
   (state.fixtureEvents?.length?fixtureEventsPanel(state.fixtureEvents,comp,f):'<div class="empty">Nessun tabellino associato.</div>');
  const extraMatch=!involvesTeam(f,team());
  const availableKits=collectionForClub(team()||{});
