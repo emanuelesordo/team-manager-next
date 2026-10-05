@@ -692,3 +692,17 @@
 .match-header-interval{margin-top:4px}
 .match-header-interval small{font-size:11px;font-weight:900;letter-spacing:.08em}
 .match-compact-center .match-header-interval small{font-size:8px}
+
+
+/* Recovery clock wraps onto its own line to avoid invading team names. */
+.match-header-live-clock strong[data-staff-clock]{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;white-space:nowrap}
+.match-header-live-clock .live-clock-regulation{display:block}
+.match-header-live-clock .live-clock-recovery-row{display:flex;align-items:baseline;justify-content:center;line-height:1}
+.match-header-live-clock .live-clock-plus{font-size:.78em}
+.match-header-live-clock .live-clock-recovery{font-size:.92em}
+.match-compact-center .match-header-live-clock strong[data-staff-clock]{gap:0}
+@media(max-width:650px){
+ .match-header-live-clock .live-clock-regulation{font-size:1em}
+ .match-header-live-clock .live-clock-recovery-row{margin-top:1px}
+ .match-compact-center .match-header-live-clock .live-clock-recovery-row{font-size:.9em}
+}
