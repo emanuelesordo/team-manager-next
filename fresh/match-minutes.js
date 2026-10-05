@@ -53,5 +53,14 @@ export function storedEventMinute(event,cumulative,competition){
 }
 export function displayEventMinute(event,competition,missing='—'){
  const n=cumulativeEventMinute(event,competition);
- return n===null?missing:String(n)+(Number(event?.stoppage_minute)>0?'+'+Number(event.stoppage_minute):'')+'′';
+ if(n===null)return missing;
+ const stoppage=Number(event?.stoppage_minute)||0;
+ if(stoppage>0)return String(n)+'+'+stoppage+'′';
+ let shown=n;
+ const delta=Number(event?.timing_delta_seconds);
+ const liveNow=event?.payload?.entered_from==='tm_app_live'&&event?.payload?.minute_mode==='now_estimated';
+ // Live display uses the started minute by excess: 40:00 stays 40', 40:01..40:59 shows 41'.
+ // Keep manual/historic corrections untouched; old live rows can use their captured timing remainder.
+ if(liveNow&&Number.isFinite(delta)&&delta>0&&delta<60)shown=n+1;
+ return String(shown)+'′';
 }
