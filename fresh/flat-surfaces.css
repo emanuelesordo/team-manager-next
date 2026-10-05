@@ -388,3 +388,7 @@
   .global-live-club strong{font-size:9px}
   .global-live-result{font-size:20px}
 }
+
+
+/* The global live strip is never duplicated inside the live match itself. */
+body[data-page="match"][data-current-match-live="true"] .global-live-score{display:none!important}
