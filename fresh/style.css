@@ -948,3 +948,7 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
 
 .match-header-scorer.is-proposed{opacity:.58}
 .event-react{min-width:38px;width:auto;padding:0 8px;font-size:14px}
+
+.test-badge{display:inline-flex;align-items:center;min-height:18px;padding:2px 7px;border:1px solid var(--border);border-radius:999px;font-size:9px;font-weight:900;letter-spacing:.08em;color:var(--muted);background:var(--surface)}
+.fixture-row.is-test{outline:1px dashed color-mix(in srgb,var(--border) 85%,transparent);outline-offset:-1px}
+.match-test-banner{margin:0 0 10px;padding:8px 12px;border:1px dashed var(--border);border-radius:10px;font-size:11px;font-weight:800;color:var(--muted);background:color-mix(in srgb,var(--surface) 88%,transparent)}
