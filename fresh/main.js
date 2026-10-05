@@ -4,7 +4,7 @@ import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankR
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
-import {votesPanel,saveVote} from './votes.js?ratings=20261005bar3';
+import {votesPanel,saveVote} from './votes.js?ratings=20261005compact4';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005second-card-header14';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
@@ -492,7 +492,7 @@ function match(){
  else if((staffAccess||selectedTab==='live')&&['live','callups','tactics'].includes(selectedTab))body=staffMatchSection(staffContext(),f,m,selectedTab);
  else if(selectedTab==='events')body=staffAccess&&!extraMatch?staffMatchSection(staffContext(),f,m,'events'):'<div class="inner-card"><h3>Cronologia eventi</h3>'+timeline+'</div>';
  else if(selectedTab==='lineup')body=isStaff(staffContext())&&m?matchLineup(staffContext(),m):'<div class="inner-card">'+formation+'</div>';
- else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E});
+ else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E,competition:comp,kit:activeKit});
  else body=extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
   '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>';
  if(extraMatch&&editableScore&&state.scoreEditing){
