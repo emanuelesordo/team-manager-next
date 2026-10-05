@@ -941,3 +941,7 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
  .mt-event-reactions{margin-left:4px}
  .mt-event-meta{font-size:8px}
 }
+
+.match-score-trigger.score-proposed{display:inline-grid;justify-items:center;gap:2px}
+.match-proposed-label{font:800 8px 'Manrope',sans-serif;letter-spacing:.12em;color:var(--muted)}
+.mt-event-meta.timing-provisional{color:#a97728}
