@@ -5,11 +5,11 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote} from './votes.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005privatematch1';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005callup-lineup-sync1';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
-import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261004benchonly';
+import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261005callup-lineup-sync1';
 import {projectionContainer,updateProjection} from './projection-ui.js?clubs=20261003id';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {teamAnalyticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?clubs=20261003id';
@@ -775,6 +775,23 @@ async function saveExtraDetail(field,value){
  const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
  try{await adminWrite('app_competition_fixtures','PATCH',{[field]:value},{id:f.id});f[field]=value;render();toast('Dettaglio aggiornato')}catch(error){toast('Modifica non salvata: '+error.message)}
 }
+function mergeMatchPlayerState(rows){
+ if(!state.matchData)state.matchData={players:[]};
+ if(!Array.isArray(state.matchData.players))state.matchData.players=[];
+ const byId=new Map(state.matchData.players.map(p=>[p.player_id,p]));
+ for(const row of rows){
+  const current=byId.get(row.player_id);
+  const next={...(current||{}),...row,started:row.selection_status==='starter'};
+  if(row.selection_status!=='absent'){next.unavailability_reason=null;next.unavailability_note=null}
+  if(current)Object.assign(current,next);
+  else{state.matchData.players.push(next);byId.set(row.player_id,next)}
+ }
+}
+async function reloadMatchDataIfCurrent(matchId){
+ const current=resolveMatch().operational;
+ if(!current||current.id!==matchId)return;
+ try{state.matchData=await loadMatchInfo(matchId);render()}catch(error){toast('Ricaricamento tabellino non riuscito: '+error.message)}
+}
 let lineupTimer=null,lineupPendingSnapshot=null;
 document.addEventListener('tm-lineup-change',e=>{
  const form=e.detail.form;
@@ -782,7 +799,8 @@ document.addEventListener('tm-lineup-change',e=>{
  const matchId=form.dataset.lineupMatch;
  const rows=[...form.querySelectorAll('[data-lineup-player]')].map(el=>{
   const value=n=>el.querySelector('[name="'+n+'"]')?.value||'';
-  const selection_status=value('status');
+  const rawStatus=value('status');
+  const selection_status=rawStatus==='starter'?'starter':'bench';
   return {player_id:el.dataset.lineupPlayer,selection_status,
    shirt_number:value('shirt')?Number(value('shirt')):null,
    tactical_slot:selection_status==='starter'?(Number(value('slot'))||null):null,
@@ -791,14 +809,19 @@ document.addEventListener('tm-lineup-change',e=>{
  });
  const snapshot={matchId,formation:form.elements.formation?.value||'4-4-2',rows};
  lineupPendingSnapshot=snapshot;
+ // Keep tab switches consistent while the debounced write is still pending.
+ mergeMatchPlayerState(rows);
+ const localMatch=state.data?.matches?.find(x=>x.id===matchId);if(localMatch)localMatch.formation=snapshot.formation;
  const label=form.querySelector('[data-lineup-save-status]');
  if(label)label.textContent='Modifiche da salvare…';
  clearTimeout(lineupTimer);
  lineupTimer=setTimeout(()=>{
-  if(label)label.textContent='Salvataggio…';
+  if(label?.isConnected)label.textContent='Salvataggio…';
   void persistLineupSnapshot(snapshot,error=>{
-   if(!label?.isConnected)return;
-   label.textContent=error?'Errore: '+error.message:'Salvato';
+   if(error){
+    if(label?.isConnected)label.textContent='Errore: '+error.message;
+    if(lineupPendingSnapshot===snapshot)void reloadMatchDataIfCurrent(matchId);
+   }else if(label?.isConnected)label.textContent='Salvato';
   }).catch(()=>{});
  },350);
 });
@@ -807,6 +830,10 @@ document.addEventListener('tm-callup-change',e=>{
  const getRow=()=>[...document.querySelectorAll('[data-callup-player]')].find(x=>x.dataset.callupPlayer===detail.playerId);
  const row=getRow();
  if(row){row.dataset.saving='true';row.dataset.saveError='false';row.querySelectorAll('[data-callup-reason]').forEach(button=>button.disabled=true)}
+ // Optimistic match state: Formazione must immediately see the same availability as Convocazioni.
+ mergeMatchPlayerState([{player_id:detail.playerId,selection_status:detail.status,
+  unavailability_reason:detail.status==='absent'?detail.reason:null,
+  unavailability_note:null,tactical_slot:null,is_captain:false}]);
  void persistCallupChange(detail,error=>{
   const current=getRow();
   if(current){
@@ -819,11 +846,9 @@ document.addEventListener('tm-callup-change',e=>{
    }else{
     current.dataset.persistedStatus=detail.status;
     current.dataset.persistedReason=detail.status==='absent'?detail.reason:'';
-    const savedPlayer=state.matchData?.players?.find(p=>p.player_id===detail.playerId);
-    if(savedPlayer){savedPlayer.selection_status=detail.status;savedPlayer.unavailability_reason=detail.status==='absent'?detail.reason:null}
-    else if(state.matchData?.players)state.matchData.players.push({player_id:detail.playerId,selection_status:detail.status,unavailability_reason:detail.status==='absent'?detail.reason:null});
    }
   }
+  if(error)void reloadMatchDataIfCurrent(detail.matchId);
   toast(error?'Convocazione NON salvata: '+error.message:'Convocazione salvata');
  }).catch(()=>{});
 });
