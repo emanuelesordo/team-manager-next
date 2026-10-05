@@ -798,3 +798,81 @@
  .lineup-minimal button.lineup-list-number{font-size:10px}
  .lineup-minimal .lineup-bench,.lineup-minimal .lineup-bench-svg{width:14px;height:14px}
 }
+
+
+/* Formazione mobile: stessa gerarchia dell'Overview — campo pieno, panchina sotto. */
+@media(max-width:760px){
+ .lineup-minimal .lineup-split{
+  display:block!important;
+  width:100%!important;
+ }
+ .lineup-minimal .lineup-pitch-column{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+ }
+ .lineup-minimal .visual-lineup{
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+ }
+ .lineup-minimal .visual-field{
+  width:100%!important;
+  max-width:none!important;
+  min-height:0!important;
+  aspect-ratio:.95!important;
+  margin:0 auto!important;
+ }
+ .lineup-minimal .lineup-player-column{
+  display:block!important;
+  position:static!important;
+  width:100%!important;
+  max-width:none!important;
+  min-height:0!important;
+  overflow:visible!important;
+  margin-top:12px!important;
+ }
+ .lineup-minimal .lineup-sort-head{
+  position:static!important;
+  width:100%!important;
+  grid-template-columns:18px 34px 32px minmax(0,1fr) 38px!important;
+  gap:3px!important;
+  padding:4px 2px 6px!important;
+ }
+ .lineup-minimal .lineup-rows{
+  position:static!important;
+  inset:auto!important;
+  width:100%!important;
+  max-height:none!important;
+  overflow:visible!important;
+ }
+ .lineup-minimal .lineup-row{
+  width:100%!important;
+  grid-template-columns:18px 34px 32px minmax(0,1fr) 38px!important;
+  gap:3px!important;
+  min-height:38px!important;
+  padding:4px 2px!important;
+  border-bottom:1px solid var(--border);
+ }
+ .lineup-minimal .lineup-name{
+  min-width:0!important;
+  overflow:visible!important;
+  white-space:normal!important;
+  text-overflow:clip!important;
+ }
+ .lineup-minimal .lineup-name strong{
+  display:block!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere;
+  font-size:10px!important;
+  line-height:1.08!important;
+ }
+ .lineup-minimal .lineup-role,
+ .lineup-minimal .lineup-rating{font-size:8.5px!important}
+ .lineup-minimal button.lineup-list-number{font-size:10px!important}
+ .lineup-minimal .lineup-bench,
+ .lineup-minimal .lineup-bench-svg{width:14px!important;height:14px!important}
+}
