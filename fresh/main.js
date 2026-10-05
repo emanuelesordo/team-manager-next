@@ -4,7 +4,7 @@ import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankR
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
-import {votesPanel,saveVote} from './votes.js?ratings=20261005compact4';
+import {votesPanel,saveVote} from './votes.js?ratings=20261005compact5';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?live=20261005second-card-header14';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
