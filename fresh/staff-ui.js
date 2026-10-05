@@ -509,7 +509,7 @@ function liveDraftSheet(ctx,m,rules,field,bench){
    '<div class="live-sheet-actions"><button type="button" class="staff-soft" data-staff-action="live-close">Annulla</button><button type="submit" class="staff-submit">Salva recupero</button></div></form></section></div>';
  }
  const type=d.type||'goal',side=d.side||'team',selected=d.playerId||'';
- const minute=d.minute==null?'':d.minute;
+ const minute=d.minute==null?'':d.minute,stoppage=Number(d.stoppage||0);
  const fieldOptions=[['','Seleziona giocatore'],...field.map(x=>[x.player_id,playerText(x.person)])];
  const benchOptions=[['','Seleziona giocatore'],...bench.map(x=>[x.player_id,playerText(x.person)])];
  const assistOptions=[['','Nessun assist / da indicare'],...field.filter(x=>x.player_id!==selected).map(x=>[x.player_id,playerText(x.person)])];
@@ -534,6 +534,7 @@ function liveDraftSheet(ctx,m,rules,field,bench){
    '<label><input type="radio" name="team_side" value="opponent" '+(side==='opponent'?'checked':'')+'><span>Avversario</span></label></div>'+
    '<div class="live-sheet-grid"><label class="staff-field"><span>Tempo</span><input value="'+esc(livePeriodName(m))+'" disabled></label>'+
    '<label class="staff-field"><span>Minuto prenotato</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+esc(minute)+'"></label>'+
+   (stoppage>0?'<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+esc(stoppage)+'"></label>':'<input type="hidden" name="stoppage_minute" value="0">')+
    playerField+secondary+reason+'</div>'+cardExtra+
    '<label class="staff-field live-notes"><span>Note / motivazione (facoltative)</span><input name="notes" maxlength="400" placeholder="Aggiungi solo se serve"></label>'+
    '<p class="live-sheet-note">Timestamp bloccato al tap: <strong>'+esc(d.clockLabel||'—')+'</strong>. Puoi completare i dati senza perdere il momento dell’evento.</p>'+
@@ -713,19 +714,28 @@ export async function staffClick(e,button,ctx){
  const liveUser=Boolean(ctx.state.identity?.user);
  if(liveUser&&['live-event-open','live-event-switch','live-close','live-recovery-open'].includes(preAction)){
   const m=ctx.resolveMatch().operational;if(!m)return true;
-  if(preAction==='live-close'){memory.liveDraft=null;ctx.render();return true}
+  if(preAction==='live-close'){
+   if(button.classList?.contains('live-sheet-backdrop')&&e.target!==button)return false;
+   memory.liveDraft=null;ctx.render();return true
+  }
   if(preAction==='live-recovery-open'){
    if(!isStaff(ctx))return true;
    memory.liveDraft={kind:'recovery',recovery:Number(m.live_recovery_minutes||0)};ctx.render();return true;
   }
   const competition=(ctx.state.data?.competitions||[]).find(x=>x.id===m.competition_id),rules=matchRules(m,competition);
-  const seconds=liveClockSeconds(m),relative=periodRelativeMinute(Math.floor(seconds/60),m.live_period_no||m.live_period,rules);
+  const seconds=liveClockSeconds(m),periodNo=Math.max(1,Number(m.live_period_no||1));
+  const periodLength=Math.max(1,Number(rules?.minutes_per_period||40));
+  const periodOffsetSeconds=(periodNo-1)*periodLength*60;
+  const relativeSeconds=Math.max(0,seconds-periodOffsetSeconds);
+  const isStoppage=relativeSeconds>periodLength*60;
+  const relative=isStoppage?periodLength:Math.floor(relativeSeconds/60);
+  const stoppage=isStoppage?Math.max(1,Math.ceil((relativeSeconds-periodLength*60)/60)):0;
   if(preAction==='live-event-switch'&&memory.liveDraft){
-   memory.liveDraft={...memory.liveDraft,type:button.dataset.liveEvent||memory.liveDraft.type,playerId:null};ctx.render();return true;
+   memory.liveDraft={...memory.liveDraft,type:button.dataset.liveEvent||memory.liveDraft.type};ctx.render();return true;
   }
   memory.liveDraft={kind:'event',type:button.dataset.liveEvent||'goal',playerId:button.dataset.livePlayer||null,side:'team',
-   capturedAt:new Date().toISOString(),minute:relative,period:m.live_period_no||m.live_period||1,
-   clockLabel:String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0')};
+   capturedAt:new Date().toISOString(),minute:relative,stoppage,period:m.live_period_no||m.live_period||1,
+   clockLabel:stoppage>0?((periodNo*periodLength)+"'+"+stoppage+"'"):(String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0'))};
   ctx.render();return true;
  }
  if(!isStaff(ctx))return false;
@@ -1066,6 +1076,7 @@ export async function staffSubmit(e,ctx){
     }
    }
    saved=await pendingFn(form,()=>rpc('tm_app_submit_live_event',{p_match_id:m.id,p_event:payload}));
+   memory.liveDraft=null;
    await reloadMatch(ctx);
    ctx.toast(saved?.status==='official'?'Evento registrato e confermato':'Evento registrato · in attesa di conferma');
    return true;
@@ -1196,7 +1207,12 @@ function tickClock(){
  for(const el of els){
   const base=Number(el.dataset.seconds||0),anchor=Date.parse(el.dataset.anchor||'');
   const n=base+(el.dataset.running==='true'&&Number.isFinite(anchor)?Math.max(0,Math.floor((Date.now()-anchor)/1000)):0);
-  el.textContent=String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+  const periodLength=Number(el.dataset.periodLen||0),periodNo=Math.max(1,Number(el.dataset.periodNo||1));
+  const regulation=periodLength>0?periodLength*periodNo*60:0;
+  if(regulation>0&&n>regulation){
+   const plus=Math.max(1,Math.ceil((n-regulation)/60));
+   el.textContent=(periodLength*periodNo)+"'+"+plus+"'";
+  }else el.textContent=String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
  }
  const el=els[0];
  if(el.dataset.running==='true' && Number(el.dataset.blueMin)>0 &&
