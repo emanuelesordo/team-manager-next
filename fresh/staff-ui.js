@@ -566,6 +566,14 @@ function adminPayload(form,ctx){
  return {table:null,id:null,payload:data};
 }
 const pendingFn=async(form,fn)=>{const button=form.querySelector('[type="submit"]');if(button){button.disabled=true;button.textContent='Salvataggio…'}try{return await fn()}finally{if(button){button.disabled=false;button.textContent='Salva'}}};
+function delayedLiveSuggestion(fixture,competition){
+ const length=Number(competition?.minutes_per_period);
+ const kickoff=Date.parse(fixture?.kickoff_at||'');
+ if(!Number.isFinite(length)||length<=0||!Number.isFinite(kickoff))return {period:'first_half',minute:0};
+ const elapsed=Math.max(0,Math.floor((Date.now()-kickoff)/60000));
+ if(elapsed>=length+15)return {period:'second_half',minute:Math.max(0,elapsed-length-15)};
+ return {period:'first_half',minute:Math.min(length,elapsed)};
+}
 async function reloadMatch(ctx){
  const m=ctx.resolveMatch().operational;
  if(m){
@@ -706,7 +714,26 @@ export async function staffClick(e,button,ctx){
    await reloadMatch(ctx);ctx.toast(decision==='approve'?'Evento ufficializzato':'Evento scartato senza eliminazione');return true;
   }
   if(!m)throw Error('Apri prima la gestione del match');
-  if(action==='start'&&!window.confirm('Avviare ora il live? I comandi cronometro, eventi e risultato saranno attivi.'))return true;
+  if(action==='start'){
+   const fixture=ctx.resolveMatch().fixture;
+   const competition=(ctx.state.data?.competitions||[]).find(x=>x.id===m.competition_id);
+   const realtime=window.confirm('La partita sta iniziando adesso?\n\nOK = sì, avvia il timer da 0\nAnnulla = sto inserendo il live in ritardo');
+   if(realtime){
+    await rpc('tm_app_start_live_v2',{p_match_id:m.id,p_mode:'realtime',p_period:'first_half',p_approx_minute:0});
+    await reloadMatch(ctx);ctx.toast('LIVE avviato in tempo reale');return true;
+   }
+   const suggestion=delayedLiveSuggestion(fixture,competition);
+   const suggestedSecond=suggestion.period==='second_half';
+   const second=window.confirm('Periodo attuale suggerito: '+(suggestedSecond?'2° tempo':'1° tempo')+'.\n\nOK = 2° tempo\nAnnulla = 1° tempo');
+   const period=second?'second_half':'first_half';
+   const suggested=period===suggestion.period?suggestion.minute:0;
+   const raw=window.prompt('Minuto approssimativo attuale del '+(second?'2°':'1°')+' tempo.\nIl timer partirà da questo riferimento e gli eventi inseriti dal live resteranno ricalibrabili.',String(suggested));
+   if(raw===null)return true;
+   const approx=Number(raw);
+   if(!Number.isInteger(approx)||approx<0||approx>180)throw Error('Minuto approssimativo non valido');
+   await rpc('tm_app_start_live_v2',{p_match_id:m.id,p_mode:'delayed',p_period:period,p_approx_minute:approx});
+   await reloadMatch(ctx);ctx.toast('LIVE avviato da riferimento approssimativo');return true;
+  }
   if(action==='finish'&&!window.confirm('Finalizzare la partita? Risultato e cronologia saranno ufficializzati.'))return true;
   if(action==='reopen'&&!window.confirm('Riaprire questa partita per correzioni?'))return true;
   if(action==='void'&&!window.confirm('Annullare questo evento e rettificare l’eventuale gol?'))return true;
@@ -837,15 +864,32 @@ export async function staffSubmit(e,ctx){
    if(!Number.isFinite(configuredMinutes)||configuredMinutes<=0)throw Error('Durata dei tempi non configurata nella competizione: controlla Setup → Competizioni');
    const relativeMinute=numberOrNull(d.minute);
    const minute=cumulativeMinuteFromPeriod(relativeMinute,period,c);
+   const timerMinute=m.live_clock_running?liveClockMinute(m,c):null;
+   const minuteOrigin=relativeMinute===null?
+    (d.minute_mode==='past_unknown'?'past_unknown':'live_estimated'):
+    (timerMinute!==null&&relativeMinute===timerMinute?'timer':'manual');
    const payload={event_type:d.event_type,team_side:d.team_side,
     player_id:d.team_side==='team'?d.player_id||null:null,
     secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
     minute,stoppage_minute:numberOrNull(d.stoppage_minute),
     substitution_reason:d.substitution_reason,notes:d.notes,
     count_score:Boolean(d.count_score),captured_at:d.captured_at||new Date().toISOString(),
-    minute_mode:d.minute_mode||'now_estimated',request_key:crypto.randomUUID()};
+    minute_mode:d.minute_mode||'now_estimated',minute_origin:minuteOrigin,request_key:crypto.randomUUID()};
    if(payload.event_type==='substitution'&&!payload.player_id)throw Error('Indica chi esce');
-   const saved=await pendingFn(form,()=>rpc('tm_app_submit_live_event',{p_match_id:m.id,p_event:payload}));
+   const duplicate=await rpc('tm_app_find_event_duplicate',{p_match_id:m.id,p_event:payload});
+   let saved;
+   if(duplicate?.candidate){
+    const seconds=Number(duplicate.distance_seconds)||0;
+    const merge=window.confirm('Evento simile già registrato '+seconds+' s fa.\n\nOK = unisci al precedente\nAnnulla = mantieni come evento separato');
+    if(merge){
+     saved=await pendingFn(form,()=>rpc('tm_app_merge_event_submission',{p_match_id:m.id,p_event_id:duplicate.event_id,p_event:payload}));
+     await reloadMatch(ctx);
+     const conflicts=saved?.conflicts&&Object.keys(saved.conflicts).length;
+     ctx.toast(conflicts?'Evento unificato · alcuni dati discordanti restano da verificare':'Evento unificato al precedente');
+     return true;
+    }
+   }
+   saved=await pendingFn(form,()=>rpc('tm_app_submit_live_event',{p_match_id:m.id,p_event:payload}));
    await reloadMatch(ctx);
    ctx.toast(saved?.status==='official'?'Evento registrato e confermato':'Evento registrato · in attesa di conferma');
    return true;
