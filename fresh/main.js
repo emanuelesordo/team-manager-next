@@ -246,7 +246,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
- const tracked=ordered.map(e=>{const official=e.validation_status==='official';if(official&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:official&&goal(e)?(snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
+ const tracked=ordered.map(e=>{const counts=['official','proposed','community_confirmed'].includes(e.validation_status)&&e.payload?.count_score!==false;if(counts&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:counts&&goal(e)?(e.validation_status==='official'&&snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
  const heading=label=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
  const cards=e=>{
   const t=type(e),shirt=String(e.payload?.opponent_shirt_number||'');
@@ -287,15 +287,15 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   const trusted=['admin','player'].includes(state.identity?.role?.role);
   const canReact=trusted&&['proposed','community_confirmed','disputed'].includes(e.validation_status);
   const reactions=canReact?'<span class="mt-event-reactions">'+
-   '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(e.id)+'" aria-label="Conferma evento">+</button>'+
-   '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(e.id)+'" aria-label="Segnala errore">−</button></span>':'';
+   '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(e.id)+'" aria-label="Conferma evento">+'+E(Number(e.support_count)||0)+'</button>'+
+   '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(e.id)+'" aria-label="Segnala errore">−'+E(Number(e.dispute_count)||0)+'</button></span>':'';
   return (goal(e)?'':'<span class="mt-icon">'+icon(e)+'</span>')+score+names+reactions;
  };
  const minutes=e=>E(displayEventMinute(e,competitionSettings).replace('′',"'"));
  const recoveryByPeriod=new Map();
  for(const e of events||[]){if(type(e)==='period_end'){const p=period(e);const n=Number(e.payload?.recovery_minutes??e.stoppage_minute)||0;recoveryByPeriod.set(p,Math.max(n,recoveryByPeriod.get(p)||0))}}
  for(const e of ordered){if(recovery(e)){const p=period(e);recoveryByPeriod.set(p,Math.max(recovery(e),recoveryByPeriod.get(p)||0))}else{const n=absoluteMinute(e);if(n!==null){const p=period(e),end=p==='first_half'?duration:duration*2;if(duration!==null&&n>end)recoveryByPeriod.set(p,Math.max(n-end,recoveryByPeriod.get(p)||0))}}}
- const halfGoals=tracked.filter(x=>period(x.event)==='first_half'&&x.event.validation_status==='official'&&goal(x.event));
+ const halfGoals=tracked.filter(x=>period(x.event)==='first_half'&&['official','proposed','community_confirmed'].includes(x.event.validation_status)&&x.event.payload?.count_score!==false&&goal(x.event));
  const halfScore=halfGoals.some(x=>absoluteMinute(x.event)===null)?'? - ?':
   halfGoals.reduce((scores,x)=>{let s=side(x.event);if(type(x.event)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')scores[0]++;if(s==='away')scores[1]++;return scores},[0,0]).join(' - ');
  const complete=['finished','completed','full_time','ft'].includes(norm(fixture.status));
@@ -367,7 +367,7 @@ function match(){
    (editor?field('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):''):titleInfo('Data',weekday(f.kickoff_at))+titleInfo('Ora',time(f.kickoff_at)))+'</div>'+
   '<div class="match-meta-group match-meta-right">'+
    (editor?field('venue_name','Campo',f.venue_name||venue)+field('venue_address','Luogo',f.venue_address||address):(placeLink?'<a class="match-meta-item" target="_blank" rel="noopener noreferrer" href="'+E(placeLink)+'" title="Apri il luogo su Maps"><strong>'+E(venue||address||'—')+'</strong></a>':titleInfo('Campo',venue||'—')))+'</div></div>';
- const scorers=matchScorerRows(activeEvents.filter(e=>e.validation_status==='official'),f,team(),playerName,comp);
+ const scorers=matchScorerRows(activeEvents.filter(e=>['official','proposed','community_confirmed'].includes(e.validation_status)),f,team(),playerName,comp);
  const recordedGoals=(state.fixtureEvents||[]).filter(e=>e.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
  const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
  const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
@@ -379,12 +379,12 @@ function match(){
   if(home)score.home++;else score.away++;
   return score;
  },{home:officialHome,away:officialAway});
- const hasProposedScore=Boolean(matchIsLive&&pendingGoals.length);
+ const hasProposedScore=Boolean(liveEntryOpen&&pendingGoals.length);
  const scoreText=hasProposedScore?
   E(proposedScore.home)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(proposedScore.away):
   hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
  const editableScore=extraMatch&&state.identity?.role?.role==='admin';
- const headerScore=matchIsLive?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+(hasProposedScore?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
+ const headerScore=liveEntryOpen?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+(hasProposedScore?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
@@ -636,16 +636,22 @@ document.addEventListener('click',async e=>{
   if(!['admin','player'].includes(state.identity?.role?.role)){toast('Solo giocatori e amministratori possono validare gli eventi');return}
   const reaction=Number(eventReaction.dataset.eventReaction),eventId=eventReaction.dataset.eventId;
   const m=resolveMatch().operational;if(!m||!eventId)return;
-  let note=null;
+  let note=null,proposedChanges={};
   if(reaction===-1){
-   note=window.prompt('Cosa va corretto? La segnalazione resterà associata all’evento per la revisione in gestione.');
+   const category=window.prompt('Cosa contesti? Scrivi: minuto, giocatore, tipo, squadra, non avvenuto oppure altro.','minuto');
+   if(category===null)return;
+   const normalizedCategory=category.trim().toLowerCase();
+   const allowed=['minuto','giocatore','tipo','squadra','non avvenuto','altro'];
+   if(!allowed.includes(normalizedCategory)){toast('Categoria contestazione non valida');return}
+   note=window.prompt('Descrivi brevemente la correzione proposta.');
    if(note===null)return;
    note=note.trim();
    if(!note){toast('Indica cosa deve essere corretto');return}
+   proposedChanges={category:normalizedCategory};
   }
   eventReaction.disabled=true;
   try{
-   const result=await rpc('tm_app_react_event',{p_match_id:m.id,p_event_id:eventId,p_reaction:reaction,p_note:note,p_proposed_changes:{}});
+   const result=await rpc('tm_app_react_event',{p_match_id:m.id,p_event_id:eventId,p_reaction:reaction,p_note:note,p_proposed_changes:proposedChanges});
    await refreshLive();
    toast(result?.status==='official'?'Evento confermato':result?.status==='disputed'?'Errore segnalato · evento da rivedere':'Conferma registrata · revisione gestione necessaria');
   }catch(err){eventReaction.disabled=false;toast('Validazione non riuscita: '+err.message)}
@@ -710,6 +716,11 @@ document.addEventListener('change',e=>{
  if(e.target.matches('[data-mine]')){state.mineOnly=e.target.checked;render()}
  if(e.target.matches('[data-comp-select]')){state.comp=e.target.value||null;render()}
 });
+document.addEventListener('pointerdown',e=>{
+ const form=e.target.closest?.('form[data-staff-form="event"]');
+ const captured=form?.querySelector?.('input[name="captured_at"]');
+ if(captured&&!captured.value)captured.value=new Date().toISOString();
+},{capture:true,passive:true});
 document.addEventListener('paste',e=>{staffLogoEvent(e)});
 for(const type of ['pointerdown','pointermove','pointerup','pointercancel','dragstart','dragover','drop']){
  document.addEventListener(type,e=>{staffLogoEvent(e)});
