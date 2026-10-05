@@ -558,7 +558,14 @@ function matchLive(ctx,m,competition){
  const eventNames={goal:'Gol',own_goal:'Autogol',penalty_scored:'Gol su rigore',penalty_missed:'Rigore sbagliato',yellow_card:'Ammonizione',red_card:'Espulsione',blue_card:'Cartellino blu',substitution:'Cambio',period_end:'Fine periodo',other:'Evento'};
  const recent=(ctx.state.matchData?.events||[]).filter(e=>e.validation_status!=='rejected').slice().reverse().slice(0,6).map(e=>{
   const who=e.player_id?playerText((ctx.state.data?.players||[]).find(p=>p.id===e.player_id)):'';
-  return '<div class="live-recent-row"><span class="live-recent-minute">'+esc(e.minute==null?'—':e.minute+"'")+'</span><strong>'+esc(eventNames[e.event_type]||e.event_type)+(who?' · '+esc(who):'')+'</strong></div>';
+  const status=e.validation_status==='official'?'Confermato':e.validation_status==='disputed'?'Contestato':'Da confermare';
+  const timing=e.minute==null?'Minuto da completare':
+   e.payload?.minute_provisional===true?'Minuto stimato':
+   e.timing_consistent===false?'Minuto da verificare':'';
+  const votes=e.validation_status==='official'?'':(' · +'+Number(e.support_count||0)+' / −'+Number(e.dispute_count||0));
+  const minute=e.minute==null?'—':String(e.minute)+(Number(e.stoppage_minute)>0?'+'+Number(e.stoppage_minute):'')+"'";
+  return '<div class="live-recent-row"><span class="live-recent-minute">'+esc(minute)+'</span><div class="live-recent-main"><strong>'+esc(eventNames[e.event_type]||e.event_type)+(who?' · '+esc(who):'')+'</strong>'+
+   '<small class="live-recent-meta '+(e.validation_status==='disputed'?'is-disputed':'')+'">'+esc(status+votes)+(timing?' · '+esc(timing):'')+'</small></div></div>';
  }).join('');
  let periodAction='',periodLabel='';
  if(staff){
