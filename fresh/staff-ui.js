@@ -8,7 +8,7 @@ import {availabilityDefault,normalizedReason,unavailabilityReasons} from './avai
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js';
-import {storedEventMinute,cumulativeMinuteFromPeriod} from './match-minutes.js';
+import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute} from './match-minutes.js';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 
 export const staffLogoEvent=handleLogoEditorEvent;
@@ -434,29 +434,46 @@ function liveControls(m){
  else if(m.status==='finished')controls=btn('reopen','Riapri per correzioni');
  return '<div class="live-action-row">'+controls+'</div>';
 }
+function liveClockMinute(m,competition){
+ if(!m?.live_clock_running)return null;
+ const base=Number(m.live_clock_seconds||0),anchor=Date.parse(m.live_clock_anchor||'');
+ const seconds=base+(Number.isFinite(anchor)?Math.max(0,Math.floor((Date.now()-anchor)/1000)):0);
+ return periodRelativeMinute(Math.floor(seconds/60),m.live_period,competition);
+}
 function matchLive(ctx,m,competition){
  const people=ctx.state.data?.players||[],rows=ctx.state.matchData?.players||[],present=rows.filter(r=>['starter','bench'].includes(r.selection_status)||r.started);
  const playerOpts=[['','Non indicato']].concat(present.map(x=>[x.player_id,playerText(people.find(p=>p.id===x.player_id))]));
- const active=m.status==='live',mins=Number(competition?.minutes_per_period)>0?Number(competition.minutes_per_period):null;
- const eventForm=active?'<form data-staff-form="event" class="staff-form live-event-form"><div class="staff-form-grid">'+
+ const fixture=ctx.resolveMatch().fixture;
+ const kickoff=Date.parse(fixture?.kickoff_at||'');
+ const active=m.status==='live'||(m.status==='scheduled'&&Number.isFinite(kickoff)&&Date.now()>=kickoff);
+ const mins=Number(competition?.minutes_per_period)>0?Number(competition.minutes_per_period):null;
+ const suggested=active&&mins?liveClockMinute(m,competition):null;
+ const minuteValue=suggested==null?'':String(Math.max(0,suggested));
+ const eventForm=active?'<form data-staff-form="event" class="staff-form live-event-form"><input type="hidden" name="captured_at" value="">'+
+ '<div class="staff-form-grid">'+
  picker('event_type','Evento',events,'goal')+picker('team_side','Squadra',[['team','Nostra squadra'],['opponent','Avversaria']],'team')+
  picker('player_id','Giocatore principale / uscente',playerOpts,'')+
  picker('secondary_player_id','Assist / subentrante',playerOpts,'')+
- input('minute','Minuto del periodo', '','number','min="0" max="300" placeholder="'+(m.live_period==='second_half'?'Es. 16':'Es. 28')+'"')+
+ input('minute','Minuto del periodo (facoltativo)',minuteValue,'number','min="0" max="300" placeholder="'+(m.live_period==='second_half'?'Es. 16':'Es. 28')+'"')+
  input('stoppage_minute','Recupero', '','number','min="0" max="30" placeholder="—"')+
  picker('substitution_reason','Motivo del cambio',[['tactical','Tattico'],['injury','Infortunio'],['technical','Tecnico'],['other','Altro']],'tactical')+
  input('notes','Note (facoltative)','','text','maxlength="400"')+'</div>'+
- '<label class="staff-check"><input type="checkbox" name="count_score" checked> Aggiorna anche il tabellone per gol, autogol e rigori segnati</label>'+
- help(mins?'Inserisci il minuto relativo al periodo in corso: ogni tempo riparte da 0. Il live resta cumulativo (es. 56′ live = 16′ del 2° tempo con tempi da 40′). Il recupero resta separato.':'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
- submit('Registra evento')+'</form>':help('Gli eventi si registrano a match avviato. Una partita finalizzata richiede riapertura esplicita.');
- return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+displayClock(m,competition)+liveControls(m)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':'')+
- '<div class="staff-live-grid"><div class="staff-live-panel"><h3>Risultato della partita</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(ctx.resolveMatch().fixture||m))+
- '</div><div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
+ '<label class="staff-check"><input type="checkbox" name="count_score" checked> Aggiorna il tabellone quando l’evento diventa ufficiale</label>'+
+ help(mins?(m.live_clock_running?
+  'Il minuto è relativo al periodo ed è precompilato dal timer. Puoi correggerlo per eventi avvenuti prima; oltre ±5 minuti dal timestamp l’evento richiede conferma in gestione.':
+  'Timer fermo o non avviato: puoi lasciare il minuto vuoto. Il timestamp viene comunque registrato e il minuto potrà essere completato in gestione.'):'Durata non disponibile: verifica Setup → Competizioni prima di registrare eventi.')+
+ submit('Registra evento')+'</form>':help('L’inserimento live è disponibile dall’orario di inizio della partita.');
+ const staff=isStaff(ctx);
+ const staffTools=staff?displayClock(m,competition)+liveControls(m)+(Number(competition?.discipline_rules?.blue_duration_minutes)>0?'<div class="staff-blue-action">'+btn('sync-blue','Verifica rientri blu')+'</div>':''):'';
+ const score=staff?'<div class="staff-live-panel"><h3>Risultato della partita</h3>'+ (m.status==='finished'?help('Partita finalizzata. Riapri per rettificare.'):scoreForm(fixture||m))+'</div>':'';
+ return '<section class="staff-subpanel">'+title('DIRETTA','Console di gara')+staffTools+
+ '<div class="staff-live-grid">'+score+'<div class="staff-live-panel"><h3>Nuovo evento</h3>'+eventForm+'</div></div></section>';
 }
 function matchEvents(ctx,m){const fixture=ctx.resolveMatch().fixture,competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id);return reviewPanel({match:m,fixture,competition,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
 
 export function staffMatchSection(ctx,f,m,section){
- if(!isStaff(ctx))return '';
+ const staff=isStaff(ctx),liveContributor=section==='live'&&Boolean(ctx.state.identity?.user);
+ if(!staff&&!liveContributor)return '';
  if(!['callups','lineup','live','events','tactics'].includes(section))return '';
  if((!m||!m.fixture_id)&&['finished','live'].includes(f?.status))
   return '<section class="glass panel staff-root"><p class="data-warning">Tabellino operativo non collegato: verifica il collegamento prima di modificare la partita.</p></section>';
@@ -750,7 +767,8 @@ export function persistLineupSnapshot(snapshot,notify){
 export async function staffSubmit(e,ctx){
  const form=e.target,kind=form.dataset.staffForm;if(!kind)return false;
  e.preventDefault();
- if(!isStaff(ctx))return true;
+ const eventContribution=kind==='event'&&Boolean(ctx.state.identity?.user);
+ if(!isStaff(ctx)&&!eventContribution)return true;
  try{
   if(kind==='amend-event'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Partita non collegata');
@@ -823,10 +841,13 @@ export async function staffSubmit(e,ctx){
     secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
     minute,stoppage_minute:numberOrNull(d.stoppage_minute),
     substitution_reason:d.substitution_reason,notes:d.notes,
-    count_score:Boolean(d.count_score),request_key:crypto.randomUUID()};
+    count_score:Boolean(d.count_score),captured_at:d.captured_at||new Date().toISOString(),
+    request_key:crypto.randomUUID()};
    if(payload.event_type==='substitution'&&!payload.player_id)throw Error('Indica chi esce');
-   await pendingFn(form,()=>rpc('tm_app_match_action',{p_match_id:m.id,p_action:'event',p_payload:payload}));
-   await reloadMatch(ctx);ctx.toast('Evento live registrato');return true;
+   const saved=await pendingFn(form,()=>rpc('tm_app_submit_live_event',{p_match_id:m.id,p_event:payload}));
+   await reloadMatch(ctx);
+   ctx.toast(saved?.status==='official'?'Evento registrato e confermato':'Evento registrato · in attesa di conferma');
+   return true;
   }
   if(kind==='score'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
