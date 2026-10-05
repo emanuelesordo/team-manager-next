@@ -638,7 +638,7 @@
 
 /* Match score must inherit the large score size, not the generic nested-span size. */
 .match-detail-head .match-big-score>b>.match-score-trigger{
- display:inline-flex;align-items:baseline;justify-content:center;gap:.08em;
+ position:relative;display:inline-flex;align-items:baseline;justify-content:center;gap:.08em;
  font-size:inherit!important;line-height:inherit!important;font-weight:inherit;color:inherit;
  padding:0;border:0;border-radius:0;
 }
