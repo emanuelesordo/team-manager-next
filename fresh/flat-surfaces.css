@@ -301,3 +301,91 @@
   .ov-event-ball{width:15px!important;height:15px!important}
   .ov-event-sub{width:18px!important;height:18px!important}
 }
+
+
+/* Mobile home carousel: remove unused vertical air and keep controls close to the score. */
+@media (max-width:650px){
+  body[data-page="home"] .home-feature [data-home-hero]>.hero-panel{
+    min-height:0;
+    height:auto;
+  }
+  body[data-page="home"] .home-feature .hero-content{
+    height:auto;
+    padding:14px 14px 13px;
+    gap:8px;
+  }
+  body[data-page="home"] .home-feature .hero-content>p{line-height:1.2}
+  body[data-page="home"] .home-feature .hero-score{
+    margin:4px 0 6px;
+    gap:4px;
+  }
+  body[data-page="home"] .home-feature .hero-club{gap:4px}
+  body[data-page="home"] .home-feature .hero-club .crest.xl{width:58px;height:58px}
+  body[data-page="home"] .home-feature .hero-club strong{min-height:0;font-size:10px;line-height:1.15}
+  body[data-page="home"] .home-feature .hero-mid{gap:5px}
+  body[data-page="home"] .home-feature .hero-mid b{font-size:31px;line-height:1}
+  body[data-page="home"] .home-feature .hero-mid small{font-size:8px}
+  body[data-page="home"] .home-feature .hero-bottom{
+    margin-top:0;
+    min-height:0;
+    gap:7px;
+  }
+  body[data-page="home"] .home-feature .hero-arrows button{width:27px;height:27px}
+  body[data-page="home"] .home-feature .hero-bottom .primary-btn{padding:9px 12px}
+}
+
+/* Persistent score strip while a fixture is live: desktop + mobile, on every page. */
+.global-live-score{
+  position:sticky;
+  top:65px;
+  z-index:21;
+  width:100%;
+  min-height:52px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;
+  gap:12px;
+  padding:7px clamp(16px,3vw,42px);
+  border:0;
+  border-bottom:1px solid var(--border);
+  background:color-mix(in srgb,var(--surface-solid) 94%,transparent);
+  color:var(--ink);
+  box-shadow:0 8px 24px #001b2430;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.global-live-label{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:9px;font-weight:900;letter-spacing:.08em;color:#ff7d83;
+}
+.global-live-label i{
+  width:7px;height:7px;border-radius:50%;background:#ff4e58;
+  box-shadow:0 0 0 4px #ff4e581f;
+  animation:pulse 2s ease-in-out infinite;
+}
+.global-live-club{display:flex;align-items:center;gap:8px;min-width:0}
+.global-live-home{justify-content:flex-end}
+.global-live-away{justify-content:flex-start}
+.global-live-club strong{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:12px;
+}
+.global-live-result{
+  white-space:nowrap;font-size:24px;line-height:1;font-variant-numeric:tabular-nums;
+}
+body[data-live="true"] .match-compact-bar{display:none}
+@media(max-width:760px){
+  .global-live-score{
+    top:70px;
+    min-height:48px;
+    grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);
+    gap:6px;
+    padding:6px 10px;
+  }
+  .global-live-label{font-size:8px;gap:4px}
+  .global-live-label i{width:6px;height:6px}
+  .global-live-club{gap:4px}
+  .global-live-club .crest{width:25px;height:25px;border-radius:7px}
+  .global-live-club strong{font-size:9px}
+  .global-live-result{font-size:20px}
+}
