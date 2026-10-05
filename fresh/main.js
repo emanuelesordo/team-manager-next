@@ -767,6 +767,26 @@ document.addEventListener('click',async e=>{
  }
 });
 document.addEventListener('change',async e=>{
+ if(e.target.matches('[data-vote-range]')){
+  const input=e.target,control=input.closest('[data-vote-control]'),stateEl=control?.querySelector('[data-vote-save-state]');
+  if(!hasSession()){state.overlay='login';render();return}
+  const m=resolveMatch().operational,activeFixture=state.match;
+  if(!m){toast('Tabellino non disponibile');return}
+  control?.classList.add('is-saving');control?.classList.remove('is-error','is-saved');
+  if(stateEl)stateEl.textContent='Salvataggio…';
+  input.disabled=true;
+  try{
+   await saveVote(m.id,input.dataset.votePlayer,input.value);
+   const updated=await loadMatchInfo(m.id);
+   if(activeFixture===state.match){state.matchData=updated;render()}
+   toast('Valutazione salvata');
+  }catch(error){
+   input.disabled=false;control?.classList.remove('is-saving');control?.classList.add('is-error');
+   if(stateEl)stateEl.textContent='Salvataggio non riuscito';
+   toast('Voto non salvato: '+(error.message||error));
+  }
+  return;
+ }
  if(e.target.matches('[data-match-kit]')){
   const m=resolveMatch().operational;if(!m)return;
   try{await rpc('tm_app_match_details',{p_match_id:m.id,p_kit_key:e.target.value||null});m.match_kit_key=e.target.value;toast('Divisa salvata')}
@@ -796,6 +816,8 @@ document.addEventListener('change',e=>{
  if(e.target.matches('[data-comp-select]')){state.comp=e.target.value||null;render()}
 });
 document.addEventListener('pointerdown',e=>{
+ const voteRange=e.target.closest?.('[data-vote-range]');
+ if(voteRange){const control=voteRange.closest('[data-vote-control]');control?.classList.add('is-active');}
  const submit=e.target.closest?.('form[data-staff-form="event"] [type="submit"]');
  const form=submit?.closest?.('form[data-staff-form="event"]');
  const captured=form?.querySelector?.('input[name="captured_at"]');
@@ -807,6 +829,14 @@ for(const type of ['pointerdown','pointermove','pointerup','pointercancel','drag
 }
 document.addEventListener('input',e=>{
  if(staffLogoEvent(e))return;
+ if(e.target.matches('[data-vote-range]')){
+  const input=e.target,control=input.closest('[data-vote-control]'),bubble=control?.querySelector('[data-vote-bubble]');
+  const value=Number(input.value),pos=((value-1)/9*100).toFixed(3)+'%';
+  input.style.setProperty('--vote-pos',pos);
+  if(bubble){bubble.style.setProperty('--vote-pos',pos);bubble.value=String(value).replace('.',',');bubble.textContent=String(value).replace('.',',')}
+  control?.classList.add('is-active');control?.classList.remove('is-unrated');
+  return;
+ }
  if(e.target.id==='player-search'){
   state.q=e.target.value;const query=normalized(state.q);let visible=0;
   document.querySelectorAll('[data-search-name]').forEach(el=>{const show=el.dataset.searchName.includes(query);el.hidden=!show;if(show)visible++});
@@ -939,20 +969,6 @@ document.addEventListener('submit',async e=>{
    toast('Partita di test creata');
    if(result?.fixture_id)await openMatch(result.fixture_id);
   }catch(err){error.textContent=err.message||String(err);button.disabled=false;button.textContent='Crea partita'}
-  return;
- }
- if(e.target.matches('[data-vote-form]')){
-  e.preventDefault();
-  if(!hasSession()){state.overlay='login';render();return}
-  const button=e.target.querySelector('[type=submit]'),m=resolveMatch().operational,activeFixture=state.match;
-  if(!m){toast('Tabellino non disponibile');return}
-  button.disabled=true;button.textContent='Salvataggio…';
-  try{
-   await saveVote(m.id,e.target.dataset.votePlayer,String(new FormData(e.target).get('rating')??''));
-   const updated=await loadMatchInfo(m.id);
-   if(activeFixture===state.match){state.matchData=updated;render()}
-   toast('Valutazione salvata');
-  }catch(error){toast('Voto non salvato: '+(error.message||error));button.disabled=false;button.textContent='Riprova'}
   return;
  }
  if(e.target.matches('[data-staff-form]')){await staffSubmit(e,staffContext());return}
