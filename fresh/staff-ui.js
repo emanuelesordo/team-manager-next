@@ -576,9 +576,7 @@ function matchLive(ctx,m,competition){
    else {periodAction='resume';periodLabel='Riprendi'}
   }
  }
- const clock='<div class="live-mobile-clock"><span class="status '+(m.status==='live'?'live':'end')+'">'+(m.status==='live'?'LIVE':m.status==='finished'?'FINALE':'PRE')+'</span>'+
-  '<strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+esc(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+esc(m.id)+'" data-blue-min="'+Number(competition?.discipline_rules?.blue_duration_minutes||0)+'">00:00</strong>'+
-  '<span>'+esc(livePeriodName(m))+(recovery>0?' · +'+recovery+"'":'')+'</span></div>';
+ const clock='';
  const consoleHtml='<div class="live-fast-console">'+
    liveQuickButton('goal','Gol','⚽',!active)+liveQuickButton('yellow_card','Cartellino','▮',!active)+liveQuickButton('substitution','Cambio','↔',!active)+
    (staff?'<button type="button" class="live-quick live-quick-recovery" data-staff-action="live-recovery-open" '+(m.status!=='live'?'disabled':'')+'><span class="live-quick-icon">◴</span><span>Recupero</span></button>':'')+
@@ -861,22 +859,38 @@ export async function staffClick(e,button,ctx){
   if(action==='start'){
    const fixture=ctx.resolveMatch().fixture;
    const competition=(ctx.state.data?.competitions||[]).find(x=>x.id===m.competition_id);
-   const realtime=window.confirm('La partita sta iniziando adesso?\n\nOK = sì, avvia il timer da 0\nAnnulla = sto inserendo il live in ritardo');
+   const realtime=window.confirm('La partita sta iniziando adesso?\n\nOK = live da ora, timer da 0\nAnnulla = live iniziato prima');
    if(realtime){
-    await rpc('tm_app_start_live_v2',{p_match_id:m.id,p_mode:'realtime',p_period:'first_half',p_approx_minute:0});
-    await reloadMatch(ctx);ctx.toast('LIVE avviato in tempo reale');return true;
+    try{
+     await rpc('tm_app_start_live_v2',{p_match_id:m.id,p_mode:'realtime',p_period:'first_half',p_approx_minute:0});
+    }catch(error){
+     if(/function|schema cache|not found|PGRST202/i.test(String(error?.message||error))){
+      await rpc('tm_app_match_action',{p_match_id:m.id,p_action:'start',p_payload:{force_start:true}});
+     }else throw error;
+    }
+    await reloadMatch(ctx);ctx.toast('LIVE avviato da ora');return true;
    }
    const suggestion=delayedLiveSuggestion(fixture,competition,m);
    const suggestedSecond=suggestion.period==='second_half';
-   const second=window.confirm('Periodo attuale suggerito: '+(suggestedSecond?'2° tempo':'1° tempo')+'.\n\nOK = 2° tempo\nAnnulla = 1° tempo');
-   const period=second?'second_half':'first_half';
-   const suggested=period===suggestion.period?suggestion.minute:0;
-   const raw=window.prompt('Minuto approssimativo attuale del '+(second?'2°':'1°')+' tempo.\nIl timer partirà da questo riferimento e gli eventi inseriti dal live resteranno ricalibrabili.',String(suggested));
-   if(raw===null)return true;
-   const approx=Number(raw);
+   const useSuggestion=window.confirm('Stima automatica: '+(suggestedSecond?'2° tempo':'1° tempo')+', circa '+suggestion.minute+"'.\n\nOK = usa questa stima\nAnnulla = correggi periodo/minuto");
+   let period=suggestion.period,approx=suggestion.minute;
+   if(!useSuggestion){
+    const second=window.confirm('Sei nel 2° tempo?\n\nOK = 2° tempo\nAnnulla = 1° tempo');
+    period=second?'second_half':'first_half';
+    const fallback=period===suggestion.period?suggestion.minute:0;
+    const raw=window.prompt('Minuto approssimativo attuale del '+(second?'2°':'1°')+' tempo.',String(fallback));
+    if(raw===null)return true;
+    approx=Number(raw);
+   }
    if(!Number.isInteger(approx)||approx<0||approx>180)throw Error('Minuto approssimativo non valido');
-   await rpc('tm_app_start_live_v2',{p_match_id:m.id,p_mode:'delayed',p_period:period,p_approx_minute:approx});
-   await reloadMatch(ctx);ctx.toast('LIVE avviato da riferimento approssimativo');return true;
+   try{
+    await rpc('tm_app_start_live_v2',{p_match_id:m.id,p_mode:'delayed',p_period:period,p_approx_minute:approx});
+   }catch(error){
+    if(/function|schema cache|not found|PGRST202/i.test(String(error?.message||error)))
+     throw Error('Funzione live non disponibile nella cache API. Ricarica una volta la pagina: lo schema Supabase è stato riallineato.');
+    throw error;
+   }
+   await reloadMatch(ctx);ctx.toast('LIVE avviato · '+(period==='second_half'?'2°':'1°')+' tempo, '+approx+"' stimato");return true;
   }
   if(action==='finish'&&!window.confirm('Finalizzare la partita? Risultato e cronologia saranno ufficializzati.'))return true;
   if(action==='reopen'&&!window.confirm('Riaprire questa partita per correzioni?'))return true;
@@ -1178,10 +1192,13 @@ export async function staffSubmit(e,ctx){
 }
 let clockInterval,clockContext=null,syncBusy=false,lastSyncTime=0;
 function tickClock(){
- const el=document.querySelector('[data-staff-clock]');if(!el)return;
- const base=Number(el.dataset.seconds||0),anchor=Date.parse(el.dataset.anchor||'');
- const n=base+(el.dataset.running==='true'&&Number.isFinite(anchor)?Math.max(0,Math.floor((Date.now()-anchor)/1000)):0);
- el.textContent=String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+ const els=[...document.querySelectorAll('[data-staff-clock]')];if(!els.length)return;
+ for(const el of els){
+  const base=Number(el.dataset.seconds||0),anchor=Date.parse(el.dataset.anchor||'');
+  const n=base+(el.dataset.running==='true'&&Number.isFinite(anchor)?Math.max(0,Math.floor((Date.now()-anchor)/1000)):0);
+  el.textContent=String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+ }
+ const el=els[0];
  if(el.dataset.running==='true' && Number(el.dataset.blueMin)>0 &&
     clockContext && !syncBusy && !document.hidden && Date.now()-lastSyncTime>20000){
    lastSyncTime=Date.now();syncBusy=true;
