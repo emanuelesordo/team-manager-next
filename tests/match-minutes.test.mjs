@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cumulativeEventMinute,storedEventMinute,displayEventMinute,matchPeriodLength} from '../fresh/match-minutes.js';
+import {cumulativeEventMinute,storedEventMinute,displayEventMinute,matchPeriodLength,cumulativeMinuteFromPeriod,periodRelativeMinute} from '../fresh/match-minutes.js';
 import {reviewPanel} from '../fresh/postmatch-review.js';
 import {amendEventForm,revisionHistory} from '../fresh/postmatch-controls.js';
 
@@ -18,6 +18,15 @@ test('40 minute competition converts legacy second-half events exactly once',()=
  assert.equal(cumulativeEventMinute({...legacy,minute:20,payload:{period:'first_half'}},competition),20);
  assert.equal(cumulativeEventMinute({...legacy,minute:null},competition),null);
 });
+test('live entry uses period-relative minute but stores cumulative minute exactly once',()=>{
+ assert.equal(cumulativeMinuteFromPeriod(16,'second_half',competition),56);
+ assert.equal(periodRelativeMinute(56,'second_half',competition),16);
+ assert.equal(cumulativeMinuteFromPeriod(28,'first_half',competition),28);
+ assert.equal(periodRelativeMinute(28,'first_half',competition),28);
+ assert.equal(cumulativeMinuteFromPeriod(null,'second_half',competition),null);
+ assert.throws(()=>cumulativeMinuteFromPeriod(16,'second_half',null),/Durata/);
+});
+
 test('editing displays cumulative minute but saves unchanged legacy storage convention',()=>{
  assert.equal(storedEventMinute(legacy,68,competition),28);
  assert.equal(storedEventMinute(live,68,competition),68);
