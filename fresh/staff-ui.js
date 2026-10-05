@@ -548,7 +548,8 @@ function liveDraftSheet(ctx,m,rules,field,bench){
 }
 function matchLive(ctx,m,competition){
  const rules=matchRules(m,competition),fixture=ctx.resolveMatch().fixture,staff=isStaff(ctx);
- const active=m.status==='live'||(m.status==='scheduled'&&Date.now()>=Date.parse(fixture?.kickoff_at||''));
+ const kickoff=Date.parse(fixture?.kickoff_at||'');
+ const active=m.status==='live'||(m.status==='scheduled'&&Number.isFinite(kickoff)&&Date.now()>=kickoff-5*60000);
  const roster=livePlayers(ctx,m),seconds=liveClockSeconds(m);
  const recovery=Number(m.live_recovery_period_no)===Math.max(1,Number(m.live_period_no||1))?Number(m.live_recovery_minutes||0):0;
  const playerRows=roster.field.map(x=>{
