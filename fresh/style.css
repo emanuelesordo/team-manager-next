@@ -1168,3 +1168,16 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 }
 
 .fixture-result.editable-time{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+
+/* Admin timeline editing */
+.mt-editable-event{appearance:none;border:0;background:transparent;color:inherit;padding:0;margin:0;font:inherit;text-align:inherit;cursor:pointer}
+.mt-editable-event:hover .mt-names strong,.mt-editable-event:focus-visible .mt-names strong{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+.mt-add-event{display:grid;place-items:center;width:20px;height:20px;margin:-2px auto 2px;border:1px solid color-mix(in srgb,var(--border) 88%,transparent);border-radius:50%;background:color-mix(in srgb,var(--surface) 80%,transparent);color:var(--muted);font:500 13px/1 sans-serif;opacity:.48;cursor:pointer}
+.mt-add-event:hover,.mt-add-event:focus-visible{opacity:1;color:var(--ink);border-color:color-mix(in srgb,var(--ink) 25%,var(--border))}
+.mt-add-empty{margin:8px auto}
+.timeline-event-sheet .live-sheet-grid{align-items:end}
+.timeline-event-sheet .staff-danger{margin-right:auto}
+@media(max-width:650px){
+ .mt-add-event{width:18px;height:18px;font-size:12px}
+ .timeline-event-sheet .live-sheet-actions{display:flex;gap:6px}
+}
