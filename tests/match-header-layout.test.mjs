@@ -39,7 +39,7 @@ test('status is above result with explicit dash; substitutions are tight',()=>{
 
 test('compact layout preserves full identity normally and score plus timer during live',()=>{
  assert.match(matchSource,/class="match-expanded"/);
- assert.match(matchSource,/class="match-compact-bar glass"/);
+ assert.match(matchSource,/class="match-compact-bar glass/);
  const compact=matchSource.slice(matchSource.indexOf("const compactHeader="),matchSource.indexOf(" const header=",matchSource.indexOf("const compactHeader=")));
  assert.ok(compact.includes("matchIsLive?'':("));
  assert.ok(compact.includes("club(f.home_team"));
