@@ -38,7 +38,7 @@ export function reviewPanel({match,fixture,competition,events=[],players=[],edit
   const minute=displayEventMinute(ev,competition,'Minuto non noto');
   const scoreApplied=ev.payload?.score_applied===true||ev.payload?.counted_in_score===true;
   const editable=['live','finished'].includes(match?.status);
-  const timing=ev.minute==null?'Evento passato · timestamp salvato, minuto da completare':
+  const timing=ev.minute==null?'Evento passato · Timestamp salvato, minuto da completare':
    ev.payload?.minute_provisional===true?'Minuto provvisorio stimato dall’orario di inizio':
    ev.timing_consistent===false&&Number.isFinite(Number(ev.timing_delta_seconds))?
     'Inserito '+Math.max(1,Math.round(Math.abs(Number(ev.timing_delta_seconds))/60))+' min '+(Number(ev.timing_delta_seconds)>0?'dopo':'prima')+' rispetto al minutaggio · verifica richiesta':
