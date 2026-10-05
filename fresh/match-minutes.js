@@ -12,6 +12,10 @@ export const legacyRelativeMinute=event=>event?.payload?.period==='second_half' 
 export function livePeriodOffset(period,competition){
  const length=matchPeriodLength(competition);
  if(length===null)throw Error('Durata della competizione non disponibile');
+ const numeric=Number(period);
+ if(Number.isInteger(numeric)&&numeric>0)return (numeric-1)*length;
+ const match=String(period||'').match(/^period_(\d+)$/);
+ if(match)return (Math.max(1,Number(match[1]))-1)*length;
  if(period==='second_half')return length;
  if(period==='extra')return 2*length;
  return 0;
@@ -32,7 +36,8 @@ export function cumulativeEventMinute(event,competition){
  if(event?.minute===null||event?.minute===undefined||event.minute==='')return null;
  const n=Number(event.minute);if(!Number.isFinite(n))return null;
  const length=matchPeriodLength(competition);
- return length!==null&&legacyRelativeMinute(event)?n+length:n;
+ if(length!==null&&legacyRelativeMinute(event))return n+length;
+ return n;
 }
 export function storedEventMinute(event,cumulative,competition){
  if(cumulative===null||cumulative===undefined||cumulative==='')return null;
