@@ -233,7 +233,7 @@ function stats(){
 function resolveMatch(){const f=fixtures().find(x=>x.id===state.match);const exact=state.data?.matches?.find(m=>m.fixture_id===f?.id);return {fixture:f,operational:f?(exact||fixtureToMatch(f,state.data?.matches||[],state.base.opponents,team())):null}}
 function staffContext(){return {state,heading,resolveMatch,loadMatchInfo,involvesTeam,render,toast,reloadAll,refreshLive,logoutUser}}
 function admin(){return adminPage(staffContext())}
-function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSettings){
+function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSettings,trustedReviewer=false){
  const norm=v=>String(v??'').trim().toLocaleLowerCase('it');
  const homeIsOurs=Boolean(ourTeam?.id&&fixture.home_team_id===ourTeam.id);
  const side=e=>{const s=norm(e.team_side||e.side);if(['home','casa'].includes(s))return 'home';if(['away','ospite'].includes(s))return 'away';if(['team','ours','own'].includes(s))return homeIsOurs?'home':'away';if(['opponent','opposition'].includes(s))return homeIsOurs?'away':'home';return 'unknown'};
@@ -292,8 +292,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   const stateLabel=e.validation_status==='official'?'':e.validation_status==='disputed'?'Contestato':'Da confermare';
   const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+
    (stateLabel?'<small class="mt-event-state">'+E(stateLabel)+'</small>':'')+timingInfo(e)+'</span>';
-  const trusted=['admin','player'].includes(state.identity?.role?.role);
-  const canReact=trusted&&['official','proposed','community_confirmed','disputed'].includes(e.validation_status);
+  const canReact=trustedReviewer&&['official','proposed','community_confirmed','disputed'].includes(e.validation_status);
   const reactions=canReact?'<span class="mt-event-reactions">'+
    '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(e.id)+'" aria-label="Conferma evento">+'+E(Number(e.support_count)||0)+'</button>'+
    '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(e.id)+'" aria-label="Segnala errore">−'+E(Number(e.dispute_count)||0)+'</button></span>':'';
@@ -357,7 +356,7 @@ function match(){
  const playerName=id=>matchPlayerLabel(people(id));
  const activeEvents=(data.events||[]).filter(e=>e.validation_status!=='rejected');
  const pending=activeEvents.filter(e=>['proposed','community_confirmed','disputed'].includes(e.validation_status)).length;
- const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),rules):
+ const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),rules,['admin','player'].includes(state.identity?.role?.role)):
   (state.fixtureEvents?.length?fixtureEventsPanel(state.fixtureEvents,comp,f):'<div class="empty">Nessun tabellino associato.</div>');
  const extraMatch=!involvesTeam(f,team());
  const availableKits=collectionForClub(team()||{});
