@@ -19,13 +19,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install Playwright and Chromium
+      - name: Install Playwright browsers
         run: |
           python -m pip install playwright==1.56.0
-          python -m playwright install --with-deps chromium
+          python -m playwright install --with-deps chromium webkit
       - name: Start static test server
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/team-manager-http.log 2>&1 &
           sleep 2
-      - name: Run responsive browser test with simulated Supabase
-        run: python tests/match-browser.py
+      - name: Run responsive browser test with simulated Supabase (Chromium)
+        run: BROWSER=chromium python tests/match-browser.py
+      - name: Run responsive browser test with simulated Supabase (WebKit)
+        run: BROWSER=webkit python tests/match-browser.py
