@@ -2,6 +2,8 @@ name: Validate & deploy Pages
 on:
   push:
     branches: [main]
+    paths:
+      - 'index.html'
   workflow_dispatch:
 permissions:
   contents: read
