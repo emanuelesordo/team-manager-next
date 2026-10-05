@@ -519,7 +519,7 @@ function liveDraftSheet(ctx,m,rules,field,bench){
  const secondary=type==='goal'?picker('secondary_player_id','Assist',assistOptions,''):
   type==='substitution'?picker('secondary_player_id','Giocatore entra',benchOptions,''):'';
  const reason=type==='substitution'?picker('substitution_reason','Motivo cambio',
-  [['tactical','Scelta tattica'],['injury','Infortunio'],['technical','Scelta tecnica'],['injury_prevention','Prevenzione infortunio'],['disciplinary_prevention','Prevenzione disciplinare'],['other','Altro']],'tactical'):'';
+  [['','Nessun motivo'],['tactical','Scelta tattica'],['injury','Infortunio'],['technical','Scelta tecnica'],['injury_prevention','Prevenzione infortunio'],['disciplinary_prevention','Prevenzione disciplinare'],['other','Altro']],''):'';
  const playerField=side==='team'?picker('player_id',playerLabel,fieldOptions,selected):'';
  const cardExtra=type==='yellow_card'?'<button type="button" class="live-type-mini" data-staff-action="live-event-switch" data-live-event="red_card" title="Passa a rosso">🟥 Rosso</button>':'';
  return '<div class="live-sheet-backdrop" data-staff-action="live-close"><section class="live-event-sheet" role="dialog" aria-modal="true" aria-label="Aggiungi evento">'+
