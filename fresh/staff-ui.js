@@ -572,9 +572,7 @@ function matchLive(ctx,m,competition){
   const currentPeriod=Math.max(1,Number(m.live_period_no||1));
   if(m.status==='scheduled'){periodAction='start';periodLabel='Inizio periodo'}
   else if(m.status==='live'&&m.live_clock_running){
-   if(m.is_test)periodAction='test-period-end';
-   else if(currentPeriod<rules.periods&&currentPeriod===1)periodAction='halftime';
-   else periodAction='pause';
+   periodAction='end-period';
    periodLabel='Fine periodo';
   }else if(m.status==='live'){
    if(m.is_test&&m.live_period==='halftime'&&currentPeriod<rules.periods){periodAction='test-period-next';periodLabel='Inizio '+(currentPeriod+1)+'° tempo'}
@@ -727,7 +725,7 @@ export async function staffClick(e,button,ctx){
   }
   if(preAction==='live-recovery-open'){
    if(!isStaff(ctx))return true;
-   memory.liveDraft={kind:'recovery',recovery:Number(m.live_recovery_minutes||0)};ctx.render();return true;
+   memory.liveDraft={kind:'recovery',recovery:Number(m.live_recovery_period_no)===Math.max(1,Number(m.live_period_no||1))?Number(m.live_recovery_minutes||0):0};ctx.render();return true;
   }
   const competition=(ctx.state.data?.competitions||[]).find(x=>x.id===m.competition_id),rules=matchRules(m,competition);
   const seconds=liveClockSeconds(m),periodNo=Math.max(1,Number(m.live_period_no||1));
@@ -926,6 +924,12 @@ export async function staffClick(e,button,ctx){
   }
   const map={void:'void_event',approve:'approve_event'};
   if(action==='sync-blue'){const count=await rpc('tm_app_sync_blue',{p_match_id:m.id});await reloadMatch(ctx);ctx.toast(count>0?count+' rientri blu registrati':'Nessun rientro necessario');return true;}
+  if(action==='end-period'){
+   const ended=await rpc('tm_app_end_period',{p_match_id:m.id});
+   await reloadMatch(ctx);
+   ctx.toast('Periodo concluso · '+Number(ended?.score_home||0)+'-'+Number(ended?.score_away||0)+(Number(ended?.recovery_minutes||0)?' · recupero +'+Number(ended.recovery_minutes)+"'":''));
+   return true;
+  }
   if(action==='test-period-end'||action==='test-period-next'){
    await rpc('tm_app_test_period_action',{p_match_id:m.id,p_action:action==='test-period-end'?'end':'next'});
    await reloadMatch(ctx);ctx.toast(action==='test-period-end'?'Tempo concluso':'Tempo successivo avviato');return true;
@@ -1218,9 +1222,15 @@ function tickClock(){
   const periodLength=Number(el.dataset.periodLen||0),periodNo=Math.max(1,Number(el.dataset.periodNo||1));
   const regulation=periodLength>0?periodLength*periodNo*60:0;
   if(regulation>0&&n>regulation){
-   const plus=Math.max(1,Math.ceil((n-regulation)/60));
-   el.textContent=(periodLength*periodNo)+"'+"+plus+"'";
+   const extraSeconds=Math.max(1,n-regulation),plus=Math.floor((extraSeconds-1)/60)+1,sec=(extraSeconds-1)%60+1;
+   el.textContent=(periodLength*periodNo)+"'+"+plus+"' "+String(sec).padStart(2,'0')+'"';
   }else el.textContent=String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+  const label=el.parentElement?.querySelector?.('[data-staff-period-label]');
+  if(label){
+   const baseLabel=label.dataset.baseLabel||'';
+   const declared=Number(label.dataset.recovery||0);
+   label.textContent=baseLabel+(regulation>0&&n>regulation&&declared>0?' · RECUPERO +'+declared+"'":'');
+  }
  }
  const el=els[0];
  if(el.dataset.running==='true' && Number(el.dataset.blueMin)>0 &&
