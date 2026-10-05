@@ -246,7 +246,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
- const tracked=ordered.map(e=>{if(goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:goal(e)?(snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
+ const tracked=ordered.map(e=>{const official=e.validation_status==='official';if(official&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:official&&goal(e)?(snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
  const heading=label=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
  const cards=e=>{
   const t=type(e),shirt=String(e.payload?.opponent_shirt_number||'');
@@ -266,12 +266,29 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return '<span class="mt-card-stack" aria-label="Cartellino">'+colors.map(c=>'<i class="mt-card-'+c+'"></i>').join('')+'</span>';
  };
  const icon=e=>{const t=type(e);if(goal(e))return '';if(['yellow_card','red_card','blue_card','second_yellow'].includes(t))return cards(e);if(['substitution','sub_out','sub_in'].includes(t))return '<span class="mt-change" aria-label="Sostituzione"><span class="mt-sub-in">→</span><span class="mt-sub-out">←</span></span>';if(t==='blue_return')return '<span class="mt-generic">↩</span>';return '<span class="mt-generic">◆</span>'};
+ const eventState=e=>e.validation_status==='official'?'official':e.validation_status==='disputed'?'disputed':'pending';
+ const timingInfo=e=>{
+  if(e.minute==null)return '<small class="mt-event-meta">Timestamp salvato · minuto da completare</small>';
+  const delta=Number(e.timing_delta_seconds);
+  if(e.timing_consistent===false&&Number.isFinite(delta)){
+   const minutes=Math.max(1,Math.round(Math.abs(delta)/60));
+   return '<small class="mt-event-meta timing-warning">Inserito '+minutes+' min '+(delta>0?'dopo':'prima')+' rispetto al minutaggio</small>';
+  }
+  return '';
+ };
  const eventContent=entry=>{const e=entry.event,t=type(e),isChange=['substitution','sub_out','sub_in'].includes(t);
   const primary=isChange&&e.secondary_player_id?playerName(e.secondary_player_id):e.player_id?playerName(e.player_id):goal(e)?'Gol avversario':e.payload?.opponent_shirt_number?'#'+e.payload.opponent_shirt_number:'Squadra';
   const secondary=isChange?(e.secondary_player_id&&e.player_id?playerName(e.player_id):''):(goal(e)&&e.secondary_player_id?playerName(e.secondary_player_id):'');
   const score=entry.score?'<span class="mt-score">'+E(entry.score)+'</span>':'';
-  const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+'</span>';
-  return (goal(e)?'':'<span class="mt-icon">'+icon(e)+'</span>')+score+names;
+  const stateLabel=e.validation_status==='official'?'':e.validation_status==='disputed'?'Contestato':'Da confermare';
+  const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+
+   (stateLabel?'<small class="mt-event-state">'+E(stateLabel)+'</small>':'')+timingInfo(e)+'</span>';
+  const trusted=['admin','player'].includes(state.identity?.role?.role);
+  const canReact=trusted&&['proposed','community_confirmed','disputed'].includes(e.validation_status);
+  const reactions=canReact?'<span class="mt-event-reactions">'+
+   '<button type="button" class="event-react event-react-plus" data-event-reaction="1" data-event-id="'+E(e.id)+'" aria-label="Conferma evento">+</button>'+
+   '<button type="button" class="event-react event-react-minus" data-event-reaction="-1" data-event-id="'+E(e.id)+'" aria-label="Segnala errore">−</button></span>':'';
+  return (goal(e)?'':'<span class="mt-icon">'+icon(e)+'</span>')+score+names+reactions;
  };
  const minutes=e=>E(displayEventMinute(e,competitionSettings).replace('′',"'"));
  const recoveryByPeriod=new Map();
@@ -290,7 +307,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
    let j=i+1;while(j<items.length&&sameMoment(items[i],items[j]))j++;
    const group=items.slice(i,j),first=group[0].event;
    const contentFor=which=>group.filter(x=>side(x.event)===which||(which==='away'&&side(x.event)==='unknown'))
-    .map(x=>'<div class="mt-group-item">'+eventContent(x)+'</div>').join('');
+    .map(x=>'<div class="mt-group-item event-'+eventState(x.event)+'">'+eventContent(x)+'</div>').join('');
    output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
    i=j;
   }
@@ -329,7 +346,10 @@ function match(){
   '<div class="empty">Formazione non disponibile: partita senza tabellino operativo.</div>';
  const staffAccess=isStaff(staffContext());
  const matchIsLive=m?.status==='live'||f.status==='live';
- const tabs=extraMatch?[['info','Info'],['overview','Overview'] ]:[['info','Info'],...(staffAccess?[['callups','Disponibilità']]:[]),['ratings','Voti'],...(staffAccess&&matchIsLive?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[])];
+ const kickoffMs=Date.parse(f.kickoff_at||'');
+ const liveEntryOpen=matchIsLive||(m?.status==='scheduled'&&Number.isFinite(kickoffMs)&&Date.now()>=kickoffMs);
+ const canLiveContribute=Boolean(state.identity?.user)&&!extraMatch&&Boolean(m)&&liveEntryOpen;
+ const tabs=extraMatch?[['info','Info'],['overview','Overview'] ]:[['info','Info'],...(staffAccess?[['callups','Disponibilità']]:[]),['ratings','Voti'],...(canLiveContribute?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[])];
  const requestedTab=state.matchTab==='summary'?'overview':state.matchTab;
  const mappedTab=requestedTab==='staff'?(staffAccess&&!extraMatch?'callups':'overview'):requestedTab;
  const selectedTab=tabs.some(([id])=>id===mappedTab)?mappedTab:'overview';
@@ -346,7 +366,7 @@ function match(){
    (editor?field('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):''):titleInfo('Data',weekday(f.kickoff_at))+titleInfo('Ora',time(f.kickoff_at)))+'</div>'+
   '<div class="match-meta-group match-meta-right">'+
    (editor?field('venue_name','Campo',f.venue_name||venue)+field('venue_address','Luogo',f.venue_address||address):(placeLink?'<a class="match-meta-item" target="_blank" rel="noopener noreferrer" href="'+E(placeLink)+'" title="Apri il luogo su Maps"><strong>'+E(venue||address||'—')+'</strong></a>':titleInfo('Campo',venue||'—')))+'</div></div>';
- const scorers=matchScorerRows(activeEvents,f,team(),playerName,comp);
+ const scorers=matchScorerRows(activeEvents.filter(e=>e.validation_status==='official'),f,team(),playerName,comp);
  const recordedGoals=(state.fixtureEvents||[]).filter(e=>e.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
  const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
  const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
@@ -389,7 +409,7 @@ function match(){
   kitSelect+'</div></div>';
  let body='';
  if(selectedTab==='info')body=infoContent;
- else if(staffAccess&&['live','callups','tactics'].includes(selectedTab))body=staffMatchSection(staffContext(),f,m,selectedTab);
+ else if((staffAccess||selectedTab==='live')&&['live','callups','tactics'].includes(selectedTab))body=staffMatchSection(staffContext(),f,m,selectedTab);
  else if(selectedTab==='events')body=staffAccess&&!extraMatch?staffMatchSection(staffContext(),f,m,'events'):'<div class="inner-card"><h3>Cronologia eventi</h3>'+timeline+'</div>';
  else if(selectedTab==='lineup')body=isStaff(staffContext())&&m?matchLineup(staffContext(),m):'<div class="inner-card">'+formation+'</div>';
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E});
@@ -597,6 +617,26 @@ document.addEventListener('click',async e=>{
    lineupPendingSnapshot=null;
    toast('Formazione iniziale ufficialmente confermata');render();
   }catch(err){toast('Conferma non riuscita: '+err.message);confirm.disabled=false}
+  return;
+ }
+ const eventReaction=e.target.closest('[data-event-reaction]');
+ if(eventReaction){
+  if(!['admin','player'].includes(state.identity?.role?.role)){toast('Solo giocatori e amministratori possono validare gli eventi');return}
+  const reaction=Number(eventReaction.dataset.eventReaction),eventId=eventReaction.dataset.eventId;
+  const m=resolveMatch().operational;if(!m||!eventId)return;
+  let note=null;
+  if(reaction===-1){
+   note=window.prompt('Cosa va corretto? La segnalazione resterà associata all’evento per la revisione in gestione.');
+   if(note===null)return;
+   note=note.trim();
+   if(!note){toast('Indica cosa deve essere corretto');return}
+  }
+  eventReaction.disabled=true;
+  try{
+   const result=await rpc('tm_app_react_event',{p_match_id:m.id,p_event_id:eventId,p_reaction:reaction,p_note:note,p_proposed_changes:{}});
+   await refreshLive();
+   toast(result?.status==='official'?'Evento confermato':result?.status==='disputed'?'Errore segnalato · evento da rivedere':'Conferma registrata · revisione gestione necessaria');
+  }catch(err){eventReaction.disabled=false;toast('Validazione non riuscita: '+err.message)}
   return;
  }
  const staffTarget=e.target.closest('[data-staff-action],[data-staff-area],[data-staff-match-tab]');
