@@ -405,10 +405,16 @@ function match(){
   hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
  const editableScore=extraMatch&&state.identity?.role?.role==='admin';
  const headerScore=liveEntryOpen?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+(hasProposedScore?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
+ const livePeriodLabel=m?.live_period==='halftime'?'Intervallo':m?.live_period==='penalties'?'Rigori':
+  (m?.status==='live'?(Math.max(1,Number(m?.live_period_no||1))+'° tempo'):'');
+ const liveRecovery=(m?.status==='live'&&Number(m?.live_recovery_period_no)===Math.max(1,Number(m?.live_period_no||1)))?Number(m?.live_recovery_minutes||0):0;
+ const headerTimer=m&&m.status==='live'?
+  '<div class="match-header-live-clock"><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+E(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+E(m.id)+'" data-blue-min="'+Number(comp?.discipline_rules?.blue_duration_minutes||0)+'">00:00</strong>'+
+  '<small>'+E(livePeriodLabel)+(liveRecovery>0?' · +'+E(liveRecovery)+"'":'')+'</small></div>':'';
  const compactHeader='<div class="match-compact-bar glass" aria-hidden="true">'+
   '<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong></div>'+
-  '<b class="match-compact-score">'+headerScore+'</b>'+
+  '<div class="match-compact-center"><b class="match-compact-score">'+headerScore+'</b>'+headerTimer+'</div>'+
   '<div class="match-compact-club match-compact-away"><strong>'+E(f.away_team)+'</strong>'+
   club(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+'</div></div>';
  const statusEditor=editor?'<select data-extra-status aria-label="Stato partita">'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,text])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+text+'</option>').join('')+'</select>':null;
@@ -417,7 +423,7 @@ function match(){
   '<div class="match-expanded">'+matchMeta+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
   '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
-  '<div class="match-big-score"><div class="match-score-status">'+(statusEditor||status(f))+'</div><b>'+headerScore+'</b></div>'+
+  '<div class="match-big-score"><div class="match-score-status">'+(statusEditor||status(f))+'</div><b>'+headerScore+'</b>'+headerTimer+'</div>'+
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+
   '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div></div>'+
   '</div>';
