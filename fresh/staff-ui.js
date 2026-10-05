@@ -708,6 +708,12 @@ function delayedLiveSuggestion(fixture,competition,m=null){
  if(elapsed>=length+15)return {period:'second_half',minute:Math.max(0,elapsed-length-15)};
  return {period:'first_half',minute:Math.min(length,elapsed)};
 }
+function mountLiveSheet(){
+ requestAnimationFrame(()=>{
+  const backdrop=document.querySelector('.live-sheet-backdrop');
+  if(backdrop&&backdrop.parentElement!==document.body)document.body.append(backdrop);
+ });
+}
 async function reloadMatch(ctx){
  const m=ctx.resolveMatch().operational;
  if(m){
@@ -730,7 +736,7 @@ export async function staffClick(e,button,ctx){
   }
   if(preAction==='live-recovery-open'){
    if(!isStaff(ctx))return true;
-   memory.liveDraft={kind:'recovery',recovery:Number(m.live_recovery_period_no)===Math.max(1,Number(m.live_period_no||1))?Number(m.live_recovery_minutes||0):0};ctx.render();return true;
+   memory.liveDraft={kind:'recovery',recovery:Number(m.live_recovery_period_no)===Math.max(1,Number(m.live_period_no||1))?Number(m.live_recovery_minutes||0):0};ctx.render();mountLiveSheet();return true;
   }
   const competition=(ctx.state.data?.competitions||[]).find(x=>x.id===m.competition_id),rules=matchRules(m,competition);
   const seconds=liveClockSeconds(m),periodNo=Math.max(1,Number(m.live_period_no||1));
@@ -741,12 +747,12 @@ export async function staffClick(e,button,ctx){
   const relative=isStoppage?periodLength:Math.floor(relativeSeconds/60);
   const stoppage=isStoppage?Math.max(1,Math.ceil((relativeSeconds-periodLength*60)/60)):0;
   if(preAction==='live-event-switch'&&memory.liveDraft){
-   memory.liveDraft={...memory.liveDraft,type:button.dataset.liveEvent||memory.liveDraft.type};ctx.render();return true;
+   memory.liveDraft={...memory.liveDraft,type:button.dataset.liveEvent||memory.liveDraft.type};ctx.render();mountLiveSheet();return true;
   }
   memory.liveDraft={kind:'event',type:button.dataset.liveEvent||'goal',playerId:button.dataset.livePlayer||null,side:'team',
    capturedAt:new Date().toISOString(),minute:relative,stoppage,period:m.live_period_no||m.live_period||1,
    clockLabel:stoppage>0?((periodNo*periodLength)+"'+"+stoppage+"'"):(String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0'))};
-  ctx.render();return true;
+  ctx.render();mountLiveSheet();return true;
  }
  if(!isStaff(ctx))return false;
  if(button.dataset.staffArea){
