@@ -251,34 +251,19 @@
 .ov-shared-field .field-slot .ov-marker-side-right{left:calc(100% - 5px)}
 .ov-shared-field .field-slot .ov-marker-icon{
   position:relative;display:inline-flex;align-items:center;justify-content:center;
-  flex:0 0 auto;min-width:15px;min-height:15px;padding:0;
+  flex:0 0 auto;width:18px;height:18px;padding:0;
   border:0;border-radius:0;background:none;box-shadow:none;
-  color:#fff;font:900 15px/1 Arial,sans-serif;white-space:nowrap;text-shadow:0 1px 2px #0009;
+  color:inherit;white-space:nowrap;text-shadow:none;
 }
-.ov-shared-field .field-slot .ov-icon-ball{font-size:15px;line-height:1;filter:drop-shadow(0 1px 1px #0008)}
-.ov-shared-field .field-slot .ov-icon-own-goal{filter:hue-rotate(320deg) saturate(3) drop-shadow(0 1px 1px #0008)}
-.ov-shared-field .field-slot .ov-icon-assist{font-size:15px;filter:grayscale(1) brightness(3) drop-shadow(0 1px 1px #0008)}
-.ov-shared-field .field-slot .ov-icon-sub{font:900 20px/.78 Arial,sans-serif;text-shadow:0 1px 2px #000b}
-.ov-shared-field .field-slot .ov-icon-sub-in{color:#31a65e}
-.ov-shared-field .field-slot .ov-icon-sub-out{color:#d84747}
-.ov-shared-field .field-slot .ov-icon-return{color:#4f9bff;font-size:17px}
-.ov-shared-field .field-slot .ov-card-icon{
-  display:block;width:9px;height:14px;border:0;border-radius:1px;
-  transform:rotate(10deg);box-shadow:0 1px 2px #0008;
+.ov-shared-field .field-slot .ov-event-svg{
+  display:block;width:18px;height:18px;overflow:visible;
+  filter:drop-shadow(0 1px 1px #0007);
 }
-.ov-shared-field .field-slot .ov-card-yellow{background:#f4c21f}
-.ov-shared-field .field-slot .ov-card-blue{background:#378be7}
-.ov-shared-field .field-slot .ov-card-red{background:#e34043}
-.ov-shared-field .field-slot .ov-double-cards{
-  position:relative;display:block;width:14px;height:15px;
-}
-.ov-shared-field .field-slot .ov-double-cards i{
-  position:absolute;display:block;width:9px;height:14px;border-radius:1px;
-  transform:rotate(9deg);box-shadow:0 1px 2px #0008;
-}
-.ov-shared-field .field-slot .ov-double-cards i:first-child{left:0;top:1px;background:#f4c21f}
-.ov-shared-field .field-slot .ov-double-cards i:last-child{left:4px;top:0;background:#e34043}
-.ov-shared-field .field-slot .ov-double-cards.is-blue i:first-child{background:#378be7}
+.ov-shared-field .field-slot .ov-event-card{width:14px;height:18px}
+.ov-shared-field .field-slot .ov-event-double-card{width:18px;height:19px}
+.ov-shared-field .field-slot .ov-event-assist{width:20px;height:18px}
+.ov-shared-field .field-slot .ov-event-sub{width:19px;height:19px}
+.ov-shared-field .field-slot .ov-event-return{width:18px;height:18px}
 .ov-shared-field .field-slot .ov-marker-count{
   position:absolute;top:-5px;right:-7px;
   padding:0;border:0;border-radius:0;background:none;box-shadow:none;
