@@ -99,7 +99,7 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
   const control=canVote?
    '<div class="vote-control'+stateClass+'" data-vote-control>'+
     '<div class="vote-scale"><div class="vote-track" aria-hidden="true"><span class="vote-six-marker"><b>6</b></span>'+meanMarker+'</div>'+
-     '<input class="vote-range" data-vote-range data-vote-player="'+e(id)+'" type="range" min="1" max="10" step="0.5" value="'+e(initial)+'" aria-label="Voto per '+e(fullName)+'" style="--vote-pos:'+votePosition(initial)+'">'+
+     '<input class="vote-range" data-vote-range data-vote-player="'+e(id)+'" data-vote-saved-value="'+(personalValue!==null?e(personalValue):'')+'" type="range" min="1" max="10" step="0.5" value="'+e(initial)+'" aria-label="Voto per '+e(fullName)+'" style="--vote-pos:'+votePosition(initial)+'">'+
      '<output class="vote-bubble" data-vote-bubble style="--vote-pos:'+votePosition(initial)+'">'+e(String(initial).replace('.',','))+'</output></div>'+
     '<small class="vote-save-state" data-vote-save-state>'+(personalValue!==null?'Il tuo voto '+e(String(personalValue).replace('.',',')):'Tocca la barra')+'</small>'+
    '</div>':
