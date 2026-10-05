@@ -662,7 +662,7 @@ async function fillAnalytics(){
  if(!ids.length){verifiedEventCache={season:chosen,events:[]};box.innerHTML=renderEventAnalytics(realFixtures(),matches,[],team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[]);return}
  analyticsBusy=true;
  try{
-  const query='select=match_id,event_type,minute,stoppage_minute,team_side,side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+
+  const query='select=match_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+
    ids.map(encodeURIComponent).join(',')+')&limit=1000';
   const events=await get('app_match_events',query);
   if(chosen!==state.season)return;
