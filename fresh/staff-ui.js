@@ -306,7 +306,7 @@ export function adminPage(ctx){
   const f=idOf(own,S.fixtures);
   const local=f?.kickoff_at?new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(f.kickoff_at)).replace(' ','T'):'';
   form=wrapForm('fixtures','Calendario e risultati',
-   selectExisting('fixtures',own.map(f=>({...f,name:f.home_team+' – '+f.away_team+' · '+(f.round_no??'')})),'name')+
+   selectExisting('fixtures',own.map(f=>({...f,name:(f.is_test?'[TEST] ':'')+f.home_team+' – '+f.away_team+' · '+(f.round_no??'')})),'name')+
    (!f?'<p class="staff-help">Nuova partita: scegli giornata, competizione, squadre, data e campo. Per molti incontri usa Importa CSV.</p>'+
    '<div class="staff-form-grid">'+
     selection('competition_id','Competizione',comps.map(c=>[c.id,c.name]),comps[0]?.id)+
