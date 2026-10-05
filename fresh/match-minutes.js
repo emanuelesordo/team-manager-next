@@ -8,6 +8,26 @@ export const matchPeriodLength=competition=>{
 };
 export const legacyRelativeMinute=event=>event?.payload?.period==='second_half' &&
  event?.payload?.minute_relative!==false && event?.payload?.entered_from!=='tm_app_live';
+
+export function livePeriodOffset(period,competition){
+ const length=matchPeriodLength(competition);
+ if(length===null)throw Error('Durata della competizione non disponibile');
+ if(period==='second_half')return length;
+ if(period==='extra')return 2*length;
+ return 0;
+}
+export function cumulativeMinuteFromPeriod(minute,period,competition){
+ if(minute===null||minute===undefined||minute==='')return null;
+ const n=Number(minute);
+ if(!Number.isInteger(n)||n<0||n>300)throw Error('Minuto del periodo non valido');
+ return n+livePeriodOffset(period,competition);
+}
+export function periodRelativeMinute(cumulative,period,competition){
+ if(cumulative===null||cumulative===undefined||cumulative==='')return null;
+ const n=Number(cumulative);
+ if(!Number.isFinite(n))return null;
+ return Math.max(0,n-livePeriodOffset(period,competition));
+}
 export function cumulativeEventMinute(event,competition){
  if(event?.minute===null||event?.minute===undefined||event.minute==='')return null;
  const n=Number(event.minute);if(!Number.isFinite(n))return null;
