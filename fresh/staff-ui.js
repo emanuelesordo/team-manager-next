@@ -54,7 +54,7 @@ function wrapForm(id,heading,form,description){return '<section class="glass pan
 export function adminPage(ctx){
  if(!isStaff(ctx))return '<div class="empty">Gestione riservata allo staff autorizzato.</div>';
  const data=ctx.state.data||{},base=ctx.state.base||{},t=base.team||{};
- const S=memory.selected,seasons=base.seasons||[],comps=data.competitions||[],opps=base.opponents||[],players=data.players||[],fixtures=data.fixtures||[];
+ const S=memory.selected,seasons=base.seasons||[],comps=(data.competitions||[]).filter(c=>c?.phase_rules?.system_private_test!==true),opps=base.opponents||[],players=data.players||[],fixtures=data.fixtures||[];
  const unlinked=(data.matches||[]).filter(m=>!m.fixture_id);
  let form='';
  if(memory.area==='team'){
@@ -332,7 +332,8 @@ function picker(name,label,choices,value){return selection(name,label,choices,va
 const statusOf=m=>String(m?.status||'scheduled');
 function displayClock(m,competition){
  if(!m)return '';
- return '<div class="clockline"><span class="status '+(m.status==='live'?'live':'end')+'">'+esc(m.status==='live'?'LIVE':m.status==='finished'?'FINALE':'PREPARTITA')+'</span><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+esc(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+esc(m.id)+'" data-blue-min="'+Number(competition?.discipline_rules?.blue_duration_minutes||0)+'">00:00</strong><span>'+esc(m.live_period||'pre')+'</span></div>';
+ const periodLabel=m.is_test&&Number(m.live_period_no)>0?(m.live_period==='halftime'?'Intervallo · '+Number(m.live_period_no)+'° tempo concluso':Number(m.live_period_no)+'° tempo'):(m.live_period||'pre');
+ return '<div class="clockline"><span class="status '+(m.status==='live'?'live':'end')+'">'+esc(m.status==='live'?'LIVE':m.status==='finished'?'FINALE':'PREPARTITA')+'</span><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+esc(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+esc(m.id)+'" data-blue-min="'+Number(competition?.discipline_rules?.blue_duration_minutes||0)+'">00:00</strong><span>'+esc(periodLabel)+'</span></div>';
 }
 const callupReasons=[
  ['illness','Malattia','thermometer'],
@@ -472,7 +473,7 @@ function matchLive(ctx,m,competition){
  picker('event_type','Evento',events,'goal')+picker('team_side','Squadra',[['team','Nostra squadra'],['opponent','Avversaria']],'team')+
  picker('player_id','Giocatore principale / uscente',playerOpts,'')+
  picker('secondary_player_id','Assist / subentrante',playerOpts,'')+
- input('minute','Minuto del periodo (facoltativo)',minuteValue,'number','min="0" max="300" placeholder="'+(m.live_period==='second_half'?'Es. 16':'Es. 28')+'"')+
+ input('minute','Minuto del periodo (facoltativo)',minuteValue,'number','min="0" max="300" placeholder="Es. '+Math.min(28,Math.max(1,Number(rules.minutes_per_period||40)-12))+'"')+
  picker('minute_mode','Se il minuto resta vuoto',[['now_estimated','È avvenuto ora · stima da orario inizio'],['past_unknown','Evento passato · minuto sconosciuto']],'now_estimated')+
  input('stoppage_minute','Recupero', '','number','min="0" max="30" placeholder="—"')+
  picker('substitution_reason','Motivo del cambio',[['tactical','Tattico'],['injury','Infortunio'],['technical','Tecnico'],['other','Altro']],'tactical')+
