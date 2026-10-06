@@ -101,6 +101,7 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
   roster:['app_roster','select=*&season_id=eq.'+id],
   contracts:['app_roster_periods','select=id,season_id,player_id,start_date,end_date&season_id=eq.'+id+'&order=start_date.asc&limit=1000'],
   playerStats:['app_player_season_stats','select=*&season_id=eq.'+id],
+  matchRatingSummary:['v_match_rating_summary','select=match_id,team_id,season_id,player_id,average_rating,rating_count&season_id=eq.'+id+'&limit=5000'],
   habitual:['tm_player_habitual_shirts','select=player_id,shirt_number,occurrences,last_used&limit=1000'],
   matches:['app_matches','select=*&season_id=eq.'+id],
   // Names used by tabellino/storico must also work for non-staff members and
