@@ -555,8 +555,10 @@ function match(){
  const scoreText=hasProposedScore?
   E(proposedScore.home)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(proposedScore.away):
   hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
+ const provisionalResult=Boolean(m&&f.status==='finished'&&m.result_review_status!=='confirmed');
  const editableScore=state.identity?.role?.role==='admin';
- const scoreInner=liveEntryOpen?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+(hasProposedScore?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
+ const scoreAttention=liveEntryOpen||provisionalResult;
+ const scoreInner=scoreAttention?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+((hasProposedScore||provisionalResult)?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
  const headerScore=editableScore?'<button type="button" class="match-score-edit-toggle'+(state.scoreEditing?' is-editing':'')+'" data-score-edit aria-pressed="'+state.scoreEditing+'" title="'+(state.scoreEditing?'Esci dalla modifica eventi':'Modifica eventi')+'">'+scoreInner+'</button>':scoreInner;
  const livePeriodLabel=m?.live_period==='halftime'?'Intervallo':m?.live_period==='penalties'?'Rigori':
   (m?.status==='live'?(Math.max(1,Number(m?.live_period_no||1))+'° tempo'):'');
