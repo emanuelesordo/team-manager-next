@@ -1,0 +1,22 @@
+/* Compact horizontal vote picker: keep the mean badge in its own column. */
+.vote-bar-cell,.vote-picker-wrap{min-width:0;overflow:hidden}
+.vote-picker{width:100%;max-width:100%;gap:1px;padding:1px 0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.vote-picker-option{min-width:23px;height:22px;padding:0 3px;border-radius:5px;font-size:7.5px;flex:0 0 auto}
+.vote-picker-option.active{transform:none}
+.vote-average-cell{position:relative;z-index:2;overflow:visible;margin-left:3px}
+@media(max-width:900px){
+ .vote-row{grid-template-columns:29px 34px minmax(68px,.78fr) minmax(42px,.44fr) minmax(104px,1.48fr) 42px}
+ .vote-average-cell .ov-rating{min-width:36px;box-sizing:border-box}
+}
+@media(max-width:650px){
+ .vote-row{grid-template-columns:25px 29px minmax(60px,.72fr) minmax(36px,.38fr) minmax(96px,1.45fr) 42px}
+ .vote-picker{gap:0}
+ .vote-picker-option{min-width:20px;height:20px;padding:0 2px;border-radius:4px;font-size:6.5px}
+ .vote-average-cell{margin-left:2px}
+ .vote-average-cell .ov-rating{min-width:38px;padding:1px 3px;font-size:7.5px;white-space:nowrap}
+}
+@media(max-width:380px){
+ .vote-row{grid-template-columns:24px 28px minmax(56px,.7fr) 34px minmax(88px,1.35fr) 40px}
+ .vote-picker-option{min-width:19px;font-size:6.2px}
+ .vote-average-cell .ov-rating{min-width:36px;padding-inline:2px}
+}
