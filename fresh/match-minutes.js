@@ -54,6 +54,8 @@ export function storedEventMinute(event,cumulative,competition){
 export function displayEventMinute(event,competition,missing='—'){
  const n=cumulativeEventMinute(event,competition);
  if(n===null)return missing;
+ const length=matchPeriodLength(competition);
+ if(event?.payload?.period==='halftime'&&length!==null)return String(length+1)+'′';
  const stoppage=Number(event?.stoppage_minute)||0;
  if(stoppage>0)return String(n)+'+'+stoppage+'′';
  let shown=n;
