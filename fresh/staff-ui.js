@@ -1,13 +1,14 @@
 import {matchPlayerLabel} from './match-player-label.js';
 import {roundRobinDraft} from './phase-scheduler.js';
 import {openKitConfigurator,collectionForClub} from './kit-editor.js';
-import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge} from './api.js?prematch=20261006v4';
+import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge,runCsiCheck} from './api.js?csi=20261007v1';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup,formationModules} from './lineup-pitch.js?callups=20261004moduli';
 import {availabilityDefault,normalizedReason,unavailabilityReasons} from './availability.js';
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js?live=20261005merge2';
+import {csiReviewPanel} from './csi-review.js?csi=20261007v1';
 import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 
@@ -25,6 +26,7 @@ const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</
 const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',venues:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'callups',busy:false,liveDraft:null};
 const memory=initial;
 let reviewEditEvent=null,reviewHistoryEvent=null,reviewHistoryEntries=[];
+let csiSnapshot=null,csiSourceEvents=[];
 let scoreAuditRows=[],scoreAuditOpen=false;
 let integrityData=null,integrityError='';
 let phaseDraft=null;
@@ -693,18 +695,29 @@ function matchLive(ctx,m,competition){
 }
 
 function matchEvents(ctx,m){const fixture=ctx.resolveMatch().fixture,competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id),rules=matchRules(m,competition);return reviewPanel({match:m,fixture,competition:rules,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
+async function loadCsiReview(ctx){
+ const fixture=ctx.resolveMatch().fixture;
+ if(!fixture?.id){csiSnapshot=null;csiSourceEvents=[];return}
+ const snapshots=await get('app_match_source_snapshots','select=*&fixture_id=eq.'+encodeURIComponent(fixture.id)+'&source=eq.csi&order=fetched_at.desc&limit=1');
+ csiSnapshot=snapshots[0]||null;
+ csiSourceEvents=csiSnapshot?await get('app_match_source_events','select=*&snapshot_id=eq.'+encodeURIComponent(csiSnapshot.id)+'&order=event_ordinal.asc'):[];
+}
+function matchCsiReview(ctx,m){
+ const fixture=ctx.resolveMatch().fixture;
+ return csiReviewPanel({fixture,match:m,snapshot:csiSnapshot,sourceEvents:csiSourceEvents,tmEvents:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[]});
+}
 
 export function staffMatchSection(ctx,f,m,section){
  const staff=isStaff(ctx),liveContributor=section==='live'&&Boolean(ctx.state.identity?.user);
  if(!staff&&!liveContributor)return '';
- if(!['callups','lineup','live','events','tactics'].includes(section))return '';
+ if(!['callups','lineup','live','events','tactics','verification'].includes(section))return '';
  if((!m||!m.fixture_id)&&['finished','live'].includes(f?.status))
   return '<section class="glass panel staff-root"><p class="data-warning">Tabellino operativo non collegato: verifica il collegamento prima di modificare la partita.</p></section>';
  if(!m||!m.fixture_id)return '<section class="glass panel staff-root">'+
   help('Per iniziare collega un unico tabellino operativo alla partita.')+btn('ensure','Prepara tabellino')+'</section>';
  const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===f.competition_id);
  const content=section==='callups'?matchCallups(ctx,m):section==='lineup'?matchLineup(ctx,m):
-  section==='live'?matchLive(ctx,m,competition):section==='tactics'?staffTacticsPanel(ctx,m):matchEvents(ctx,m);
+  section==='live'?matchLive(ctx,m,competition):section==='tactics'?staffTacticsPanel(ctx,m):section==='verification'?matchCsiReview(ctx,m):matchEvents(ctx,m);
  return '<section class="staff-root staff-direct-section">'+content+'</section>';
 }
 export function staffMatchPanel(ctx,f,m){
@@ -714,10 +727,10 @@ export function staffMatchPanel(ctx,f,m){
  help('Associa la partita ufficiale a un unico tabellino operativo, riutilizzando le registrazioni già esistenti quando la corrispondenza è univoca. Nessun dato storico viene duplicato.')+
  btn('ensure','Apri gestione di questa partita')+'</section>';
  const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===f.competition_id);
- const tabs=[['callups','Convocazioni'],['lineup','Formazione'],['live','Live'],['events','Eventi'],['tactics','Tattica']];
+ const tabs=[['callups','Convocazioni'],['lineup','Formazione'],['live','Live'],['events','Eventi'],['verification','Verifica / rettifica'],['tactics','Tattica']];
  const tabNav='<div class="staff-switch small-tabs" role="tablist">'+tabs.map(([k,v])=>
   '<button type="button" role="tab" aria-selected="'+(k===memory.matchTab)+'" class="'+(k===memory.matchTab?'selected':'')+'" data-staff-match-tab="'+k+'">'+v+'</button>').join('')+'</div>';
- const page=memory.matchTab==='callups'?matchCallups(ctx,m):memory.matchTab==='lineup'?matchLineup(ctx,m):memory.matchTab==='live'?matchLive(ctx,m,competition):memory.matchTab==='tactics'?staffTacticsPanel(ctx,m):matchEvents(ctx,m);
+ const page=memory.matchTab==='callups'?matchCallups(ctx,m):memory.matchTab==='lineup'?matchLineup(ctx,m):memory.matchTab==='live'?matchLive(ctx,m,competition):memory.matchTab==='tactics'?staffTacticsPanel(ctx,m):memory.matchTab==='verification'?matchCsiReview(ctx,m):matchEvents(ctx,m);
  return '<section class="glass panel staff-root">'+tabNav+page+'<div class="staff-bottom-actions">'+btn('refresh-match','Aggiorna tabellino')+'</div></section>';
 }
 function dataForm(form){return Object.fromEntries(new FormData(form))}
@@ -864,7 +877,9 @@ export async function staffClick(e,button,ctx){
   memory.area=button.dataset.staffArea;ctx.render();return true;
  }
  if(button.dataset.staffMatchTab){
-  memory.matchTab=button.dataset.staffMatchTab;memory.liveDraft=null;ctx.render();return true;
+  memory.matchTab=button.dataset.staffMatchTab;memory.liveDraft=null;
+  if(memory.matchTab==='verification'){try{await loadCsiReview(ctx)}catch(error){ctx.toast('Verifica CSI non leggibile: '+error.message)}}
+  ctx.render();return true;
  }
  const action=button.dataset.staffAction;if(!action)return false;
  if(memory.busy)return true;
@@ -954,6 +969,16 @@ export async function staffClick(e,button,ctx){
    phaseDraft={phaseId,rows:draw};ctx.render();return true;
   }
   if(action==='audit-integrity'){integrityError='';try{integrityData=await rpc('tm_app_integrity_report')}catch(e){integrityError=e.message||String(e)}ctx.render();return true}
+  if(action==='csi-check'){
+   const fixture=ctx.resolveMatch().fixture;
+   if(!fixture?.source_url)throw Error('URL CSI non disponibile per questa partita');
+   const result=await runCsiCheck(fixture.id);
+   await loadCsiReview(ctx);
+   await reloadMatch(ctx);
+   memory.matchTab='verification';
+   ctx.toast(result.changed?'Nuovi dati CSI acquisiti · verifica richiesta':'CSI già aggiornato · nessuna variazione');
+   return true;
+  }
   if(action==='refresh-match'){await reloadMatch(ctx);return true}
   if(action==='review-edit'){reviewEditEvent=button.dataset.eventId;reviewHistoryEvent=null;ctx.render();return true;}
   if(action==='review-cancel-edit'){reviewEditEvent=null;ctx.render();return true;}
