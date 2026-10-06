@@ -704,15 +704,17 @@ async function loadCsiReview(ctx){
 }
 function matchCsiReview(ctx,m){
  const fixture=ctx.resolveMatch().fixture;
- return csiReviewPanel({fixture,match:m,snapshot:csiSnapshot,sourceEvents:csiSourceEvents,tmEvents:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[]});
+ const tmEvents=m?(ctx.state.matchData?.events||[]):(ctx.state.fixtureEvents||[]);
+ return csiReviewPanel({fixture,match:m,snapshot:csiSnapshot,sourceEvents:csiSourceEvents,tmEvents,players:ctx.state.data?.players||[]});
 }
 
 export function staffMatchSection(ctx,f,m,section){
  const staff=isStaff(ctx),liveContributor=section==='live'&&Boolean(ctx.state.identity?.user);
  if(!staff&&!liveContributor)return '';
  if(!['callups','lineup','live','events','tactics','verification'].includes(section))return '';
- if((!m||!m.fixture_id)&&['finished','live'].includes(f?.status))
+ if(section!=='verification'&&(!m||!m.fixture_id)&&['finished','live'].includes(f?.status))
   return '<section class="glass panel staff-root"><p class="data-warning">Tabellino operativo non collegato: verifica il collegamento prima di modificare la partita.</p></section>';
+ if(section==='verification')return '<section class="staff-root staff-direct-section">'+matchCsiReview(ctx,m)+'</section>';
  if(!m||!m.fixture_id)return '<section class="glass panel staff-root">'+
   help('Per iniziare collega un unico tabellino operativo alla partita.')+btn('ensure','Prepara tabellino')+'</section>';
  const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===f.competition_id);
