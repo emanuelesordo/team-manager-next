@@ -51,6 +51,59 @@ const roleOf=ctx=>ctx.state.identity?.profile?.is_active===false?null:ctx.state.
 export const isStaff=ctx=>['admin','manager'].includes(roleOf(ctx));
 function selectExisting(kind,records,text){return '<label class="staff-field"><span>Modifica esistente o crea nuovo</span><select data-staff-select="'+kind+'">'+option('','+ Nuovo',memory.selected[kind])+records.map(x=>option(x.id,x[text]||x.name||x.id,memory.selected[kind])).join('')+'</select></label>'}
 function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor'+(['team','opponents'].includes(id)?' staff-editor-club staff-editor-'+id:'')+'">'+(id==='opponents'?'':title('CONFIGURAZIONE',heading)+(description?help(description):''))+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}
+function seasonStartYear(season){
+ const parsed=Number(String(season?.start_date||'').slice(0,4));
+ if(Number.isInteger(parsed))return parsed;
+ const match=String(season?.name||'').match(/(20\d{2})/);
+ return match?Number(match[1]):new Date().getFullYear();
+}
+function clubHistoryFields(ctx,{teamId=null,opponentId=null}={}){
+ if(!teamId&&!opponentId)return '';
+ const current=ctx.state.base?.seasons?.find(s=>s.id===ctx.state.season);
+ const start=seasonStartYear(current);
+ const all=(ctx.state.base?.clubHistory||[]).filter(r=>teamId?r.team_id===teamId:r.opponent_id===opponentId);
+ const byYear=new Map(all.map(r=>[Number(r.season_start_year),r]));
+ const years=Array.from({length:5},(_,i)=>start-1-i);
+ let visible=0;
+ while(visible<years.length&&byYear.has(years[visible]))visible++;
+ if(visible<5)visible++;
+ const rows=years.slice(0,visible).map((year,index)=>{
+  const row=byYear.get(year),label=year+'/'+String(year+1).slice(-2);
+  return '<div class="staff-form-grid" data-history-row data-history-year="'+year+'">'+
+   '<input type="hidden" name="history_'+index+'_id" value="'+esc(row?.id||'')+'">'+
+   '<div class="staff-history-season"><strong>'+esc(label)+'</strong><small>stagione precedente '+(index+1)+'/5</small></div>'+
+   input('history_'+index+'_tier','Livello (A1=1, A2=2, B=3)',row?.tier_level??'','number','step="0.001" min="0.001" max="999"')+
+   input('history_'+index+'_position','Posizione finale',row?.final_position??'','number','min="1" max="100"')+
+   input('history_'+index+'_points','Punti ottenuti',row?.points??'','number','min="0" max="999"')+
+   input('history_'+index+'_max_points','Punti disponibili',row?.max_points??'','number','min="1" max="999"')+
+   '</div>';
+ }).join('');
+ return '<details class="staff-history" open><summary>Storico forma anni passati</summary>'+
+  help('Fino a 5 stagioni, aggiunte in ordine dalla più recente. Livello, posizione e resa punti alimentano la classifica pronostici; lo storico pesa soprattutto quando la stagione corrente ha poche gare.')+
+  rows+'</details>';
+}
+function historyRows(form){
+ return [...form.querySelectorAll('[data-history-row]')].map(row=>{
+  const index=[...form.querySelectorAll('[data-history-row]')].indexOf(row);
+  const value=s=>String(form.elements['history_'+index+'_'+s]?.value||'').trim();
+  const raw={id:value('id'),tier:value('tier'),position:value('position'),points:value('points'),max_points:value('max_points')};
+  const supplied=[raw.tier,raw.position,raw.points,raw.max_points].filter(v=>v!=='').length;
+  if(!supplied)return null;
+  if(supplied!==4)throw Error('Storico '+row.dataset.historyYear+': completa livello, posizione, punti e punti disponibili');
+  const tier=Number(raw.tier),position=Number(raw.position),points=Number(raw.points),maxPoints=Number(raw.max_points);
+  if(!Number.isFinite(tier)||tier<=0||!Number.isInteger(position)||position<1||!Number.isInteger(points)||points<0||!Number.isInteger(maxPoints)||maxPoints<1||points>maxPoints)
+   throw Error('Storico '+row.dataset.historyYear+': valori non validi');
+  return {id:raw.id||null,season_start_year:Number(row.dataset.historyYear),tier_level:tier,final_position:position,points,max_points:maxPoints};
+ }).filter(Boolean);
+}
+async function persistClubHistory(form,{teamId=null,opponentId=null}={}){
+ const rows=historyRows(form);
+ for(const row of rows){
+  const {id,...payload}=row;
+  Object.assign(payload,teamId?{team_id:teamId,opponent_id:null}:{team_id:null,opponent_id:opponentId}, {updated_at:new Date().toISOString()});
+  await adminWrite('app_club_season_history',id?'PATCH':'POST',payload,id?{id}:{});
+ }
+}
 export function adminPage(ctx){
  if(!isStaff(ctx))return '<div class="empty">Gestione riservata allo staff autorizzato.</div>';
  const data=ctx.state.data||{},base=ctx.state.base||{},t=base.team||{};
@@ -72,7 +125,7 @@ export function adminPage(ctx){
     '</div>'+
     '<div class="staff-team-brand">'+
      logoPicker(t.logo_url||'',[t.primary_color,t.secondary_color,t.accent_color],t.logo_shape||'rounded',true,t.logo_background_color)+
-    '</div></div>',
+    '</div></div>'+clubHistoryFields(ctx,{teamId:t.id}),
    'La modifica dei dati ufficiali è soggetta ai permessi di squadra presenti in Supabase.');
  }
  if(memory.area==='seasons'){
@@ -207,7 +260,7 @@ export function adminPage(ctx){
     '</div>'+
     '<div class="staff-team-brand">'+
      logoPicker(o?.logo_url||'',[o?.primary_color,o?.secondary_color,o?.accent_color],t.logo_shape||'rounded',false,o?.logo_background_color)+
-    '</div></div>',
+    '</div></div>'+(o?clubHistoryFields(ctx,{opponentId:o.id}):help('Salva prima la nuova avversaria; poi potrai aggiungere lo storico delle stagioni precedenti.')),
    'Ogni avversaria mantiene la sua identità tra stagioni e competizioni.');
  }
  if(memory.area==='players'){
@@ -1239,12 +1292,15 @@ export async function staffSubmit(e,ctx){
    await pendingFn(form,()=>rpc('tm_app_edit_fixture',{p_fixture_id:obj.id,p_changes:obj.payload}));
   }else{
    const written=await pendingFn(form,()=>adminWrite(obj.table,obj.id?'PATCH':'POST',obj.payload,obj.id?{id:obj.id}:{}));
+   const savedRowId=obj.id||written?.[0]?.id||null;
    if(obj.table==='app_competitions'){
-    const rowId=obj.id||written?.[0]?.id;
+    const rowId=savedRowId;
     if(!rowId)throw Error('Competizione salvata, ma identificativo non restituito: riprova a collegarla');
     const linkId=String(dataForm(form).general_competition_id||'');
     await rpc('tm_app_link_competition',{p_app_id:rowId,p_general_id:linkId||null});
    }
+   if(obj.table==='teams')await pendingFn(form,()=>persistClubHistory(form,{teamId:ctx.state.base.team.id}));
+   if(obj.table==='app_opponents'&&savedRowId)await pendingFn(form,()=>persistClubHistory(form,{opponentId:savedRowId}));
   }
   await ctx.reloadAll();ctx.toast('Configurazione salvata');return true;
  }catch(err){ctx.toast('Errore: '+(err.message||err));return true}
