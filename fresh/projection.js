@@ -36,10 +36,18 @@ function historicalPrior(team,history=[]){
  let sum=0,weightsTotal=0;
  rows.forEach((r,index)=>{
   const tier=Number(r.tier_level),position=Math.max(1,Number(r.final_position)||1);
+  const totalPositions=Number(r.total_positions);
   const maxPoints=Math.max(1,Number(r.max_points)||1),earned=clamp(Number(r.points||0)/maxPoints);
   const tierScore=clamp(1-(Math.max(1,tier)-1)*.2,.1,1);
-  const positionScore=clamp(1/(1+.18*(position-1)),.15,1);
-  const seasonScore=.55*tierScore+.30*earned+.15*positionScore;
+  const absolutePositionScore=clamp(1/(1+.18*(position-1)),.15,1);
+  const relativePositionScore=Number.isInteger(totalPositions)&&totalPositions>=2?
+   clamp((totalPositions-position)/(totalPositions-1),0,1):absolutePositionScore;
+  const baseScore=.55*tierScore+.30*earned+.15*relativePositionScore;
+  const gd=Number(r.goal_difference);
+  const hasGoalDifference=Number.isFinite(gd)&&r.goal_difference!==null&&r.goal_difference!=='';
+  const gdScale=Math.max(8,Number.isInteger(totalPositions)?totalPositions:12)*4;
+  const gdScore=hasGoalDifference?clamp(.5+gd/gdScale):.5;
+  const seasonScore=hasGoalDifference?.9*baseScore+.1*gdScore:baseScore;
   const weight=5-index;
   sum+=seasonScore*weight;weightsTotal+=weight;
  });
@@ -72,7 +80,7 @@ export function projectionSignature(config,fixtures,standings,history=[]){
  return JSON.stringify([config?.id,config?.win_points,config?.draw_points,config?.loss_points,
   fixtures.filter(f=>f.competition_id===config?.id).map(f=>[f.id,f.kickoff_at,homeId(f),awayId(f),f.status,f.home_score,f.away_score]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))),
   standings.filter(s=>s.competition_id===config?.id).map(s=>[standingId(s),s.points,s.played,s.goals_for,s.goals_against]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))),
-  history.map(r=>[identity(r.team_id,r.opponent_id),r.season_start_year,r.tier_level,r.final_position,r.points,r.max_points]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))||Number(b[1])-Number(a[1]))]);
+  history.map(r=>[identity(r.team_id,r.opponent_id),r.season_start_year,r.tier_level,r.final_position,r.total_positions,r.points,r.max_points,r.goal_difference]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))||Number(b[1])-Number(a[1]))]);
 }
 export function projectLeague(config,fixtures,standings,iterations=10000,history=[]){
  if(!config?.id||!Number.isInteger(iterations)||iterations<1||iterations>20000)throw Error('Proiezione: parametri non validi');
