@@ -8,7 +8,7 @@ const key=v=>String(v??'');
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
 const roleOf=p=>String(p?.generic_role_manual||p?.role||'').toUpperCase();
 const dateOnly=v=>String(v||'').slice(0,10);
-const finite=v=>Number.isFinite(Number(v));
+const finite=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
 
 function eligibleRoster(data,fixtureDate){
  const day=dateOnly(fixtureDate);
@@ -243,7 +243,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   players.push({
    player_id:picked.player_id,slot,role:roleOf(picked.person)||targetRole,
    name:matchPlayerLabel(picked.person),shirt_number:scores.shirts.get(key(picked.player_id))||habitual||'',
-   x:positions[i].x,y:positions[i].y
+   x:clamp(positions[i].x,10,90),y:clamp(positions[i].y,14,84)
   });
  }
  const xiIds=new Set(players.map(p=>key(p.player_id)));
@@ -265,12 +265,12 @@ export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
   '<div class="prematch-lineup-player" style="left:'+p.x+'%;top:'+p.y+'%" title="'+escape(p.name)+' · atteso '+rating(p.expectedRating)+' · media '+rating(p.meanRating)+'">'+
    '<span class="prematch-lineup-shirt">'+shirtSvg(model.kit,'prematch-'+i,false,p.shirt_number||null)+'</span>'+
    '<strong>'+escape(p.name)+'</strong>'+
-   '<span class="prematch-player-rating"><b>'+rating(p.expectedRating)+'</b><small>att. · '+rating(p.meanRating)+' media</small></span></div>').join('');
+   '<span class="prematch-player-rating"><span><b>'+rating(p.expectedRating)+'</b><small>atteso</small></span><i></i><span><b>'+rating(p.meanRating)+'</b><small>media</small></span></span></div>').join('');
  return '<div class="prematch-lineup-head"><div><span class="eyebrow">FORMAZIONE IPOTETICA</span><h3>'+escape(model.formation)+'</h3></div>'+
   '<span class="prematch-lineup-confidence">'+Math.round(model.confidence*100)+'% base dati</span></div>'+
   (finite(model.xiExpectedRating)?'<div class="prematch-xi-rating"><span>Voto XI atteso</span><strong>'+rating(model.xiExpectedRating)+'</strong></div>':'')+
   '<div class="prematch-lineup-field visual-field"><span class="field-circle"></span><span class="field-midline"></span>'+nodes+'</div>'+
   '<p class="prematch-lineup-note">'+
    (model.comparableUsed?'Ponderate soprattutto '+model.sampleSize+' formazion'+(model.sampleSize===1?'e':'i')+' contro avversarie di potenziale comparabile.':'Campione comparabile ridotto: integrate le formazioni recenti.')+
-   ' La scelta combina disponibilità, ruolo/slot, voti, risultati e rendimento delle coppie di giocatori realmente contemporanee in campo. Considerati '+model.availableCount+' disponibili.</p>';
+   ' La scelta combina disponibilità, ruolo/slot, voti, risultati, tipo di avversaria e rendimento delle coppie di giocatori realmente contemporanee in campo. Sotto ogni giocatore: voto atteso e media storica. Considerati '+model.availableCount+' disponibili.</p>';
 }
