@@ -33,8 +33,8 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
  return '<div class="prematch-summary">'+
   '<div class="prematch-expected"><span>RISULTATO ATTESO</span><strong>'+score(result.expectedGoals.home)+' <i>–</i> '+score(result.expectedGoals.away)+'</strong>'+
   '<small>Risultato esatto più probabile: <b>'+escape(most.home)+'–'+escape(most.away)+'</b> ('+pct(most.probability)+'%)</small></div>'+
-  '<div class="prematch-ranks"><span><small>Rango stimato</small><b>#'+escape(result.home.rank)+' '+escape(result.home.name)+'</b></span>'+
-  '<span><small>Rango stimato</small><b>#'+escape(result.away.rank)+' '+escape(result.away.name)+'</b></span></div>'+
+  '<div class="prematch-ranks"><span><small>Potenziale atteso</small><b>#'+escape(result.home.potentialRank)+' '+escape(result.home.name)+'</b></span>'+
+  '<span><small>Potenziale atteso</small><b>#'+escape(result.away.potentialRank)+' '+escape(result.away.name)+'</b></span></div>'+
   '</div>'+
   '<div class="prematch-probabilities">'+outcomes.map(([key,label,value])=>
    '<div class="prematch-probability"><div><b>'+escape(key)+'</b><span>'+escape(label)+'</span><strong>'+pct(value)+'%</strong></div>'+
