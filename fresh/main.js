@@ -1,4 +1,4 @@
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc} from './api.js?prematch=20261006v1';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc} from './api.js?prematch=20261006v2';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
@@ -800,7 +800,7 @@ async function hydrateMatchPrediction(){
    if(ids.length){
     const query='select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&match_id=in.('+
      ids.map(encodeURIComponent).join(',')+')&limit=2000';
-    events=await get('app_match_events',query);
+    events=await get('app_match_events',query).catch(()=>[]);
    }
    if(chosen!==state.season)return;
    predictionEventCache={season:chosen,events};
