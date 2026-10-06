@@ -198,7 +198,7 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay){
  let best=null,bestScore=-Infinity;
  for(const c of candidates){
   if(used.has(key(c.player_id)))continue;
-  const id=key(c.player_id),role=roleOf(c.person),roleFit=role===targetRole?3.2:((targetRole==='C'&&['D','A'].includes(role))?.35:0);
+  const id=key(c.player_id),role=roleOf(c.person),roleFit=role===targetRole?3.2:((targetRole==='C'&&['D','A'].includes(role)) ? .35 : 0);
   const slotFit=scores.slotScore.get(id+'|'+slot)||0,general=scores.score.get(id)||0,m=scores.metrics.get(id)||{};
   const rating=finite(m.contextRating)?(Number(m.contextRating)-6)*1.15:0;
   const result=(Number(m.resultQuality||.5)-.5)*1.6;
