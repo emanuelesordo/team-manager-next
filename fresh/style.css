@@ -1240,3 +1240,23 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
  .match-detail-head .match-header-team .team-crest-rating{gap:4px}
  .match-detail-head .match-header-team .team-crest-rating .team-weighted-score{height:16px;min-width:25px;padding:0 4px;font-size:8px}
 }
+
+
+/* Rating squadra: centro dello spazio libero tra bordo e stemma. */
+.hero-club,.match-detail-head .match-header-team{position:relative}
+.hero-club .team-crest-rating,
+.match-detail-head .match-header-team .team-crest-rating{position:static}
+.hero-club .team-crest-rating-home .team-weighted-score,
+.match-detail-head .match-header-team-home .team-crest-rating-home .team-weighted-score{
+ position:absolute;left:25%;top:50%;transform:translate(-50%,-50%);z-index:2
+}
+.hero-club .team-crest-rating-away .team-weighted-score,
+.match-detail-head .match-header-team-away .team-crest-rating-away .team-weighted-score{
+ position:absolute;right:25%;top:50%;transform:translate(50%,-50%);z-index:2
+}
+@media(max-width:650px){
+ .hero-club .team-crest-rating-home .team-weighted-score,
+ .match-detail-head .match-header-team-home .team-crest-rating-home .team-weighted-score{left:22%}
+ .hero-club .team-crest-rating-away .team-weighted-score,
+ .match-detail-head .match-header-team-away .team-crest-rating-away .team-weighted-score{right:22%}
+}
