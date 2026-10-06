@@ -16,15 +16,22 @@ const matches=[
 ];
 const priorSelections=[];
 for(const [mi,m] of matches.entries()){
- for(let i=0;i<11;i++)priorSelections.push({match_id:m.id,player_id:'p'+(i+1),selection_status:'starter',started:true,tactical_slot:i+1,shirt_number:i+1});
+ for(let i=0;i<11;i++)priorSelections.push({match_id:m.id,player_id:'p'+(i+1),selection_status:'starter',started:true,minutes_played:80,tactical_slot:i+1,shirt_number:i+1});
 }
-const data={players,roster,matches,priorSelections,contracts:[],habitual:[],injuries:[],suspensions:[],disciplinaryEvents:[],competitionLinks:[]};
-const competition={id:'c1',discipline_rules:{}};
+const fixtures=[
+ {id:'fx1',competition_id:'c1',status:'finished',kickoff_at:matches[0].kickoff_at,home_team_id:'team-1',away_opponent_id:'o1',home_score:2,away_score:0},
+ {id:'fx2',competition_id:'c1',status:'finished',kickoff_at:matches[1].kickoff_at,home_team_id:'team-1',away_opponent_id:'o2',home_score:1,away_score:1},
+ {id:'fx3',competition_id:'c1',status:'finished',kickoff_at:matches[2].kickoff_at,home_team_id:'team-1',away_opponent_id:'o3',home_score:0,away_score:1}
+];
+const seasonRatings=[];
+for(const m of matches)for(let i=0;i<11;i++)seasonRatings.push({match_id:m.id,player_id:'p'+(i+1),rating:6.2+i*.08});
+const data={players,roster,matches,fixtures,priorSelections,seasonRatings,playerStats:players.map((p,i)=>({player_id:p.id,avg_rating:6.1+i*.08})),contracts:[],habitual:[],injuries:[],suspensions:[],disciplinaryEvents:[],competitionLinks:[]};
+const competition={id:'c1',periods:2,minutes_per_period:40,discipline_rules:{}};
 const prediction={comparableFixtureIds:{home:['fx1','fx2'],away:[]}};
 
 test('hypothetical XI uses comparable formations and excludes current absences',()=>{
  const matchData={players:[{player_id:'p3',selection_status:'absent',started:false,unavailability_reason:'injury'}]};
- const result=buildHypotheticalLineup({fixture,targetMatch,data,matchData,team,competition,prediction,kit:{}});
+ const result=buildHypotheticalLineup({fixture,targetMatch,data,matchData,team,competition,competitions:[competition],prediction,kit:{},events:[]});
  assert.ok(result);
  assert.equal(result.formation,'4-4-2');
  assert.equal(result.comparableUsed,true);
@@ -32,12 +39,28 @@ test('hypothetical XI uses comparable formations and excludes current absences',
  assert.equal(result.players.length,11);
  assert.equal(result.players.some(p=>p.player_id==='p3'),false);
  assert.equal(result.availableCount,12);
+ assert.ok(result.players.every(p=>Number.isFinite(p.expectedRating)));
+ assert.ok(result.players.every(p=>Number.isFinite(p.meanRating)));
+ assert.ok(Number.isFinite(result.xiExpectedRating));
 });
 
 test('hypothetical XI falls back to recent lineups when comparable sample is absent',()=>{
- const result=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[]},team,competition,prediction:{comparableFixtureIds:{home:[],away:[]}},kit:{}});
+ const result=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[]},team,competition,competitions:[competition],prediction:{comparableFixtureIds:{home:[],away:[]},lineupFixtureWeights:{home:{},away:{}}},kit:{},events:[]});
  assert.ok(result);
  assert.equal(result.comparableUsed,false);
  assert.ok(result.sampleSize>=1);
  assert.equal(result.players.length,11);
+});
+
+
+test('hypothetical XI can use opponent-relevance and simultaneous co-play data',()=>{
+ const events=[
+  {match_id:'m1',event_type:'substitution',team_side:'team',player_id:'p11',secondary_player_id:'p12',minute:40,stoppage_minute:0,validation_status:'official',payload:{period:'second_half'},created_at:'2026-09-20T20:00:00Z'}
+ ];
+ const weightedPrediction={comparableFixtureIds:{home:['fx1','fx2'],away:[]},lineupFixtureWeights:{home:{fx1:1,fx2:.9,fx3:.35},away:{}}};
+ const result=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[]},team,competition,competitions:[competition],prediction:weightedPrediction,kit:{},events});
+ assert.ok(result);
+ assert.equal(result.comparableUsed,true);
+ assert.ok(result.players.some(p=>p.player_id==='p12')||result.players.some(p=>p.player_id==='p11'));
+ assert.ok(result.confidence>0);
 });
