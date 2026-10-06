@@ -57,6 +57,26 @@ function roleTargets(formation){
  });
  return out;
 }
+function spread(count,min,max){
+ if(count<=1)return [50];
+ const step=(max-min)/(count-1);
+ return Array.from({length:count},(_,i)=>min+step*i);
+}
+function prematchPositions(formation){
+ const nums=String(formation||'4-4-2').split('-').map(Number);
+ const valid=nums.length>=2&&nums.length<=5&&nums.every(n=>Number.isInteger(n)&&n>0)&&nums.reduce((a,b)=>a+b,0)===10?nums:[4,4,2];
+ const rows=[{slot:1,x:50,y:86}];let slot=2;
+ valid.forEach((count,index)=>{
+  const y=valid.length===1?42:68-(52*index/(valid.length-1));
+  let min=15,max=85;
+  if(count===1){min=max=50}
+  else if(count===2){min=32;max=68}
+  else if(count===3){min=21;max=79}
+  const xs=spread(count,min,max);
+  xs.forEach(x=>rows.push({slot:slot++,x,y}));
+ });
+ return rows;
+}
 function availabilityFor(playerId,{targetMatch,data,matchData,competition}){
  const saved=(matchData?.players||[]).find(p=>p.player_id===playerId)||
   (data.priorSelections||[]).find(p=>p.match_id===targetMatch?.id&&p.player_id===playerId);
@@ -85,13 +105,22 @@ function ratingAverages(data,matches,fixtureWeights,team){
   p.plainSum+=avg;p.plainN++;p.weightedSum+=avg*weight;p.weight+=weight;p.matchN++;byPlayer.set(playerId,p);
  }
  const seasonStats=new Map((data.playerStats||[]).map(x=>[key(x.player_id),x]));
+ const roleBuckets=new Map();let teamSum=0,teamN=0;
+ for(const p of data.players||[]){
+  const stat=seasonStats.get(key(p.id));if(!finite(stat?.avg_rating))continue;
+  const value=Number(stat.avg_rating),role=roleOf(p)||'GEN';
+  const bucket=roleBuckets.get(role)||{sum:0,n:0};bucket.sum+=value;bucket.n++;roleBuckets.set(role,bucket);
+  teamSum+=value;teamN++;
+ }
+ const teamAverage=teamN?teamSum/teamN:null;
  const result=new Map();
  for(const p of data.players||[]){
-  const row=byPlayer.get(key(p.id)),stat=seasonStats.get(key(p.id));
-  const fallback=finite(stat?.avg_rating)?Number(stat.avg_rating):null;
+  const row=byPlayer.get(key(p.id)),stat=seasonStats.get(key(p.id)),role=roleOf(p)||'GEN';
+  const roleBucket=roleBuckets.get(role),roleAverage=roleBucket?.n?roleBucket.sum/roleBucket.n:null;
+  const fallback=finite(stat?.avg_rating)?Number(stat.avg_rating):(finite(roleAverage)?Number(roleAverage):(finite(teamAverage)?Number(teamAverage):null));
   const mean=row?.plainN?row.plainSum/row.plainN:fallback;
   const context=row?.weight?row.weightedSum/row.weight:fallback;
-  result.set(key(p.id),{mean,context,votes:row?.plainN||0});
+  result.set(key(p.id),{mean,context,votes:row?.plainN||0,fallbackSource:finite(stat?.avg_rating)?'season':finite(roleAverage)?'role':finite(teamAverage)?'team':'none'});
  }
  return result;
 }
@@ -234,7 +263,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const ratings=ratingAverages(data,ownPrior,fixtureWeights,team);
  const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
  const coPlay=coPlayMap(ownPrior,data,events,competitions.length?competitions:[competition],fixtureWeights,team);
- const targets=roleTargets(formation),positions=pitchPositions(formation),used=new Set(),players=[];
+ const targets=roleTargets(formation),positions=prematchPositions(formation),used=new Set(),players=[];
  for(let i=0;i<positions.length;i++){
   const slot=positions[i].slot,targetRole=targets[i]||'C';
   const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay);if(!picked)continue;
@@ -265,7 +294,7 @@ export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
   '<div class="prematch-lineup-player" style="left:'+p.x+'%;top:'+p.y+'%" title="'+escape(p.name)+' · atteso '+rating(p.expectedRating)+' · media '+rating(p.meanRating)+'">'+
    '<span class="prematch-lineup-shirt">'+shirtSvg(model.kit,'prematch-'+i,false,p.shirt_number||null)+'</span>'+
    '<strong>'+escape(p.name)+'</strong>'+
-   '<span class="prematch-player-rating"><span><b>'+rating(p.expectedRating)+'</b><small>atteso</small></span><i></i><span><b>'+rating(p.meanRating)+'</b><small>media</small></span></span></div>').join('');
+   '<span class="prematch-player-rating"><b>'+rating(p.expectedRating)+'</b><small>att</small><i>·</i><b>'+rating(p.meanRating)+'</b><small>med</small></span></div>').join('');
  return '<div class="prematch-lineup-head"><div><span class="eyebrow">FORMAZIONE IPOTETICA</span><h3>'+escape(model.formation)+'</h3></div>'+
   '<span class="prematch-lineup-confidence">'+Math.round(model.confidence*100)+'% base dati</span></div>'+
   (finite(model.xiExpectedRating)?'<div class="prematch-xi-rating"><span>Voto XI atteso</span><strong>'+rating(model.xiExpectedRating)+'</strong></div>':'')+
