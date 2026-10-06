@@ -1,4 +1,4 @@
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc} from './api.js?names=20261006weighted2';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc} from './api.js?names=20261006public4';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
@@ -180,7 +180,7 @@ function paintTeamWeightedRatings(){
 }
 async function publicWeightedRating(matchId){
  try{
-  const value=await rpc('tm_app_public_weighted_rating',{p_match_id:matchId});
+  const value=await publicRpc('tm_app_public_weighted_rating',{p_match_id:matchId});
   const n=Number(value);
   return Number.isFinite(n)?n:null;
  }catch{return null}
