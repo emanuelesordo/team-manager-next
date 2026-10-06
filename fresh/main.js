@@ -526,7 +526,7 @@ function match(){
  const kickoffMs=Date.parse(f.kickoff_at||'');
  const liveEntryOpen=matchIsLive||(m?.status==='scheduled'&&Number.isFinite(kickoffMs)&&Date.now()>=kickoffMs-5*60000);
  const canLiveContribute=Boolean(state.identity?.user)&&!extraMatch&&Boolean(m)&&liveEntryOpen;
- const tabs=extraMatch?[['info','Info'],['overview','Overview'] ]:[['info','Info'],...(staffAccess?[['callups','Disponibilità']]:[]),['ratings','Voti'],...(canLiveContribute?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['tactics','Tattica']]:[])];
+ const tabs=extraMatch?[['info','Info'],['overview','Overview'],...(staffAccess?[['verification','Verifica / rettifica']]:[]) ]:[['info','Info'],...(staffAccess?[['callups','Disponibilità']]:[]),['ratings','Voti'],...(canLiveContribute?[['live','Live']]:[]),['overview','Overview'],['lineup','Formazione'],['events','Eventi'],...(staffAccess?[['verification','Verifica / rettifica'],['tactics','Tattica']]:[])];
  const requestedTab=state.matchTab==='summary'?'overview':state.matchTab;
  const mappedTab=requestedTab==='staff'?(staffAccess&&!extraMatch?'callups':'overview'):requestedTab;
  const selectedTab=tabs.some(([id])=>id===mappedTab)?mappedTab:'overview';
@@ -614,6 +614,7 @@ function match(){
  if(selectedTab==='info')body=infoContent;
  else if((staffAccess||selectedTab==='live')&&['live','callups','tactics'].includes(selectedTab))body=staffMatchSection(staffContext(),f,m,selectedTab);
  else if(selectedTab==='events')body=staffAccess&&!extraMatch?staffMatchSection(staffContext(),f,m,'events'):'<div class="inner-card"><h3>Cronologia eventi</h3>'+timeline+'</div>';
+ else if(selectedTab==='verification')body=staffAccess?staffMatchSection(staffContext(),f,m,'verification'):'<div class="empty">Verifica riservata allo staff.</div>';
  else if(selectedTab==='lineup')body=isStaff(staffContext())&&m?matchLineup(staffContext(),m):'<div class="inner-card">'+formation+'</div>';
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E,competition:comp,kit:activeKit});
  else {
