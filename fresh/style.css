@@ -1242,21 +1242,41 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 }
 
 
-/* Rating squadra: centro dello spazio libero tra bordo e stemma. */
+/* Rating squadra: esattamente a metà dello spazio tra bordo del blocco squadra e bordo dello stemma. */
 .hero-club,.match-detail-head .match-header-team{position:relative}
 .hero-club .team-crest-rating,
 .match-detail-head .match-header-team .team-crest-rating{position:static}
-.hero-club .team-crest-rating-home .team-weighted-score,
-.match-detail-head .match-header-team-home .team-crest-rating-home .team-weighted-score{
- position:absolute;left:25%;top:50%;transform:translate(-50%,-50%);z-index:2
+.hero-club .team-crest-rating-home .team-weighted-score{
+ position:absolute;
+ left:calc(25% - clamp(16px,1.35vw,21px));
+ top:50%;
+ transform:translate(-50%,-50%);
+ z-index:2
 }
-.hero-club .team-crest-rating-away .team-weighted-score,
+.hero-club .team-crest-rating-away .team-weighted-score{
+ position:absolute;
+ right:calc(25% - clamp(16px,1.35vw,21px));
+ top:50%;
+ transform:translate(50%,-50%);
+ z-index:2
+}
+.match-detail-head .match-header-team-home .team-crest-rating-home .team-weighted-score{
+ position:absolute;
+ left:calc(25% - clamp(19.5px,1.8vw,27px));
+ top:50%;
+ transform:translate(-50%,-50%);
+ z-index:2
+}
 .match-detail-head .match-header-team-away .team-crest-rating-away .team-weighted-score{
- position:absolute;right:25%;top:50%;transform:translate(50%,-50%);z-index:2
+ position:absolute;
+ right:calc(25% - clamp(19.5px,1.8vw,27px));
+ top:50%;
+ transform:translate(50%,-50%);
+ z-index:2
 }
 @media(max-width:650px){
- .hero-club .team-crest-rating-home .team-weighted-score,
- .match-detail-head .match-header-team-home .team-crest-rating-home .team-weighted-score{left:22%}
- .hero-club .team-crest-rating-away .team-weighted-score,
- .match-detail-head .match-header-team-away .team-crest-rating-away .team-weighted-score{right:22%}
+ .hero-club .team-crest-rating-home .team-weighted-score{left:calc(25% - 12.5px)}
+ .hero-club .team-crest-rating-away .team-weighted-score{right:calc(25% - 12.5px)}
+ .match-detail-head .match-header-team-home .team-crest-rating-home .team-weighted-score{left:calc(25% - 12.5px)}
+ .match-detail-head .match-header-team-away .team-crest-rating-away .team-weighted-score{right:calc(25% - 12.5px)}
 }
