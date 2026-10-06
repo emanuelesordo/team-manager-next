@@ -1,7 +1,8 @@
 import {get,hasSession,markNotificationRead} from './api.js';
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const NOTIFICATION_REFRESH_MS=5*60*1000;
 let cached={user:null,team:null,at:0,items:[]};
-let loading=null,installed=false,getContext=null;
+let loading=null,installed=false,getContext=null,pollTimer=null;
 export function notificationList(items){
  if(!items.length)return '<p class="empty">Non ci sono notifiche per questo account.</p>';
  return '<div class="notifications-list">'+items.map(n=>{
@@ -22,7 +23,7 @@ export async function syncNotificationBell(ctx,force=false){
  if(!hasSession()||!id||!team)return;
  if(cached.user!==id||cached.team!==team)cached={user:id,team,at:0,items:[]};
  if(loading)return loading;
- if(!force&&Date.now()-cached.at<60000){paintBadge();return cached.items}
+ if(!force&&Date.now()-cached.at<NOTIFICATION_REFRESH_MS){paintBadge();return cached.items}
  loading=get('team_notifications',
   'select=id,title,body,notification_type,entity_type,entity_id,read_at,created_at&recipient_profile_id=eq.'+
     encodeURIComponent(id)+'&team_id=eq.'+encodeURIComponent(team)+'&order=created_at.desc&limit=50')
@@ -39,6 +40,12 @@ function openPanel(ctx){
  '<span class="eyebrow">MESSAGGI DI SQUADRA</span><h2>Notifiche</h2>'+
  '<div data-notification-list>'+notificationList(cached.items)+'</div></section>';
  document.body.append(node);
+}
+function refreshInstalledBell(force=false){
+ if(document.hidden||!hasSession()||!getContext)return;
+ const ctx=getContext();
+ if(!ctx?.state?.identity?.user)return;
+ void syncNotificationBell(ctx,force);
 }
 export function installNotifications(provider){
  if(installed)return;installed=true;getContext=provider;
@@ -59,6 +66,9 @@ export function installNotifications(provider){
   }
  });
  document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('tm-notifications')?.remove()});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshInstalledBell(false)});
+ clearInterval(pollTimer);
+ pollTimer=setInterval(()=>refreshInstalledBell(false),NOTIFICATION_REFRESH_MS);
 }
 export function resetNotifications(){
  cached={user:null,team:null,at:0,items:[]};
