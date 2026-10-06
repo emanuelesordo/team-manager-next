@@ -754,17 +754,18 @@ export async function staffClick(e,button,ctx){
   const competition=(ctx.state.data?.competitions||[]).find(x=>x.id===m.competition_id),rules=matchRules(m,competition);
   const seconds=liveClockSeconds(m),periodNo=Math.max(1,Number(m.live_period_no||1));
   const periodLength=Math.max(1,Number(rules?.minutes_per_period||40));
+  const atHalftime=m.live_period==='halftime';
   const periodOffsetSeconds=(periodNo-1)*periodLength*60;
   const relativeSeconds=Math.max(0,seconds-periodOffsetSeconds);
-  const isStoppage=relativeSeconds>periodLength*60;
-  const relative=isStoppage?periodLength:Math.floor(relativeSeconds/60);
-  const stoppage=isStoppage?Math.max(1,Math.ceil((relativeSeconds-periodLength*60)/60)):0;
+  const isStoppage=!atHalftime&&relativeSeconds>periodLength*60;
+  const relative=atHalftime?periodLength:(isStoppage?periodLength:Math.floor(relativeSeconds/60));
+  const stoppage=atHalftime?0:(isStoppage?Math.max(1,Math.ceil((relativeSeconds-periodLength*60)/60)):0);
   if(preAction==='live-event-switch'&&memory.liveDraft){
    memory.liveDraft={...memory.liveDraft,type:button.dataset.liveEvent||memory.liveDraft.type};ctx.render();mountLiveSheet();return true;
   }
   memory.liveDraft={kind:'event',type:button.dataset.liveEvent||'goal',playerId:button.dataset.livePlayer||null,side:'team',
-   capturedAt:new Date().toISOString(),minute:relative,stoppage,period:m.live_period_no||m.live_period||1,
-   clockLabel:stoppage>0?((periodNo*periodLength)+"'+"+stoppage+"'"):(String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0'))};
+   capturedAt:new Date().toISOString(),minute:relative,stoppage,period:atHalftime?'halftime':(m.live_period_no||m.live_period||1),
+   clockLabel:atHalftime?('Intervallo · '+periodLength+':00'):(stoppage>0?((periodNo*periodLength)+"'+"+stoppage+"'"):(String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0')))};
   ctx.render();mountLiveSheet();return true;
  }
  if(!isStaff(ctx))return false;
