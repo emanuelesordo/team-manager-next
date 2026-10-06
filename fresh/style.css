@@ -1207,6 +1207,7 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
  font-size:10px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;
  box-shadow:inset 0 0 0 1px #ffffff12;
 }
+.team-weighted-score[hidden]{display:none!important}
 .team-weighted-score.score-elite{color:#123d25;background:#aef59b}
 .team-weighted-score.score-high{color:#17452d;background:#c3f4ae}
 .team-weighted-score.score-above{color:#28513a;background:#d9efb0}
