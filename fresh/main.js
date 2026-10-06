@@ -275,6 +275,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const duration=Number.isFinite(configuredMinutes)&&configuredMinutes>0?configuredMinutes:null;
  const absoluteMinute=e=>cumulativeEventMinute(e,competitionSettings);
  const periodNo=e=>{
+  if(norm(e.payload?.period)==='halftime')return 2;
   const explicit=Number(e.payload?.period_no);
   if(Number.isInteger(explicit)&&explicit>0)return explicit;
   const p=norm(e.payload?.period);if(p==='first_half')return 1;if(p==='second_half')return 2;
@@ -288,7 +289,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
  const tracked=ordered.map(e=>{const counts=!['rejected','disputed'].includes(e.validation_status)&&e.payload?.count_score!==false;if(counts&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:counts&&goal(e)?(snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
- const heading=label=>'<div class="mt-divider"><span>'+E(label)+'</span></div>';
+ const heading=(label,kind='period')=>'<div class="mt-divider mt-divider-'+E(kind)+'"><span>'+E(label)+'</span>'+(adminEdit&&kind==='title'?'<button type="button" class="mt-title-add" data-timeline-add aria-label="Aggiungi evento">+</button>':'')+'</div>';
  const cards=e=>{
   const t=type(e),shirt=String(e.payload?.opponent_shirt_number||'');
   const cumulative=t==='second_yellow'||(t==='red_card'&&['second_yellow_blue','second_card'].includes(e.payload?.card_type));
@@ -366,20 +367,19 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
     .map(x=>adminEdit&&x.event.id?
      '<button type="button" class="mt-group-item mt-editable-event" data-timeline-event="'+E(x.event.id)+'" title="Modifica evento">'+eventContent(x)+'</button>':
      '<div class="mt-group-item">'+eventContent(x)+'</div>').join('');
-   output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>'+
-    (adminEdit?'<button type="button" class="mt-add-event" data-timeline-add data-minute="'+E(first.minute??'')+'" data-stoppage="'+E(first.stoppage_minute??0)+'" aria-label="Aggiungi evento qui">+</button>':'');
+   output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
    i=j;
   }
   return output;
  };
  const renderPeriod=p=>{
-  const entries=descending.filter(x=>periodNo(x.event)===p&&x.event?.payload?.period!=='halftime');
+  const entries=descending.filter(x=>periodNo(x.event)===p);
   const base=duration===null?null:p*duration;
   const added=x=>{const n=absoluteMinute(x.event);return recovery(x.event)>0||(base!==null&&n!==null&&n>=base)};
   const stoppage=entries.filter(added),regular=entries.filter(x=>!added(x));
   const declared=Number(recoveryByPeriod.get(p))||0,endEvent=periodEndByPeriod.get(p);
   let output='';
-  if(endEvent){
+  if(endEvent&&!(complete&&p===maxPeriod)){
    const label=String(endEvent.payload?.label||(p===1?'HT':'FINE '+p+'° TEMPO'));
    const scoreHome=Number(endEvent.payload?.score_home),scoreAway=Number(endEvent.payload?.score_away);
    const scoreText=Number.isFinite(scoreHome)&&Number.isFinite(scoreAway)?
@@ -387,13 +387,12 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
    output+=heading(label+(scoreText?' '+scoreText:''));
   }
   output+=groupedRows(stoppage);
-  if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO');
+  if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO','recovery');
   return output+groupedRows(regular);
  };
- const halftimeRows=groupedRows(descending.filter(x=>x.event?.payload?.period==='halftime'));
- let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI');
+ let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI','title');
  if(maxPeriod===2){
-  parts+=renderPeriod(2)+(halftimeRows?heading('INTERVALLO')+halftimeRows:'')+(periodEndByPeriod.has(1)?'':heading('HT '+halfScore))+renderPeriod(1);
+  parts+=renderPeriod(2)+(periodEndByPeriod.has(1)?'':heading('HT '+halfScore))+renderPeriod(1);
  }else if(maxPeriod>2){
   for(let p=maxPeriod;p>=1;p--){
    parts+=renderPeriod(p);
@@ -401,8 +400,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   }
  }else parts+=renderPeriod(1);
  return '<div class="match-timeline'+(adminEdit?' is-admin-editable':'')+'" aria-label="Cronologia eventi della partita">'+
-  (tracked.length||recoveryByPeriod.size?parts:parts+'<div class="empty padded">Nessun evento registrato.</div>')+
-  (adminEdit&&!tracked.length?'<button type="button" class="mt-add-event mt-add-empty" data-timeline-add aria-label="Aggiungi evento">+</button>':'')+'</div>';
+  (tracked.length||recoveryByPeriod.size?parts:parts+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>';
 }
 
 function matchRules(m,comp){
@@ -450,7 +448,7 @@ function match(){
  const playerName=id=>matchPlayerLabel(people(id));
  const activeEvents=(data.events||[]).filter(e=>e.validation_status!=='rejected');
  const pending=activeEvents.filter(e=>['proposed','community_confirmed','disputed'].includes(e.validation_status)).length;
- const adminTimeline=state.identity?.role?.role==='admin';
+ const adminTimeline=state.identity?.role?.role==='admin'&&state.scoreEditing;
  const timeline=m?matchEventTimeline(activeEvents,f,playerName,team(),rules,['admin','player'].includes(state.identity?.role?.role),m,adminTimeline):
   matchEventTimeline(state.fixtureEvents||[],f,playerName,team(),rules,false,null,adminTimeline);
  const extraMatch=!involvesTeam(f,team());
@@ -492,8 +490,9 @@ function match(){
  const scoreText=hasProposedScore?
   E(proposedScore.home)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(proposedScore.away):
   hasScore(f)?E(f.home_score)+' <span class="match-score-separator" aria-hidden="true">-</span> '+E(f.away_score):'<span class="vs">VS</span>';
- const editableScore=extraMatch&&state.identity?.role?.role==='admin';
- const headerScore=liveEntryOpen?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+(hasProposedScore?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
+ const editableScore=state.identity?.role?.role==='admin';
+ const scoreInner=liveEntryOpen?'<span class="match-score-trigger '+(hasProposedScore?'score-proposed':'score-pending')+'">'+scoreText+(hasProposedScore?'<small class="match-proposed-label">PROVVISORIO</small>':'')+'</span>':scoreText;
+ const headerScore=editableScore?'<button type="button" class="match-score-edit-toggle'+(state.scoreEditing?' is-editing':'')+'" data-score-edit aria-pressed="'+state.scoreEditing+'" title="'+(state.scoreEditing?'Esci dalla modifica eventi':'Modifica eventi')+'">'+scoreInner+'</button>':scoreInner;
  const livePeriodLabel=m?.live_period==='halftime'?'Intervallo':m?.live_period==='penalties'?'Rigori':
   (m?.status==='live'?(Math.max(1,Number(m?.live_period_no||1))+'° tempo'):'');
  const liveRecovery=(m?.status==='live'&&Number(m?.live_recovery_period_no)===Math.max(1,Number(m?.live_period_no||1)))?Number(m?.live_recovery_minutes||0):0;
@@ -535,7 +534,6 @@ function match(){
   '<div class="match-result-decision"><strong>Risultato in attesa di conferma</strong>'+(pending?'<small>Prima ufficializza i '+pending+' eventi in sospeso dalla scheda Eventi.</small>':'')+
   '<button type="button" class="staff-submit" data-staff-action="review-result-confirm"'+(pending?' disabled title="Ufficializza prima gli eventi"':'')+'>Conferma risultato</button></div>'):'';
  const infoContent='<div class="match-info-editor">'+reviewAction+
-  (extraMatch&&canEditInfo?'<button type="button" class="staff-soft" data-score-edit="true">'+(state.scoreEditing?'Salva risultato':'Modifica risultato ed eventi')+'</button>':'')+
   '<div class="staff-form-grid">'+infoField('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):'')+
   infoField('venue_name','Campo',f.venue_name||venue)+infoField('venue_address','Indirizzo',f.venue_address||address)+
   (canEditInfo?'<label class="staff-field"><span>Stato</span><select data-extra-status>'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,name])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+name+'</option>').join('')+'</select></label>':'')+
@@ -548,10 +546,6 @@ function match(){
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E,competition:comp,kit:activeKit});
  else body=extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
   '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>';
- if(extraMatch&&editableScore&&state.scoreEditing){
-  const eventRows=(state.fixtureEvents||[]).filter(x=>x.validation_status!=='rejected').map(x=>'<form data-extra-event-form data-event-id="'+E(x.id)+'" class="extra-event-row"><select name="event_type">'+[['goal','Gol'],['own_goal','Autogol'],['yellow_card','Giallo'],['blue_card','Blu'],['red_card','Rosso']].map(([k,v])=>'<option value="'+k+'"'+(x.event_type===k?' selected':'')+'>'+v+'</option>').join('')+'</select><select name="team_side"><option value="home"'+(x.side==='home'?' selected':'')+'>Casa</option><option value="away"'+(x.side==='away'?' selected':'')+'>Ospiti</option></select><input name="minute" type="number" min="0" max="300" placeholder="Minuto ?" value="'+E(cumulativeEventMinute(x,comp)??'')+'"><button type="submit">Aggiorna</button><button type="button" data-extra-remove="'+E(x.id)+'" aria-label="Escludi evento">×</button></form>').join('');
-  body='<section class="extra-edit-panel"><h3>Modifica partita</h3><p>Le modifiche ai singoli eventi e ai dettagli si salvano con i rispettivi comandi. Premi di nuovo il punteggio per aggiornare il risultato in base ai gol.</p><div class="extra-event-editor">'+eventRows+'<form data-extra-event-form class="extra-event-row"><select name="event_type"><option value="goal">Gol</option><option value="own_goal">Autogol</option><option value="yellow_card">Giallo</option><option value="blue_card">Blu</option><option value="red_card">Rosso</option></select><select name="team_side"><option value="home">Casa</option><option value="away">Ospiti</option></select><input name="minute" type="number" min="0" max="300" placeholder="Minuto ?" value=""><button type="submit">+ Evento</button></form></div><p class="extra-score-summary">Gol inseriti: <strong>'+eventGoals.home+'–'+eventGoals.away+'</strong> · senza minuto contribuiscono al risultato, ma non ai parziali della cronologia.</p></section>'+body;
- }
  return '<button class="back-link" data-page="calendar">'+ico('back')+' Torna al calendario</button>'+
   '<div class="match-header-sentinel" aria-hidden="true"></div>'+header+compactHeader+'<section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">'+
   tabs.map(([id,label])=>'<button role="tab" aria-selected="'+(selectedTab===id)+'" data-tab="'+id+
@@ -866,7 +860,17 @@ document.addEventListener('click',async e=>{
  if(x.dataset.rosterNew!==undefined){if(isStaff(staffContext())){openNewPlayer();navigate('admin')}return}
  if(x.dataset.rosterSort){const k=x.dataset.rosterSort;state.rosterDesc=state.rosterSort===k?!state.rosterDesc:['shirt','age','appearances','goals','avg_rating'].includes(k);state.rosterSort=k;render();return}
  if(x.dataset.page){navigate(x.dataset.page);return}
- if(x.dataset.scoreEdit!==undefined){if(state.identity?.role?.role==='admin'&&!involvesTeam(resolveMatch().fixture,team())){if(!state.scoreEditing){state.scoreEditing=true;render()}else await saveExtraScore()}return}
+ if(x.dataset.scoreEdit!==undefined){
+  if(state.identity?.role?.role!=='admin')return;
+  if(!state.scoreEditing){state.scoreEditing=true;state.timelineEditor=null;render()}
+  else{
+   const f=resolveMatch().fixture;
+   state.timelineEditor=null;
+   if(f&&!involvesTeam(f,team()))await saveExtraScore();
+   else{state.scoreEditing=false;render()}
+  }
+  return;
+ }
  if(x.dataset.scoreCancel!==undefined){state.scoreEditing=false;render();return}
  if(x.dataset.extraRemove){if(state.identity?.role?.role==='admin'){try{await adminWrite('app_match_events','PATCH',{validation_status:'rejected'},{id:x.dataset.extraRemove});state.fixtureEvents=await loadFixtureEvents(state.match);render();toast('Evento escluso')}catch(error){toast(error.message)}}return}
  if(x.dataset.match){openMatch(x.dataset.match);return}
