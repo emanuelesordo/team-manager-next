@@ -705,7 +705,8 @@ async function loadCsiReview(ctx){
 function matchCsiReview(ctx,m){
  const fixture=ctx.resolveMatch().fixture;
  const tmEvents=m?(ctx.state.matchData?.events||[]):(ctx.state.fixtureEvents||[]);
- return csiReviewPanel({fixture,match:m,snapshot:csiSnapshot,sourceEvents:csiSourceEvents,tmEvents,players:ctx.state.data?.players||[]});
+ const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id)||null;
+ return csiReviewPanel({fixture,match:m,snapshot:csiSnapshot,sourceEvents:csiSourceEvents,tmEvents,players:ctx.state.data?.players||[],competition});
 }
 
 export function staffMatchSection(ctx,f,m,section){
