@@ -195,15 +195,22 @@ function fixtureWeightedBadge(f){
  const m=(state.data?.matches||[]).find(x=>x.fixture_id===f?.id);
  return m?weightedScoreBadge(m.id):'';
 }
-function teamNameWithWeighted(name,badge=''){
- return '<span class="team-name-rating"><strong>'+E(name)+'</strong>'+badge+'</span>';
+function teamNameWithWeighted(name){
+ return '<span class="team-name-rating"><strong>'+E(name)+'</strong></span>';
+}
+function teamCrestWithWeighted(name,size,ref,badge='',side='home'){
+ return '<span class="team-crest-rating team-crest-rating-'+side+'">'+
+  (side==='home'?badge:'')+
+  club(name,size,ref)+
+  (side==='away'?badge:'')+
+  '</span>';
 }
 function hero(){
  const slides=carouselFixtures();if(!slides.length)return '<div class="hero-panel"><div class="empty light">Non ci sono ancora partite in calendario.</div></div>';
  state.slide=Math.min(state.slide,slides.length-1);const f=slides[state.slide];
  const weighted=fixtureWeightedBadge(f);
  const homeBadge=f.home_team_id===team()?.id?weighted:'',awayBadge=f.away_team_id===team()?.id?weighted:'';
- return `<section class="hero-panel"><div class="hero-bg"></div><div class="hero-content"><p>${E(competition(f.competition_id)?.name||'Competizione')} ${f.round_no!=null?'· Giornata '+E(f.round_no):''}</p><div class="hero-score"><div class="hero-club">${club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}${teamNameWithWeighted(f.home_team,homeBadge)}</div><div class="hero-mid"><span class="hero-live">${status(f)}</span><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="hero-club">${club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}${teamNameWithWeighted(f.away_team,awayBadge)}</div></div><div class="hero-bottom"><div class="dots">${slides.map((_,i)=>`<button data-slide="${i}" class="${i===state.slide?'on':''}" aria-label="Mostra partita ${i+1}"></button>`).join('')}</div><div class="hero-arrows"><button data-action="prevslide" aria-label="Precedente">${ico('back',17)}</button><button data-action="nextslide" aria-label="Successiva">${ico('chevron',17)}</button></div><button class="primary-btn" data-match="${E(f.id)}">Dettagli match ${ico('arrow',17)}</button></div></div></section>`;
+ return `<section class="hero-panel"><div class="hero-bg"></div><div class="hero-content"><p>${E(competition(f.competition_id)?.name||'Competizione')} ${f.round_no!=null?'· Giornata '+E(f.round_no):''}</p><div class="hero-score"><div class="hero-club">${teamCrestWithWeighted(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id},homeBadge,'home')}${teamNameWithWeighted(f.home_team)}</div><div class="hero-mid"><span class="hero-live">${status(f)}</span><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="hero-club">${teamCrestWithWeighted(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id},awayBadge,'away')}${teamNameWithWeighted(f.away_team)}</div></div><div class="hero-bottom"><div class="dots">${slides.map((_,i)=>`<button data-slide="${i}" class="${i===state.slide?'on':''}" aria-label="Mostra partita ${i+1}"></button>`).join('')}</div><div class="hero-arrows"><button data-action="prevslide" aria-label="Precedente">${ico('back',17)}</button><button data-action="nextslide" aria-label="Successiva">${ico('chevron',17)}</button></div><button class="primary-btn" data-match="${E(f.id)}">Dettagli match ${ico('arrow',17)}</button></div></div></section>`;
 }
 
 const ratingsHomeCache=new Map();
@@ -555,20 +562,20 @@ function match(){
    '<div class="match-header-live-clock"><strong data-staff-clock data-seconds="'+Number(m.live_clock_seconds||0)+'" data-anchor="'+E(m.live_clock_anchor||'')+'" data-running="'+Boolean(m.live_clock_running)+'" data-match="'+E(m.id)+'" data-blue-min="'+Number(comp?.discipline_rules?.blue_duration_minutes||0)+'" data-period-len="'+Number(rules?.minutes_per_period||0)+'" data-period-no="'+Math.max(1,Number(m.live_period_no||1))+'">'+E(liveClockText)+'</strong>'+
    '<small data-staff-period-label data-base-label="'+E(livePeriodLabel)+'" data-recovery="'+E(liveRecovery)+'">'+E(livePeriodLabel)+'</small></div>'):'';
  const compactHeader='<div class="match-compact-bar glass'+(matchIsLive?' is-live':'')+'" aria-hidden="true">'+
-  (matchIsLive?'':('<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
-  teamNameWithWeighted(f.home_team,homeWeighted)+'</div>'))+
+  (matchIsLive?'':('<div class="match-compact-club match-compact-home">'+teamCrestWithWeighted(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id},homeWeighted,'home')+
+  teamNameWithWeighted(f.home_team)+'</div>'))+
   '<div class="match-compact-center"><b class="match-compact-score">'+headerScore+'</b>'+headerTimer+'</div>'+
-  (matchIsLive?'':('<div class="match-compact-club match-compact-away">'+teamNameWithWeighted(f.away_team,awayWeighted)+
-  club(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+'</div>'))+'</div>';
+  (matchIsLive?'':('<div class="match-compact-club match-compact-away">'+teamNameWithWeighted(f.away_team)+
+  teamCrestWithWeighted(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id},awayWeighted,'away')+'</div>'))+'</div>';
  const statusEditor=editor?'<select data-extra-status aria-label="Stato partita">'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,text])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+text+'</option>').join('')+'</select>':null;
  const testNotice=f.is_test?'<div class="match-test-banner"><strong>TEST PRIVATO</strong> · solo tuo · '+E(rules.periods)+'×'+E(rules.minutes_per_period)+"'"+' · cambi '+(rules.rolling_substitutions?'rotanti':'non rotanti')+' · escluso da classifiche e statistiche</div>':'';
  const header=testNotice+'<div class="match-detail-head glass">'+
   '<div class="match-expanded">'+
-  '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
-  teamNameWithWeighted(f.home_team,homeWeighted)+renderMatchScorers(scorers,'home',E)+'</div>'+
+  '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+teamCrestWithWeighted(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id},homeWeighted,'home')+
+  teamNameWithWeighted(f.home_team)+renderMatchScorers(scorers,'home',E)+'</div>'+
   '<div class="match-big-score"><div class="match-score-datetime">'+E(shortDate(f.kickoff_at))+' '+E(time(f.kickoff_at))+'</div><div class="match-score-status">'+(statusEditor||status(f))+'</div><b>'+headerScore+'</b>'+headerTimer+'</div>'+
-  '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+
-  teamNameWithWeighted(f.away_team,awayWeighted)+renderMatchScorers(scorers,'away',E)+'</div></div>'+matchMeta+'</div>'+
+  '<div class="match-header-team match-header-team-away">'+teamCrestWithWeighted(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id},awayWeighted,'away')+
+  teamNameWithWeighted(f.away_team)+renderMatchScorers(scorers,'away',E)+'</div></div>'+matchMeta+'</div>'+
   '</div>';
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato in attesa di conferma'):'';
  const notice=(pending?'<p class="data-warning">'+pending+' eventi ancora da ufficializzare.</p>':'')+
