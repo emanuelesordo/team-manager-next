@@ -803,9 +803,9 @@ async function hydrateMatchPrediction(){
    predictionBusy=true;
    const fixtureIds=realFixtures().filter(x=>x.status==='finished').map(x=>x.id).filter(Boolean);
    const queries=[];
-   if(ids.length)queries.push(get('app_match_events','select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&match_id=in.('+
+   if(ids.length)queries.push(get('app_match_events','select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+
     ids.map(encodeURIComponent).join(',')+')&limit=2000').catch(()=>[]));
-   if(fixtureIds.length)queries.push(get('app_match_events','select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&fixture_id=in.('+
+   if(fixtureIds.length)queries.push(get('app_match_events','select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&fixture_id=in.('+
     fixtureIds.map(encodeURIComponent).join(',')+')&limit=2000').catch(()=>[]));
    const batches=queries.length?await Promise.all(queries):[];
    const merged=new Map();for(const batch of batches)for(const event of batch)merged.set(event.id,event);
@@ -834,7 +834,8 @@ async function hydrateMatchPrediction(){
     const preferred=f.home_team_id===team()?.id?'home':'away';
     const kit=kits[operational?.match_kit_key]||kits[preferred]||kits.home||Object.values(kits)[0]||{};
     const model=buildHypotheticalLineup({
-     fixture:f,targetMatch:operational,data:state.data,matchData:state.matchData,team:team(),competition:comp,prediction:result,kit
+     fixture:f,targetMatch:operational,data:state.data,matchData:state.matchData,team:team(),competition:comp,
+     competitions:state.data?.competitions||[],prediction:result,kit,events
     });
     lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
    }
