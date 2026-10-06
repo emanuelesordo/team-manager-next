@@ -1,4 +1,4 @@
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc} from './api.js?names=20261006weighted1';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc} from './api.js?names=20261006weighted2';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
@@ -22,6 +22,7 @@ import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
+import {weightedTeamRating} from './team-rating.js?legacy=20261006v1';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -157,22 +158,38 @@ function standings(comp,limit=0){
  return `<div class="table-scroller"><table class="standing-table"><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>DR</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.team_id===team()?.id?'ours':''}"><td>${i+1}</td><td><span class="standing-team">${club(r.team,'tiny',{team_id:r.team_id,opponent_id:r.opponent_id})}<span>${E(r.team)}</span></span></td><td>${r.played??'—'}</td><td>${r.won??'—'}</td><td>${r.drawn??'—'}</td><td>${r.lost??'—'}</td><td>${r.goals_for??'—'}</td><td>${r.goals_against??'—'}</td><td>${r.goal_difference??'—'}</td><td class="points">${r.points??'—'}</td></tr>`).join('')}</tbody></table></div>`
 }
 function carouselFixtures(){const a=[previous(),next()].filter(Boolean);return a.filter((f,i)=>a.findIndex(x=>x.id===f.id)===i)}
-function weightedMatchScore(matchId){
- if(!matchId)return null;
- const rows=(state.data?.matchRatingSummary||[]).filter(r=>r.match_id===matchId&&Number(r.rating_count)>0&&Number.isFinite(Number(r.average_rating)));
- if(!rows.length)return null;
- const total=rows.reduce((sum,r)=>sum+Number(r.rating_count||0),0);
- if(!total)return null;
- return rows.reduce((sum,r)=>sum+Number(r.average_rating)*Number(r.rating_count||0),0)/total;
-}
+const teamRatingCache=new Map();
 function weightedScoreLevel(score){
  return score>=9?'elite':score>=8?'high':score>=7?'above':score>=6?'even':score>=5?'below':'low';
 }
 function weightedScoreBadge(matchId){
- const value=weightedMatchScore(matchId);
- if(!Number.isFinite(value))return '';
- return '<span class="team-weighted-score score-'+weightedScoreLevel(value)+'" title="Punteggio ponderato squadra · media dei voti, ponderata per il numero di valutazioni">'+
-  E(value.toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:2}))+'</span>';
+ if(!matchId)return '';
+ const value=teamRatingCache.get(String(matchId));
+ const visible=Number.isFinite(value);
+ return '<span class="team-weighted-score '+(visible?'score-'+weightedScoreLevel(value):'')+'" data-team-weighted-match="'+E(matchId)+'" title="Rating medio squadra ponderato sui minuti effettivamente giocati"'+(visible?'':' hidden')+'>'+
+  (visible?E(value.toFixed(2).replace('.',',')):'')+'</span>';
+}
+function paintTeamWeightedRatings(){
+ document.querySelectorAll('[data-team-weighted-match]').forEach(el=>{
+  const value=teamRatingCache.get(String(el.dataset.teamWeightedMatch));
+  const visible=Number.isFinite(value);
+  el.hidden=!visible;
+  el.className='team-weighted-score'+(visible?' score-'+weightedScoreLevel(value):'');
+  if(visible)el.textContent=value.toFixed(2).replace('.',',');
+ });
+}
+async function hydrateHomeTeamRatings(){
+ if(state.page!=='home'||state.loading)return;
+ const targets=carouselFixtures().filter(isFinished).map(f=>({f,m:(state.data?.matches||[]).find(x=>x.fixture_id===f.id)})).filter(x=>x.m?.id);
+ const missing=targets.filter(({m})=>!teamRatingCache.has(String(m.id)));
+ await Promise.all(missing.map(async({f,m})=>{
+  try{
+   const info=await loadMatchInfo(m.id);
+   const value=weightedTeamRating({match:m,matchPlayers:info.players||[],events:info.events||[],ratings:info.ratings||[],competition:competition(f.competition_id)||{}});
+   teamRatingCache.set(String(m.id),Number.isFinite(value)?value:null);
+  }catch{teamRatingCache.set(String(m.id),null)}
+ }));
+ if(state.page==='home')paintTeamWeightedRatings();
 }
 function fixtureWeightedBadge(f){
  const m=(state.data?.matches||[]).find(x=>x.fixture_id===f?.id);
@@ -525,6 +542,10 @@ function match(){
  const liveClockBase=Number(m?.live_clock_seconds||0),liveClockAnchor=Date.parse(m?.live_clock_anchor||'');
  const liveClockNow=Math.max(0,liveClockBase+(m?.live_clock_running&&Number.isFinite(liveClockAnchor)?Math.floor((Date.now()-liveClockAnchor)/1000):0));
  const liveClockText=String(Math.floor(liveClockNow/60)).padStart(2,'0')+':'+String(liveClockNow%60).padStart(2,'0');
+ if(m?.id&&state.matchData){
+  const value=weightedTeamRating({match:m,matchPlayers:data.players||[],events:data.events||[],ratings:data.ratings||[],competition:rules});
+  teamRatingCache.set(String(m.id),Number.isFinite(value)?value:null);
+ }
  const weighted=weightedScoreBadge(m?.id);
  const homeWeighted=f.home_team_id===team()?.id?weighted:'';
  const awayWeighted=f.away_team_id===team()?.id?weighted:'';
@@ -677,7 +698,7 @@ function render(){
  if(state.page==='competitions'&&!state.loading){const scroller=document.querySelector('[data-rounds-scroll]');const focus=scroller?.querySelector('[data-round-focus]');if(scroller&&focus){const next=scroller.querySelector('[data-round-next]');const bounds=scroller.getBoundingClientRect();const first=focus.getBoundingClientRect();const last=(next||focus).getBoundingClientRect();const top=first.top-bounds.top+scroller.scrollTop;const visibleHeight=last.bottom-first.top+12;scroller.style.height=Math.ceil(visibleHeight)+'px';scroller.scrollTop=Math.max(0,top);}}
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading){paintMatchHeaderCompact();requestAnimationFrame(()=>requestAnimationFrame(centerVotePickers))}
- if(state.page==='home'&&!state.loading)void hydrateHomeRatings();
+ if(state.page==='home'&&!state.loading){void hydrateHomeRatings();void hydrateHomeTeamRatings();}
  manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[],(row)=>{const match=(state.data?.standings||[]).find(x=>('team:'+x.team_id===row.club_id&&x.team_id)||('opponent:'+x.opponent_id===row.club_id&&x.opponent_id));return match?club(row.team,'tiny',{team_id:match.team_id,opponent_id:match.opponent_id}):''});paintLineupPitch();paintCallups();if(state.page==='match'&&!state.loading)startStaffClock(isStaff(staffContext())?staffContext():null);
 }
 function centerVotePickers(){
