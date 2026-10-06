@@ -170,7 +170,7 @@ function managementBehavior(club,primaryTeam,completed,matches,events,competitio
    if(ours>theirs)wasAhead=true;if(ours<theirs)wasBehind=true;
   }
   const s=scoreFor(f,club);if(!s)continue;complete++;
-  const finalValue=s[0]>s[1]?1:(s[0]===s[1]?.5:0);
+  const finalValue=s[0]>s[1]?1:(s[0]===s[1] ? .5 : 0);
   if(wasAhead){led++;ledValue+=finalValue}
   if(wasBehind){trailed++;trailValue+=finalValue}
  }
