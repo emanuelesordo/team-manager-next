@@ -1263,6 +1263,7 @@ export async function staffSubmit(e,ctx){
   }
   const obj=adminPayload(form,ctx);
   if(!obj.table)throw Error('Modulo sconosciuto');
+  if(['teams','app_opponents'].includes(obj.table))historyRows(form);
   if(obj.table==='new-fixture'){
    if(!(ctx.state.data?.competitions||[]).some(c=>c.id===obj.payload.competition_id))throw Error('Competizione non appartenente alla stagione');
    const {competition_id,...row}=obj.payload;
