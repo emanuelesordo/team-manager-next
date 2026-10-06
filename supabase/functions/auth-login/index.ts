@@ -186,22 +186,17 @@ async function registerLinkedPlayer(req: Request, normalized: string, password: 
       if (memberRoleError) throw memberRoleError;
     }
 
-    const { error: appRoleError } = await admin.from("app_user_roles").insert({
-      user_id: createdUserId,
-      role: "player",
-      player_id: player.id,
-    });
-    if (appRoleError) throw appRoleError;
-
-    const { data: linked, error: linkError } = await admin
+    // The profiles trigger private.tm_profile_link_trigger() performs the
+    // canonical username -> player link and upserts app_user_roles.
+    const { data: linkedPlayer, error: linkedPlayerError } = await admin
       .from("players")
-      .update({ profile_id: createdUserId })
+      .select("id,profile_id")
       .eq("id", player.id)
-      .is("profile_id", null)
-      .select("id")
       .maybeSingle();
-    if (linkError) throw linkError;
-    if (!linked) throw new Error("giocatore già collegato");
+    if (linkedPlayerError) throw linkedPlayerError;
+    if (linkedPlayer?.profile_id !== createdUserId) {
+      throw new Error("collegamento giocatore non riuscito");
+    }
 
     return await loginWithAlias(req, internalEmail, password, {
       id: createdUserId,
