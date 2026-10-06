@@ -32,6 +32,9 @@ test('pre-match prediction returns normalized 1X2 probabilities and expected sco
  const sum=result.probabilities.home+result.probabilities.draw+result.probabilities.away;
  assert.ok(Math.abs(sum-1)<1e-9);
  assert.ok(result.expectedGoals.home>0&&result.expectedGoals.away>0);
+ assert.equal(result.probabilities.topScorelines.length,3);
+ assert.ok(result.probabilities.topScorelines.every(s=>Number.isInteger(s.home)&&Number.isInteger(s.away)&&s.probability>0));
+ assert.deepEqual(result.probabilities.mostLikely,result.probabilities.topScorelines[0]);
  assert.ok(result.coverage>=0&&result.coverage<=100);
  assert.equal(result.venue.surface_type,'synthetic');
  assert.ok(typeof result.narrative==='string'&&result.narrative.length>20);
@@ -84,4 +87,14 @@ test('goal timing windows feed pre-match strengths and weaknesses',()=>{
  assert.equal(result.situational.home.totalTimedGoalsFor,4);
  assert.equal(result.situational.home.strongestFor.label,"1′–20′");
  assert.ok(result.attention.some(x=>x.club==='A'&&x.label.includes('Picco offensivo')));
+});
+
+
+test('match narrative reflects matchup-specific signals',()=>{
+ const first=predictMatch({fixture:fixtures[4],competition,fixtures,history,venues,matches:[],events:[],team:null,competitions:[competition]});
+ const alternate={...fixtures[4],id:'8',home_team:'C',away_team:'A',home_opponent_id:'C',away_opponent_id:'A'};
+ const second=predictMatch({fixture:alternate,competition,fixtures:[...fixtures.filter(f=>f.id!=='5'),alternate],history,venues,matches:[],events:[],team:null,competitions:[competition]});
+ assert.ok(first.narrative.includes('A')||first.narrative.includes('C'));
+ assert.ok(second.narrative.includes('A')||second.narrative.includes('C'));
+ assert.notEqual(first.narrative,second.narrative);
 });
