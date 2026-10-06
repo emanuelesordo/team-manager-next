@@ -833,8 +833,17 @@ async function hydrateMatchPrediction(){
     const kits=collectionForClub(team()||{});
     const preferred=f.home_team_id===team()?.id?'home':'away';
     const kit=kits[operational?.match_kit_key]||kits[preferred]||kits.home||Object.values(kits)[0]||{};
+    const matchIds=matches.map(m=>m.id).filter(Boolean);
+    const [freshStats,freshRatings]=await Promise.all([
+     get('app_player_season_stats','select=season_id,player_id,first_name,last_name,position_group,appearances,starts,minutes,goals,assists,yellow_cards,red_cards,blue_cards,avg_rating&season_id=eq.'+encodeURIComponent(chosen)+'&limit=1000').catch(()=>[]),
+     matchIds.length?get('app_match_ratings','select=match_id,player_id,rating,created_at&match_id=in.('+matchIds.map(encodeURIComponent).join(',')+')&limit=10000').catch(()=>[]):Promise.resolve([])
+    ]);
+    const lineupData={...state.data,
+     playerStats:freshStats.length?freshStats:(state.data.playerStats||[]),
+     seasonRatings:freshRatings.length?freshRatings:(state.data.seasonRatings||[])
+    };
     const model=buildHypotheticalLineup({
-     fixture:f,targetMatch:operational,data:state.data,matchData:state.matchData,team:team(),competition:comp,
+     fixture:f,targetMatch:operational,data:lineupData,matchData:state.matchData,team:team(),competition:comp,
      competitions:state.data?.competitions||[],prediction:result,kit,events
     });
     lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
