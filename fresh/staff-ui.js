@@ -22,7 +22,7 @@ const help=text=>'<p class="staff-help">'+esc(text)+'</p>';
 const title=(name,text)=>'<div class="staff-panel-heading"><div><span class="eyebrow">'+esc(name)+'</span><h2>'+esc(text)+'</h2></div></div>';
 const btn=(action,label)=>'<button type="button" class="staff-soft" data-staff-action="'+esc(action)+'">'+esc(label)+'</button>';
 const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</button>';
-const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'callups',busy:false,liveDraft:null};
+const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',venues:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'callups',busy:false,liveDraft:null};
 const memory=initial;
 let reviewEditEvent=null,reviewHistoryEvent=null,reviewHistoryEntries=[];
 let scoreAuditRows=[],scoreAuditOpen=false;
@@ -34,7 +34,7 @@ function integrityPanel(){
  return '<section class="glass panel staff-editor">'+title('DIAGNOSTICA','Integrità dei dati')+help('Controlla collegamenti, risultati discordanti, giocatori ed eventi orfani. Non modifica, elimina o approva nulla.')+btn('audit-integrity','Esegui controllo')+(integrityError?'<p class="data-warning">'+esc(integrityError)+'</p>':'')+(integrityData?'<p class="staff-help">Segnalazioni: '+count+' · '+esc(new Date(integrityData.checked_at).toLocaleString('it-IT'))+'</p>'+ (entries||help('Nessuna incongruenza rilevata.')):help('Controllo non ancora eseguito.'))+'<div class="staff-event-list">'+entries+'</div></section>';
 }
 
-const areas=[['team','Squadra'],['seasons','Stagioni'],['competitions','Competizioni'],['opponents','Avversarie'],['players','Rosa'],['fixtures','Calendario'],['import','Importa CSV'],['integrity','Integrità'],['availability','Disponibilità'],['users','Utenti']];
+const areas=[['team','Squadra'],['seasons','Stagioni'],['competitions','Competizioni'],['opponents','Avversarie'],['venues','Campi'],['players','Rosa'],['fixtures','Calendario'],['import','Importa CSV'],['integrity','Integrità'],['availability','Disponibilità'],['users','Utenti']];
 const types=[['available','Disponibile'],['starter','Titolare'],['bench','Panchina'],['absent','Indisponibile / non convocato']];
 const reasons=[['','—'],...unavailabilityReasons];
 const events=[['goal','Gol'],['own_goal','Autogol'],['penalty_scored','Rigore segnato'],['penalty_missed','Rigore sbagliato'],['yellow_card','Ammonizione'],['blue_card','Cartellino blu'],['blue_return','Rientro blu'],['red_card','Espulsione'],['substitution','Sostituzione / Uscita'],['period_end','Fine periodo'],['other','Altro']];
@@ -119,7 +119,7 @@ async function persistClubHistory(form,{teamId=null,opponentId=null}={}){
 export function adminPage(ctx){
  if(!isStaff(ctx))return '<div class="empty">Gestione riservata allo staff autorizzato.</div>';
  const data=ctx.state.data||{},base=ctx.state.base||{},t=base.team||{};
- const S=memory.selected,seasons=base.seasons||[],comps=(data.competitions||[]).filter(c=>c?.phase_rules?.system_private_test!==true),opps=base.opponents||[],players=data.players||[],fixtures=data.fixtures||[];
+ const S=memory.selected,seasons=base.seasons||[],comps=(data.competitions||[]).filter(c=>c?.phase_rules?.system_private_test!==true),opps=base.opponents||[],venues=base.venues||[],players=data.players||[],fixtures=data.fixtures||[];
  const unlinked=(data.matches||[]).filter(m=>!m.fixture_id);
  let form='';
  if(memory.area==='team'){
@@ -274,6 +274,22 @@ export function adminPage(ctx){
      logoPicker(o?.logo_url||'',[o?.primary_color,o?.secondary_color,o?.accent_color],t.logo_shape||'rounded',false,o?.logo_background_color)+
     '</div></div>'+(o?clubHistoryFields(ctx,{opponentId:o.id}):help('Salva prima la nuova avversaria; poi potrai aggiungere lo storico delle stagioni precedenti.')),
    'Ogni avversaria mantiene la sua identità tra stagioni e competizioni.');
+ }
+ if(memory.area==='venues'){
+  const venue=idOf(venues,S.venues);
+  form=wrapForm('venues','Campi di gioco',
+   selectExisting('venues',venues,'name')+
+   '<div class="staff-form-grid">'+
+    input('name','Nome campo',venue?.name||'','text','required maxlength="120"')+
+    input('address_line','Indirizzo',venue?.address_line||'','text','maxlength="180"')+
+    input('city','Comune / località',venue?.city||'','text','maxlength="100"')+
+    input('province','Provincia',venue?.province||'','text','maxlength="2" pattern="[a-zA-Z]{2}"')+
+    selection('surface_type','Superficie',[['','Non indicata'],['natural','Naturale'],['synthetic','Sintetico'],['hybrid','Ibrido']],venue?.surface_type||'')+
+    selection('width_profile','Larghezza',[['','Non indicata'],['narrow','Stretto'],['standard','Standard'],['wide','Largo']],venue?.width_profile||'')+
+    selection('length_profile','Lunghezza',[['','Non indicata'],['short','Corto'],['standard','Standard'],['long','Lungo']],venue?.length_profile||'')+
+    selection('is_opponent_venue','Utilizzo',[['false','Campo proprio / neutro'],['true','Campo avversario']],String(venue?.is_opponent_venue??true))+
+   '</div>',
+   'Il profilo del campo entra nel pronostico solo quando esistono precedenti reali sufficienti su campi con caratteristiche simili. Nessun vantaggio viene assegnato a priori a sintetico, largo, lungo, stretto o corto.');
  }
  if(memory.area==='players'){
   const list=[...players].sort((a,b)=>String(a.last_name).localeCompare(String(b.last_name),'it'));
@@ -745,6 +761,16 @@ function adminPayload(form,ctx){
   }};
  }
  if(kind==='opponents')return {table:'app_opponents',id:blank.opponents||null,payload:{...cleaned(data,['name','short_name','logo_url','primary_color','secondary_color','accent_color','logo_background_color','home_venue_name']),...clubVenuePayload(data)}};
+ if(kind==='venues'){
+  const province=String(data.province||'').trim().toUpperCase();
+  if(province&&!/^[A-Z]{2}$/.test(province))throw Error('Provincia campo: usa due lettere');
+  return {table:'venues',id:blank.venues||null,payload:{
+   name:String(data.name||'').trim(),address_line:String(data.address_line||'').trim()||null,
+   city:String(data.city||'').trim()||null,province:province||null,
+   surface_type:data.surface_type||null,width_profile:data.width_profile||null,length_profile:data.length_profile||null,
+   is_opponent_venue:data.is_opponent_venue==='true'
+  }};
+ }
  if(kind==='fixtures'){
   if(!blank.fixtures){
    const round=Number(data.round_no);
@@ -1295,6 +1321,7 @@ export async function staffSubmit(e,ctx){
    if(!obj.id)obj.payload.season_id=ctx.state.season;
   }
   if(obj.table==='app_seasons'&&!obj.id)obj.payload.team_id=ctx.state.base.team.id;
+  if(obj.table==='venues'&&!obj.id)obj.payload.team_id=ctx.state.base.team.id;
   if(obj.table==='app_seasons'&&obj.id&&obj.payload.status==='future'&&
    ctx.state.base.seasons.find(s=>s.id===obj.id)?.status==='active')
    throw Error('La stagione attiva può essere cambiata solo con «Imposta come attiva»');
