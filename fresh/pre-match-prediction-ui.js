@@ -1,5 +1,5 @@
 const pct=value=>Math.round(Number(value||0)*100);
-const score=value=>Number(value||0).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
+const score=value=>String(Math.max(0,Math.round(Number(value)||0)));
 const signed=value=>{const n=Math.round((Number(value||.5)-.5)*200);return n===0?'neutro':(n>0?'+':'')+n};
 const metric=value=>Number(value||0).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
 const metric2=value=>Number(value||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
