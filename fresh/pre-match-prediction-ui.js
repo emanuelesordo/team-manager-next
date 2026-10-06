@@ -58,6 +58,7 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
    '<div class="prematch-probability"><div><b>'+escape(key)+'</b><span>'+escape(label)+'</span><strong>'+pct(value)+'%</strong></div>'+
    '<i><span style="width:'+pct(value)+'%"></span></i></div>').join('')+'</div>'+
   field+comparisonMarkup+attentionMarkup+
+  (result.narrative?'<section class="prematch-narrative"><div class="prematch-section-title"><span class="eyebrow">SCENARIO ATTESO</span><h4>Come può svilupparsi la gara</h4></div><p>'+escape(result.narrative)+'</p></section>':'')+
   '<details class="prematch-details"><summary>Dettaglio dei fattori del modello</summary><div class="prematch-factor-grid">'+factorRows+'</div></details>'+
   '<p class="prematch-footnote">Copertura dati: <b>'+escape(result.coverage)+'%</b> · '+escape(result.completedCompetitionMatches)+
   ' gare concluse della competizione disponibili prima di questa partita. Il modello usa solo dati antecedenti al match e non incorpora informazioni successive.</p>';
