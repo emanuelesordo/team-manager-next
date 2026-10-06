@@ -38,8 +38,8 @@ test('pre-match prediction returns normalized 1X2 probabilities and expected sco
 
 test('prediction never uses results after target kickoff',()=>{
  const base=predictMatch({fixture:fixtures[4],competition,fixtures,history,venues,matches:[],events:[],team:null,competitions:[competition]});
- const future=fixture(7,'finished','2026-09-22T18:00:00Z','C','A',8,0,'Campo A');
- const changed=predictMatch({fixture:fixtures[4],competition,fixtures:[...fixtures,future],history,venues,matches:[],events:[],team:null,competitions:[competition]});
+ const changedRows=fixtures.map((f,i)=>i===5?{...f,status:'finished',home_score:8,away_score:0}:f);
+ const changed=predictMatch({fixture:fixtures[4],competition,fixtures:changedRows,history,venues,matches:[],events:[],team:null,competitions:[competition]});
  assert.equal(base.expectedGoals.home,changed.expectedGoals.home);
  assert.equal(base.expectedGoals.away,changed.expectedGoals.away);
  assert.deepEqual(base.probabilities,changed.probabilities);
