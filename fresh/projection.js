@@ -47,7 +47,7 @@ function historicalPrior(team,history=[]){
   const hasGoalDifference=Number.isFinite(gd)&&r.goal_difference!==null&&r.goal_difference!=='';
   const gdScale=Math.max(8,Number.isInteger(totalPositions)?totalPositions:12)*4;
   const gdScore=hasGoalDifference?clamp(.5+gd/gdScale):.5;
-  const seasonScore=hasGoalDifference?.9*baseScore+.1*gdScore:baseScore;
+  const seasonScore=hasGoalDifference ? .9*baseScore+.1*gdScore : baseScore;
   const weight=5-index;
   sum+=seasonScore*weight;weightsTotal+=weight;
  });
