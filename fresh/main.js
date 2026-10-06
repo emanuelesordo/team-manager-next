@@ -178,18 +178,29 @@ function paintTeamWeightedRatings(){
   if(visible)el.textContent=value.toFixed(2).replace('.',',');
  });
 }
+async function publicWeightedRating(matchId){
+ try{
+  const value=await rpc('tm_app_public_weighted_rating',{p_match_id:matchId});
+  const n=Number(value);
+  return Number.isFinite(n)?n:null;
+ }catch{return null}
+}
 async function hydrateHomeTeamRatings(){
  if(state.page!=='home'||state.loading)return;
  const targets=carouselFixtures().filter(isFinished).map(f=>({f,m:(state.data?.matches||[]).find(x=>x.fixture_id===f.id)})).filter(x=>x.m?.id);
- const missing=targets.filter(({m})=>!teamRatingCache.has(String(m.id)));
- await Promise.all(missing.map(async({f,m})=>{
-  try{
-   const info=await loadMatchInfo(m.id);
-   const value=weightedTeamRating({match:m,matchPlayers:info.players||[],events:info.events||[],ratings:info.ratings||[],competition:competition(f.competition_id)||{}});
-   teamRatingCache.set(String(m.id),Number.isFinite(value)?value:null);
-  }catch{teamRatingCache.set(String(m.id),null)}
+ await Promise.all(targets.map(async({m})=>{
+  const value=await publicWeightedRating(m.id);
+  teamRatingCache.set(String(m.id),value);
  }));
  if(state.page==='home')paintTeamWeightedRatings();
+}
+async function hydrateMatchTeamRating(){
+ if(state.page!=='match'||state.loading)return;
+ const m=resolveMatch().operational;
+ if(!m?.id)return;
+ const value=await publicWeightedRating(m.id);
+ teamRatingCache.set(String(m.id),value);
+ if(state.page==='match'&&resolveMatch().operational?.id===m.id)paintTeamWeightedRatings();
 }
 function fixtureWeightedBadge(f){
  const m=(state.data?.matches||[]).find(x=>x.fixture_id===f?.id);
@@ -705,7 +716,7 @@ function render(){
  if(state.page==='competitions'&&!state.loading){const scroller=document.querySelector('[data-rounds-scroll]');const focus=scroller?.querySelector('[data-round-focus]');if(scroller&&focus){const next=scroller.querySelector('[data-round-next]');const bounds=scroller.getBoundingClientRect();const first=focus.getBoundingClientRect();const last=(next||focus).getBoundingClientRect();const top=first.top-bounds.top+scroller.scrollTop;const visibleHeight=last.bottom-first.top+12;scroller.style.height=Math.ceil(visibleHeight)+'px';scroller.scrollTop=Math.max(0,top);}}
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading){paintMatchHeaderCompact();requestAnimationFrame(()=>requestAnimationFrame(centerVotePickers))}
- if(state.page==='home'&&!state.loading){void hydrateHomeRatings();void hydrateHomeTeamRatings();}
+ if(state.page==='home'&&!state.loading){void hydrateHomeRatings();void hydrateHomeTeamRatings();}if(state.page==='match'&&!state.loading)void hydrateMatchTeamRating();
  manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[],(row)=>{const match=(state.data?.standings||[]).find(x=>('team:'+x.team_id===row.club_id&&x.team_id)||('opponent:'+x.opponent_id===row.club_id&&x.opponent_id));return match?club(row.team,'tiny',{team_id:match.team_id,opponent_id:match.opponent_id}):''});paintLineupPitch();paintCallups();if(state.page==='match'&&!state.loading)startStaffClock(isStaff(staffContext())?staffContext():null);
 }
 function centerVotePickers(){
@@ -724,7 +735,7 @@ function navigate(page){
  history.replaceState(null,'',page==='match'&&state.match?matchRoute(state.match):'#'+page);
  render();window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
 }
-function changeSlide(nextIndex){const a=carouselFixtures();if(!a.length)return;state.slide=(nextIndex+a.length)%a.length;const slot=document.querySelector('[data-home-hero]');if(state.page==='home'&&slot){slot.innerHTML=hero();return}render()}
+function changeSlide(nextIndex){const a=carouselFixtures();if(!a.length)return;state.slide=(nextIndex+a.length)%a.length;const slot=document.querySelector('[data-home-hero]');if(state.page==='home'&&slot){slot.innerHTML=hero();paintTeamWeightedRatings();return}render()}
 let gesture=null;
 document.addEventListener('touchstart',e=>{if(e.target.closest('.hero-panel'))gesture={x:e.changedTouches[0].clientX,y:e.changedTouches[0].clientY}},{passive:true});
 document.addEventListener('touchend',e=>{if(!gesture||!e.target.closest('.hero-panel')){gesture=null;return}const dx=e.changedTouches[0].clientX-gesture.x,dy=e.changedTouches[0].clientY-gesture.y;gesture=null;if(Math.abs(dx)>54&&Math.abs(dx)>Math.abs(dy)*1.3)changeSlide(state.slide+(dx<0?1:-1))},{passive:true});
