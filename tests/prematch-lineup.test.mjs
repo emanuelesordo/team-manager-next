@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildHypotheticalLineup} from '../fresh/pre-match-lineup.js';
+import {buildHypotheticalLineup,renderHypotheticalLineup} from '../fresh/pre-match-lineup.js';
 
 const team={id:'team-1',name:'Caselle'};
 const fixture={id:'fx-target',competition_id:'c1',status:'scheduled',kickoff_at:'2026-10-12T19:00:00Z',
@@ -42,6 +42,10 @@ test('hypothetical XI uses comparable formations and excludes current absences',
  assert.ok(result.players.every(p=>Number.isFinite(p.expectedRating)));
  assert.ok(result.players.every(p=>Number.isFinite(p.meanRating)));
  assert.ok(Number.isFinite(result.xiExpectedRating));
+ const html=renderHypotheticalLineup(result);
+ assert.match(html,/atteso/);
+ assert.match(html,/media/);
+ assert.match(html,/prematch-player-rating/);
 });
 
 test('hypothetical XI falls back to recent lineups when comparable sample is absent',()=>{
