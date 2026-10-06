@@ -39,10 +39,9 @@ Deno.serve(async req=>{
   if(!/^[a-z0-9._'-]{3,64}$/.test(username))return reply({ok:true});
   const {data:profile}=await admin.from("profiles").select("id,is_active").eq("username",username).maybeSingle();
   if(profile?.is_active){
-   const {data:recent}=await admin.from("tm_password_reset_requests").select("requested_at")
-    .eq("user_id",profile.id).order("requested_at",{ascending:false}).limit(1);
-   const last=recent?.[0]?.requested_at;
-   if(!last||Date.now()-new Date(last).getTime()>24*3600000){
+   const {data:pending}=await admin.from("tm_password_reset_requests").select("id")
+    .eq("user_id",profile.id).eq("status","pending").limit(1);
+   if(!pending?.length){
     const {data:created,error}=await admin.from("tm_password_reset_requests").insert({user_id:profile.id}).select("id").single();
     if(!error&&created?.id)await notifyAdmins(created.id,profile.id,username);
    }
