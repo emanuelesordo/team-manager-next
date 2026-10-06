@@ -106,11 +106,17 @@ function strengthRows(teams,completed,allCompetitionRows,config,history){
   const attack=n?clamp((gf/n)/(Math.max(.3,leagueGoalRate)*2),0,1):.5;
   const defense=n?1-clamp((ga/n)/(Math.max(.3,leagueGoalRate)*2),0,1):.5;
   const current=.40*ppg+.30*recent+.15*gd+.075*attack+.075*defense;
+  const structural=.45*ppg+.25*gd+.15*attack+.15*defense;
   const prior=historicalPrior(club,history);
+  const scheduled=Math.max(1,totalGames.get(club)||0);
+  const structuralEvidence=clamp(n/Math.max(4,scheduled*.5));
+  const potential=prior.seasons?
+   clamp(prior.score*(1-.45*structuralEvidence)+structural*(.45*structuralEvidence)):
+   clamp(.5*(1-structuralEvidence)+structural*structuralEvidence);
   const historyShare=Math.min(.22,.22*historicalWeight(n,totalGames.get(club)));
   const strength=clamp(current*(1-historyShare)+prior.score*historyShare);
   const shrink=n/(n+3);
-  raw.set(club,{club,played:n,gf,ga,ppg,recent,gd,current,prior:prior.score,historySeasons:prior.seasons,
+  raw.set(club,{club,played:n,gf,ga,ppg,recent,gd,current,structural,potential,prior:prior.score,historySeasons:prior.seasons,
    historyShare,strength,totalGames:totalGames.get(club)||0,
    attackRate:leagueGoalRate*(1-shrink)+(n?gf/n:leagueGoalRate)*shrink,
    defenseRate:leagueGoalRate*(1-shrink)+(n?ga/n:leagueGoalRate)*shrink});
@@ -123,10 +129,10 @@ function rankBucket(diff){
 function matchupBehavior(club,targetOpponent,completed,strengths,config){
  const own=strengths.get(club);if(!own)return {bucket:'similar',sample:0,rate:.5,delta:0};
  const target=strengths.get(targetOpponent);
- const bucket=rankBucket((target?.strength??.5)-own.strength);
+ const bucket=rankBucket((target?.potential??.5)-own.potential);
  const rows=completed.filter(f=>homeId(f)===club||awayId(f)===club).filter(f=>{
   const opp=homeId(f)===club?awayId(f):homeId(f);
-  const other=strengths.get(opp);return rankBucket((other?.strength??.5)-own.strength)===bucket;
+  const other=strengths.get(opp);return rankBucket((other?.potential??.5)-own.potential)===bucket;
  });
  const rate=resultRate(rows,club,config);
  const delta=rows.length?clamp(rate-own.ppg,-.35,.35):0;
@@ -235,10 +241,10 @@ function outcomeProbabilities(homeLambda,awayLambda){
  if(total>0){home/=total;draw/=total;away/=total}
  return {home,draw,away,mostLikely:{home:best.home,away:best.away,probability:best.p/Math.max(total,1e-9)}};
 }
-function rankOf(club,strengths){
- return 1+[...strengths.values()].filter(x=>x.strength>(strengths.get(club)?.strength??.5)).length;
+function potentialRankOf(club,strengths){
+ return 1+[...strengths.values()].filter(x=>x.potential>(strengths.get(club)?.potential??.5)).length;
 }
-function bucketLabel(bucket){return bucket==='higher'?'rango superiore':bucket==='lower'?'rango inferiore':'rango simile'}
+function bucketLabel(bucket){return bucket==='higher'?'potenziale superiore':bucket==='lower'?'potenziale inferiore':'potenziale simile'}
 
 export function predictionSignature({fixture,fixtures=[],history=[],venues=[],events=[]}={}){
  return JSON.stringify([
@@ -294,9 +300,11 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const factors=[
   {key:'form',label:'Forma recente',home:home.recent,away:away.recent,
    detail:home.played&&away.played?'Ultime gare pesate con maggiore importanza alle più recenti.':'Campione ancora ridotto.'},
+  {key:'potential',label:'Potenziale atteso',home:home.potential,away:away.potential,
+   detail:'Valore sulla carta: storico e livello pregresso, corretti gradualmente dalla qualità strutturale mostrata nella stagione corrente. La forma recente resta separata.'},
   {key:'competition',label:'Andamento competizione',home:home.strength,away:away.strength,
-   detail:'Forza corrente ricavata da punti, forma, DR, attacco/difesa e piccolo prior storico.'},
-  {key:'rank',label:'Contro squadre di rango',home:homeBehavior.rate,away:awayBehavior.rate,
+   detail:'Forza attuale ricavata da punti, forma, DR, attacco/difesa e piccolo prior storico.'},
+  {key:'rank',label:'Contro squadre di potenziale',home:homeBehavior.rate,away:awayBehavior.rate,
    detail:(homeBehavior.sample||awayBehavior.sample)?
     fixture.home_team+': '+homeBehavior.sample+' precedenti contro '+bucketLabel(homeBehavior.bucket)+' · '+fixture.away_team+': '+awayBehavior.sample+' contro '+bucketLabel(awayBehavior.bucket):
     'Nessun precedente comparabile sufficiente nella competizione.'},
@@ -325,8 +333,8 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
 
  return {
   fixtureId:fixture.id,
-  home:{id:homeClub,name:fixture.home_team,rank:rankOf(homeClub,strengths),strength:home.strength,played:home.played},
-  away:{id:awayClub,name:fixture.away_team,rank:rankOf(awayClub,strengths),strength:away.strength,played:away.played},
+  home:{id:homeClub,name:fixture.home_team,potentialRank:potentialRankOf(homeClub,strengths),potential:home.potential,strength:home.strength,played:home.played},
+  away:{id:awayClub,name:fixture.away_team,potentialRank:potentialRankOf(awayClub,strengths),potential:away.potential,strength:away.strength,played:away.played},
   expectedGoals:{home:homeLambda,away:awayLambda},
   probabilities:probability,
   coverage,
