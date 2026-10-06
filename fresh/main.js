@@ -23,6 +23,8 @@ import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
 import {weightedTeamRating} from './team-rating.js?legacy=20261006v1';
+import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261006v1';
+import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261006v1';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -54,6 +56,7 @@ const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar'
 const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'overview',scoreEditing:false,matchData:null,timelineEditor:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',rosterSort:'name',rosterDesc:false,theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
 let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
 let verifiedEventCache=null,analyticsBusy=false;
+let predictionEventCache=null,predictionBusy=false,predictionRenderKey='';
 async function pollLive(){
  if(pollBusy||document.hidden||state.loading||!state.season||state.overlay||state.page==='admin'||state.page==='match'&&state.matchTab==='staff')return;
  pollBusy=true;const currentSeason=state.season;
@@ -612,8 +615,11 @@ function match(){
  else if(selectedTab==='events')body=staffAccess&&!extraMatch?staffMatchSection(staffContext(),f,m,'events'):'<div class="inner-card"><h3>Cronologia eventi</h3>'+timeline+'</div>';
  else if(selectedTab==='lineup')body=isStaff(staffContext())&&m?matchLineup(staffContext(),m):'<div class="inner-card">'+formation+'</div>';
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E,competition:comp,kit:activeKit});
- else body=extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
-  '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>';
+ else {
+  const prediction=preMatchPredictionContainer(f,E);
+  body=prediction+(extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
+   '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>');
+ }
  return '<button class="back-link" data-page="calendar">'+ico('back')+' Torna al calendario</button>'+
   '<div class="match-header-sentinel" aria-hidden="true"></div>'+header+compactHeader+'<section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">'+
   tabs.map(([id,label])=>'<button role="tab" aria-selected="'+(selectedTab===id)+'" data-tab="'+id+
@@ -716,7 +722,7 @@ function render(){
  if(state.page==='competitions'&&!state.loading){const scroller=document.querySelector('[data-rounds-scroll]');const focus=scroller?.querySelector('[data-round-focus]');if(scroller&&focus){const next=scroller.querySelector('[data-round-next]');const bounds=scroller.getBoundingClientRect();const first=focus.getBoundingClientRect();const last=(next||focus).getBoundingClientRect();const top=first.top-bounds.top+scroller.scrollTop;const visibleHeight=last.bottom-first.top+12;scroller.style.height=Math.ceil(visibleHeight)+'px';scroller.scrollTop=Math.max(0,top);}}
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading){paintMatchHeaderCompact();requestAnimationFrame(()=>requestAnimationFrame(centerVotePickers))}
- if(state.page==='home'&&!state.loading){void hydrateHomeRatings();void hydrateHomeTeamRatings();}if(state.page==='match'&&!state.loading)void hydrateMatchTeamRating();
+ if(state.page==='home'&&!state.loading){void hydrateHomeRatings();void hydrateHomeTeamRatings();}if(state.page==='match'&&!state.loading){void hydrateMatchTeamRating();void hydrateMatchPrediction();}
  manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[],state.base?.clubHistory||[],(row)=>{const match=(state.data?.standings||[]).find(x=>('team:'+x.team_id===row.club_id&&x.team_id)||('opponent:'+x.opponent_id===row.club_id&&x.opponent_id));return match?club(row.team,'tiny',{team_id:match.team_id,opponent_id:match.opponent_id}):''});paintLineupPitch();paintCallups();if(state.page==='match'&&!state.loading)startStaffClock(isStaff(staffContext())?staffContext():null);
 }
 function centerVotePickers(){
@@ -746,7 +752,7 @@ function manageCarousel(){
 }
 async function switchSeason(id){
  if(!state.base.seasons.some(x=>x.id===id))return;
- const loadId=++state.loadId;state.season=id;state.comp=null;state.match=null;state.player=null;state.slide=0;state.loading=true;render();
+ const loadId=++state.loadId;state.season=id;state.comp=null;state.match=null;state.player=null;state.slide=0;predictionEventCache=null;predictionRenderKey='';state.loading=true;render();
  try{const data=await loadSeason(id,isStaff(staffContext()),state.identity?.role?.role==='admin');if(loadId!==state.loadId)return;state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render()}
  catch(e){state.loading=false;render();toast('Dati non disponibili: '+e.message)}
 }
@@ -778,6 +784,44 @@ async function refreshLive(){
   state.matchData=await loadMatchInfo(m.id);
  }
  if(state.match===id)render();
+}
+async function hydrateMatchPrediction(){
+ const target=document.querySelector('[data-prematch-prediction]');
+ if(!target||predictionBusy||!state.data||!state.match)return;
+ const f=fixtures().find(x=>x.id===state.match),comp=competition(f?.competition_id);
+ if(!f||!comp||!['scheduled','postponed'].includes(String(f.status||'')))return;
+ const chosen=state.season,matches=(state.data.matches||[]).filter(m=>!m.is_test);
+ let events=[];
+ try{
+  if(predictionEventCache?.season===chosen)events=predictionEventCache.events;
+  else{
+   const ids=matches.map(m=>m.id).filter(Boolean);
+   predictionBusy=true;
+   if(ids.length){
+    const query='select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&match_id=in.('+
+     ids.map(encodeURIComponent).join(',')+')&limit=2000';
+    events=await get('app_match_events',query);
+   }
+   if(chosen!==state.season)return;
+   predictionEventCache={season:chosen,events};
+  }
+  const signature=predictionSignature({fixture:f,fixtures:realFixtures(),history:state.base?.clubHistory||[],venues:state.base?.venues||[],events});
+  if(target.dataset.ready===signature||predictionRenderKey===signature)return;
+  predictionRenderKey=signature;
+  const result=predictMatch({
+   fixture:f,competition:comp,fixtures:realFixtures(),history:state.base?.clubHistory||[],
+   venues:state.base?.venues||[],matches,events,team:team(),competitions:state.data?.competitions||[]
+  });
+  const current=document.querySelector('[data-prematch-prediction="'+CSS.escape(f.id)+'"]');
+  if(current){
+   current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">DATI · NON QUOTE</span></div>'+
+    renderPreMatchPrediction(result,E);
+   current.dataset.ready=signature;
+  }
+ }catch(error){
+  const current=document.querySelector('[data-prematch-prediction]');
+  if(current)current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div></div><p class="empty">Pronostico non disponibile: '+E(error.message)+'</p>';
+ }finally{predictionBusy=false}
 }
 async function fillAnalytics(){
  const box=document.querySelector('[data-event-analysis]');if(!box||!state.data)return;
