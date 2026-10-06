@@ -39,3 +39,31 @@ test('changing labels does not alter the identity or simulation seed',()=>{
  const original=projectLeague(competition,data,table,100),updated=projectLeague(competition,newLabels,renamedStandings,100);
  assert.deepEqual(original.rows.map(x=>[x.club_id,x.position,x.expectedPoints]),updated.rows.map(x=>[x.club_id,x.position,x.expectedPoints]));
 });
+
+
+test('historical weight decays against the actual competition length',()=>{
+ const mk=(id,status,home,away,hs=null,as=null)=>({
+  id:String(id),competition_id:cid,status,kickoff_at:'2026-10-'+String(id).padStart(2,'0')+'T18:00:00Z',
+  home_team:home,away_team:away,home_team_id:null,home_opponent_id:home,
+  away_team_id:null,away_opponent_id:away,home_score:hs,away_score:as
+ });
+ const history=[
+  {opponent_id:'A',season_start_year:2025,tier_level:2,final_position:2,total_positions:14,points:42,max_points:54,goal_difference:20},
+  {opponent_id:'B',season_start_year:2025,tier_level:3,final_position:12,total_positions:14,points:14,max_points:54,goal_difference:-25}
+ ];
+ const fixtures=Array.from({length:12},(_,i)=>mk(i+1,i<6?'finished':'scheduled',i%2?'A':'B',i%2?'B':'A',i<6?(i%3):null,i<6?((i+1)%3):null));
+ const standings=[
+  {competition_id:cid,team:'A',opponent_id:'A',points:9,played:6},
+  {competition_id:cid,team:'B',opponent_id:'B',points:9,played:6}
+ ];
+ const half=projectLeague(competition,fixtures,standings,100,history);
+ for(const row of half.rows){
+  assert.equal(row.gamesCompleted,6);
+  assert.equal(row.totalCompetitionGames,12);
+  assert.ok(Math.abs(row.historicalWeight-(6/(6+2.5*6)))<1e-9);
+ }
+ const earlyFixtures=fixtures.map((f,i)=>i<2?f:{...f,status:'scheduled',home_score:null,away_score:null});
+ const earlyStandings=standings.map(x=>({...x,played:2,points:3}));
+ const early=projectLeague(competition,earlyFixtures,earlyStandings,100,history);
+ assert.ok(early.rows.every(x=>x.historicalWeight>.6&&x.historicalWeight<.7));
+});
