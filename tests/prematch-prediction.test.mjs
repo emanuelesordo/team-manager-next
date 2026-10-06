@@ -34,6 +34,8 @@ test('pre-match prediction returns normalized 1X2 probabilities and expected sco
  assert.ok(result.expectedGoals.home>0&&result.expectedGoals.away>0);
  assert.ok(result.coverage>=0&&result.coverage<=100);
  assert.equal(result.venue.surface_type,'synthetic');
+ assert.ok(typeof result.narrative==='string'&&result.narrative.length>20);
+ assert.ok(result.lineupFixtureWeights?.home&&typeof result.lineupFixtureWeights.home==='object');
 });
 
 test('prediction never uses results after target kickoff',()=>{
