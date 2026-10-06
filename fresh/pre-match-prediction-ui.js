@@ -19,7 +19,7 @@ export function preMatchPredictionContainer(fixture,escape=value=>String(value??
 
 export function renderPreMatchPrediction(result,escape=value=>String(value??'')){
  if(!result)return '<p class="empty">Dati insufficienti per elaborare un pronostico pre-partita.</p>';
- const p=result.probabilities||{},most=p.mostLikely||{},comparison=result.comparison||{},situational=result.situational||{};
+ const p=result.probabilities||{},most=p.mostLikely||{},scorelines=p.topScorelines||[],comparison=result.comparison||{},situational=result.situational||{};
  const homeStats=comparison.home||{},awayStats=comparison.away||{},homeSitu=situational.home||{},awaySitu=situational.away||{};
  const comparisonRows=[
   ['Punti / gara',metric2(homeStats.ppg),metric2(awayStats.ppg)],
@@ -51,8 +51,10 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
    '<div><span>'+escape(item.club)+'</span><strong>'+escape(item.label)+'</strong></div><b>'+escape(item.value)+'</b><small>'+escape(item.detail)+'</small></article>').join('')+'</div>':
    '<p class="prematch-attention-empty">Campione ancora troppo ridotto per evidenziare pattern situazionali affidabili.</p>')+'</section>';
  return '<div class="prematch-summary">'+
-  '<div class="prematch-expected"><span>RISULTATO ATTESO</span><strong>'+score(result.expectedGoals.home)+' <i>–</i> '+score(result.expectedGoals.away)+'</strong>'+
-  '<small>Risultato esatto più probabile: <b>'+escape(most.home)+'–'+escape(most.away)+'</b> ('+pct(most.probability)+'%)</small></div>'+
+  '<div class="prematch-expected"><span>RISULTATO ATTESO</span><strong>'+escape(most.home)+' <i>–</i> '+escape(most.away)+'</strong>'+
+  '<small class="prematch-score-main">Probabilità score esatto: <b>'+pct(most.probability)+'%</b></small>'+
+  (scorelines.length>1?'<div class="prematch-score-alternatives">'+scorelines.slice(1,3).map(s=>'<span><b>'+escape(s.home)+'–'+escape(s.away)+'</b> '+pct(s.probability)+'%</span>').join('')+'</div>':'')+
+  '</div>'+
   '<div class="prematch-ranks"><span><small>Potenziale atteso</small><b>#'+escape(result.home.potentialRank)+' '+escape(result.home.name)+'</b></span>'+
   '<span><small>Potenziale atteso</small><b>#'+escape(result.away.potentialRank)+' '+escape(result.away.name)+'</b></span></div>'+
   '</div>'+
