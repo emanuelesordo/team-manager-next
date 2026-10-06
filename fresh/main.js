@@ -13,7 +13,7 @@ import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.j
 import {projectionContainer,updateProjection} from './projection-ui.js?clubs=20261003id';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261005legacy1';
-import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
+import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js?live=20261006halftime1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
 
 import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=20261005proposed';
@@ -373,7 +373,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return output;
  };
  const renderPeriod=p=>{
-  const entries=descending.filter(x=>periodNo(x.event)===p);
+  const entries=descending.filter(x=>periodNo(x.event)===p&&x.event?.payload?.period!=='halftime');
   const base=duration===null?null:p*duration;
   const added=x=>{const n=absoluteMinute(x.event);return recovery(x.event)>0||(base!==null&&n!==null&&n>=base)};
   const stoppage=entries.filter(added),regular=entries.filter(x=>!added(x));
@@ -390,9 +390,10 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO');
   return output+groupedRows(regular);
  };
+ const halftimeRows=groupedRows(descending.filter(x=>x.event?.payload?.period==='halftime'));
  let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI');
  if(maxPeriod===2){
-  parts+=renderPeriod(2)+(periodEndByPeriod.has(1)?'':heading('HT '+halfScore))+renderPeriod(1);
+  parts+=renderPeriod(2)+(halftimeRows?heading('INTERVALLO')+halftimeRows:'')+(periodEndByPeriod.has(1)?'':heading('HT '+halfScore))+renderPeriod(1);
  }else if(maxPeriod>2){
   for(let p=maxPeriod;p>=1;p--){
    parts+=renderPeriod(p);
@@ -419,6 +420,7 @@ function timelineEventEditor(){
  const sideValue=ev?.team_side||ev?.side||(fixtureOnly?'home':'team');
  const minute=ev?.minute??edit.minute??'';
  const stoppage=ev?.stoppage_minute??edit.stoppage??0;
+ const periodValue=ev?.payload?.period||((Number(minute)>=Number(matchRules(m,competition(f.competition_id))?.minutes_per_period||40))?'second_half':'first_half');
  const people=state.data?.players||[];
  const playerOptions='<option value="">—</option>'+people.map(p=>'<option value="'+E(p.id)+'" '+(ev?.player_id===p.id?'selected':'')+'>'+E(matchPlayerLabel(p))+'</option>').join('');
  const secondaryOptions='<option value="">—</option>'+people.map(p=>'<option value="'+E(p.id)+'" '+(ev?.secondary_player_id===p.id?'selected':'')+'>'+E(matchPlayerLabel(p))+'</option>').join('');
@@ -429,6 +431,7 @@ function timelineEventEditor(){
   '<form data-timeline-event-form class="staff-form live-sheet-form" data-event-id="'+E(ev?.id||'')+'" data-fixture-only="'+fixtureOnly+'">'+
    '<div class="live-sheet-grid"><label class="staff-field"><span>Tipo</span><select name="event_type">'+types.map(([k,l])=>'<option value="'+k+'" '+((ev?.event_type||'goal')===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
    '<label class="staff-field"><span>Squadra</span><select name="team_side">'+sideOptions.map(([k,l])=>'<option value="'+k+'" '+(sideValue===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
+   '<label class="staff-field"><span>Periodo</span><select name="period"><option value="first_half" '+(periodValue==='first_half'?'selected':'')+'>1° tempo</option><option value="halftime" '+(periodValue==='halftime'?'selected':'')+'>Intervallo</option><option value="second_half" '+(periodValue==='second_half'?'selected':'')+'>2° tempo</option><option value="extra" '+(periodValue==='extra'?'selected':'')+'>Supplementari</option></select></label>'+
    '<label class="staff-field"><span>Minuto</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+E(minute)+'"></label>'+
    '<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+E(stoppage)+'"></label>'+
    (!fixtureOnly?'<label class="staff-field"><span>Giocatore</span><select name="player_id">'+playerOptions+'</select></label><label class="staff-field"><span>Secondo giocatore</span><select name="secondary_player_id">'+secondaryOptions+'</select></label>':'')+
@@ -1056,13 +1059,27 @@ document.addEventListener('submit',async e=>{
   if(!Number.isInteger(stoppage)||stoppage<0||stoppage>30){toast('Recupero non valido');return}
   try{
    if(m){
+    const period=String(fd.get('period')||'first_half');
+    const periodLen=Number(matchRules(m,competition(f.competition_id))?.minutes_per_period||40);
+    const eventMinute=type==='substitution'&&period==='halftime'?periodLen:minute;
+    const eventStoppage=type==='substitution'&&period==='halftime'?0:stoppage;
+    const periodNo=period==='second_half'?2:period==='extra'?3:1;
     if(eventId){
      const ev=state.matchData?.events?.find(x=>String(x.id)===String(eventId));if(!ev)throw Error('Evento non trovato');
-     await rpc('tm_app_amend_event',{p_match_id:m.id,p_event_id:eventId,p_expected_status:ev.validation_status,
-      p_changes:{event_type:type,team_side:teamSide,player_id:fd.get('player_id')||null,secondary_player_id:fd.get('secondary_player_id')||null,minute,stoppage_minute:stoppage,notes:String(fd.get('notes')||'')},
-      p_reason:'Rettifica da timeline'});
+     const counted=Boolean(ev.payload?.counted_in_score);
+     if(counted&&(type!==ev.event_type||teamSide!==ev.team_side))throw Error('Per un gol già conteggiato puoi modificare minuto/giocatore, non tipo o squadra');
+     const payload={...(ev.payload||{}),period,period_no:periodNo,notes:String(fd.get('notes')||'')};
+     await adminWrite('app_match_events','PATCH',{
+      event_type:type,team_side:teamSide,player_id:teamSide==='team'?(fd.get('player_id')||null):null,
+      secondary_player_id:teamSide==='team'?(fd.get('secondary_player_id')||null):null,
+      minute:eventMinute,stoppage_minute:eventStoppage,payload
+     },{id:eventId});
     }else{
-     await rpc('tm_app_submit_live_event',{p_match_id:m.id,p_event:{event_type:type,team_side:teamSide,player_id:fd.get('player_id')||null,secondary_player_id:fd.get('secondary_player_id')||null,minute,stoppage_minute:stoppage,notes:String(fd.get('notes')||''),count_score:true,captured_at:new Date().toISOString(),minute_mode:'manual',minute_origin:'manual',request_key:crypto.randomUUID()}});
+     if(m.status==='live'){
+      await rpc('tm_app_submit_live_event',{p_match_id:m.id,p_event:{event_type:type,team_side:teamSide,player_id:fd.get('player_id')||null,secondary_player_id:fd.get('secondary_player_id')||null,minute:eventMinute,stoppage_minute:eventStoppage,notes:String(fd.get('notes')||''),count_score:true,captured_at:new Date().toISOString(),minute_mode:'manual',minute_origin:'manual',request_key:crypto.randomUUID(),payload:{period,period_no:periodNo}}});
+     }else{
+      await adminWrite('app_match_events','POST',{match_id:m.id,fixture_id:f.id,event_type:type,team_side:teamSide,player_id:teamSide==='team'?(fd.get('player_id')||null):null,secondary_player_id:teamSide==='team'?(fd.get('secondary_player_id')||null):null,minute:eventMinute,stoppage_minute:eventStoppage,payload:{period,period_no:periodNo,notes:String(fd.get('notes')||''),entered_from:'timeline_admin',count_score:false},proposed_by:state.identity.user,validation_status:'official',source:'manual'});
+     }
     }
     state.matchData=await loadMatchInfo(m.id);
    }else{
