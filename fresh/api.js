@@ -130,6 +130,11 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
  const names=Object.keys(requests),arr=await Promise.allSettled(names.map(k=>get(...requests[k])));
  const output={errors:{}};
  names.forEach((n,i)=>{const x=arr[i];output[n]=x.status==='fulfilled'?x.value:[];if(x.status==='rejected')output.errors[n]=x.reason.message});
+ try{
+  const publicStats=await publicGet('app_player_season_stats','select=season_id,player_id,first_name,last_name,position_group,appearances,starts,minutes,goals,assists,yellow_cards,red_cards,blue_cards,avg_rating&season_id=eq.'+encodeURIComponent(id)+'&limit=1000');
+  if(Array.isArray(publicStats)&&publicStats.length)output.playerStats=publicStats;
+ }catch(error){}
+
  // Enrich player identities when private columns are available, but never let
  // a private-detail failure remove the names needed by match history/timeline.
  if(Array.isArray(output.playerDetails)){
