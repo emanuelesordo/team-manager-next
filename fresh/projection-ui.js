@@ -1,4 +1,4 @@
-import {projectLeague,projectionSignature} from './projection.js?history=20261006v1';
+import {projectLeague,projectionSignature} from './projection.js?history=20261006v2';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let lastKey='',busyKey='';
 export function projectionContainer(competition){
