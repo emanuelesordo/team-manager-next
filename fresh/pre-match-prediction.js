@@ -229,6 +229,96 @@ function numericalBehavior(club,primaryTeam,completed,matches,events,competition
  const score=clamp(.5+.10*clamp(supRate/2,-1,1)+.10*clamp(infRate/2,-1,1));
  return {exposure,superiorMinutes,inferiorMinutes,score,delta:clamp(score-.5,-.2,.2),insufficient:false};
 }
+
+function eventFixture(event,matchesById,fixturesById){
+ if(event?.fixture_id&&fixturesById.has(key(event.fixture_id)))return fixturesById.get(key(event.fixture_id));
+ const match=matchesById.get(key(event?.match_id));
+ return match?.fixture_id?fixturesById.get(key(match.fixture_id))||null:null;
+}
+function eventClub(event,fixture,primaryTeam,forGoal=false){
+ if(!event||!fixture)return null;
+ let side=event.team_side||event.side;
+ if(forGoal&&event.event_type==='own_goal'){
+  if(side==='home')side='away';else if(side==='away')side='home';
+  else if(side==='team')side='opponent';else if(side==='opponent')side='team';
+ }
+ if(side==='home')return homeId(fixture);
+ if(side==='away')return awayId(fixture);
+ if(side==='team'||side==='opponent'){
+  const primary=primaryTeam?.id?'team:'+primaryTeam.id:null;
+  if(!primary)return null;
+  const opponent=homeId(fixture)===primary?awayId(fixture):awayId(fixture)===primary?homeId(fixture):null;
+  return side==='team'?primary:opponent;
+ }
+ return null;
+}
+function comparisonMetrics(club,completed,config){
+ const rows=completed.filter(f=>homeId(f)===club||awayId(f)===club);
+ let gf=0,ga=0,pts=0;
+ for(const f of rows){const s=scoreFor(f,club);if(!s)continue;gf+=s[0];ga+=s[1];pts+=points(s[0],s[1],config)}
+ const played=rows.length;
+ const recent=rows.slice().sort((a,b)=>Date.parse(a.kickoff_at)-Date.parse(b.kickoff_at)).slice(-5);
+ let recentPts=0;for(const f of recent){const s=scoreFor(f,club);if(s)recentPts+=points(s[0],s[1],config)}
+ return {played,ppg:played?pts/played:0,gfPerGame:played?gf/played:0,gaPerGame:played?ga/played:0,gdPerGame:played?(gf-ga)/played:0,
+  recentPpg:recent.length?recentPts/recent.length:0};
+}
+function situationalMetrics(club,completed,matches,events,competitions,primaryTeam){
+ const fixturesById=new Map(completed.map(f=>[key(f.id),f]));
+ const matchesById=new Map((matches||[]).map(m=>[key(m.id),m]));
+ const byFixture=new Map();
+ for(const e of events||[]){
+  if(e.validation_status==='rejected')continue;
+  const f=eventFixture(e,matchesById,fixturesById);if(!f)continue;
+  const list=byFixture.get(key(f.id))||[];list.push(e);byFixture.set(key(f.id),list);
+ }
+ let timelineSample=0,trailed=0,recovered=0,comebackWins=0,led=0,heldLead=0,lostLead=0;
+ let opponentReds=0,ownReds=0,cardSample=0;
+ for(const f of completed.filter(x=>homeId(x)===club||awayId(x)===club)){
+  const all=byFixture.get(key(f.id))||[];
+  cardSample++;
+  for(const e of all){
+   if(!['red_card','second_yellow'].includes(e.event_type))continue;
+   const receiver=eventClub(e,f,primaryTeam,false);
+   if(receiver===club)ownReds++;else if(receiver)opponentReds++;
+  }
+  const goals=all.filter(e=>goalTypes.has(e.event_type)&&e.payload?.count_score!==false);
+  if(goals.length!==Number(f.home_score)+Number(f.away_score)||goals.some(e=>!Number.isInteger(e.minute)))continue;
+  const comp=(competitions||[]).find(x=>key(x.id)===key(f.competition_id));
+  goals.sort((a,b)=>(cumulativeEventMinute(a,comp)??999)-(cumulativeEventMinute(b,comp)??999)||
+   Number(a.stoppage_minute||0)-Number(b.stoppage_minute||0)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  let ours=0,theirs=0,wasBehind=false,wasAhead=false,reachedEqualAfterBehind=false,reachedEqualAfterAhead=false;
+  for(const e of goals){
+   const scorer=eventClub(e,f,primaryTeam,true);if(!scorer)continue;
+   if(scorer===club)ours++;else theirs++;
+   if(ours<theirs)wasBehind=true;if(ours>theirs)wasAhead=true;
+   if(wasBehind&&ours>=theirs)reachedEqualAfterBehind=true;
+   if(wasAhead&&ours<=theirs)reachedEqualAfterAhead=true;
+  }
+  timelineSample++;
+  const s=scoreFor(f,club);if(!s)continue;
+  if(wasBehind){trailed++;if(reachedEqualAfterBehind)recovered++;if(s[0]>s[1])comebackWins++}
+  if(wasAhead){led++;if(s[0]>s[1])heldLead++;if(reachedEqualAfterAhead)lostLead++}
+ }
+ return {timelineSample,trailed,recovered,comebackWins,led,heldLead,lostLead,cardSample,opponentReds,ownReds,
+  recoveryRate:trailed?recovered/trailed:null,leadHoldRate:led?heldLead/led:null,
+  opponentRedRate:cardSample?opponentReds/cardSample:null,ownRedRate:cardSample?ownReds/cardSample:null};
+}
+function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
+ const out=[];
+ const push=(club,label,value,detail,tone='watch')=>out.push({club,label,value,detail,tone});
+ const inspect=(name,base,situ)=>{
+  if(base.played>=2&&base.recentPpg-base.ppg>=.5)push(name,'Forma in crescita','↑',base.recentPpg.toFixed(2)+' punti/gara nelle ultime contro '+base.ppg.toFixed(2)+' complessivi','strength');
+  if(base.played>=2&&base.ppg-base.recentPpg>=.5)push(name,'Forma in calo','↓',base.recentPpg.toFixed(2)+' punti/gara recenti contro '+base.ppg.toFixed(2)+' complessivi','risk');
+  if(situ.trailed>=2&&situ.recoveryRate>=.5)push(name,'Rimonta spesso',Math.round(situ.recoveryRate*100)+'%',situ.recovered+' recuperi dopo essere andata sotto in '+situ.trailed+' casi','strength');
+  if(situ.led>=2&&situ.leadHoldRate>=.75)push(name,'Protegge bene il vantaggio',Math.round(situ.leadHoldRate*100)+'%',situ.heldLead+' vittorie dopo essere passata avanti in '+situ.led+' gare','strength');
+  if(situ.led>=2&&situ.lostLead/situ.led>=.5)push(name,'Vantaggio vulnerabile',Math.round(100*situ.lostLead/situ.led)+'%',situ.lostLead+' volte raggiunta dopo essere passata avanti','risk');
+  if(situ.cardSample>=2&&situ.opponentRedRate>=.25)push(name,'Fa espellere avversari',situ.opponentReds,situ.opponentReds+' espulsioni avversarie in '+situ.cardSample+' gare con eventi disponibili','watch');
+  if(situ.cardSample>=2&&situ.ownRedRate>=.25)push(name,'Rischio disciplina',situ.ownReds,situ.ownReds+' espulsioni proprie in '+situ.cardSample+' gare con eventi disponibili','risk');
+  if(base.played>=2&&base.gfPerGame>=base.gaPerGame+.75)push(name,'Produzione offensiva','+'+(base.gfPerGame-base.gaPerGame).toFixed(1),base.gfPerGame.toFixed(1)+' gol fatti/gara contro '+base.gaPerGame.toFixed(1)+' subiti','strength');
+ };
+ inspect(homeName,homeBase,homeSitu);inspect(awayName,awayBase,awaySitu);
+ return out.slice(0,8);
+}
 function factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r}
 function poissonProbability(k,lambda){return Math.exp(-lambda)*Math.pow(lambda,k)/factorial(k)}
 function outcomeProbabilities(homeLambda,awayLambda){
@@ -273,6 +363,14 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
 
  const homeBehavior=matchupBehavior(homeClub,awayClub,completed,strengths,competition);
  const awayBehavior=matchupBehavior(awayClub,homeClub,completed,strengths,competition);
+ const homeComparableFixtures=completed.filter(f=>homeId(f)===homeClub||awayId(f)===homeClub).filter(f=>{
+  const opp=homeId(f)===homeClub?awayId(f):homeId(f),other=strengths.get(opp);
+  return rankBucket((other?.potential??.5)-home.potential)===homeBehavior.bucket;
+ }).map(f=>f.id);
+ const awayComparableFixtures=completed.filter(f=>homeId(f)===awayClub||awayId(f)===awayClub).filter(f=>{
+  const opp=homeId(f)===awayClub?awayId(f):homeId(f),other=strengths.get(opp);
+  return rankBucket((other?.potential??.5)-away.potential)===awayBehavior.bucket;
+ }).map(f=>f.id);
  const targetVenue=fixtureVenue(fixture,venues);
  const homeVenue=venueBehavior(homeClub,targetVenue,completed,venues,competition,home.ppg);
  const awayVenue=venueBehavior(awayClub,targetVenue,completed,venues,competition,away.ppg);
@@ -297,6 +395,10 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  homeLambda=clamp(homeLambda,.15,4.5);awayLambda=clamp(awayLambda,.15,4.5);
 
  const probability=outcomeProbabilities(homeLambda,awayLambda);
+ const homeComparison=comparisonMetrics(homeClub,completed,competition),awayComparison=comparisonMetrics(awayClub,completed,competition);
+ const homeSituational=situationalMetrics(homeClub,completed,matches,events,competitions,team);
+ const awaySituational=situationalMetrics(awayClub,completed,matches,events,competitions,team);
+ const attention=attentionPoints(fixture.home_team,fixture.away_team,homeComparison,awayComparison,homeSituational,awaySituational);
  const factors=[
   {key:'form',label:'Forma recente',home:home.recent,away:away.recent,
    detail:home.played&&away.played?'Ultime gare pesate con maggiore importanza alle più recenti.':'Campione ancora ridotto.'},
@@ -339,6 +441,10 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   probabilities:probability,
   coverage,
   completedCompetitionMatches:completed.length,
+  comparison:{home:homeComparison,away:awayComparison},
+  situational:{home:homeSituational,away:awaySituational},
+  attention,
+  comparableFixtureIds:{home:homeComparableFixtures,away:awayComparableFixtures},
   factors,
   venue:targetVenue?{name:targetVenue.name,surface_type:targetVenue.surface_type,width_profile:targetVenue.width_profile,length_profile:targetVenue.length_profile}:null
  };
