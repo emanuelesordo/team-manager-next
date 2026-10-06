@@ -1223,3 +1223,19 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
  .match-detail-head .match-header-team .team-weighted-score{height:16px;min-width:25px;padding:0 4px;font-size:8px}
  .match-detail-head .match-header-team .team-name-rating>strong{font-size:10px;line-height:1.1}
 }
+
+
+/* Rating squadra: posizione esterna allo stemma, come riferimento allegato. */
+.team-crest-rating{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:0}
+.team-crest-rating-home .team-weighted-score{order:-1}
+.team-crest-rating-away .team-weighted-score{order:2}
+.hero-club .team-crest-rating{margin-bottom:2px}
+.match-header-team .team-crest-rating{margin-bottom:2px}
+.match-compact-club .team-crest-rating{gap:4px}
+.match-compact-club .team-crest-rating .team-weighted-score{height:17px;min-width:27px;padding:0 5px;font-size:8px}
+@media(max-width:650px){
+ .home-feature .hero-club .team-crest-rating{gap:5px}
+ .home-feature .hero-club .team-crest-rating .team-weighted-score{height:18px;min-width:29px;padding:0 5px;font-size:9px}
+ .match-detail-head .match-header-team .team-crest-rating{gap:4px}
+ .match-detail-head .match-header-team .team-crest-rating .team-weighted-score{height:16px;min-width:25px;padding:0 4px;font-size:8px}
+}
