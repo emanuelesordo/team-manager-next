@@ -116,7 +116,7 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
    '<div class="vote-control is-disabled"><small class="vote-save-state">'+(unused?'Non applicabile':'Non disponibile')+'</small></div>';
   const ratingLevel=average===null?'unrated':average>=9?'elite':average>=8?'high':average>=7?'above':average>=6?'even':average>=5?'below':'low';
   const avgLabel='<span class="ov-rating ov-rating-'+ratingLevel+(average===null?' ov-no-rating':'')+'" title="'+(stats.count?e('Voto medio partita: '+averageText+' ('+stats.count+' voti'+(stats.sv?' · '+stats.sv+' SV':'')+')'):'Nessun voto registrato')+'">'+e(averageText)+'</span>';
-  const shirt='<span class="vote-shirt">'+shirtSvg(kit||{},'vote-'+id,false,row.shirt_number)+'<b>'+e(row.shirt_number??'—')+'</b></span>';
+  const shirt='<span class="vote-shirt">'+shirtSvg(kit||{},'vote-'+id,false,row.shirt_number)+'</span>';
   return '<article class="vote-row'+(unused?' vote-row-unused':'')+'">'+
    '<div class="vote-shirt-cell">'+shirt+'</div>'+
    '<div class="vote-flow-cell">'+(played.flow||'<span class="vote-flow none">—</span>')+'</div>'+
