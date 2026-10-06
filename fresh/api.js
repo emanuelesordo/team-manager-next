@@ -208,6 +208,14 @@ export async function adminWrite(table,method,values,where={}){
 }
 
 /** Edge action: admin auth validated by the deployed server function. */
+export async function runCsiCheck(fixture_id){
+ if(!hasSession())throw new Error('Accesso richiesto');
+ if(!/^[0-9a-f-]{36}$/i.test(String(fixture_id||'')))throw new Error('Partita non valida');
+ const response=await authorized('/functions/v1/csi-match-parser',{method:'POST',body:{fixture_id}});
+ if(!response?.ok)throw new Error(response?.error||'Controllo CSI non riuscito');
+ return response;
+}
+
 export async function reviewPasswordRequest(request_id,decision){
  if(!hasSession())throw new Error('Accesso richiesto');
  if(!['resolve','reject'].includes(decision))throw new Error('Decisione non valida');
