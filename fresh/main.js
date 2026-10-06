@@ -25,6 +25,7 @@ import {installNotifications,syncNotificationBell,resetNotifications} from './no
 import {weightedTeamRating} from './team-rating.js?legacy=20261006v1';
 import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261006v3';
 import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261006v2';
+import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261006v1';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -56,7 +57,7 @@ const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar'
 const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'overview',scoreEditing:false,matchData:null,timelineEditor:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',rosterSort:'name',rosterDesc:false,theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
 let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
 let verifiedEventCache=null,analyticsBusy=false;
-let predictionEventCache=null,predictionBusy=false,predictionRenderKey='';
+let predictionEventCache=null,predictionBusy=false;
 async function pollLive(){
  if(pollBusy||document.hidden||state.loading||!state.season||state.overlay||state.page==='admin'||state.page==='match'&&state.matchTab==='staff')return;
  pollBusy=true;const currentSeason=state.season;
@@ -617,7 +618,10 @@ function match(){
  else if(selectedTab==='ratings')body=votesPanel({match:m,data,people:state.data?.players||[],userId:state.identity.user,loggedIn:hasSession(),escape:E,competition:comp,kit:activeKit});
  else {
   const prediction=preMatchPredictionContainer(f,E);
-  body=prediction+(extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
+  const preMatch=['scheduled','postponed'].includes(String(f.status||''))&&!extraMatch;
+  if(preMatch)body='<div class="prematch-overview-grid"><div class="prematch-overview-left">'+prediction+'</div>'+
+   '<aside class="glass prematch-lineup-panel" data-prematch-lineup="'+E(f.id)+'"><div class="prematch-loading"><span class="loader"></span><span>Calcolo formazione ipotetica…</span></div></aside></div>';
+  else body=prediction+(extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
    '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>');
  }
  return '<button class="back-link" data-page="calendar">'+ico('back')+' Torna al calendario</button>'+
@@ -752,7 +756,7 @@ function manageCarousel(){
 }
 async function switchSeason(id){
  if(!state.base.seasons.some(x=>x.id===id))return;
- const loadId=++state.loadId;state.season=id;state.comp=null;state.match=null;state.player=null;state.slide=0;predictionEventCache=null;predictionRenderKey='';state.loading=true;render();
+ const loadId=++state.loadId;state.season=id;state.comp=null;state.match=null;state.player=null;state.slide=0;predictionEventCache=null;state.loading=true;render();
  try{const data=await loadSeason(id,isStaff(staffContext()),state.identity?.role?.role==='admin');if(loadId!==state.loadId)return;state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render()}
  catch(e){state.loading=false;render();toast('Dati non disponibili: '+e.message)}
 }
@@ -797,17 +801,20 @@ async function hydrateMatchPrediction(){
   else{
    const ids=matches.map(m=>m.id).filter(Boolean);
    predictionBusy=true;
-   if(ids.length){
-    const query='select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&match_id=in.('+
-     ids.map(encodeURIComponent).join(',')+')&limit=2000';
-    events=await get('app_match_events',query).catch(()=>[]);
-   }
+   const fixtureIds=realFixtures().filter(x=>x.competition_id===f.competition_id&&x.status==='finished').map(x=>x.id).filter(Boolean);
+   const queries=[];
+   if(ids.length)queries.push(get('app_match_events','select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&match_id=in.('+
+    ids.map(encodeURIComponent).join(',')+')&limit=2000').catch(()=>[]));
+   if(fixtureIds.length)queries.push(get('app_match_events','select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,validation_status,payload,created_at&fixture_id=in.('+
+    fixtureIds.map(encodeURIComponent).join(',')+')&limit=2000').catch(()=>[]));
+   const batches=queries.length?await Promise.all(queries):[];
+   const merged=new Map();for(const batch of batches)for(const event of batch)merged.set(event.id,event);
+   events=[...merged.values()];
    if(chosen!==state.season)return;
    predictionEventCache={season:chosen,events};
   }
   const signature=predictionSignature({fixture:f,fixtures:realFixtures(),history:state.base?.clubHistory||[],venues:state.base?.venues||[],events});
-  if(target.dataset.ready===signature||predictionRenderKey===signature)return;
-  predictionRenderKey=signature;
+  if(target.dataset.ready===signature)return;
   const result=predictMatch({
    fixture:f,competition:comp,fixtures:realFixtures(),history:state.base?.clubHistory||[],
    venues:state.base?.venues||[],matches,events,team:team(),competitions:state.data?.competitions||[]
@@ -818,9 +825,25 @@ async function hydrateMatchPrediction(){
     renderPreMatchPrediction(result,E);
    current.dataset.ready=signature;
   }
+  const lineupTarget=document.querySelector('[data-prematch-lineup="'+CSS.escape(f.id)+'"]');
+  if(lineupTarget){
+   if(!isStaff(staffContext()))lineupTarget.innerHTML='<div class="prematch-lineup-empty">Formazione ipotetica disponibile allo staff.</div>';
+   else{
+    const operational=resolveMatch().operational;
+    const kits=collectionForClub(team()||{});
+    const preferred=f.home_team_id===team()?.id?'home':'away';
+    const kit=kits[operational?.match_kit_key]||kits[preferred]||kits.home||Object.values(kits)[0]||{};
+    const model=buildHypotheticalLineup({
+     fixture:f,targetMatch:operational,data:state.data,matchData:state.matchData,team:team(),competition:comp,prediction:result,kit
+    });
+    lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
+   }
+  }
  }catch(error){
   const current=document.querySelector('[data-prematch-prediction]');
   if(current)current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div></div><p class="empty">Pronostico non disponibile: '+E(error.message)+'</p>';
+  const lineupTarget=document.querySelector('[data-prematch-lineup]');
+  if(lineupTarget)lineupTarget.innerHTML='<div class="prematch-lineup-empty">Formazione ipotetica non disponibile.</div>';
  }finally{predictionBusy=false}
 }
 async function fillAnalytics(){
