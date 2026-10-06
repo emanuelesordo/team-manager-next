@@ -319,6 +319,31 @@ function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
  inspect(homeName,homeBase,homeSitu);inspect(awayName,awayBase,awaySitu);
  return out.slice(0,8);
 }
+function fixtureOpponentRelevance(club,targetOpponent,completed,strengths){
+ const target=strengths.get(targetOpponent)?.potential??.5;
+ const out={};
+ for(const f of completed.filter(x=>homeId(x)===club||awayId(x)===club)){
+  const opp=homeId(f)===club?awayId(f):homeId(f);
+  const potential=strengths.get(opp)?.potential??.5;
+  out[f.id]=clamp(Math.exp(-Math.abs(potential-target)*6),.35,1);
+ }
+ return out;
+}
+function matchNarrative(fixture,probability,expectedGoals,attention=[]){
+ const pairs=[['home',probability.home,fixture.home_team],['draw',probability.draw,'il pareggio'],['away',probability.away,fixture.away_team]]
+  .sort((a,b)=>b[1]-a[1]);
+ const top=pairs[0],gap=top[1]-pairs[1][1],total=Number(expectedGoals.home||0)+Number(expectedGoals.away||0);
+ let opening='';
+ if(gap<.08)opening='Il modello si aspetta una gara equilibrata, senza un esito nettamente dominante.';
+ else if(top[0]==='draw')opening='Il pareggio è l’esito singolo più probabile, con valori complessivamente vicini.';
+ else opening=top[2]+' parte con un vantaggio statistico '+(gap>.18?'abbastanza marcato':'contenuto')+'.';
+ let rhythm=total>=3.1?'Il profilo suggerisce una partita piuttosto aperta, con diverse occasioni e possibilità di cambi di inerzia.':
+  total<=1.8?'Il volume offensivo atteso è basso: è più probabile una gara chiusa, in cui il primo gol può pesare molto.':
+  'Il numero di gol atteso è intermedio: la partita potrebbe restare in equilibrio per una parte consistente della gara.';
+ const notable=attention.find(x=>/Rimonta|Vantaggio|espellere|disciplina|Produzione offensiva/i.test(x.label));
+ const detail=notable?' Da monitorare soprattutto '+notable.club.toLowerCase()+' per '+notable.label.toLowerCase()+'.':'';
+ return opening+' '+rhythm+detail;
+}
 function factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r}
 function poissonProbability(k,lambda){return Math.exp(-lambda)*Math.pow(lambda,k)/factorial(k)}
 function outcomeProbabilities(homeLambda,awayLambda){
@@ -371,6 +396,8 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   const opp=homeId(f)===awayClub?awayId(f):homeId(f),other=strengths.get(opp);
   return rankBucket((other?.potential??.5)-away.potential)===awayBehavior.bucket;
  }).map(f=>f.id);
+ const homeFixtureRelevance=fixtureOpponentRelevance(homeClub,awayClub,completed,strengths);
+ const awayFixtureRelevance=fixtureOpponentRelevance(awayClub,homeClub,completed,strengths);
  const targetVenue=fixtureVenue(fixture,venues);
  const homeVenue=venueBehavior(homeClub,targetVenue,completed,venues,competition,home.ppg);
  const awayVenue=venueBehavior(awayClub,targetVenue,completed,venues,competition,away.ppg);
@@ -399,6 +426,7 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const homeSituational=situationalMetrics(homeClub,completed,matches,events,competitions,team);
  const awaySituational=situationalMetrics(awayClub,completed,matches,events,competitions,team);
  const attention=attentionPoints(fixture.home_team,fixture.away_team,homeComparison,awayComparison,homeSituational,awaySituational);
+ const narrative=matchNarrative(fixture,probability,{home:homeLambda,away:awayLambda},attention);
  const factors=[
   {key:'form',label:'Forma recente',home:home.recent,away:away.recent,
    detail:home.played&&away.played?'Ultime gare pesate con maggiore importanza alle più recenti.':'Campione ancora ridotto.'},
@@ -445,6 +473,8 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   situational:{home:homeSituational,away:awaySituational},
   attention,
   comparableFixtureIds:{home:homeComparableFixtures,away:awayComparableFixtures},
+  lineupFixtureWeights:{home:homeFixtureRelevance,away:awayFixtureRelevance},
+  narrative,
   factors,
   venue:targetVenue?{name:targetVenue.name,surface_type:targetVenue.surface_type,width_profile:targetVenue.width_profile,length_profile:targetVenue.length_profile}:null
  };
