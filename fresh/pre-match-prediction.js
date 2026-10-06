@@ -44,7 +44,7 @@ function historicalPrior(club,history=[]){
   const base=.55*tierScore+.30*earned+.15*relativePositionScore;
   const gd=Number(r.goal_difference),hasGd=Number.isFinite(gd)&&r.goal_difference!==null&&r.goal_difference!=='';
   const gdScale=Math.max(8,Number.isInteger(totalPositions)?totalPositions:12)*4;
-  const seasonScore=hasGd?.9*base+.1*clamp(.5+gd/gdScale):base;
+  const seasonScore=hasGd ? .9*base+.1*clamp(.5+gd/gdScale) : base;
   const weight=5-index;sum+=seasonScore*weight;weightsTotal+=weight;
  });
  return {score:weightsTotal?clamp(sum/weightsTotal):.5,seasons:rows.length};
@@ -170,7 +170,7 @@ function managementBehavior(club,primaryTeam,completed,matches,events,competitio
    if(ours>theirs)wasAhead=true;if(ours<theirs)wasBehind=true;
   }
   const s=scoreFor(f,club);if(!s)continue;complete++;
-  const finalValue=s[0]>s[1]?1:s[0]===s[1]?.5:0;
+  const finalValue=s[0]>s[1]?1:(s[0]===s[1]?.5:0);
   if(wasAhead){led++;ledValue+=finalValue}
   if(wasBehind){trailed++;trailValue+=finalValue}
  }
