@@ -143,9 +143,20 @@ export async function loadFixtureEvents(fixtureId){
 
 export async function loadMatchInfo(matchId){
  if(!matchId)return {players:[],events:[],ratings:[],ratingMeans:[],tacticalChanges:[],errors:{}};
- const params={players:['app_match_players','select=*&match_id=eq.'+matchId],events:['app_match_events','select=*&match_id=eq.'+matchId+'&order=minute.asc.nullslast,created_at.asc'],ratings:['app_match_ratings','select=*&match_id=eq.'+matchId],ratingMeans:['tm_player_recent_votes','select=player_id,avg_rating,votes,sv&match_id=eq.'+matchId],tacticalChanges:['app_match_tactical_changes','select=*&match_id=eq.'+matchId+'&order=minute.asc,created_at.asc']};
+ const params={events:['app_match_events','select=*&match_id=eq.'+matchId+'&order=minute.asc.nullslast,created_at.asc']};
+ if(hasSession())Object.assign(params,{
+  players:['app_match_players','select=*&match_id=eq.'+matchId],
+  ratings:['app_match_ratings','select=*&match_id=eq.'+matchId],
+  ratingMeans:['tm_player_recent_votes','select=player_id,avg_rating,votes,sv&match_id=eq.'+matchId],
+  tacticalChanges:['app_match_tactical_changes','select=*&match_id=eq.'+matchId+'&order=minute.asc,created_at.asc']
+ });
  const names=Object.keys(params),results=await Promise.allSettled(names.map(x=>get(...params[x])));
- const data={errors:{}};names.forEach((k,i)=>{data[k]=results[i].status==='fulfilled'?results[i].value:[];if(results[i].status==='rejected')data.errors[k]=results[i].reason.message});
+ const data={players:[],events:[],ratings:[],ratingMeans:[],tacticalChanges:[],errors:{}};
+ names.forEach((k,i)=>{data[k]=results[i].status==='fulfilled'?results[i].value:[];if(results[i].status==='rejected')data.errors[k]=results[i].reason.message});
+ if(!hasSession()){
+  try{data.players=await publicRpc('tm_app_public_match_players',{p_match_id:matchId})||[]}
+  catch(error){data.errors.players=error.message}
+ }
  return data;
 }
 
@@ -161,10 +172,13 @@ export async function saveFixture(id,fields){
 }
 
 /** RPC server-side: autorizzazioni verificate da Supabase, non dal frontend. */
-export async function rpc(functionName,args={}){
+export async function publicRpc(functionName,args={}){
  if(!/^[a-z_][a-z0-9_]*$/.test(functionName))throw new Error('Funzione non valida');
- if(!hasSession())throw new Error('Effettua l’accesso per modificare i dati');
  return authorized('/rest/v1/rpc/'+functionName,{method:'POST',body:args});
+}
+export async function rpc(functionName,args={}){
+ if(!hasSession())throw new Error('Effettua l’accesso per modificare i dati');
+ return publicRpc(functionName,args);
 }
 /** Mutazioni RLS su tabelle esplicitamente consentite alla console admin. */
 const EDIT_TABLES=new Set(['teams','app_seasons','app_competitions','app_opponents',
