@@ -6,16 +6,16 @@ export function projectionContainer(competition){
   return '';
  return '<section class="projected glass panel" aria-label="Classifica proiettata"><div class="panel-heading"><h2>Classifica proiettata</h2><span class="projected-meta">SIMULAZIONE</span></div><div data-projection-target="'+escape(competition.id)+'"><p class="empty">Calcolo delle 10.000 stagioni…</p></div></section>';
 }
-export function updateProjection(config,allFixtures,allStandings,crest=()=>'' ){
+export function updateProjection(config,allFixtures,allStandings,history=[],crest=()=>'' ){
  const target=document.querySelector('[data-projection-target]');
  if(!target||!config||target.dataset.projectionTarget!==config.id)return;
- const key=projectionSignature(config,allFixtures,allStandings);
+ const key=projectionSignature(config,allFixtures,allStandings,history);
  if(target.dataset.ready===key)return;
  if(busyKey===key)return;
  busyKey=key;
  setTimeout(()=>{
   try{
-   const output=projectLeague(config,allFixtures,allStandings,10000);
+   const output=projectLeague(config,allFixtures,allStandings,10000,history);
    const node=document.querySelector('[data-projection-target="'+CSS.escape(config.id)+'"]');
    if(!node||node.dataset.ready===key)return;
    node.innerHTML=renderProjection(output,crest);
