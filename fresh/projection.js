@@ -53,7 +53,15 @@ function historicalPrior(team,history=[]){
  });
  return weightsTotal?clamp(sum/weightsTotal):.5;
 }
-function strengths(teams,completed,config,history=[]){
+function historicalWeight(gamesPlayed,totalGames){
+ const played=Math.max(0,Number(gamesPlayed)||0),total=Math.max(played,Number(totalGames)||0);
+ if(total<=0)return played>0?0:1;
+ if(played<=0)return 1;
+ if(played>=total)return 0;
+ const remaining=total-played;
+ return clamp(remaining/(remaining+2.5*played));
+}
+function strengths(teams,completed,config,history=[],competitionRows=[]){
  const allGoals=completed.reduce((s,f)=>s+f.home_score+f.away_score,0);
  const avgGoal=completed.length?clamp(allGoals/(completed.length*2),.6,2.2):1.3;
  const scores=new Map();
@@ -71,8 +79,10 @@ function strengths(teams,completed,config,history=[]){
    weights(away.slice(-5),{...config,team},{team,side:'away'}))/2;
   const raw=.3*ppg+.25*recent+.2*goalDiff+.1*attack+.1*defense+.05*homeAway;
   const prior=historicalPrior(team,history);
-  const shrink=n/(n+4);
-  scores.set(team,{strength:clamp(prior*(1-shrink)+raw*shrink),games:n,gf,ga,prior});
+  const totalGames=competitionRows.filter(f=>homeId(f)===team||awayId(f)===team).length;
+  const historyWeight=historicalWeight(n,totalGames);
+  const currentWeight=1-historyWeight;
+  scores.set(team,{strength:clamp(prior*historyWeight+raw*currentWeight),games:n,totalGames,gf,ga,prior,historyWeight});
  }
  return {scores,avgGoal};
 }
@@ -92,7 +102,7 @@ export function projectLeague(config,fixtures,standings,iterations=10000,history
  if(!remaining.length)return {complete:true,iterations:0,teams:teams.map(t=>({team:table.find(row=>standingId(row)===t)?.team||t,club_id:t})),played:completed.length,remaining:0};
  const signature=projectionSignature(config,rows,table,history);
  const key=signature+'|'+iterations;if(memo.has(key))return memo.get(key);
- const {scores,avgGoal}=strengths(teams,completed,config,history);
+ const {scores,avgGoal}=strengths(teams,completed,config,history,rows);
  const n=teams.length,index=new Map(teams.map((t,i)=>[t,i])),rand=random(hash(signature));
  const initialPoints=new Int32Array(n);
  const currentRank=new Map();
@@ -130,7 +140,8 @@ export function projectLeague(config,fixtures,standings,iterations=10000,history
    const ordered=ranks[i].sort((a,b)=>a-b),q=p=>ordered[Math.floor((ordered.length-1)*p)];
    return{club_id:team,team:table.find(row=>standingId(row)===team)?.team||team,position:sumsR[i]/iterations,expectedPoints:sumsP[i]/iterations,
     lowerPosition:q(.2),upperPosition:q(.8),currentPosition:currentRank.get(team),
-    existingPoints:initialPoints[i],gamesCompleted:scores.get(team)?.games??0,historicalPrior:scores.get(team)?.prior??.5,
+    existingPoints:initialPoints[i],gamesCompleted:scores.get(team)?.games??0,totalCompetitionGames:scores.get(team)?.totalGames??0,
+    historicalPrior:scores.get(team)?.prior??.5,historicalWeight:scores.get(team)?.historyWeight??0,
     expectedGoalsFor:(scores.get(team)?.gf??0)+sumsGF[i]/iterations,
     expectedGoalsAgainst:(scores.get(team)?.ga??0)+sumsGS[i]/iterations};
   }).sort((a,b)=>a.position-b.position||a.team.localeCompare(b.team,'it'))
