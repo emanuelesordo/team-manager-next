@@ -19,14 +19,16 @@ export function preMatchPredictionContainer(fixture,escape=value=>String(value??
 
 export function renderPreMatchPrediction(result,escape=value=>String(value??'')){
  if(!result)return '<p class="empty">Dati insufficienti per elaborare un pronostico pre-partita.</p>';
- const p=result.probabilities||{},most=p.mostLikely||{},comparison=result.comparison||{};
- const homeStats=comparison.home||{},awayStats=comparison.away||{};
+ const p=result.probabilities||{},most=p.mostLikely||{},comparison=result.comparison||{},situational=result.situational||{};
+ const homeStats=comparison.home||{},awayStats=comparison.away||{},homeSitu=situational.home||{},awaySitu=situational.away||{};
  const comparisonRows=[
   ['Punti / gara',metric2(homeStats.ppg),metric2(awayStats.ppg)],
   ['Gol fatti / gara',metric(homeStats.gfPerGame),metric(awayStats.gfPerGame)],
   ['Gol subiti / gara',metric(homeStats.gaPerGame),metric(awayStats.gaPerGame)],
   ['DR / gara',(homeStats.gdPerGame>=0?'+':'')+metric(homeStats.gdPerGame),(awayStats.gdPerGame>=0?'+':'')+metric(awayStats.gdPerGame)],
-  ['Forma recente · pt/g',metric2(homeStats.recentPpg),metric2(awayStats.recentPpg)]
+  ['Forma recente · pt/g',metric2(homeStats.recentPpg),metric2(awayStats.recentPpg)],
+  ['Fascia gol più forte',homeSitu.strongestFor?(homeSitu.strongestFor.label+' · '+homeSitu.strongestFor.for):'—',awaySitu.strongestFor?(awaySitu.strongestFor.label+' · '+awaySitu.strongestFor.for):'—'],
+  ['Fascia più vulnerabile',homeSitu.weakestAgainst?(homeSitu.weakestAgainst.label+' · '+homeSitu.weakestAgainst.against):'—',awaySitu.weakestAgainst?(awaySitu.weakestAgainst.label+' · '+awaySitu.weakestAgainst.against):'—']
  ];
  const attention=(result.attention||[]);
  const outcomes=[
