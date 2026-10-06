@@ -74,26 +74,38 @@ function clubHistoryFields(ctx,{teamId=null,opponentId=null}={}){
    '<div class="staff-history-season"><strong>'+esc(label)+'</strong><small>stagione precedente '+(index+1)+'/5</small></div>'+
    input('history_'+index+'_tier','Livello (A1=1, A2=2, B=3)',row?.tier_level??'','number','step="0.001" min="0.001" max="999"')+
    input('history_'+index+'_position','Posizione finale',row?.final_position??'','number','min="1" max="100"')+
+   input('history_'+index+'_total_positions','Posizioni totali / squadre',row?.total_positions??'','number','min="2" max="100"')+
    input('history_'+index+'_points','Punti ottenuti',row?.points??'','number','min="0" max="999"')+
    input('history_'+index+'_max_points','Punti disponibili',row?.max_points??'','number','min="1" max="999"')+
+   input('history_'+index+'_goal_difference','DR finale',row?.goal_difference??'','number','min="-999" max="999"')+
    '</div>';
  }).join('');
  return '<details class="staff-history" open><summary>Storico forma anni passati</summary>'+
-  help('Fino a 5 stagioni, aggiunte in ordine dalla più recente. Livello, posizione e resa punti alimentano la classifica pronostici; lo storico pesa soprattutto quando la stagione corrente ha poche gare.')+
+  help('Fino a 5 stagioni, aggiunte in ordine dalla più recente. Livello, posizione sul totale, resa punti e differenza reti alimentano la classifica pronostici; lo storico pesa soprattutto quando la stagione corrente ha poche gare.')+
   rows+'</details>';
 }
 function historyRows(form){
  return [...form.querySelectorAll('[data-history-row]')].map(row=>{
   const index=[...form.querySelectorAll('[data-history-row]')].indexOf(row);
   const value=s=>String(form.elements['history_'+index+'_'+s]?.value||'').trim();
-  const raw={id:value('id'),tier:value('tier'),position:value('position'),points:value('points'),max_points:value('max_points')};
-  const supplied=[raw.tier,raw.position,raw.points,raw.max_points].filter(v=>v!=='').length;
-  if(!supplied)return null;
-  if(supplied!==4)throw Error('Storico '+row.dataset.historyYear+': completa livello, posizione, punti e punti disponibili');
+  const raw={id:value('id'),tier:value('tier'),position:value('position'),total_positions:value('total_positions'),points:value('points'),max_points:value('max_points'),goal_difference:value('goal_difference')};
+  const core=[raw.tier,raw.position,raw.points,raw.max_points],any=[...core,raw.total_positions,raw.goal_difference].some(v=>v!=='');
+  if(!any)return null;
+  if(core.some(v=>v===''))throw Error('Storico '+row.dataset.historyYear+': completa livello, posizione, punti e punti disponibili');
   const tier=Number(raw.tier),position=Number(raw.position),points=Number(raw.points),maxPoints=Number(raw.max_points);
+  const totalPositions=raw.total_positions===''?null:Number(raw.total_positions);
+  const goalDifference=raw.goal_difference===''?null:Number(raw.goal_difference);
   if(!Number.isFinite(tier)||tier<=0||!Number.isInteger(position)||position<1||!Number.isInteger(points)||points<0||!Number.isInteger(maxPoints)||maxPoints<1||points>maxPoints)
    throw Error('Storico '+row.dataset.historyYear+': valori non validi');
-  return {id:raw.id||null,season_start_year:Number(row.dataset.historyYear),tier_level:tier,final_position:position,points,max_points:maxPoints};
+  if((totalPositions===null)!==(goalDifference===null))
+   throw Error('Storico '+row.dataset.historyYear+': inserisci sia posizioni totali sia DR');
+  if(!raw.id&&(totalPositions===null||goalDifference===null))
+   throw Error('Storico '+row.dataset.historyYear+': per una nuova stagione indica posizioni totali e DR');
+  if(totalPositions!==null&&(!Number.isInteger(totalPositions)||totalPositions<2||totalPositions>100||position>totalPositions))
+   throw Error('Storico '+row.dataset.historyYear+': totale posizioni non valido');
+  if(goalDifference!==null&&(!Number.isInteger(goalDifference)||goalDifference<-999||goalDifference>999))
+   throw Error('Storico '+row.dataset.historyYear+': DR non valida');
+  return {id:raw.id||null,season_start_year:Number(row.dataset.historyYear),tier_level:tier,final_position:position,total_positions:totalPositions,points,max_points:maxPoints,goal_difference:goalDifference};
  }).filter(Boolean);
 }
 async function persistClubHistory(form,{teamId=null,opponentId=null}={}){
