@@ -1,6 +1,8 @@
 const pct=value=>Math.round(Number(value||0)*100);
 const score=value=>Number(value||0).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
 const signed=value=>{const n=Math.round((Number(value||.5)-.5)*200);return n===0?'neutro':(n>0?'+':'')+n};
+const metric=value=>Number(value||0).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
+const metric2=value=>Number(value||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
 const venueLabel=v=>{
  if(!v)return '';
  const labels={natural:'naturale',synthetic:'sintetico',hybrid:'ibrido',narrow:'stretto',standard:'standard',wide:'largo',short:'corto',long:'lungo'};
@@ -17,7 +19,16 @@ export function preMatchPredictionContainer(fixture,escape=value=>String(value??
 
 export function renderPreMatchPrediction(result,escape=value=>String(value??'')){
  if(!result)return '<p class="empty">Dati insufficienti per elaborare un pronostico pre-partita.</p>';
- const p=result.probabilities||{},most=p.mostLikely||{};
+ const p=result.probabilities||{},most=p.mostLikely||{},comparison=result.comparison||{};
+ const homeStats=comparison.home||{},awayStats=comparison.away||{};
+ const comparisonRows=[
+  ['Punti / gara',metric2(homeStats.ppg),metric2(awayStats.ppg)],
+  ['Gol fatti / gara',metric(homeStats.gfPerGame),metric(awayStats.gfPerGame)],
+  ['Gol subiti / gara',metric(homeStats.gaPerGame),metric(awayStats.gaPerGame)],
+  ['DR / gara',(homeStats.gdPerGame>=0?'+':'')+metric(homeStats.gdPerGame),(awayStats.gdPerGame>=0?'+':'')+metric(awayStats.gdPerGame)],
+  ['Forma recente · pt/g',metric2(homeStats.recentPpg),metric2(awayStats.recentPpg)]
+ ];
+ const attention=(result.attention||[]);
  const outcomes=[
   ['1',result.home.name,p.home],
   ['X','Pareggio',p.draw],
@@ -30,6 +41,13 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
  }).join('');
  const field=result.venue?'<div class="prematch-field-profile"><span>CAMPO</span><strong>'+escape(result.venue.name||'Campo partita')+'</strong>'+
   '<small>'+escape(venueLabel(result.venue)||'Profilo non definito')+'</small></div>':'';
+ const comparisonMarkup='<section class="prematch-compare"><div class="prematch-section-title"><span class="eyebrow">CONFRONTO</span><h4>Numeri delle due squadre</h4></div>'+
+  '<div class="prematch-compare-head"><strong>'+escape(result.home.name)+'</strong><span></span><strong>'+escape(result.away.name)+'</strong></div>'+
+  comparisonRows.map(row=>'<div class="prematch-compare-row"><b>'+escape(row[1])+'</b><span>'+escape(row[0])+'</span><b>'+escape(row[2])+'</b></div>').join('')+'</section>';
+ const attentionMarkup='<section class="prematch-attention"><div class="prematch-section-title"><span class="eyebrow">PUNTI DI ATTENZIONE</span><h4>Pattern da tenere d’occhio</h4></div>'+
+  (attention.length?'<div class="prematch-attention-grid">'+attention.map(item=>'<article class="prematch-attention-item '+escape(item.tone||'watch')+'">'+
+   '<div><span>'+escape(item.club)+'</span><strong>'+escape(item.label)+'</strong></div><b>'+escape(item.value)+'</b><small>'+escape(item.detail)+'</small></article>').join('')+'</div>':
+   '<p class="prematch-attention-empty">Campione ancora troppo ridotto per evidenziare pattern situazionali affidabili.</p>')+'</section>';
  return '<div class="prematch-summary">'+
   '<div class="prematch-expected"><span>RISULTATO ATTESO</span><strong>'+score(result.expectedGoals.home)+' <i>–</i> '+score(result.expectedGoals.away)+'</strong>'+
   '<small>Risultato esatto più probabile: <b>'+escape(most.home)+'–'+escape(most.away)+'</b> ('+pct(most.probability)+'%)</small></div>'+
@@ -39,8 +57,8 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
   '<div class="prematch-probabilities">'+outcomes.map(([key,label,value])=>
    '<div class="prematch-probability"><div><b>'+escape(key)+'</b><span>'+escape(label)+'</span><strong>'+pct(value)+'%</strong></div>'+
    '<i><span style="width:'+pct(value)+'%"></span></i></div>').join('')+'</div>'+
-  field+
-  '<details class="prematch-details"><summary>Perché il modello stima questo risultato</summary><div class="prematch-factor-grid">'+factorRows+'</div></details>'+
+  field+comparisonMarkup+attentionMarkup+
+  '<details class="prematch-details"><summary>Dettaglio dei fattori del modello</summary><div class="prematch-factor-grid">'+factorRows+'</div></details>'+
   '<p class="prematch-footnote">Copertura dati: <b>'+escape(result.coverage)+'%</b> · '+escape(result.completedCompetitionMatches)+
   ' gare concluse della competizione disponibili prima di questa partita. Il modello usa solo dati antecedenti al match e non incorpora informazioni successive.</p>';
 }
