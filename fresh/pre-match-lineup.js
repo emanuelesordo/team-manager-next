@@ -1,4 +1,4 @@
-import {pitchPositions,formationModules} from './lineup-pitch.js';
+import {formationModules} from './lineup-pitch.js';
 import {shirtSvg} from './kit-editor.js';
 import {availabilityDefault} from './availability.js';
 import {matchPlayerLabel} from './match-player-label.js';
