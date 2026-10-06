@@ -71,3 +71,17 @@ test('expected potential is separate from current form and uses historical stren
  assert.ok(result.home.potential>result.away.potential);
  assert.ok(result.factors.some(x=>x.key==='potential'));
 });
+
+
+test('goal timing windows feed pre-match strengths and weaknesses',()=>{
+ const events=[
+  {id:'g1',fixture_id:'1',match_id:null,event_type:'goal',minute:8,stoppage_minute:0,team_side:'home',validation_status:'official',payload:{period:'first_half'}},
+  {id:'g2',fixture_id:'1',match_id:null,event_type:'goal',minute:14,stoppage_minute:0,team_side:'home',validation_status:'official',payload:{period:'first_half'}},
+  {id:'g3',fixture_id:'4',match_id:null,event_type:'goal',minute:7,stoppage_minute:0,team_side:'away',validation_status:'official',payload:{period:'first_half'}},
+  {id:'g4',fixture_id:'4',match_id:null,event_type:'goal',minute:18,stoppage_minute:0,team_side:'away',validation_status:'official',payload:{period:'first_half'}}
+ ];
+ const result=predictMatch({fixture:fixtures[4],competition,fixtures,history,venues,matches:[],events,team:null,competitions:[competition]});
+ assert.equal(result.situational.home.totalTimedGoalsFor,4);
+ assert.equal(result.situational.home.strongestFor.label,"1′–20′");
+ assert.ok(result.attention.some(x=>x.club==='A'&&x.label.includes('Picco offensivo')));
+});
