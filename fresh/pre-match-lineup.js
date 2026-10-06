@@ -66,7 +66,7 @@ function bestForSlot(candidates,used,slot,targetRole,scores){
  let best=null,bestScore=-Infinity;
  for(const c of candidates){
   if(used.has(c.player_id))continue;
-  const role=roleOf(c.person),roleFit=role===targetRole?3:(targetRole==='C'&&['D','A'].includes(role)?.25:0);
+  const role=roleOf(c.person),roleFit=role===targetRole?3:(targetRole==='C'&&['D','A'].includes(role)?0.25:0);
   const slotFit=scores.slotScore.get(c.player_id+'|'+slot)||0;
   const general=scores.score.get(c.player_id)||0;
   const value=slotFit+general+roleFit+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
@@ -75,7 +75,8 @@ function bestForSlot(candidates,used,slot,targetRole,scores){
  return best;
 }
 export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team,competition,prediction,kit}={}){
- if(!fixture||!team?.id||!targetMatch||!data)return null;
+ if(!fixture||!team?.id||!data)return null;
+ targetMatch=targetMatch||{id:null,kickoff_at:fixture.kickoff_at,competition_id:fixture.competition_id};
  const teamSide=fixture.home_team_id===team.id?'home':fixture.away_team_id===team.id?'away':null;
  if(!teamSide)return null;
  const kickoff=Date.parse(fixture.kickoff_at||'');
