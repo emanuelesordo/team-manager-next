@@ -1,4 +1,4 @@
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc} from './api.js?names=20261005matchread1';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc} from './api.js?names=20261006weighted1';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
@@ -157,10 +157,36 @@ function standings(comp,limit=0){
  return `<div class="table-scroller"><table class="standing-table"><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>DR</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.team_id===team()?.id?'ours':''}"><td>${i+1}</td><td><span class="standing-team">${club(r.team,'tiny',{team_id:r.team_id,opponent_id:r.opponent_id})}<span>${E(r.team)}</span></span></td><td>${r.played??'—'}</td><td>${r.won??'—'}</td><td>${r.drawn??'—'}</td><td>${r.lost??'—'}</td><td>${r.goals_for??'—'}</td><td>${r.goals_against??'—'}</td><td>${r.goal_difference??'—'}</td><td class="points">${r.points??'—'}</td></tr>`).join('')}</tbody></table></div>`
 }
 function carouselFixtures(){const a=[previous(),next()].filter(Boolean);return a.filter((f,i)=>a.findIndex(x=>x.id===f.id)===i)}
+function weightedMatchScore(matchId){
+ if(!matchId)return null;
+ const rows=(state.data?.matchRatingSummary||[]).filter(r=>r.match_id===matchId&&Number(r.rating_count)>0&&Number.isFinite(Number(r.average_rating)));
+ if(!rows.length)return null;
+ const total=rows.reduce((sum,r)=>sum+Number(r.rating_count||0),0);
+ if(!total)return null;
+ return rows.reduce((sum,r)=>sum+Number(r.average_rating)*Number(r.rating_count||0),0)/total;
+}
+function weightedScoreLevel(score){
+ return score>=9?'elite':score>=8?'high':score>=7?'above':score>=6?'even':score>=5?'below':'low';
+}
+function weightedScoreBadge(matchId){
+ const value=weightedMatchScore(matchId);
+ if(!Number.isFinite(value))return '';
+ return '<span class="team-weighted-score score-'+weightedScoreLevel(value)+'" title="Punteggio ponderato squadra · media dei voti, ponderata per il numero di valutazioni">'+
+  E(value.toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:2}))+'</span>';
+}
+function fixtureWeightedBadge(f){
+ const m=(state.data?.matches||[]).find(x=>x.fixture_id===f?.id);
+ return m?weightedScoreBadge(m.id):'';
+}
+function teamNameWithWeighted(name,badge=''){
+ return '<span class="team-name-rating"><strong>'+E(name)+'</strong>'+badge+'</span>';
+}
 function hero(){
  const slides=carouselFixtures();if(!slides.length)return '<div class="hero-panel"><div class="empty light">Non ci sono ancora partite in calendario.</div></div>';
  state.slide=Math.min(state.slide,slides.length-1);const f=slides[state.slide];
- return `<section class="hero-panel"><div class="hero-bg"></div><div class="hero-content"><p>${E(competition(f.competition_id)?.name||'Competizione')} ${f.round_no!=null?'· Giornata '+E(f.round_no):''}</p><div class="hero-score"><div class="hero-club">${club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}<strong>${E(f.home_team)}</strong></div><div class="hero-mid"><span class="hero-live">${status(f)}</span><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="hero-club">${club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}<strong>${E(f.away_team)}</strong></div></div><div class="hero-bottom"><div class="dots">${slides.map((_,i)=>`<button data-slide="${i}" class="${i===state.slide?'on':''}" aria-label="Mostra partita ${i+1}"></button>`).join('')}</div><div class="hero-arrows"><button data-action="prevslide" aria-label="Precedente">${ico('back',17)}</button><button data-action="nextslide" aria-label="Successiva">${ico('chevron',17)}</button></div><button class="primary-btn" data-match="${E(f.id)}">Dettagli match ${ico('arrow',17)}</button></div></div></section>`;
+ const weighted=fixtureWeightedBadge(f);
+ const homeBadge=f.home_team_id===team()?.id?weighted:'',awayBadge=f.away_team_id===team()?.id?weighted:'';
+ return `<section class="hero-panel"><div class="hero-bg"></div><div class="hero-content"><p>${E(competition(f.competition_id)?.name||'Competizione')} ${f.round_no!=null?'· Giornata '+E(f.round_no):''}</p><div class="hero-score"><div class="hero-club">${club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})}${teamNameWithWeighted(f.home_team,homeBadge)}</div><div class="hero-mid"><span class="hero-live">${status(f)}</span><b>${score(f)}</b><small>${date(f.kickoff_at)} · ${time(f.kickoff_at)}</small></div><div class="hero-club">${club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})}${teamNameWithWeighted(f.away_team,awayBadge)}</div></div><div class="hero-bottom"><div class="dots">${slides.map((_,i)=>`<button data-slide="${i}" class="${i===state.slide?'on':''}" aria-label="Mostra partita ${i+1}"></button>`).join('')}</div><div class="hero-arrows"><button data-action="prevslide" aria-label="Precedente">${ico('back',17)}</button><button data-action="nextslide" aria-label="Successiva">${ico('chevron',17)}</button></div><button class="primary-btn" data-match="${E(f.id)}">Dettagli match ${ico('arrow',17)}</button></div></div></section>`;
 }
 
 const ratingsHomeCache=new Map();
@@ -499,6 +525,9 @@ function match(){
  const liveClockBase=Number(m?.live_clock_seconds||0),liveClockAnchor=Date.parse(m?.live_clock_anchor||'');
  const liveClockNow=Math.max(0,liveClockBase+(m?.live_clock_running&&Number.isFinite(liveClockAnchor)?Math.floor((Date.now()-liveClockAnchor)/1000):0));
  const liveClockText=String(Math.floor(liveClockNow/60)).padStart(2,'0')+':'+String(liveClockNow%60).padStart(2,'0');
+ const weighted=weightedScoreBadge(m?.id);
+ const homeWeighted=f.home_team_id===team()?.id?weighted:'';
+ const awayWeighted=f.away_team_id===team()?.id?weighted:'';
  const headerTimer=m&&m.status==='live'?
   (m.live_period==='halftime'?
    '<div class="match-header-live-clock match-header-interval"><small>Intervallo</small></div>':
@@ -506,19 +535,19 @@ function match(){
    '<small data-staff-period-label data-base-label="'+E(livePeriodLabel)+'" data-recovery="'+E(liveRecovery)+'">'+E(livePeriodLabel)+'</small></div>'):'';
  const compactHeader='<div class="match-compact-bar glass'+(matchIsLive?' is-live':'')+'" aria-hidden="true">'+
   (matchIsLive?'':('<div class="match-compact-club match-compact-home">'+club(f.home_team,'sm',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
-  '<strong>'+E(f.home_team)+'</strong></div>'))+
+  teamNameWithWeighted(f.home_team,homeWeighted)+'</div>'))+
   '<div class="match-compact-center"><b class="match-compact-score">'+headerScore+'</b>'+headerTimer+'</div>'+
-  (matchIsLive?'':('<div class="match-compact-club match-compact-away"><strong>'+E(f.away_team)+'</strong>'+
+  (matchIsLive?'':('<div class="match-compact-club match-compact-away">'+teamNameWithWeighted(f.away_team,awayWeighted)+
   club(f.away_team,'sm',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+'</div>'))+'</div>';
  const statusEditor=editor?'<select data-extra-status aria-label="Stato partita">'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,text])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+text+'</option>').join('')+'</select>':null;
  const testNotice=f.is_test?'<div class="match-test-banner"><strong>TEST PRIVATO</strong> · solo tuo · '+E(rules.periods)+'×'+E(rules.minutes_per_period)+"'"+' · cambi '+(rules.rolling_substitutions?'rotanti':'non rotanti')+' · escluso da classifiche e statistiche</div>':'';
  const header=testNotice+'<div class="match-detail-head glass">'+
   '<div class="match-expanded">'+
   '<div class="match-detail-score"><div class="match-header-team match-header-team-home">'+club(f.home_team,'xl',{team_id:f.home_team_id,opponent_id:f.home_opponent_id})+
-  '<strong>'+E(f.home_team)+'</strong>'+renderMatchScorers(scorers,'home',E)+'</div>'+
+  teamNameWithWeighted(f.home_team,homeWeighted)+renderMatchScorers(scorers,'home',E)+'</div>'+
   '<div class="match-big-score"><div class="match-score-datetime">'+E(shortDate(f.kickoff_at))+' '+E(time(f.kickoff_at))+'</div><div class="match-score-status">'+(statusEditor||status(f))+'</div><b>'+headerScore+'</b>'+headerTimer+'</div>'+
   '<div class="match-header-team match-header-team-away">'+club(f.away_team,'xl',{team_id:f.away_team_id,opponent_id:f.away_opponent_id})+
-  '<strong>'+E(f.away_team)+'</strong>'+renderMatchScorers(scorers,'away',E)+'</div></div>'+matchMeta+'</div>'+
+  teamNameWithWeighted(f.away_team,awayWeighted)+renderMatchScorers(scorers,'away',E)+'</div></div>'+matchMeta+'</div>'+
   '</div>';
  const resultStatus=f.status==='finished'&&m?(m.result_review_status==='confirmed'?'Risultato confermato':'Risultato in attesa di conferma'):'';
  const notice=(pending?'<p class="data-warning">'+pending+' eventi ancora da ufficializzare.</p>':'')+
