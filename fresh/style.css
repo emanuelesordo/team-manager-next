@@ -1181,3 +1181,17 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
  .mt-add-event{width:18px;height:18px;font-size:12px}
  .timeline-event-sheet .live-sheet-actions{display:flex;gap:6px}
 }
+
+/* Timeline editing is activated only from the score. */
+.match-score-edit-toggle{appearance:none;border:0;background:transparent;color:inherit;font:inherit;padding:0;margin:0;cursor:pointer;border-radius:10px}
+.match-score-edit-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.match-score-edit-toggle.is-editing{animation:tm-score-edit-blink 1.15s ease-in-out infinite}
+@keyframes tm-score-edit-blink{0%,100%{opacity:1}50%{opacity:.38}}
+@media(prefers-reduced-motion:reduce){.match-score-edit-toggle.is-editing{animation:none;outline:1px dashed var(--accent);outline-offset:4px}}
+.mt-title-add{width:20px;height:20px;display:inline-grid;place-items:center;margin-left:-7px;padding:0;border:1px solid var(--border);border-radius:50%;background:var(--surface);color:var(--muted);font:500 13px/1 sans-serif;cursor:pointer}
+.mt-title-add:hover,.mt-title-add:focus-visible{color:var(--ink);border-color:color-mix(in srgb,var(--ink) 28%,var(--border))}
+.mt-divider-period,.mt-divider-title{gap:6px}
+.mt-divider-period:before,.mt-divider-period:after,.mt-divider-title:before,.mt-divider-title:after{transform-origin:center}
+.mt-divider-recovery{font-weight:500;letter-spacing:.02em;text-transform:none}
+.mt-divider-recovery span{font-weight:500}
+@media(max-width:550px){.mt-title-add{width:18px;height:18px;font-size:12px}}
