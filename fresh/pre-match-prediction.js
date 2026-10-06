@@ -273,6 +273,7 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
  }
  let timelineSample=0,trailed=0,recovered=0,comebackWins=0,led=0,heldLead=0,lostLead=0;
  let opponentReds=0,ownReds=0,cardSample=0;
+ const timing=new Map();
  for(const f of completed.filter(x=>homeId(x)===club||awayId(x)===club)){
   const all=byFixture.get(key(f.id))||[];
   cardSample++;
@@ -287,9 +288,17 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
   goals.sort((a,b)=>(cumulativeEventMinute(a,comp)??999)-(cumulativeEventMinute(b,comp)??999)||
    Number(a.stoppage_minute||0)-Number(b.stoppage_minute||0)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
   let ours=0,theirs=0,wasBehind=false,wasAhead=false,reachedEqualAfterBehind=false,reachedEqualAfterAhead=false;
+  const periodMinutes=Math.max(1,Number(comp?.minutes_per_period)||40),matchMinutes=Math.max(1,Number(comp?.periods)||2)*periodMinutes;
+  const windowSize=Math.max(1,periodMinutes/2);
   for(const e of goals){
    const scorer=eventClub(e,f,primaryTeam,true);if(!scorer)continue;
-   if(scorer===club)ours++;else theirs++;
+   const minute=Math.max(1,Number(cumulativeEventMinute(e,comp)||1));
+   const rawIndex=Math.floor((Math.min(minute,matchMinutes)-1)/windowSize);
+   const windowIndex=Math.max(0,Math.min(3,rawIndex));
+   const start=Math.floor(windowIndex*windowSize)+1,end=Math.round(Math.min(matchMinutes,(windowIndex+1)*windowSize));
+   const label=start+"′–"+end+"′",bucket=timing.get(label)||{label,start,end,for:0,against:0};
+   if(scorer===club){ours++;bucket.for++}else{theirs++;bucket.against++}
+   timing.set(label,bucket);
    if(ours<theirs)wasBehind=true;if(ours>theirs)wasAhead=true;
    if(wasBehind&&ours>=theirs)reachedEqualAfterBehind=true;
    if(wasAhead&&ours<=theirs)reachedEqualAfterAhead=true;
@@ -299,9 +308,14 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
   if(wasBehind){trailed++;if(reachedEqualAfterBehind)recovered++;if(s[0]>s[1])comebackWins++}
   if(wasAhead){led++;if(s[0]>s[1])heldLead++;if(reachedEqualAfterAhead)lostLead++}
  }
+ const goalWindows=[...timing.values()].sort((a,b)=>a.start-b.start);
+ const totalFor=goalWindows.reduce((s,x)=>s+x.for,0),totalAgainst=goalWindows.reduce((s,x)=>s+x.against,0);
+ const strongestFor=goalWindows.slice().sort((a,b)=>b.for-a.for||a.start-b.start)[0]||null;
+ const weakestAgainst=goalWindows.slice().sort((a,b)=>b.against-a.against||a.start-b.start)[0]||null;
  return {timelineSample,trailed,recovered,comebackWins,led,heldLead,lostLead,cardSample,opponentReds,ownReds,
   recoveryRate:trailed?recovered/trailed:null,leadHoldRate:led?heldLead/led:null,
-  opponentRedRate:cardSample?opponentReds/cardSample:null,ownRedRate:cardSample?ownReds/cardSample:null};
+  opponentRedRate:cardSample?opponentReds/cardSample:null,ownRedRate:cardSample?ownReds/cardSample:null,
+  goalWindows,totalTimedGoalsFor:totalFor,totalTimedGoalsAgainst:totalAgainst,strongestFor,weakestAgainst};
 }
 function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
  const out=[];
@@ -314,6 +328,10 @@ function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
   if(situ.led>=2&&situ.lostLead/situ.led>=.5)push(name,'Vantaggio vulnerabile',Math.round(100*situ.lostLead/situ.led)+'%',situ.lostLead+' volte raggiunta dopo essere passata avanti','risk');
   if(situ.cardSample>=2&&situ.opponentRedRate>=.25)push(name,'Fa espellere avversari',situ.opponentReds,situ.opponentReds+' espulsioni avversarie in '+situ.cardSample+' gare con eventi disponibili','watch');
   if(situ.cardSample>=2&&situ.ownRedRate>=.25)push(name,'Rischio disciplina',situ.ownReds,situ.ownReds+' espulsioni proprie in '+situ.cardSample+' gare con eventi disponibili','risk');
+  if(situ.strongestFor&&situ.totalTimedGoalsFor>=2&&situ.strongestFor.for/situ.totalTimedGoalsFor>=.45)
+   push(name,'Picco offensivo '+situ.strongestFor.label,situ.strongestFor.for+' gol',Math.round(100*situ.strongestFor.for/situ.totalTimedGoalsFor)+'% dei gol con minutaggio completo arriva in questa fascia','strength');
+  if(situ.weakestAgainst&&situ.totalTimedGoalsAgainst>=2&&situ.weakestAgainst.against/situ.totalTimedGoalsAgainst>=.45)
+   push(name,'Fascia vulnerabile '+situ.weakestAgainst.label,situ.weakestAgainst.against+' subiti',Math.round(100*situ.weakestAgainst.against/situ.totalTimedGoalsAgainst)+'% dei gol subiti con minutaggio completo arriva in questa fascia','risk');
   if(base.played>=2&&base.gfPerGame>=base.gaPerGame+.75)push(name,'Produzione offensiva','+'+(base.gfPerGame-base.gaPerGame).toFixed(1),base.gfPerGame.toFixed(1)+' gol fatti/gara contro '+base.gaPerGame.toFixed(1)+' subiti','strength');
  };
  inspect(homeName,homeBase,homeSitu);inspect(awayName,awayBase,awaySitu);
@@ -340,7 +358,7 @@ function matchNarrative(fixture,probability,expectedGoals,attention=[]){
  let rhythm=total>=3.1?'Il profilo suggerisce una partita piuttosto aperta, con diverse occasioni e possibilità di cambi di inerzia.':
   total<=1.8?'Il volume offensivo atteso è basso: è più probabile una gara chiusa, in cui il primo gol può pesare molto.':
   'Il numero di gol atteso è intermedio: la partita potrebbe restare in equilibrio per una parte consistente della gara.';
- const notable=attention.find(x=>/Rimonta|Vantaggio|espellere|disciplina|Produzione offensiva/i.test(x.label));
+ const notable=attention.find(x=>/Picco offensivo|Fascia vulnerabile|Rimonta|Vantaggio|espellere|disciplina|Produzione offensiva/i.test(x.label));
  const detail=notable?' Da monitorare soprattutto '+notable.club.toLowerCase()+' per '+notable.label.toLowerCase()+'.':'';
  return opening+' '+rhythm+detail;
 }
