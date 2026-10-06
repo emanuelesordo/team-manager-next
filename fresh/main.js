@@ -10,7 +10,7 @@ import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261005callup-lineup-sync1';
-import {projectionContainer,updateProjection} from './projection-ui.js?history=20261006v2';
+import {projectionContainer,updateProjection} from './projection-ui.js?history=20261006v3';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261005legacy1';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js?live=20261006halftime1';
