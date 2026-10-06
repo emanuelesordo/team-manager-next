@@ -58,3 +58,14 @@ test('signature reacts to historical and venue profile changes',()=>{
  const c=predictionSignature({fixture:fixtures[4],fixtures,history,venues:[{...venues[0],width_profile:'narrow'},...venues.slice(1)],events:[]});
  assert.notEqual(a,b);assert.notEqual(a,c);
 });
+
+
+test('expected potential is separate from current form and uses historical strength',()=>{
+ const result=predictMatch({fixture:fixtures[4],competition,fixtures,history,venues,matches:[],events:[],team:null,competitions:[competition]});
+ assert.ok(Number.isFinite(result.home.potential));
+ assert.ok(Number.isFinite(result.away.potential));
+ assert.ok(Number.isInteger(result.home.potentialRank));
+ assert.ok(Number.isInteger(result.away.potentialRank));
+ assert.ok(result.home.potential>result.away.potential);
+ assert.ok(result.factors.some(x=>x.key==='potential'));
+});
