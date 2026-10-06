@@ -43,9 +43,10 @@ test('hypothetical XI uses comparable formations and excludes current absences',
  assert.ok(result.players.every(p=>Number.isFinite(p.meanRating)));
  assert.ok(Number.isFinite(result.xiExpectedRating));
  const html=renderHypotheticalLineup(result);
- assert.match(html,/atteso/);
- assert.match(html,/media/);
  assert.match(html,/prematch-player-rating/);
+ assert.match(html,/>att</);
+ assert.match(html,/>med</);
+ assert.doesNotMatch(html,/prematch-player-rating[^>]*>[\s\S]*?—/);
 });
 
 test('hypothetical XI falls back to recent lineups when comparable sample is absent',()=>{
@@ -67,4 +68,17 @@ test('hypothetical XI can use opponent-relevance and simultaneous co-play data',
  assert.equal(result.comparableUsed,true);
  assert.ok(result.players.some(p=>p.player_id==='p12')||result.players.some(p=>p.player_id==='p11'));
  assert.ok(result.confidence>0);
+});
+
+
+test('4-4-2 pre-match positions are symmetric and evenly spaced',()=>{
+ const result=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[]},team,competition,competitions:[competition],prediction:{comparableFixtureIds:{home:['fx1','fx2'],away:[]},lineupFixtureWeights:{home:{fx1:1,fx2:.9},away:{}}},kit:{},events:[]});
+ const keeper=result.players.find(p=>p.slot===1);
+ assert.equal(keeper.x,50);
+ assert.equal(keeper.y,86);
+ const defenders=result.players.filter(p=>p.slot>=2&&p.slot<=5).sort((a,b)=>a.slot-b.slot);
+ assert.deepEqual(defenders.map(p=>Math.round(p.x*100)/100),[15,38.33,61.67,85]);
+ assert.ok(defenders.every(p=>p.y===68));
+ const gaps=defenders.slice(1).map((p,i)=>p.x-defenders[i].x);
+ assert.ok(Math.max(...gaps)-Math.min(...gaps)<0.001);
 });
