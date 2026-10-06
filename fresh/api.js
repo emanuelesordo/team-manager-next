@@ -84,11 +84,11 @@ export async function loadIdentity(){
 }
 export async function loadBase(){
  const query='select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,home_venue_name,logo_shape,logo_background_color,home_venue_address,home_venue_street,home_venue_city,home_venue_province,kits&limit=10';
- const [publicTeams,s,o]=await Promise.all([get('tm_public_teams',query),get('app_seasons','select=id,team_id,name,status,start_date,end_date&order=start_date.desc'),get('app_opponents','select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,logo_background_color,home_venue_name,home_venue_address,home_venue_street,home_venue_city,home_venue_province,kits')]);
+ const [publicTeams,s,o,h]=await Promise.all([get('tm_public_teams',query),get('app_seasons','select=id,team_id,name,status,start_date,end_date&order=start_date.desc'),get('app_opponents','select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,logo_background_color,home_venue_name,home_venue_address,home_venue_street,home_venue_city,home_venue_province,kits'),get('app_club_season_history','select=id,team_id,opponent_id,season_start_year,tier_level,final_position,points,max_points&order=season_start_year.desc&limit=500')]);
  const t=publicTeams.length?publicTeams:hasSession()?await get('teams',query):[];
  const current=s.find(x=>x.status==='active')||s[0],team=t.find(x=>x.id===current?.team_id)||t[0];
  if(!current||!team)throw Error('Squadra o stagione non configurata');
- return {team,seasons:s,opponents:o};
+ return {team,seasons:s,opponents:o,clubHistory:h};
 }
 export async function loadSeason(id,includePrivate=false,includeAdmin=false){
  const requests={
@@ -181,7 +181,7 @@ export async function rpc(functionName,args={}){
  return publicRpc(functionName,args);
 }
 /** Mutazioni RLS su tabelle esplicitamente consentite alla console admin. */
-const EDIT_TABLES=new Set(['teams','app_seasons','app_competitions','app_opponents',
+const EDIT_TABLES=new Set(['teams','app_seasons','app_competitions','app_opponents','app_club_season_history',
  'players','app_roster','app_competition_fixtures','app_matches','app_match_events','injuries','suspensions']);
 export async function adminWrite(table,method,values,where={}){
  if(!EDIT_TABLES.has(table)||!['POST','PATCH'].includes(method))throw new Error('Operazione non prevista');
