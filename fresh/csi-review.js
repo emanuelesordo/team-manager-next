@@ -1,3 +1,4 @@
+import {cumulativeEventMinute} from './match-minutes.js';
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={goal:'Gol',yellow_card:'Ammonizione',blue_card:'Cartellino blu',red_card:'Espulsione',substitution:'Cambio',unknown:'Evento CSI'};
 const norm=v=>String(v??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
@@ -22,11 +23,11 @@ function tmWho(ev,players){
  if(ev.event_type==='substitution')return [map.get(ev.player_id),map.get(ev.secondary_player_id)].filter(Boolean).join(' → ')||'Giocatori non indicati';
  return map.get(ev.player_id)||ev.payload?.opponent_player_name||(ev.payload?.opponent_shirt_number?'#'+ev.payload.opponent_shirt_number:'Giocatore non indicato');
 }
-function candidateScore(source,target,match,players){
+function candidateScore(source,target,match,players,competition){
  if(source.event_type!==target.event_type)return -1;
  const side=csiSide(source,match);
  if(side&&target.team_side!==side)return -1;
- const sm=Number(source.minute),tm=Number(target.minute);
+ const sm=Number(source.minute),tm=cumulativeEventMinute(target,competition);
  let score=45;
  if(Number.isFinite(sm)&&Number.isFinite(tm)){
   const diff=Math.abs(sm-tm);
@@ -41,14 +42,14 @@ function candidateScore(source,target,match,players){
  }
  return score;
 }
-export function compareCsiEvents(sourceEvents=[],tmEvents=[],match,players=[]){
+export function compareCsiEvents(sourceEvents=[],tmEvents=[],match,players=[],competition=null){
  const usable=tmEvents.filter(e=>e.validation_status!=='rejected'&&e.event_type!=='period_end');
  const used=new Set();
  const rows=sourceEvents.map(source=>{
   let best=null,bestScore=-1;
   for(const target of usable){
    if(used.has(target.id))continue;
-   const score=candidateScore(source,target,match,players);
+   const score=candidateScore(source,target,match,players,competition);
    if(score>bestScore){best=target;bestScore=score}
   }
   if(best&&bestScore>=60)used.add(best.id);
@@ -61,12 +62,12 @@ export function compareCsiEvents(sourceEvents=[],tmEvents=[],match,players=[]){
 function stateLabel(state){
  return {exact:'Coincide',probable:'Probabile corrispondenza',conflict:'Da controllare',csi_only:'Solo CSI',tm_only:'Solo Team Manager'}[state]||state;
 }
-export function csiReviewPanel({fixture,match,snapshot,sourceEvents=[],tmEvents=[],players=[]}={}){
+export function csiReviewPanel({fixture,match,snapshot,sourceEvents=[],tmEvents=[],players=[],competition=null}={}){
  const hasSource=Boolean(fixture?.source_url);
  if(!hasSource)return '<section class="staff-subpanel"><div class="staff-panel-heading"><div><span class="eyebrow">VERIFICA / RETTIFICA</span><h2>Controllo CSI</h2></div></div><p class="staff-help">Questa partita non ha un URL CSI associato.</p></section>';
  const head='<div class="staff-panel-heading"><div><span class="eyebrow">VERIFICA / RETTIFICA</span><h2>Confronto con CSI Live</h2></div><button type="button" class="staff-soft" data-staff-action="csi-check">Controlla ora CSI</button></div>';
  if(!snapshot)return '<section class="staff-subpanel">'+head+'<p class="staff-help">Nessun controllo CSI salvato. Il comando crea solo dati provvisori: non modifica gli eventi ufficiali.</p></section>';
- const comparisons=compareCsiEvents(sourceEvents,tmEvents,match,players);
+ const comparisons=compareCsiEvents(sourceEvents,tmEvents,match,players,competition);
  const counts=comparisons.reduce((a,x)=>(a[x.state]=(a[x.state]||0)+1,a),{});
  const score=snapshot.home_score!=null&&snapshot.away_score!=null?snapshot.home_score+'–'+snapshot.away_score:'—';
  const rows=comparisons.map(row=>{
