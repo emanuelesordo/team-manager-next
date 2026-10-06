@@ -63,6 +63,14 @@ export async function get(table,query='',signal){
  if(query)for(const [key,value] of new URLSearchParams(query))u.searchParams.set(key,value);
  return authorized(u.pathname+u.search,{signal});
 }
+async function publicGet(table,query='',signal){
+ const u=new URL(API_URL+'/rest/v1/'+table);
+ if(query)for(const [key,value] of new URLSearchParams(query))u.searchParams.set(key,value);
+ const response=await fetch(u,{headers:{apikey:PUBLISHABLE_KEY,Accept:'application/json'},signal,cache:'no-store'});
+ const data=await response.json().catch(()=>null);
+ if(!response.ok){const err=new Error(data?.message||data?.error||'Richiesta pubblica non riuscita');err.status=response.status;throw err}
+ return data;
+}
 export async function login(username,password){
  const answer=await call('/functions/v1/auth-login',{method:'POST',body:{username,password}});
  if(!answer?.ok||!answer.session)throw new Error(answer?.error||'Credenziali non valide');
@@ -84,7 +92,7 @@ export async function loadIdentity(){
 }
 export async function loadBase(){
  const query='select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,home_venue_name,logo_shape,logo_background_color,home_venue_address,home_venue_street,home_venue_city,home_venue_province,kits&limit=10';
- const [publicTeams,s,o,h,v]=await Promise.all([get('tm_public_teams',query),get('app_seasons','select=id,team_id,name,status,start_date,end_date&order=start_date.desc'),get('app_opponents','select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,logo_background_color,home_venue_name,home_venue_address,home_venue_street,home_venue_city,home_venue_province,kits'),get('app_club_season_history','select=id,team_id,opponent_id,season_start_year,tier_level,final_position,total_positions,points,max_points,goal_difference&order=season_start_year.desc&limit=500'),get('venues','select=id,team_id,name,address_line,city,province,country,is_opponent_venue,surface_type,width_profile,length_profile&order=name.asc&limit=500')]);
+ const [publicTeams,s,o,h,v]=await Promise.all([get('tm_public_teams',query),get('app_seasons','select=id,team_id,name,status,start_date,end_date&order=start_date.desc'),get('app_opponents','select=id,name,short_name,logo_url,primary_color,secondary_color,accent_color,logo_background_color,home_venue_name,home_venue_address,home_venue_street,home_venue_city,home_venue_province,kits'),get('app_club_season_history','select=id,team_id,opponent_id,season_start_year,tier_level,final_position,total_positions,points,max_points,goal_difference&order=season_start_year.desc&limit=500'),publicGet('venues','select=id,team_id,name,address_line,city,province,country,is_opponent_venue,surface_type,width_profile,length_profile&order=name.asc&limit=500')]);
  const t=publicTeams.length?publicTeams:hasSession()?await get('teams',query):[];
  const current=s.find(x=>x.status==='active')||s[0],team=t.find(x=>x.id===current?.team_id)||t[0];
  if(!current||!team)throw Error('Squadra o stagione non configurata');
