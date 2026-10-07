@@ -1,0 +1,24 @@
+name: CSI connectivity check
+on:
+  push:
+    branches: [codex/csi-daily-sync]
+    paths: ['.github/workflows/csi-connectivity.yml']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read a public CSI match
+        env:
+          CSI_URL: 'https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/PC11BD6/?j=NEU9REdJJjRGPVBOWSY0Rz1HSkRMSCY0SD1GTEdHTU0mNEk9ZnI0dnIgTyAtIFR2NDEwciBRJjRKPVBFRU9RSiY0TD1ER0kmNDI9Yw=='
+        run: |
+          python3 - <<'PY'
+          import os, urllib.request
+          request = urllib.request.Request(os.environ['CSI_URL'], headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'})
+          with urllib.request.urlopen(request, timeout=25) as response:
+              body = response.read(2000000).decode('utf-8')
+              assert 'hero-gara' in body, 'Not a match page'
+              print('CSI match reachable: HTTP', response.status)
+          PY
