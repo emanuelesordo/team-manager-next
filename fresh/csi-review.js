@@ -5,6 +5,7 @@ const norm=v=>String(v??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u03
 function playerLabel(p){return [p?.last_name,p?.first_name].filter(Boolean).join(' ')||p?.display_name||p?.name||'Giocatore'}
 function csiSide(ev,match){
  if(!ev?.source_team_side)return null;
+ if(!match)return ev.source_team_side;
  const oursHome=match?.home_away==='home';
  return ev.source_team_side==='home'?(oursHome?'team':'opponent'):(oursHome?'opponent':'team');
 }
