@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote,deleteVote} from './votes.js?ratings=20261006picker4';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection} from './staff-ui.js?csi=20261007v2';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection,loadCsiReview} from './staff-ui.js?csi=20261007v2';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
@@ -1035,7 +1035,7 @@ document.addEventListener('click',async e=>{
  if(x.dataset.comp){state.comp=x.dataset.comp;render();return}
  if(x.dataset.filter){state.filter=x.dataset.filter;render();return}
  if(x.dataset.role){state.role=x.dataset.role;render();return}
- if(x.dataset.tab){state.matchTab=x.dataset.tab;render();return}
+ if(x.dataset.tab){state.matchTab=x.dataset.tab;if(state.matchTab==='verification'){try{await loadCsiReview(staffContext())}catch(error){toast('Dati CSI non caricati: '+(error.message||String(error)))}}render();return}
  switch(x.dataset.action){
  case 'prevslide':changeSlide(state.slide-1);break;
  case 'nextslide':changeSlide(state.slide+1);break;
