@@ -89,6 +89,22 @@ document.addEventListener('change',async event=>{
 
 const observer=new MutationObserver(enhance);observer.observe(document.documentElement,{subtree:true,childList:true});enhance();
 
+// Browser extension handoff: fill the existing staged-import form, never auto-submit.
+document.addEventListener('tm:csi-extension-payload',event=>{
+ let payload;
+ try{payload=JSON.parse(event.detail)}catch{return}
+ if(!payload||typeof payload.code!=='string'||!Array.isArray(payload.events))return;
+ enhance();
+ const toggle=document.querySelector('[data-csi-import-toggle]');
+ if(!toggle)return;
+ const box=(toggle.closest('.staff-subpanel,.staff-root')||document).querySelector('[data-csi-import-box]');
+ if(!box)return;
+ box.hidden=false;
+ box.querySelector('[data-csi-json]').value=JSON.stringify(payload,null,2);
+ status(box,'Estensione: '+payload.code+' · '+payload.events.length+' eventi. Controlla squadra e codice, quindi premi Importa e confronta.','ok');
+ box.scrollIntoView({block:'nearest',behavior:'smooth'});
+});
+
 const reopen=sessionStorage.getItem(REOPEN_KEY);
 if(reopen&&reopen===currentFixture()){
  let attempts=0;const timer=setInterval(()=>{
