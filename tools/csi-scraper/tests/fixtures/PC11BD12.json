@@ -1,0 +1,265 @@
+{
+  "url": null,
+  "code": "C11BD12",
+  "date": "2026-10-05",
+  "time": "21:15",
+  "competition": {
+    "committee": "CSI Padova",
+    "sport": "Calcio a 11",
+    "name": "Open M / Serie B - D"
+  },
+  "venue": {
+    "name": "* Impianto Sportivo Flavio Mengato Via Pirandello 1 - 35030 Caselle di Selvazzano Dentro Pd",
+    "url": "https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/?j=NEU9REdJJjRGPVBOWSY0Sj1FRkxFTSY0Mj1QbnoyMQ=="
+  },
+  "status": "Risultato ufficioso",
+  "home": {
+    "name": "Calcio Caselle",
+    "url": "https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/?j=NEU9REdJJjRGPVBOWSY0Rz1HSkRMSCY0SD1GTEdHTU0mNEk9ZnI0dnIgTyAtIFR2NDEwciBRJjRKPUdFJjQyPWY=",
+    "logo": "https://static.centrosportivoitaliano.it/modulistica/logo/03500225.jpg",
+    "score": 2
+  },
+  "away": {
+    "name": "Union Rubano A.S.D.",
+    "url": "https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/?j=NEU9REdJJjRGPVBOWSY0Rz1HSkRMSCY0SD1GTEdHTU0mNEk9ZnI0dnIgTyAtIFR2NDEwciBRJjRKPUVFJjQyPWY=",
+    "logo": "https://static.centrosportivoitaliano.it/modulistica/logo/03500321.jpg",
+    "score": 1
+  },
+  "periods": [
+    {
+      "period": 1,
+      "label": "Fine primo tempo",
+      "stoppage_minutes": 2
+    },
+    {
+      "period": 2,
+      "label": "Fine 2 - 1",
+      "stoppage_minutes": 4
+    }
+  ],
+  "events": [
+    {
+      "period": 1,
+      "minute": 29,
+      "team": "home",
+      "type": "yellow_card",
+      "player": {
+        "name": "Paccagnella M.",
+        "number": 8
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 1,
+      "minute": 40,
+      "team": "home",
+      "type": "yellow_card",
+      "player": {
+        "name": "Grisolia G.",
+        "number": 10
+      },
+      "stoppage_minute": 1
+    },
+    {
+      "period": 1,
+      "minute": 40,
+      "team": "away",
+      "type": "yellow_card",
+      "player": {
+        "name": "Perin S.",
+        "number": 26
+      },
+      "stoppage_minute": 1
+    },
+    {
+      "period": 2,
+      "minute": 41,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Chiodo R.",
+        "number": 4
+      },
+      "player_in": {
+        "name": "Panaite A.",
+        "number": 16
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 41,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Lopez G.",
+        "number": 7
+      },
+      "player_in": {
+        "name": "Peruzzo L.",
+        "number": 21
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 44,
+      "team": "home",
+      "type": "goal",
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 50,
+      "team": "away",
+      "type": "substitution",
+      "player_out": {
+        "name": "Peccolo M.",
+        "number": 9
+      },
+      "player_in": {
+        "name": "Mormina S.",
+        "number": 8
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 50,
+      "team": "away",
+      "type": "substitution",
+      "player_out": {
+        "name": "Avellone L.",
+        "number": 27
+      },
+      "player_in": {
+        "name": "Gambetta E.",
+        "number": 29
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 52,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Paccagnella M.",
+        "number": 8
+      },
+      "player_in": {
+        "name": "Casadei G.",
+        "number": 11
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 54,
+      "team": "home",
+      "type": "yellow_card",
+      "player": {
+        "name": "Panaite A.",
+        "number": 16
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 56,
+      "team": "home",
+      "type": "goal",
+      "score": {
+        "home": 2,
+        "away": 0
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 63,
+      "team": "home",
+      "type": "yellow_card",
+      "player": {
+        "name": "Cabassa D.",
+        "number": 14
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 65,
+      "team": "away",
+      "type": "goal",
+      "score": {
+        "home": 2,
+        "away": 1
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 66,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Boschetto A.",
+        "number": 19
+      },
+      "player_in": {
+        "name": "Vanzato M.",
+        "number": 15
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 74,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Grisolia G.",
+        "number": 10
+      },
+      "player_in": {
+        "name": "Gagliuolo S.",
+        "number": 17
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 76,
+      "team": "away",
+      "type": "substitution",
+      "player_out": {
+        "name": "Carraro M.",
+        "number": 19
+      },
+      "player_in": {
+        "name": "Trevisan M.",
+        "number": 18
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 80,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Zanetti A.",
+        "number": 2
+      },
+      "player_in": {
+        "name": "Pellegrino L.",
+        "number": 20
+      },
+      "stoppage_minute": 1
+    }
+  ]
+}

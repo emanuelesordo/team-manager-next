@@ -1,0 +1,30 @@
+{
+  "url": null,
+  "code": "C11BD20",
+  "date": "2026-10-15",
+  "time": "21:00",
+  "competition": {
+    "committee": "CSI Padova",
+    "sport": "Calcio a 11",
+    "name": "Open M / Serie B - D"
+  },
+  "venue": {
+    "name": "* Campo Fratte Rondinelle Via Europa 15 - 35010 Santa Giustina in Colle Pd",
+    "url": "https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/?j=NEU9REdJJjRGPVBOWSY0Sj1NR0dEJjRMPURHSSY0Mj1QbnoyMQ=="
+  },
+  "status": null,
+  "home": {
+    "name": "Straelle",
+    "url": "https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/?j=NEU9REdJJjRGPVBOWSY0Rz1HSkRMSCY0SD1GTEdHTU0mNEk9ZnI0dnIgTyAtIFR2NDEwciBRJjRKPUpFJjRMPURHSSY0Mj1m",
+    "logo": "https://static.centrosportivoitaliano.it/modulistica/logo/03500622.jpg",
+    "score": null
+  },
+  "away": {
+    "name": "Calcio Cavinese Airone",
+    "url": "https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/S112/?j=NEU9REdJJjRGPVBOWSY0Rz1HSkRMSCY0SD1GTEdHTU0mNEk9ZnI0dnIgTyAtIFR2NDEwciBRJjRKPUVFRiY0TD1ER0kmNDI9Zg==",
+    "logo": "https://static.centrosportivoitaliano.it/modulistica/logo/03500397.jpg",
+    "score": null
+  },
+  "periods": [],
+  "events": []
+}
