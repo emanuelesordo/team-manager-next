@@ -695,7 +695,7 @@ function matchLive(ctx,m,competition){
 }
 
 function matchEvents(ctx,m){const fixture=ctx.resolveMatch().fixture,competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id),rules=matchRules(m,competition);return reviewPanel({match:m,fixture,competition:rules,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
-async function loadCsiReview(ctx){
+export async function loadCsiReview(ctx){
  const fixture=ctx.resolveMatch().fixture;
  if(!fixture?.id){csiSnapshot=null;csiSourceEvents=[];return}
  const snapshots=await get('app_match_source_snapshots','select=*&fixture_id=eq.'+encodeURIComponent(fixture.id)+'&source=eq.csi&order=fetched_at.desc&limit=1');
