@@ -607,7 +607,13 @@ function match(){
   (m.result_review_status==='confirmed'?'<div class="match-result-decision"><strong>Risultato ufficiale confermato</strong><button type="button" class="staff-soft" data-staff-action="review-result-reopen">Riapri verifica</button></div>':
   '<div class="match-result-decision"><strong>Risultato in attesa di conferma</strong>'+(pending?'<small>Prima ufficializza i '+pending+' eventi in sospeso dalla scheda Eventi.</small>':'')+
   '<button type="button" class="staff-submit" data-staff-action="review-result-confirm"'+(pending?' disabled title="Ufficializza prima gli eventi"':'')+'>Conferma risultato</button></div>'):'';
- const infoContent='<div class="match-info-editor">'+reviewAction+
+ const csiCode=String(f.match_code||'').trim();
+ const csiUrl=String(f.source_url||'').trim();
+ const validCsiUrl=/^https:\/\/live\.centrosportivoitaliano\.it\/26\/Calcio-a-11\/Veneto\/Padova\/PC11BD[0-9]+\/(?:\?[^"'<>\\s]*)?$/.test(csiUrl);
+ const csiReference=(csiCode||validCsiUrl)?'<div class="match-csi-reference" aria-label="Riferimento CSI">'+
+  '<div class="staff-form-grid"><div class="staff-field"><span>Codice riferimento CSI</span><strong>'+E(csiCode||'Non disponibile')+'</strong></div>'+
+  '<div class="staff-field"><span>Partita sul sito CSI</span>'+(validCsiUrl?'<a href="'+E(csiUrl)+'" target="_blank" rel="noopener noreferrer" class="staff-soft">Apri match CSI ↗</a>':'<span>Link non disponibile</span>')+'</div></div></div>':'';
+ const infoContent='<div class="match-info-editor">'+csiReference+reviewAction+
   '<div class="staff-form-grid">'+infoField('kickoff_at','Data e ora',f.kickoff_at?new Date(f.kickoff_at).toISOString().slice(0,16):'')+
   infoField('venue_name','Campo',f.venue_name||venue)+infoField('venue_address','Indirizzo',f.venue_address||address)+
   (canEditInfo?'<label class="staff-field"><span>Stato</span><select data-extra-status>'+[['scheduled','Programmato'],['live','Live'],['finished','Finale'],['postponed','Rinviata'],['suspended','Sospesa'],['cancelled','Annullata']].map(([key,name])=>'<option value="'+key+'"'+(f.status===key?' selected':'')+'>'+name+'</option>').join('')+'</select></label>':'')+
