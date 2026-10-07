@@ -76,7 +76,7 @@ export function csiReviewPanel({fixture,match,snapshot,sourceEvents=[],tmEvents=
   const targetText=target?minuteLabel(target)+' · '+(labels[target.event_type]||target.event_type)+' · '+tmWho(target,players):'—';
   const reviewed=source?.review_decision;
   const actions=source&&!reviewed?'<div class="csi-review-actions"><button type="button" class="staff-submit" data-staff-action="csi-event-approve" data-csi-source-id="'+E(source.id)+'">Approva</button><button type="button" class="staff-soft" data-staff-action="csi-event-reject" data-csi-source-id="'+E(source.id)+'">Scarta</button></div>':'';
-  return '<div class="staff-event-row csi-compare-row csi-'+E(row.state)+'"><div><strong>'+E(reviewed==='approved'?'Approvato':reviewed==='rejected'?'Scartato':stateLabel(row.state))+(row.confidence?' · '+E(row.confidence)+'%':'')+'</strong><span>CSI: '+E(sourceText)+'</span><small>Team Manager: '+E(targetText)+'</small></div>'+actions+'</div>';
+  return '<div class="staff-event-row csi-compare-row csi-'+E(row.state)+'"><div><strong>'+E(reviewed==='use_csi'?'Approvato':reviewed==='ignore'?'Scartato':stateLabel(row.state))+(row.confidence?' · '+E(row.confidence)+'%':'')+'</strong><span>CSI: '+E(sourceText)+'</span><small>Team Manager: '+E(targetText)+'</small></div>'+actions+'</div>';
  }).join('');
  return '<section class="staff-subpanel">'+head+
   '<p class="staff-help">Snapshot '+E(new Date(snapshot.fetched_at).toLocaleString('it-IT'))+' · risultato CSI '+E(score)+' · stato '+E(snapshot.review_status)+'. I dati restano provvisori fino alla conferma admin.</p>'+
