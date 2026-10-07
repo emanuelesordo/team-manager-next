@@ -71,6 +71,8 @@ export function csiReviewPanel({fixture,match,snapshot,sourceEvents=[],tmEvents=
  const comparisons=compareCsiEvents(sourceEvents,tmEvents,match,players,competition);
  const counts=comparisons.reduce((a,x)=>(a[x.state]=(a[x.state]||0)+1,a),{});
  const score=snapshot.home_score!=null&&snapshot.away_score!=null?snapshot.home_score+'–'+snapshot.away_score:'—';
+ const pendingSourceIds=sourceEvents.filter(event=>!event.review_decision).map(event=>event.id);
+ const bulkAction=pendingSourceIds.length?'<button type="button" class="staff-submit" data-staff-action="csi-approve-pending" data-csi-pending-ids="'+E(pendingSourceIds.join(','))+'">Approva tutti ('+pendingSourceIds.length+')</button>':'';
  const rows=comparisons.map(row=>{
   const source=row.source,target=row.target;
   const sourceText=source?minuteLabel(source)+' · '+(labels[source.event_type]||source.event_type)+' · '+csiWho(source):'—';
@@ -81,6 +83,7 @@ export function csiReviewPanel({fixture,match,snapshot,sourceEvents=[],tmEvents=
  }).join('');
  return '<section class="staff-subpanel">'+head+
   '<p class="staff-help">Snapshot '+E(new Date(snapshot.fetched_at).toLocaleString('it-IT'))+' · risultato CSI '+E(score)+' · stato '+E(snapshot.review_status)+'. I dati restano provvisori fino alla conferma admin.</p>'+
+  '<div class="csi-review-actions">'+bulkAction+'</div>'+
   '<div class="staff-review-summary"><div><b>'+E(counts.exact||0)+'</b><small>Coincidono</small></div><div><b>'+E(counts.probable||0)+'</b><small>Probabili</small></div><div><b>'+E((counts.conflict||0)+(counts.csi_only||0)+(counts.tm_only||0))+'</b><small>Da controllare</small></div></div>'+
   '<div class="staff-event-list">'+(rows||'<p class="empty">Il CSI non pubblica eventi per questa gara.</p>')+'</div></section>';
 }
