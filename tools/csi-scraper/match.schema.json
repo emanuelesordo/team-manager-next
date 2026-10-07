@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:csi-scraper:match",
+  "title": "CSI Live – Gara",
+  "description": "Output di csi_match.py: dati di una gara estratti dalla pagina 'Info gara' di live.centrosportivoitaliano.it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["url", "code", "date", "time", "competition", "venue", "status", "home", "away", "periods", "events"],
+  "properties": {
+    "url": {
+      "description": "URL della pagina; null se letta da file (--file).",
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "code": {
+      "description": "Codice gara (es. C11BD12).",
+      "type": ["string", "null"]
+    },
+    "date": {
+      "description": "Data della gara (ISO 8601).",
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "time": {
+      "description": "Orario d'inizio (HH:MM).",
+      "type": ["string", "null"],
+      "pattern": "^\\d{1,2}:\\d{2}$"
+    },
+    "competition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["committee", "sport", "name"],
+      "properties": {
+        "committee": { "description": "Comitato (es. CSI Padova).", "type": ["string", "null"] },
+        "sport": { "description": "Attività (es. Calcio a 11).", "type": ["string", "null"] },
+        "name": { "description": "Campionato / girone.", "type": ["string", "null"] }
+      }
+    },
+    "venue": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "url"],
+          "properties": {
+            "name": { "type": ["string", "null"] },
+            "url": { "type": ["string", "null"], "format": "uri" }
+          }
+        }
+      ]
+    },
+    "status": {
+      "description": "Testo del badge sopra il risultato (es. 'Risultato ufficioso'); null se assente.",
+      "type": ["string", "null"]
+    },
+    "home": { "$ref": "#/$defs/team" },
+    "away": { "$ref": "#/$defs/team" },
+    "periods": {
+      "description": "Tempi presenti nella timeline, in ordine.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/period" }
+    },
+    "events": {
+      "description": "Eventi in ordine cronologico.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "$defs": {
+    "team": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "url", "logo", "score"],
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "url": { "type": ["string", "null"], "format": "uri" },
+        "logo": { "type": ["string", "null"], "format": "uri" },
+        "score": {
+          "description": "Gol segnati; null se la gara non è stata giocata.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["period", "label", "stoppage_minutes"],
+      "properties": {
+        "period": { "description": "1 = primo tempo, 2 = secondo tempo.", "type": "integer", "minimum": 1 },
+        "label": {
+          "description": "Intestazione di chiusura del tempo (es. 'Fine primo tempo'); null se il tempo è in corso.",
+          "type": ["string", "null"]
+        },
+        "stoppage_minutes": { "description": "Minuti di recupero concessi.", "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "player": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "number"],
+      "properties": {
+        "name": { "type": "string" },
+        "number": { "description": "Numero di maglia.", "type": ["integer", "null"] }
+      }
+    },
+    "nullablePlayer": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/player" }]
+    },
+    "event": {
+      "type": "object",
+      "required": ["period", "minute", "stoppage_minute", "team", "type"],
+      "properties": {
+        "period": { "type": "integer", "minimum": 1 },
+        "minute": {
+          "description": "Minuto di gara con tempi da 40' (2° tempo = minuto del sito + 40). Durante il recupero resta fermo a fine tempo (40, 80).",
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "stoppage_minute": {
+          "description": "Minuto di recupero (es. 40+1 → minute 40, stoppage_minute 1); null se non in recupero.",
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "team": { "type": ["string", "null"], "enum": ["home", "away", null] },
+        "type": {
+          "type": "string",
+          "enum": ["goal", "yellow_card", "blue_card", "red_card", "substitution", "unknown"]
+        }
+      },
+      "oneOf": [
+        {
+          "description": "Gol: il sito pubblica solo il parziale, non il marcatore.",
+          "properties": {
+            "period": true, "minute": true, "stoppage_minute": true, "team": true,
+            "type": { "const": "goal" },
+            "score": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["home", "away"],
+                  "properties": {
+                    "home": { "type": "integer", "minimum": 0 },
+                    "away": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              ]
+            }
+          },
+          "required": ["score"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Cartellino giallo, azzurro (espulsione temporanea CSI) o rosso.",
+          "properties": {
+            "period": true, "minute": true, "stoppage_minute": true, "team": true,
+            "type": { "enum": ["yellow_card", "blue_card", "red_card"] },
+            "player": { "$ref": "#/$defs/nullablePlayer" }
+          },
+          "required": ["player"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Sostituzione.",
+          "properties": {
+            "period": true, "minute": true, "stoppage_minute": true, "team": true,
+            "type": { "const": "substitution" },
+            "player_out": { "$ref": "#/$defs/nullablePlayer" },
+            "player_in": { "$ref": "#/$defs/nullablePlayer" }
+          },
+          "required": ["player_out", "player_in"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Evento con icona non riconosciuta: dati grezzi.",
+          "properties": {
+            "period": true, "minute": true, "stoppage_minute": true, "team": true,
+            "type": { "const": "unknown" },
+            "player": { "$ref": "#/$defs/nullablePlayer" },
+            "icon": { "description": "Classi CSS dell'icona.", "type": ["string", "null"] },
+            "text": { "type": ["string", "null"] }
+          },
+          "required": ["player", "icon", "text"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

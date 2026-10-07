@@ -5,3 +5,6 @@ node_modules/
 *.log
 preview.png
 desktop-preview.png
+
+dist/
+supabase/.temp/

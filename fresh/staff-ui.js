@@ -1,7 +1,7 @@
 import {matchPlayerLabel} from './match-player-label.js';
 import {roundRobinDraft} from './phase-scheduler.js';
 import {openKitConfigurator,collectionForClub} from './kit-editor.js';
-import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge,runCsiCheck} from './api.js?csi=20261007v1';
+import {get,rpc,adminWrite,reviewPasswordRequest,uploadClubBadge,runCsiCheck,importCsiPayload} from './api.js?csi=20261007v1';
 import {importPanel} from './calendar-import.js';
 import {pitchMarkup,formationModules} from './lineup-pitch.js?callups=20261004moduli';
 import {availabilityDefault,normalizedReason,unavailabilityReasons} from './availability.js';
@@ -26,7 +26,7 @@ const submit=label=>'<button type="submit" class="staff-submit">'+esc(label)+'</
 const initial={area:'team',selected:{seasons:'',competitions:'',opponents:'',venues:'',players:'',fixtures:'',injuries:'',suspensions:''},matchTab:'callups',busy:false,liveDraft:null};
 const memory=initial;
 let reviewEditEvent=null,reviewHistoryEvent=null,reviewHistoryEntries=[];
-let csiSnapshot=null,csiSourceEvents=[];
+let csiSnapshot=null,csiSourceEvents=[],csiCheck=null;
 let scoreAuditRows=[],scoreAuditOpen=false;
 let integrityData=null,integrityError='';
 let phaseDraft=null;
@@ -697,16 +697,18 @@ function matchLive(ctx,m,competition){
 function matchEvents(ctx,m){const fixture=ctx.resolveMatch().fixture,competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id),rules=matchRules(m,competition);return reviewPanel({match:m,fixture,competition:rules,events:ctx.state.matchData?.events||[],players:ctx.state.data?.players||[],editingEventId:reviewEditEvent,historyEventId:reviewHistoryEvent,historyEntries:reviewHistoryEntries,resultHistoryEntries:scoreAuditOpen?scoreAuditRows:null});}
 async function loadCsiReview(ctx){
  const fixture=ctx.resolveMatch().fixture;
- if(!fixture?.id){csiSnapshot=null;csiSourceEvents=[];return}
+ if(!fixture?.id){csiSnapshot=null;csiSourceEvents=[];csiCheck=null;return}
  const snapshots=await get('app_match_source_snapshots','select=*&fixture_id=eq.'+encodeURIComponent(fixture.id)+'&source=eq.csi&order=fetched_at.desc&limit=1');
  csiSnapshot=snapshots[0]||null;
+ const checks=await get('app_match_source_checks','select=*&fixture_id=eq.'+encodeURIComponent(fixture.id)+'&limit=1');
+ csiCheck=checks[0]||null;
  csiSourceEvents=csiSnapshot?await get('app_match_source_events','select=*&snapshot_id=eq.'+encodeURIComponent(csiSnapshot.id)+'&order=event_ordinal.asc'):[];
 }
 function matchCsiReview(ctx,m){
  const fixture=ctx.resolveMatch().fixture;
  const tmEvents=m?(ctx.state.matchData?.events||[]):(ctx.state.fixtureEvents||[]);
  const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===fixture?.competition_id)||null;
- return csiReviewPanel({fixture,match:m,snapshot:csiSnapshot,sourceEvents:csiSourceEvents,tmEvents,players:ctx.state.data?.players||[],competition});
+ return csiReviewPanel({fixture,match:m,snapshot:csiSnapshot?.fixture_id===fixture?.id?csiSnapshot:null,check:csiCheck?.fixture_id===fixture?.id?csiCheck:null,sourceEvents:csiSnapshot?.fixture_id===fixture?.id?csiSourceEvents:[],tmEvents,players:ctx.state.data?.players||[],competition});
 }
 
 export function staffMatchSection(ctx,f,m,section){
@@ -972,6 +974,21 @@ export async function staffClick(e,button,ctx){
    phaseDraft={phaseId,rows:draw};ctx.render();return true;
   }
   if(action==='audit-integrity'){integrityError='';try{integrityData=await rpc('tm_app_integrity_report')}catch(e){integrityError=e.message||String(e)}ctx.render();return true}
+  if(action==='csi-import'){
+   const fixture=ctx.resolveMatch().fixture;
+   if(!fixture?.id)throw Error('Partita non disponibile');
+   const input=document.createElement('input');input.type='file';input.accept='.json,application/json';
+   input.addEventListener('change',async()=>{
+    try{
+     const file=input.files?.[0];if(!file)return;
+     if(file.size>2000000)throw Error('Il file CSI supera 2 MB');
+     const payload=JSON.parse(await file.text());
+     const result=await importCsiPayload(fixture.id,payload);
+     if(ctx.resolveMatch().fixture?.id===fixture.id){await loadCsiReview(ctx);await reloadMatch(ctx);memory.matchTab='verification';ctx.render()}
+     ctx.toast(result.changed?'Nuovi dati CSI acquisiti · verifica richiesta':'CSI già aggiornato · nessuna variazione');
+    }catch(error){ctx.toast(error.message||'JSON CSI non valido')}
+   },{once:true});input.click();return true;
+  }
   if(action==='csi-check'){
    const fixture=ctx.resolveMatch().fixture;
    if(!fixture?.source_url)throw Error('URL CSI non disponibile per questa partita');

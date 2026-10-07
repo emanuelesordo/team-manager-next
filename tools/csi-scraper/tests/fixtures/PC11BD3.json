@@ -1,0 +1,277 @@
+{
+  "url": null,
+  "code": "C11BD3",
+  "date": "2026-09-28",
+  "time": "21:15",
+  "competition": {
+    "committee": "CSI Padova",
+    "sport": "Calcio a 11",
+    "name": "Open M / Serie B - D"
+  },
+  "venue": {
+    "name": "* Stadio Pianiga Viale Giulio Onesti 1 - 30030 Pianiga Ve",
+    "url": "https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/?j=NEU9REdJJjRGPVBOWSY0Sj1FTExHSCY0TD1ER0kmNDI9UG56MjE="
+  },
+  "status": null,
+  "home": {
+    "name": "Amatori Cadoneghe",
+    "url": "https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/?j=NEU9REdJJjRGPVBOWSY0Rz1HSkRMSCY0SD1GTEdHTU0mNEk9ZnI0dnIgTyAtIFR2NDEwciBRJjRKPUlIJjRMPURHSSY0Mj1m",
+    "logo": "https://static.centrosportivoitaliano.it/modulistica/logo/03500412.jpg",
+    "score": 2
+  },
+  "away": {
+    "name": "San Marco Stigliano",
+    "url": "https://live.centrosportivoitaliano.it/26/Calcio-a-11/Veneto/Padova/?j=NEU9REdJJjRGPVBOWSY0Rz1HSkRMSCY0SD1GTEdHTU0mNEk9ZnI0dnIgTyAtIFR2NDEwciBRJjRKPUZFJjRMPURHSSY0Mj1m",
+    "logo": "https://static.centrosportivoitaliano.it/modulistica/logo/03000141.jpg",
+    "score": 0
+  },
+  "periods": [
+    {
+      "period": 1,
+      "label": "Fine primo tempo",
+      "stoppage_minutes": 1
+    },
+    {
+      "period": 2,
+      "label": "Fine 2 - 0",
+      "stoppage_minutes": 6
+    }
+  ],
+  "events": [
+    {
+      "period": 2,
+      "minute": 41,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Sicignano G.",
+        "number": 9
+      },
+      "player_in": {
+        "name": "Conte M.",
+        "number": 18
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 49,
+      "team": "away",
+      "type": "substitution",
+      "player_out": {
+        "name": "Saretta M.",
+        "number": 3
+      },
+      "player_in": {
+        "name": "Esposito F.",
+        "number": 13
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 50,
+      "team": "away",
+      "type": "substitution",
+      "player_out": {
+        "name": "Rocco C.",
+        "number": 8
+      },
+      "player_in": {
+        "name": "Polo G.",
+        "number": 15
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 52,
+      "team": "away",
+      "type": "substitution",
+      "player_out": {
+        "name": "Lollo L.",
+        "number": 7
+      },
+      "player_in": {
+        "name": "Tessaro G.",
+        "number": 16
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 55,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Peron A.",
+        "number": 11
+      },
+      "player_in": {
+        "name": "Zanon D.",
+        "number": 17
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 61,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Zorzi A.",
+        "number": 2
+      },
+      "player_in": {
+        "name": "Dafre D.",
+        "number": 16
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 62,
+      "team": "home",
+      "type": "goal",
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 65,
+      "team": "home",
+      "type": "yellow_card",
+      "player": {
+        "name": "Da Boit A.",
+        "number": 4
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 66,
+      "team": "away",
+      "type": "yellow_card",
+      "player": {
+        "name": "Silvestrini G.",
+        "number": 1
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 69,
+      "team": "away",
+      "type": "substitution",
+      "player_out": {
+        "name": "Polo G.",
+        "number": 15
+      },
+      "player_in": {
+        "name": "Perin J.",
+        "number": 18
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 73,
+      "team": "away",
+      "type": "substitution",
+      "player_out": {
+        "name": "Righetto L.",
+        "number": 11
+      },
+      "player_in": {
+        "name": "Magliulo L.",
+        "number": 17
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 74,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Rampado A.",
+        "number": 10
+      },
+      "player_in": {
+        "name": "Segato M.",
+        "number": 15
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 74,
+      "team": "away",
+      "type": "substitution",
+      "player_out": {
+        "name": "Polato D.",
+        "number": 2
+      },
+      "player_in": {
+        "name": "Cauzzo M.",
+        "number": 14
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 77,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Marangon G.",
+        "number": 7
+      },
+      "player_in": {
+        "name": "Ceroni E.",
+        "number": 20
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 79,
+      "team": "home",
+      "type": "substitution",
+      "player_out": {
+        "name": "Da Boit A.",
+        "number": 4
+      },
+      "player_in": {
+        "name": "Dalla V.",
+        "number": 13
+      },
+      "stoppage_minute": null
+    },
+    {
+      "period": 2,
+      "minute": 80,
+      "team": "away",
+      "type": "blue_card",
+      "player": {
+        "name": "Esposito F.",
+        "number": 13
+      },
+      "stoppage_minute": 4
+    },
+    {
+      "period": 2,
+      "minute": 80,
+      "team": "home",
+      "type": "goal",
+      "score": {
+        "home": 2,
+        "away": 0
+      },
+      "stoppage_minute": 5
+    }
+  ]
+}

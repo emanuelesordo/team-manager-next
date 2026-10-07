@@ -216,6 +216,13 @@ export async function runCsiCheck(fixture_id){
  return response;
 }
 
+export async function importCsiPayload(fixture_id,payload){
+ if(!hasSession())throw new Error('Accesso richiesto');
+ const response=await authorized('/functions/v1/csi-match-import',{method:'POST',body:{fixture_id,payload}});
+ if(!response?.ok)throw new Error(response?.error||'Importazione CSI non riuscita');
+ return response;
+}
+
 export async function reviewPasswordRequest(request_id,decision){
  if(!hasSession())throw new Error('Accesso richiesto');
  if(!['resolve','reject'].includes(decision))throw new Error('Decisione non valida');
