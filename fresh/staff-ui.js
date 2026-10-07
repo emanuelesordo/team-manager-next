@@ -972,6 +972,22 @@ export async function staffClick(e,button,ctx){
    phaseDraft={phaseId,rows:draw};ctx.render();return true;
   }
   if(action==='audit-integrity'){integrityError='';try{integrityData=await rpc('tm_app_integrity_report')}catch(e){integrityError=e.message||String(e)}ctx.render();return true}
+  if(action==='csi-approve-pending'){
+   const ids=String(button.dataset.csiPendingIds||'').split(',').filter(id=>/^[0-9a-f-]{36}$/i.test(id));
+   if(!ids.length)throw Error('Non ci sono eventi CSI da approvare');
+   if(!window.confirm('Approvare tutti i '+ids.length+' eventi CSI? Diventeranno parte del tabellino e delle statistiche.'))return true;
+   let completed=0;
+   try{
+    for(const id of ids){await rpc('tm_csi_review_event',{p_source_event_id:id,p_decision:'approve'});completed++}
+   }finally{
+    await loadCsiReview(ctx);
+    await reloadMatch(ctx);
+    if(!ctx.resolveMatch().operational)ctx.state.fixtureEvents=await get('app_match_events','select=*&fixture_id=eq.'+encodeURIComponent(ctx.state.match)+'&match_id=is.null&order=minute.asc.nullslast,created_at.asc&limit=250');
+    ctx.render();
+    ctx.toast('Approvati '+completed+' su '+ids.length+' eventi CSI');
+   }
+   return true;
+  }
   if(action==='csi-event-approve'||action==='csi-event-reject'){
    const sourceId=button.dataset.csiSourceId;
    if(!/^[0-9a-f-]{36}$/i.test(String(sourceId||'')))throw Error('Evento CSI non valido');
