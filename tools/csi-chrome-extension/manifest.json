@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "CSI Live Scraper · Team Manager",
+  "version": "0.1.0",
+  "description": "Estrae schede CSI Live e le passa a Team Manager Next per importazione provvisoria.",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://live.centrosportivoitaliano.it/*"
+  ],
+  "action": {
+    "default_title": "CSI Scraper",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://emanuelesordo.github.io/team-manager-next/*"
+      ],
+      "js": [
+        "tm-bridge.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
