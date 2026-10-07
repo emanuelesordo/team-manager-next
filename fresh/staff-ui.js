@@ -972,6 +972,19 @@ export async function staffClick(e,button,ctx){
    phaseDraft={phaseId,rows:draw};ctx.render();return true;
   }
   if(action==='audit-integrity'){integrityError='';try{integrityData=await rpc('tm_app_integrity_report')}catch(e){integrityError=e.message||String(e)}ctx.render();return true}
+  if(action==='csi-event-approve'||action==='csi-event-reject'){
+   const sourceId=button.dataset.csiSourceId;
+   if(!/^[0-9a-f-]{36}$/i.test(String(sourceId||'')))throw Error('Evento CSI non valido');
+   const decision=action==='csi-event-approve'?'approve':'reject';
+   if(decision==='reject'&&!window.confirm('Scartare questo evento CSI dalla revisione?'))return true;
+   await rpc('tm_csi_review_event',{p_source_event_id:sourceId,p_decision:decision});
+   await loadCsiReview(ctx);
+   await reloadMatch(ctx);
+   if(!ctx.resolveMatch().operational)ctx.state.fixtureEvents=await get('app_match_events','select=*&fixture_id=eq.'+encodeURIComponent(ctx.state.match)+'&match_id=is.null&order=minute.asc.nullslast,created_at.asc&limit=250');
+   ctx.render();
+   ctx.toast(decision==='approve'?'Evento CSI approvato e inserito nel tabellino':'Evento CSI scartato');
+   return true;
+  }
   if(action==='csi-check'){
    const fixture=ctx.resolveMatch().fixture;
    if(!fixture?.source_url)throw Error('URL CSI non disponibile per questa partita');
