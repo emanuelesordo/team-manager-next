@@ -609,7 +609,7 @@ function match(){
   '<button type="button" class="staff-submit" data-staff-action="review-result-confirm"'+(pending?' disabled title="Ufficializza prima gli eventi"':'')+'>Conferma risultato</button></div>'):'';
  const csiCode=String(f.match_code||'').trim();
  const csiUrl=String(f.source_url||'').trim();
- const validCsiUrl=/^https:\/\/live\.centrosportivoitaliano\.it\/26\/Calcio-a-11\/Veneto\/Padova\/PC11BD[0-9]+\/(?:\?[^"'<>\\s]*)?$/.test(csiUrl);
+ const validCsiUrl=/^https:\/\/live\.centrosportivoitaliano\.it\/26\/Calcio-a-11\/Veneto\/Padova\/PC11BD[0-9]+\/(?:\?[^"'<>\s]*)?$/.test(csiUrl);
  const csiReference=(csiCode||validCsiUrl)?'<div class="match-csi-reference" aria-label="Riferimento CSI">'+
   '<div class="staff-form-grid"><div class="staff-field"><span>Codice riferimento CSI</span><strong>'+E(csiCode||'Non disponibile')+'</strong></div>'+
   '<div class="staff-field"><span>Partita sul sito CSI</span>'+(validCsiUrl?'<a href="'+E(csiUrl)+'" target="_blank" rel="noopener noreferrer" class="staff-soft">Apri match CSI ↗</a>':'<span>Link non disponibile</span>')+'</div></div></div>':'';
