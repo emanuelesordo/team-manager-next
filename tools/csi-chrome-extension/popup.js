@@ -10,45 +10,58 @@ const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
 function nameFromElement(node){return clean(node?.textContent).replace(/^\d+\s*[-–]\s*\d+\s*/,'')}
 function parse(doc,address){
  const url=validUrl(address),match=url?.pathname.match(/\/P(C[0-9A-Z]+)\/$/i);
- if(!match)throw Error('Apri una scheda partita CSI Live, non una pagina generica');
- if(!url.searchParams.has('j'))throw Error('Link CSI incompleto: manca il parametro ?j=');
- const code=match[1],title=clean(doc.title),text=clean(doc.body?.innerText||doc.body?.textContent);
- const teamLinks=[...doc.querySelectorAll('a[href]')].filter(a=>/\/S\d+\/|[?&]j=/.test(a.getAttribute('href')||'')&&/squadra|team|club|logo|shield/i.test((a.className||'')+' '+(a.parentElement?.className||'')));
- const candidateNames=teamLinks.map(a=>nameFromElement(a)).filter(v=>v.length>2&&v.length<65&&!/classifica|calendario|campionato|risultati|girone/i.test(v));
- const compact=[...new Set(candidateNames)];
- const splitTitle=title.match(/(?:Partita|Gara)?\s*[:\-]?\s*([^|–]+?)\s+(?:vs|[-–])\s+([^|–]+)/i);
- let home=compact[0]||clean(doc.querySelector('[class*="home-team"],[class*="team-home"],[class*="squadra-casa"]')?.textContent);
- let away=compact[1]||clean(doc.querySelector('[class*="away-team"],[class*="team-away"],[class*="squadra-ospite"]')?.textContent);
- if((!home||!away)&&splitTitle){home=home||clean(splitTitle[1]);away=away||clean(splitTitle[2])}
- // Do not guess team names, scores or events: incomplete pages are rejected.
- if(!home||!away||home===away)throw Error('Nomi delle squadre non riconosciuti: HTML CSI da verificare');
- const scoreElement=doc.querySelector('[class*="score"],[class*="result"],[class*="punteggio"]');
- const score=clean(scoreElement?.textContent).match(/\b(\d{1,2})\s*[-–:]\s*(\d{1,2})\b/);
- const eventRows=[...doc.querySelectorAll('tr, li, [class*="event"], [class*="cronologia"] > div')].filter(el=>el.children.length<22);
- const events=[],seen=new Set();
- for(const row of eventRows){
-  const rowText=clean(row.textContent);
-  if(rowText.length>250||rowText.length<4)continue;
-  const minuteMatch=rowText.match(/(?:^|\s)(\d{1,3})(?:\s*['′])?(?:\s*\+\s*(\d{1,2}))?(?=\s|['′]|$)/);
-  if(!minuteMatch)continue;
-  const css=String(row.className||'')+' '+[...row.querySelectorAll('[class]')].map(x=>String(x.className)).join(' ');
-  let type=/sostituz|cambio|substitution|change/i.test(rowText+' '+css)?'substitution':/ammoniz|yellow/i.test(rowText+' '+css)?'yellow_card':/espuls|red.?card/i.test(rowText+' '+css)?'red_card':/gol|goal|rete|soccer-ball/i.test(rowText+' '+css)?'goal':null;
-  if(!type)continue;
-  const minute=Number(minuteMatch[1]);if(minute>130)continue;
-  const side=/away|ospit|trasferta/i.test(css)?'away':/home|casa/i.test(css)?'home':null;
-  if(!side)continue;
-  const period=minute>40?2:1;
-  const event={period,minute,team:side,type,stoppage_minute:minuteMatch[2]?Number(minuteMatch[2]):null};
-  const key=[period,minute,side,type,rowText].join('|');if(seen.has(key))continue;seen.add(key);
-  events.push(event);
+ if(!match||!url.searchParams.has('j'))throw Error('Apri una scheda gara CSI con parametro ?j= completo');
+ const hero=doc.querySelector('.hero-gara');if(!hero)throw Error('Intestazione gara CSI non trovata');
+ const boxes=[...hero.querySelectorAll('.row.justify-content-center > .col-md-4')];
+ if(boxes.length!==2)throw Error('Squadre non riconosciute nell’intestazione CSI');
+ const team=box=>{const link=box.querySelector('h5 a[href]'),img=box.querySelector('img[src]');if(!link)throw Error('Nome squadra assente');
+ return {name:clean(link.textContent),url:new URL(link.getAttribute('href'),url.href).href,logo:img?new URL(img.getAttribute('src'),url.href).href:null,score:null}};
+ const home=team(boxes[0]),away=team(boxes[1]);
+ const score=clean(hero.querySelector('.col-md-3 h3')?.textContent).match(/^(\d+)\s*[-–]\s*(\d+)$/);
+ if(score){home.score=Number(score[1]);away.score=Number(score[2])}
+ const field=[...hero.querySelectorAll('.text-center')].find(x=>/^Campo:/i.test(clean(x.querySelector('b')?.textContent)));
+ const venueLink=field?.querySelector('a[href]');
+ const venue=venueLink?{name:clean(venueLink.textContent),url:new URL(venueLink.getAttribute('href'),url.href).href}:null;
+ const bc=[...doc.querySelectorAll('.breadcrumb-item a[aria-label]')];
+ const byLabel=part=>bc.find(x=>(x.getAttribute('aria-label')||'').includes(part));
+ const competition={committee:byLabel('Comitato CSI')?.getAttribute('aria-label')||null,sport:byLabel('Attività')?.textContent.trim()||null,name:bc.find(x=>/serie|girone|open/i.test(x.getAttribute('aria-label')||''))?.getAttribute('aria-label')||null};
+ const dateText=clean(hero.querySelector('.fad.fa-calendar')?.parentElement?.textContent),dm=dateText.match(/(\d{2})\/(\d{2})\/(\d{4})/),clock=dateText.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/);
+ const date=dm?dm[3]+'-'+dm[2]+'-'+dm[1]:null,time=clock?.[0]||null;
+ const events=[],periods=[];
+ const cards=[...doc.querySelectorAll('.card')].filter(c=>c.querySelector(':scope > .card-body > .event-header'));
+ for(const card of cards){
+  const header=clean(card.querySelector('.event-header')?.textContent);
+  const period=/primo tempo/i.test(header)?1:/^Fine\b/i.test(header)?2:null;
+  if(!period)continue;
+  const recovery=clean(card.querySelector('.event-header-info')?.textContent).match(/(\d+)\s+minut[oi]/i);
+  periods.push({period,label:header,stoppage_minutes:recovery?Number(recovery[1]):null});
+  for(const row of card.querySelectorAll('.event-row')){
+   const css=row.querySelector('.event-icon i')?.className||'';
+   const type=/fa-futbol/.test(css)?'goal':/fa-exchange/.test(css)?'substitution':/rectangle-portrait/.test(css)?(/text-danger/.test(css)?'red_card':'yellow_card'):null;
+   if(!type)continue;
+   const side=row.querySelector('.event-details.event-left')?'home':row.querySelector('.event-details.event-right')?'away':null;
+   const localTime=clean(row.querySelector('.event-time')?.textContent),tm=localTime.match(/^(\d{1,3})(?:\s*\+\s*(\d{1,2}))?'{1,2}$/);
+   if(!side||!tm)throw Error('Evento CSI con squadra/minuto non riconosciuti: '+localTime);
+   const relative=Number(tm[1]);if(relative>50)throw Error('Minuto periodo non valido '+localTime);
+   const minute=relative+(period-1)*40,details=row.querySelector('.event-details');
+   const event={period,minute,team:side,type,stoppage_minute:tm[2]?Number(tm[2]):null};
+   const person=node=>{if(!node)return null;const clone=node.cloneNode(true),num=clone.querySelector('sup small')?.textContent.match(/\d+/);clone.querySelectorAll('sup').forEach(n=>n.remove());const name=clean(clone.textContent).replace(/^(Esce|Entra):\s*/i,'');return name?{name,number:num?Number(num[0]):null}:null};
+   if(type==='substitution'){
+    const out=details?.querySelector('.player_out'),clone=details?.cloneNode(true);clone?.querySelector('.player_out')?.remove();
+    event.player_out=person(out);event.player_in=person(clone);
+    if(!event.player_out||!event.player_in)throw Error('Sostituzione incompleta al minuto '+minute);
+   }else if(type==='goal'){
+    const result=clean(details?.textContent).match(/(\d+)\s*[-–]\s*(\d+)/);
+    if(result)event.score={home:Number(result[1]),away:Number(result[2])};
+   }else event.player=person(details);
+   events.push(event);
+  }
  }
- // An empty event list or missing result on an apparently completed page is never a valid extraction.
- if(!score)throw Error('Risultato della gara non rilevato. Il parser non identifica il tabellino CSI: JSON non esportato.');
- if(events.length===0)throw Error('Eventi della gara non rilevati. Il parser non identifica la cronologia CSI: JSON non esportato.');
- const metadata=(text.match(/(\d{2})\/(\d{2})\/(20\d{2})/)||[]);
- const date=metadata.length?metadata[3]+'-'+metadata[2]+'-'+metadata[1]:null;
- const timeMatch=text.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/);
- return {url:url.href,code,date,time:timeMatch?.[0]||null,home:{name:home,score:score?Number(score[1]):null},away:{name:away,score:score?Number(score[2]):null},events};
+ if(!periods.length)throw Error('Periodi CSI non riconosciuti');
+ if(home.score!==null&&away.score!==null&&home.score+away.score>0&&!events.some(e=>e.type==='goal'))throw Error('Gol assenti da una partita con reti');
+ events.sort((a,b)=>a.minute-b.minute||(a.stoppage_minute||0)-(b.stoppage_minute||0));
+ periods.sort((a,b)=>a.period-b.period);
+ return {url:url.href,code:match[1],date,time,competition,venue,status:null,home,away,periods,events};
 }
 async function page(address){const r=await fetch(address,{credentials:'include',redirect:'follow'});if(!r.ok)throw Error('HTTP '+r.status+' · '+address);return new DOMParser().parseFromString(await r.text(),'text/html')}
 async function active(){const [tab]=await chrome.tabs.query({active:true,currentWindow:true});const url=validUrl(tab?.url);if(!url)throw Error('Apri una pagina di live.centrosportivoitaliano.it');return url.href}
