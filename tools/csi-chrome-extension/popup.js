@@ -65,7 +65,7 @@ function parse(doc,address){
    events.push(event);
   }
  }
- if(!periods.length)throw Error('Periodi CSI non riconosciuti');
+ if(!periods.length&&home.score!==null)throw Error('Periodi CSI non riconosciuti');
  if(home.score!==null&&away.score!==null&&home.score+away.score>0&&!events.some(e=>e.type==='goal'))throw Error('Gol assenti da una partita con reti');
  events.sort((a,b)=>a.minute-b.minute||(a.stoppage_minute||0)-(b.stoppage_minute||0));
  periods.sort((a,b)=>a.period-b.period);
