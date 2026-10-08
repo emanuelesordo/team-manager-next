@@ -30,12 +30,20 @@ function parse(doc,address){
  const events=[],periods=[];
  const cards=[...doc.querySelectorAll('.card')].filter(c=>c.querySelector(':scope > .card-body > .event-header'));
  for(const card of cards){
-  const header=clean(card.querySelector('.event-header')?.textContent);
-  const period=/primo tempo/i.test(header)?1:/^Fine\b/i.test(header)?2:null;
-  if(!period)continue;
-  const recovery=clean(card.querySelector('.event-header-info')?.textContent).match(/(\d+)\s+minut[oi]/i);
-  periods.push({period,label:header,stoppage_minutes:recovery?Number(recovery[1]):null});
-  for(const row of card.querySelectorAll('.event-row')){
+  let period=null;
+  for(const row of card.querySelector(':scope > .card-body').children){
+   if(row.classList.contains('event-header')){
+    const header=clean(row.textContent);
+    period=/primo tempo/i.test(header)?1:/^Fine\b/i.test(header)?2:null;
+    if(period)periods.push({period,label:header,stoppage_minutes:null});
+    continue;
+   }
+   if(row.classList.contains('event-header-info')){
+    const recovery=clean(row.textContent).match(/(\d+)\s+minut[oi]/i);
+    if(period&&periods.length)periods[periods.length-1].stoppage_minutes=recovery?Number(recovery[1]):null;
+    continue;
+   }
+   if(!row.classList.contains('event-row')||!period)continue;
    const css=row.querySelector('.event-icon i')?.className||'';
    const type=/fa-futbol/.test(css)?'goal':/fa-exchange/.test(css)?'substitution':/rectangle-portrait/.test(css)?(/text-danger/.test(css)?'red_card':'yellow_card'):null;
    if(!type)continue;
