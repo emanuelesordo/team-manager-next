@@ -42,8 +42,9 @@ function parse(doc,address){
   const key=[period,minute,side,type,rowText].join('|');if(seen.has(key))continue;seen.add(key);
   events.push(event);
  }
- // A completed game without reliably attributable events must not silently export a fabricated timeline.
- if(score&&events.length===0)throw Error('Risultato trovato, ma eventi non leggibili: esportazione bloccata per evitare dati incompleti');
+ // An empty event list or missing result on an apparently completed page is never a valid extraction.
+ if(!score)throw Error('Risultato della gara non rilevato. Il parser non identifica il tabellino CSI: JSON non esportato.');
+ if(events.length===0)throw Error('Eventi della gara non rilevati. Il parser non identifica la cronologia CSI: JSON non esportato.');
  const metadata=(text.match(/(\d{2})\/(\d{2})\/(20\d{2})/)||[]);
  const date=metadata.length?metadata[3]+'-'+metadata[2]+'-'+metadata[1]:null;
  const timeMatch=text.match(/\b([01]?\d|2[0-3]):[0-5]\d\b/);
