@@ -15,3 +15,8 @@ L'estensione non accede ai token o alle password. L'invio passa solo dalla sched
 
 ## Limitazioni
 L'estrazione del dettaglio dipende dall'HTML CSI effettivamente pubblicato. La prima versione preferisce bloccare un'esportazione incompleta e segnalarlo anziché creare eventi o punteggi inventati. Testare su un campione reale di schede partita concluse e in programma.
+
+## Parser riutilizzabile
+Le regole di estrazione utilizzano i componenti strutturali CSI (`.hero-gara`, `.event-header`, `.event-row`, `.event-details`), non nomi specifici di squadre o codici partita. Le schede senza risultato possono avere cronologia vuota. Le gare concluse con gol ma senza eventi riconosciuti vengono bloccate.
+
+Il calcolo del minutaggio per questo formato Calcio a 11 assume 40 minuti per tempo. Per sport o regolamenti con durate diverse serve configurare la durata prima dell'importazione. Campione HTML verificato: C11BD9 (12 eventi). Le altre strutture del portale richiedono ulteriori prove.
