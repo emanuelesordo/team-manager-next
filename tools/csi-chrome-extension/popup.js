@@ -2,8 +2,8 @@ const $ = id => document.getElementById(id);
 let collected = [];
 const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
 function notice(message,error=false){$('status').textContent=message;$('status').className=error?'error':'ok'}
-function blocked(b){for(const id of ['single','bulk','send','export'])$(id).disabled=b}
-function setResult(items){collected=items;$('export').disabled=!items.length;$('send').disabled=items.length!==1;$('results').textContent=items.map(p=>p.code+' · '+(p.home?.name||'?')+' – '+(p.away?.name||'?')+' · '+p.events.length+' eventi').join('\n')}
+function blocked(b){for(const id of ['single','bulk','send','export','copy'])$(id).disabled=b}
+function setResult(items){collected=items;$('copy').disabled=!items.length;$('export').disabled=!items.length;$('send').disabled=items.length!==1;$('results').textContent=items.map(p=>p.code+' · '+(p.home?.name||'?')+' – '+(p.away?.name||'?')+' · '+p.events.length+' eventi').join('\n')}
 function validUrl(address){try{const u=new URL(address);return u.protocol==='https:'&&u.hostname==='live.centrosportivoitaliano.it'&&u.pathname.startsWith('/26/Calcio-a-11/')?u:null}catch{return null}}
 function links(doc,base){const result=new Map();for(const a of doc.querySelectorAll('a[href]')){let resolved;try{resolved=new URL(a.getAttribute('href'),base).href}catch{continue}const u=validUrl(resolved);const match=u?.pathname.match(/\/P(C[0-9A-Z]+)\/$/i);if(match&&u.searchParams.has('j'))result.set(match[1],u.href)}return [...result.values()]}
 const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
@@ -53,5 +53,13 @@ async function page(address){const r=await fetch(address,{credentials:'include',
 async function active(){const [tab]=await chrome.tabs.query({active:true,currentWindow:true});const url=validUrl(tab?.url);if(!url)throw Error('Apri una pagina di live.centrosportivoitaliano.it');return url.href}
 $('single').addEventListener('click',async()=>{blocked(true);try{const url=await active();const doc=await page(url);const data=parse(doc,url);setResult([data]);notice('Scheda estratta. Controlla i dati prima di importarli.')}catch(e){setResult([]);notice(e.message,true)}finally{$('single').disabled=false;$('bulk').disabled=false}});
 $('bulk').addEventListener('click',async()=>{blocked(true);try{const url=await active(),doc=await page(url),urls=links(doc,url);if(!urls.length)throw Error('Nessun link gara con parametro ?j= rilevato');notice('Rilevate '+urls.length+' gare. Estrazione in corso…');const items=[],errors=[];for(let i=0;i<Math.min(urls.length,120);i++){try{items.push(parse(await page(urls[i]),urls[i]))}catch(e){errors.push(urls[i]+' · '+e.message)}notice((i+1)+'/'+urls.length+' visitate · '+items.length+' complete · '+errors.length+' non leggibili');await sleep(800)}setResult(items);notice(items.length+' schede esportabili. '+errors.length+' fallite/incomplete.\n'+errors.slice(0,3).join('\n'),!!errors.length)}catch(e){notice(e.message,true)}finally{$('single').disabled=false;$('bulk').disabled=false}});
-$('export').addEventListener('click',()=>{if(!collected.length)return;const raw=JSON.stringify(collected.length===1?collected[0]:{format:'csi-scraper-batch-v1',matches:collected},null,2);const blob=new Blob([raw],{type:'application/json'}),url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=collected.length===1?collected[0].code+'.json':'csi-partite.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)});
+function outputJSON(){return JSON.stringify(collected.length===1?collected[0]:{format:'csi-scraper-batch-v1',matches:collected},null,2)}
+$('copy').addEventListener('click',async()=>{
+ if(!collected.length)return;
+ try{
+  await navigator.clipboard.writeText(outputJSON());
+  notice('JSON copiato negli appunti ('+collected.length+' '+(collected.length===1?'partita':'partite')+').');
+ }catch(error){notice('Copia non riuscita: '+(error.message||String(error)),true)}
+});
+$('export').addEventListener('click',()=>{if(!collected.length)return;const raw=outputJSON();const blob=new Blob([raw],{type:'application/json'}),url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=collected.length===1?collected[0].code+'.json':'csi-partite.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)});
 $('send').addEventListener('click',async()=>{if(collected.length!==1)return;try{const tabs=await chrome.tabs.query({url:'https://emanuelesordo.github.io/team-manager-next/*'});const tab=tabs.find(x=>/^#match\/[0-9a-f-]+$/i.test(new URL(x.url).hash));if(!tab)throw Error('Apri prima la partita corrispondente su Team Manager Next');const result=await chrome.tabs.sendMessage(tab.id,{type:'CSI_DELIVER',payload:collected[0]});if(!result?.ok)throw Error(result?.error||'Scheda Team Manager non raggiungibile');notice('JSON consegnato. Passa su Team Manager, controlla il codice e premi «Importa e confronta».')}catch(e){notice(e.message,true)}});
