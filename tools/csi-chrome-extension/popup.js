@@ -5,7 +5,7 @@ function notice(message,error=false){$('status').textContent=message;$('status')
 function blocked(b){for(const id of ['single','bulk','send','export'])$(id).disabled=b}
 function setResult(items){collected=items;$('export').disabled=!items.length;$('send').disabled=items.length!==1;$('results').textContent=items.map(p=>p.code+' · '+(p.home?.name||'?')+' – '+(p.away?.name||'?')+' · '+p.events.length+' eventi').join('\n')}
 function validUrl(address){try{const u=new URL(address);return u.protocol==='https:'&&u.hostname==='live.centrosportivoitaliano.it'&&u.pathname.startsWith('/26/Calcio-a-11/')?u:null}catch{return null}}
-function links(doc,base){const result=new Map();for(const a of doc.querySelectorAll('a[href]')){const u=validUrl(new URL(a.getAttribute('href'),base).href);const match=u?.pathname.match(/\/P(C[0-9A-Z]+)\/$/i);if(match&&u.searchParams.has('j'))result.set(match[1],u.href)}return [...result.values()]}
+function links(doc,base){const result=new Map();for(const a of doc.querySelectorAll('a[href]')){let resolved;try{resolved=new URL(a.getAttribute('href'),base).href}catch{continue}const u=validUrl(resolved);const match=u?.pathname.match(/\/P(C[0-9A-Z]+)\/$/i);if(match&&u.searchParams.has('j'))result.set(match[1],u.href)}return [...result.values()]}
 const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
 function nameFromElement(node){return clean(node?.textContent).replace(/^\d+\s*[-–]\s*\d+\s*/,'')}
 function parse(doc,address){
