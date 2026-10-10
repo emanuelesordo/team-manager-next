@@ -870,8 +870,10 @@ async function hydrateMatchPrediction(){
      for(const [id,agg] of grouped)if(agg.n&&!ratingFallback.has(id))ratingFallback.set(id,agg.sum/agg.n);
      for(const player of model.players){
       const fallback=ratingFallback.get(String(player.player_id));
-      if(!Number.isFinite(Number(player.meanRating))&&Number.isFinite(fallback))player.meanRating=fallback;
-      if(!Number.isFinite(Number(player.expectedRating))&&Number.isFinite(fallback))player.expectedRating=fallback;
+      const missingMean=player.meanRating===null||player.meanRating===undefined||player.meanRating===''||!Number.isFinite(Number(player.meanRating));
+      const missingExpected=player.expectedRating===null||player.expectedRating===undefined||player.expectedRating===''||!Number.isFinite(Number(player.expectedRating));
+      if(missingMean&&Number.isFinite(fallback))player.meanRating=fallback;
+      if(missingExpected&&Number.isFinite(fallback))player.expectedRating=fallback;
      }
      const rated=model.players.filter(p=>Number.isFinite(Number(p.expectedRating)));
      model.xiExpectedRating=rated.length?rated.reduce((sum,p)=>sum+Number(p.expectedRating),0)/rated.length:null;
