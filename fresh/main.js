@@ -855,6 +855,27 @@ async function hydrateMatchPrediction(){
      fixture:f,targetMatch:operational,data:lineupData,matchData:state.matchData,team:team(),competition:comp,
      competitions:state.data?.competitions||[],prediction:result,kit,events
     });
+    if(model?.players?.length){
+     const ratingFallback=new Map();
+     for(const row of [...(state.data.playerStats||[]),...freshStats]){
+      const value=Number(row?.avg_rating);
+      if(row?.player_id&&Number.isFinite(value)&&value>0)ratingFallback.set(String(row.player_id),value);
+     }
+     const ratingRows=[...(state.data.seasonRatings||[]),...freshRatings],grouped=new Map();
+     for(const row of ratingRows){
+      const value=Number(row?.rating),id=String(row?.player_id||'');
+      if(!id||!Number.isFinite(value)||value<=0)continue;
+      const agg=grouped.get(id)||{sum:0,n:0};agg.sum+=value;agg.n++;grouped.set(id,agg);
+     }
+     for(const [id,agg] of grouped)if(agg.n&&!ratingFallback.has(id))ratingFallback.set(id,agg.sum/agg.n);
+     for(const player of model.players){
+      const fallback=ratingFallback.get(String(player.player_id));
+      if(!Number.isFinite(Number(player.meanRating))&&Number.isFinite(fallback))player.meanRating=fallback;
+      if(!Number.isFinite(Number(player.expectedRating))&&Number.isFinite(fallback))player.expectedRating=fallback;
+     }
+     const rated=model.players.filter(p=>Number.isFinite(Number(p.expectedRating)));
+     model.xiExpectedRating=rated.length?rated.reduce((sum,p)=>sum+Number(p.expectedRating),0)/rated.length:null;
+    }
     lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
    }
   }
