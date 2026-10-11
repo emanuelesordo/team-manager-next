@@ -443,8 +443,27 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const order=effectiveOrder;
  raw.forEach(order);
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+ const scoreByEvent=new Map();
  let home=0,away=0;
- const tracked=ordered.map(e=>{const counts=!['rejected','disputed'].includes(e.validation_status)&&e.payload?.count_score!==false;if(counts&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:counts&&goal(e)?(snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
+ const scoringGoals=[...goalEvents].sort((a,b)=>{
+  const ao=goalOrdinal.get(a),bo=goalOrdinal.get(b);
+  if(Number.isFinite(ao)&&Number.isFinite(bo)&&ao!==bo)return ao-bo;
+  const am=absoluteMinute(a),bm=absoluteMinute(b);
+  if(am===null&&bm!==null)return 1;
+  if(am!==null&&bm===null)return -1;
+  if(am!==null&&bm!==null&&am!==bm)return am-bm;
+  return String(a.created_at||'').localeCompare(String(b.created_at||''));
+ });
+ for(const e of scoringGoals){
+  const counts=!['rejected','disputed'].includes(e.validation_status)&&e.payload?.count_score!==false;
+  if(!counts)continue;
+  let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';
+  if(s==='home')home++;if(s==='away')away++;
+  const saved=e.payload?.legacy_fixture_score;
+  const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;
+  scoreByEvent.set(e,snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away);
+ }
+ const tracked=ordered.map(e=>({event:e,score:goal(e)?(scoreByEvent.get(e)||null):null}));
  const heading=(label,kind='period')=>'<div class="mt-divider mt-divider-'+E(kind)+'"><span>'+E(label)+'</span>'+(adminEdit&&kind==='title'?'<button type="button" class="mt-title-add" data-timeline-add aria-label="Aggiungi evento">+</button>':'')+'</div>';
  const cards=e=>{
   const t=type(e),shirt=String(e.payload?.opponent_shirt_number||'');
@@ -564,8 +583,11 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
    if(p>1)parts+=heading('FINE '+(p-1)+'° TEMPO');
   }
  }else parts+=renderPeriod(1);
+ const unplaced=descending.filter(x=>periodNo(x.event)===0&&!inferredUnknownPlacement.get(x.event));
+ const unplacedBlock=unplaced.length?
+  '<div class="match-timeline-unplaced" aria-label="Eventi senza minuto collocabile"><div class="mt-unplaced-label">MINUTO NON NOTO</div>'+groupedRows(unplaced)+'</div>':'';
  return '<div class="match-timeline'+(adminEdit?' is-admin-editable':'')+'" aria-label="Cronologia eventi della partita">'+
-  (tracked.length||recoveryByPeriod.size?parts:parts+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>';
+  (tracked.length||recoveryByPeriod.size?parts:parts+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>'+unplacedBlock;
 }
 
 function matchRules(m,comp){
