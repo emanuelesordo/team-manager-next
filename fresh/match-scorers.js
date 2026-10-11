@@ -15,7 +15,8 @@ export function matchScorerRows(events=[],fixture={},team={},playerName=()=>null
   if(!side)continue;
   const named=event.player_id?playerName(event.player_id):null;
   const shirt=event.payload?.opponent_shirt_number||event.payload?.shirt_number;
-  const name=named&&named!=='Giocatore non censito'?named:shirt?'#'+shirt:'Marcatore non indicato';
+  const genericTeamName=side==='home'?fixture.home_team:fixture.away_team;
+  const name=named&&named!=='Giocatore non censito'?named:shirt?'#'+shirt:'Gol '+(genericTeamName||'squadra');
   rows[side].push({
    id:event.id||null,minute:cumulativeEventMinute(event,competition),
    minuteText:displayEventMinute(event,competition,'—'),
