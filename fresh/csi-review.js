@@ -1,6 +1,6 @@
 import {cumulativeEventMinute} from './match-minutes.js';
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const labels={goal:'Gol',yellow_card:'Ammonizione',blue_card:'Cartellino blu',red_card:'Espulsione',substitution:'Cambio',unknown:'Evento CSI'};
+const labels={goal:'Gol',yellow_card:'Ammonizione',blue_card:'Cartellino blu',red_card:'Espulsione',substitution:'Cambio',period_end:'Recupero periodo',unknown:'Evento CSI'};
 const norm=v=>String(v??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
 function playerLabel(p){return [p?.last_name,p?.first_name].filter(Boolean).join(' ')||p?.display_name||p?.name||'Giocatore'}
 function csiSide(ev,match){
@@ -10,6 +10,7 @@ function csiSide(ev,match){
  return ev.source_team_side==='home'?(oursHome?'team':'opponent'):(oursHome?'opponent':'team');
 }
 function minuteLabel(ev){
+ if(ev?.event_type==='period_end'&&ev?.stoppage_minute!=null)return 'Recupero +'+ev.stoppage_minute+"'";
  if(ev?.minute==null)return '—';
  return ev.stoppage_minute?ev.minute+"+"+ev.stoppage_minute+"'":ev.minute+"'";
 }
@@ -26,6 +27,14 @@ function tmWho(ev,players){
 }
 function candidateScore(source,target,match,players,competition){
  if(source.event_type!==target.event_type)return -1;
+ if(source.event_type==='period_end'){
+  const sp=Number(source.period),tp=Number(target.payload?.period_no)||((target.payload?.period==='second_half')?2:1);
+  if(Number.isFinite(sp)&&Number.isFinite(tp)&&sp!==tp)return -1;
+  const sr=Number(source.stoppage_minute),tr=Number(target.payload?.recovery_minutes??target.stoppage_minute);
+  let score=80;
+  if(Number.isFinite(sr)&&Number.isFinite(tr))score+=sr===tr?20:Math.max(0,10-Math.abs(sr-tr)*3);
+  return score;
+ }
  const side=csiSide(source,match);
  if(side&&target.team_side!==side)return -1;
  const sm=Number(source.minute),tm=cumulativeEventMinute(target,competition);
