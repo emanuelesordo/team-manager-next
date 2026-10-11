@@ -49,12 +49,16 @@ function historicalPrior(club,history=[]){
   const absolutePositionScore=clamp(1/(1+.18*(position-1)),.15,1);
   const relativePositionScore=Number.isInteger(totalPositions)&&totalPositions>=2?
    clamp((totalPositions-position)/(totalPositions-1),0,1):absolutePositionScore;
-  const gd=Number(r.goal_difference),hasGd=Number.isFinite(gd)&&r.goal_difference!==null&&r.goal_difference!=='';
-  const gdScale=Math.max(8,Number.isInteger(totalPositions)?totalPositions:12)*3;
-  const gdScore=hasGd?clamp(.5+gd/gdScale):.5;
+  const gf=Number(r.goals_for),ga=Number(r.goals_against);
+  const hasGoals=Number.isFinite(gf)&&Number.isFinite(ga)&&r.goals_for!==null&&r.goals_against!==null;
+  const gd=hasGoals?gf-ga:Number(r.goal_difference),hasGd=Number.isFinite(gd)&&gd!==null&&gd!=='';
+  const played=Math.max(1,Number(r.matches_played)||Math.round(maxPoints/3)||1);
+  const gdPerGame=hasGd?gd/played:0;
+  const gdScore=hasGd?clamp(.5+gdPerGame/4):.5;
+  const scoringScore=hasGoals?clamp(.5+((gf/played)-(ga/played))/4):gdScore;
   // League level is deliberately the dominant historical signal: a poor season
   // one tier higher should still rate above a middling season one tier lower.
-  const seasonScore=.64*tierScore+.18*earned+.10*relativePositionScore+.08*gdScore;
+  const seasonScore=.60*tierScore+.17*earned+.09*relativePositionScore+.07*gdScore+.07*scoringScore;
   const weight=recency[index]??.2;
   sum+=seasonScore*weight;tierSum+=tierScore*weight;weightsTotal+=weight;
  });
@@ -294,8 +298,9 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
   const list=byFixture.get(key(f.id))||[];list.push(e);byFixture.set(key(f.id),list);
  }
  let timelineSample=0,trailed=0,recovered=0,comebackWins=0,led=0,heldLead=0,lostLead=0;
+ let scoredFirst=0,scoredFirstWins=0,concededFirst=0,concededFirstWins=0,concededFirstRecoveredPoints=0;
  let opponentReds=0,ownReds=0,cardSample=0;
- const timing=new Map();
+ const timing=new Map(),scoredMinutes=[],concededMinutes=[],equalizerMinutes=[];
  for(const f of completed.filter(x=>homeId(x)===club||awayId(x)===club)){
   const all=byFixture.get(key(f.id))||[];
   cardSample++;
@@ -319,14 +324,18 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
    const windowIndex=Math.max(0,Math.min(3,rawIndex));
    const start=Math.floor(windowIndex*windowSize)+1,end=Math.round(Math.min(matchMinutes,(windowIndex+1)*windowSize));
    const label=start+"′–"+end+"′",bucket=timing.get(label)||{label,start,end,for:0,against:0};
-   if(scorer===club){ours++;bucket.for++}else{theirs++;bucket.against++}
+   if(scorer===club){ours++;bucket.for++;scoredMinutes.push(minute)}else{theirs++;bucket.against++;concededMinutes.push(minute)}
    timing.set(label,bucket);
+   const beforeBehind=wasBehind;
    if(ours<theirs)wasBehind=true;if(ours>theirs)wasAhead=true;
-   if(wasBehind&&ours>=theirs)reachedEqualAfterBehind=true;
+   if(wasBehind&&ours>=theirs){reachedEqualAfterBehind=true;if(beforeBehind&&ours===theirs)equalizerMinutes.push(minute)}
    if(wasAhead&&ours<=theirs)reachedEqualAfterAhead=true;
   }
   timelineSample++;
   const s=scoreFor(f,club);if(!s)continue;
+  const firstGoal=goals[0],firstScorer=firstGoal?eventClub(firstGoal,f,primaryTeam,true):null;
+  if(firstScorer===club){scoredFirst++;if(s[0]>s[1])scoredFirstWins++}
+  else if(firstScorer){concededFirst++;if(s[0]>s[1])concededFirstWins++;if(s[0]>=s[1])concededFirstRecoveredPoints++}
   if(wasBehind){trailed++;if(reachedEqualAfterBehind)recovered++;if(s[0]>s[1])comebackWins++}
   if(wasAhead){led++;if(s[0]>s[1])heldLead++;if(reachedEqualAfterAhead)lostLead++}
  }
@@ -334,9 +343,15 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
  const totalFor=goalWindows.reduce((s,x)=>s+x.for,0),totalAgainst=goalWindows.reduce((s,x)=>s+x.against,0);
  const strongestFor=goalWindows.slice().sort((a,b)=>b.for-a.for||a.start-b.start)[0]||null;
  const weakestAgainst=goalWindows.slice().sort((a,b)=>b.against-a.against||a.start-b.start)[0]||null;
+ const mean=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+ const spreadAround=a=>{if(!a.length)return null;const m=mean(a),variance=a.reduce((s,x)=>s+(x-m)*(x-m),0)/a.length;return {mean:m,around:clamp(Math.round(Math.sqrt(variance)),5,10),n:a.length}};
  return {timelineSample,trailed,recovered,comebackWins,led,heldLead,lostLead,cardSample,opponentReds,ownReds,
+  scoredFirst,scoredFirstWins,concededFirst,concededFirstWins,concededFirstRecoveredPoints,
+  scoredFirstWinRate:scoredFirst?scoredFirstWins/scoredFirst:null,
+  concededFirstWinRate:concededFirst?concededFirstWins/concededFirst:null,
   recoveryRate:trailed?recovered/trailed:null,leadHoldRate:led?heldLead/led:null,
   opponentRedRate:cardSample?opponentReds/cardSample:null,ownRedRate:cardSample?ownReds/cardSample:null,
+  scoringTiming:spreadAround(scoredMinutes),concedingTiming:spreadAround(concededMinutes),equalizerTiming:spreadAround(equalizerMinutes),
   goalWindows,totalTimedGoalsFor:totalFor,totalTimedGoalsAgainst:totalAgainst,strongestFor,weakestAgainst};
 }
 function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
@@ -345,6 +360,8 @@ function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
  const inspect=(name,base,situ)=>{
   if(base.played>=2&&base.recentPpg-base.ppg>=.5)push(name,'Forma in crescita','↑',base.recentPpg.toFixed(2)+' punti/gara nelle ultime contro '+base.ppg.toFixed(2)+' complessivi','strength');
   if(base.played>=2&&base.ppg-base.recentPpg>=.5)push(name,'Forma in calo','↓',base.recentPpg.toFixed(2)+' punti/gara recenti contro '+base.ppg.toFixed(2)+' complessivi','risk');
+  if(situ.scoredFirst>=2&&situ.scoredFirstWinRate>=.6)push(name,'Capitalizza il primo gol',Math.round(situ.scoredFirstWinRate*100)+'%',situ.scoredFirstWins+' vittorie in '+situ.scoredFirst+' gare in cui ha segnato per prima','strength');
+  if(situ.concededFirst>=2&&situ.concededFirstWinRate<=.25)push(name,'Soffre il primo svantaggio',Math.round((1-situ.concededFirstWinRate)*100)+'%',situ.concededFirst+' gare partendo sotto, solo '+situ.concededFirstWins+' vinte','risk');
   if(situ.trailed>=2&&situ.recoveryRate>=.5)push(name,'Rimonta spesso',Math.round(situ.recoveryRate*100)+'%',situ.recovered+' recuperi dopo essere andata sotto in '+situ.trailed+' casi','strength');
   if(situ.led>=2&&situ.leadHoldRate>=.75)push(name,'Protegge bene il vantaggio',Math.round(situ.leadHoldRate*100)+'%',situ.heldLead+' vittorie dopo essere passata avanti in '+situ.led+' gare','strength');
   if(situ.led>=2&&situ.lostLead/situ.led>=.5)push(name,'Vantaggio vulnerabile',Math.round(100*situ.lostLead/situ.led)+'%',situ.lostLead+' volte raggiunta dopo essere passata avanti','risk');
@@ -447,6 +464,20 @@ function matchNarrative({fixture,probability,expectedGoals,home,away,homeCompari
  if(sameWindowHome) add(92,'La fascia '+homeSituational.strongestFor.label+' è un incrocio concreto: coincide con il picco realizzativo di '+fixture.home_team+' e con il momento in cui '+fixture.away_team+' concede più spesso.','timing');
  if(sameWindowAway) add(92,'La fascia '+awaySituational.strongestFor.label+' è un incrocio concreto: coincide con il picco realizzativo di '+fixture.away_team+' e con il momento in cui '+fixture.home_team+' concede più spesso.','timing');
 
+ const minuteText=x=>x?Math.round(x.mean)+"' ±"+x.around:null;
+ const homeFirstRisk=homeSituational?.concededFirst>=2&&homeSituational?.concedingTiming;
+ const awayFirstRisk=awaySituational?.concededFirst>=2&&awaySituational?.concedingTiming;
+ if(homeFirstRisk&&homeSituational.recoveryRate>=.4&&homeSituational.equalizerTiming){
+  add(94,fixture.home_team+' tende a concedere per prima attorno al '+minuteText(homeSituational.concedingTiming)+
+   ', ma quando reagisce il pareggio arriva mediamente verso il '+minuteText(homeSituational.equalizerTiming)+
+   '. È un profilo da partenza fragile ma con capacità di recupero.','firstgoal-home');
+ }else if(awayFirstRisk&&awaySituational.recoveryRate>=.4&&awaySituational.equalizerTiming){
+  add(94,fixture.away_team+' tende a concedere per prima attorno al '+minuteText(awaySituational.concedingTiming)+
+   ', ma quando recupera lo fa mediamente verso il '+minuteText(awaySituational.equalizerTiming)+
+   '. Il primo vantaggio avversario quindi non chiude necessariamente la partita.','firstgoal-away');
+ }
+ const firstSignal=attention.find(x=>/Capitalizza il primo gol|Soffre il primo svantaggio/i.test(x.label));
+ if(firstSignal)add(86,firstSignal.club+': '+firstSignal.label.toLowerCase()+'. '+firstSignal.detail+'.','firstgoal');
  const stateSignals=attention.filter(x=>/Rimonta|Vantaggio vulnerabile|Protegge bene/i.test(x.label));
  if(stateSignals.length){
   const s=stateSignals[0];
@@ -497,7 +528,7 @@ export function predictionSignature({fixture,fixtures=[],history=[],venues=[],ev
  return JSON.stringify([
   fixture?.id,fixture?.kickoff_at,fixture?.competition_id,
   fixtures.filter(f=>f.competition_id===fixture?.competition_id).map(f=>[f.id,f.status,f.kickoff_at,homeId(f),awayId(f),f.home_score,f.away_score,f.venue_name||f.venue]).sort(),
-  history.map(r=>[identity(r.team_id,r.opponent_id),r.season_start_year,r.tier_level,r.final_position,r.total_positions,r.points,r.max_points,r.goal_difference]).sort(),
+  history.map(r=>[identity(r.team_id,r.opponent_id),r.season_start_year,r.tier_level,r.final_position,r.total_positions,r.points,r.max_points,r.matches_played,r.goals_for,r.goals_against,r.goal_difference]).sort(),
   venues.map(v=>[v.id,v.name,v.surface_type,v.width_profile,v.length_profile]).sort(),
   events.map(e=>[e.id,e.match_id,e.event_type,e.minute,e.stoppage_minute,e.team_side,e.validation_status,e.payload?.count_score]).sort()
  ]);
