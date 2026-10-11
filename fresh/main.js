@@ -1359,9 +1359,30 @@ document.addEventListener('submit',async e=>{
     }
     state.matchData=await loadMatchInfo(m.id);
    }else{
-    const payload={event_type:type,team_side:teamSide,minute,stoppage_minute:stoppage,source:'manual',source_raw:{},payload:{origin:'timeline_admin'},proposed_by:state.identity.user};
-    if(eventId)await adminWrite('app_match_events','PATCH',payload,{id:eventId});
-    else await adminWrite('app_match_events','POST',{...payload,fixture_id:f.id,match_id:null});
+    const period=String(fd.get('period')||'first_half');
+    const periodNo=period==='second_half'?2:period==='extra'?3:1;
+    const periodPayload={
+     origin:'timeline_admin',
+     period,
+     period_no:periodNo,
+     minute_relative:period==='second_half'||period==='extra'
+    };
+    const payload={
+     event_type:type,
+     team_side:teamSide,
+     minute,
+     stoppage_minute:stoppage,
+     source:'manual',
+     source_raw:{period:periodNo},
+     payload:periodPayload,
+     proposed_by:state.identity.user
+    };
+    if(eventId){
+     const existing=(state.fixtureEvents||[]).find(x=>String(x.id)===String(eventId));
+     payload.payload={...(existing?.payload||{}),...periodPayload};
+     payload.source_raw={...(existing?.source_raw||{}),period:periodNo};
+     await adminWrite('app_match_events','PATCH',payload,{id:eventId});
+    }else await adminWrite('app_match_events','POST',{...payload,fixture_id:f.id,match_id:null});
     state.fixtureEvents=await loadFixtureEvents(f.id);
     await saveExtraScore({closeEditor:false,toastResult:false});
    }
