@@ -414,26 +414,34 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  }
  remainingGoals.forEach((e,i)=>goalOrdinal.set(e,openOrdinals[i]||goalEvents.length+i+1));
  const goalsByOrdinal=[...goalEvents].sort((a,b)=>(goalOrdinal.get(a)||Infinity)-(goalOrdinal.get(b)||Infinity));
+ const inferredUnknownPlacement=new Map();
  const effectiveOrder=e=>{
   const minute=absoluteMinute(e);
   if(minute!==null)return minute+recovery(e)/100;
   if(goal(e)){
    const ordinal=goalOrdinal.get(e)||Number(e.payload?.sequence_order)||1;
-   let prev=null,next=null;
+   let prev=null,next=null,prevPeriod=null,nextPeriod=null;
    for(const g of goalsByOrdinal){
     const o=goalOrdinal.get(g)||0,m=absoluteMinute(g);
     if(m===null||g===e)continue;
-    if(o<ordinal)prev=m;
-    if(o>ordinal){next=m;break}
+    if(o<ordinal){prev=m;prevPeriod=periodNo(g)}
+    if(o>ordinal){next=m;nextPeriod=periodNo(g);break}
    }
-   if(prev!==null&&next!==null)return prev+(next-prev)/2;
-   if(prev!==null)return prev+.5;
-   if(next!==null)return Math.max(0,next-.5);
+   // An unknown-minute goal can live inside the timeline only when its
+   // neighbouring known goals bound it within the same period.
+   if(prev!==null&&next!==null&&prevPeriod===nextPeriod&&prevPeriod>0){
+    inferredUnknownPlacement.set(e,{period:prevPeriod,order:prev+(next-prev)/2});
+    return prev+(next-prev)/2;
+   }
+   // Otherwise keep it out of the chronological timeline rather than
+   // pretending to know whether it happened before/after HT.
+   inferredUnknownPlacement.set(e,null);
    return 100000+ordinal/1000;
   }
   return 100000+(Number(e.payload?.sequence_order)||0)/1000;
  };
  const order=effectiveOrder;
+ raw.forEach(order);
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
  const tracked=ordered.map(e=>{const counts=!['rejected','disputed'].includes(e.validation_status)&&e.payload?.count_score!==false;if(counts&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:counts&&goal(e)?(snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
@@ -525,7 +533,12 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return output;
  };
  const renderPeriod=p=>{
-  const entries=descending.filter(x=>periodNo(x.event)===p);
+  const entries=descending.filter(x=>{
+   const ownPeriod=periodNo(x.event);
+   if(ownPeriod===p)return true;
+   if(ownPeriod!==0)return false;
+   return inferredUnknownPlacement.get(x.event)?.period===p;
+  });
   const base=duration===null?null:p*duration;
   const added=x=>{const n=absoluteMinute(x.event);return recovery(x.event)>0||(base!==null&&n!==null&&n>=base)};
   const stoppage=entries.filter(added),regular=entries.filter(x=>!added(x));
@@ -542,8 +555,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO','recovery');
   return output+groupedRows(regular);
  };
- const unknownRows=groupedRows(descending.filter(x=>periodNo(x.event)===0));
- let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI','title')+unknownRows;
+ let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI','title');
  if(maxPeriod===2){
   parts+=renderPeriod(2)+(periodEndByPeriod.has(1)?'':heading('HT '+halfScore))+renderPeriod(1);
  }else if(maxPeriod>2){
