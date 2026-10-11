@@ -1,3 +1,4 @@
+import {predictMatch} from './pre-match-prediction.js?v=20261012minutes3';
 /**
  * Deterministic Monte Carlo season projection (10,000 simulations).
  * Official source: app_competition_fixtures + app_competition_standings;
@@ -86,13 +87,14 @@ function strengths(teams,completed,config,history=[],competitionRows=[]){
  }
  return {scores,avgGoal};
 }
-export function projectionSignature(config,fixtures,standings,history=[]){
+export function projectionSignature(config,fixtures,standings,history=[],context={}){
  return JSON.stringify([config?.id,config?.win_points,config?.draw_points,config?.loss_points,
   fixtures.filter(f=>f.competition_id===config?.id).map(f=>[f.id,f.kickoff_at,homeId(f),awayId(f),f.status,f.home_score,f.away_score]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))),
   standings.filter(s=>s.competition_id===config?.id).map(s=>[standingId(s),s.points,s.played,s.goals_for,s.goals_against]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))),
-  history.map(r=>[identity(r.team_id,r.opponent_id),r.season_start_year,r.tier_level,r.final_position,r.total_positions,r.points,r.max_points,r.goal_difference]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))||Number(b[1])-Number(a[1]))]);
+  history.map(r=>[identity(r.team_id,r.opponent_id),r.season_start_year,r.tier_level,r.final_position,r.total_positions,r.points,r.max_points,r.matches_played,r.goals_for,r.goals_against,r.goal_difference]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))||Number(b[1])-Number(a[1])),
+  (context.events||[]).map(e=>[e.id,e.fixture_id,e.match_id,e.event_type,e.minute,e.stoppage_minute,e.team_side,e.validation_status,e.payload?.count_score,e.payload?.period_no,e.payload?.period]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))]);
 }
-export function projectLeague(config,fixtures,standings,iterations=10000,history=[]){
+export function projectLeague(config,fixtures,standings,iterations=10000,history=[],context={}){
  if(!config?.id||!Number.isInteger(iterations)||iterations<1||iterations>20000)throw Error('Proiezione: parametri non validi');
  const rows=fixtures.filter(f=>f.competition_id===config.id&&f.status!=='cancelled');
  const table=standings.filter(s=>s.competition_id===config.id);
@@ -100,7 +102,7 @@ export function projectLeague(config,fixtures,standings,iterations=10000,history
  const teams=validTeams(rows,table);if(teams.length<2)return null;
  const completed=rows.filter(done),remaining=rows.filter(f=>!done(f)&&['scheduled','postponed'].includes(f.status));
  if(!remaining.length)return {complete:true,iterations:0,teams:teams.map(t=>({team:table.find(row=>standingId(row)===t)?.team||t,club_id:t})),played:completed.length,remaining:0};
- const signature=projectionSignature(config,rows,table,history);
+ const signature=projectionSignature(config,rows,table,history,context);
  const key=signature+'|'+iterations;if(memo.has(key))return memo.get(key);
  const {scores,avgGoal}=strengths(teams,completed,config,history,rows);
  const n=teams.length,index=new Map(teams.map((t,i)=>[t,i])),rand=random(hash(signature));
@@ -112,15 +114,27 @@ export function projectLeague(config,fixtures,standings,iterations=10000,history
   currentRank.set(teams[i],1+table.filter(x=>Number(x.points??0)>Number(r?.points??0)).length);
  }
  const sumsP=new Float64Array(n),sumsR=new Float64Array(n),sumsGF=new Float64Array(n),sumsGS=new Float64Array(n),ranks=teams.map(()=>[]);
- const pairs=remaining.map(f=>({h:index.get(homeId(f)),a:index.get(awayId(f))}))
-  .filter(x=>Number.isInteger(x.h)&&Number.isInteger(x.a)&&x.h!==x.a);
+ const pairs=remaining.map(f=>{
+  const h=index.get(homeId(f)),a=index.get(awayId(f));
+  if(!Number.isInteger(h)||!Number.isInteger(a)||h===a)return null;
+  let predicted=null;
+  try{
+   predicted=predictMatch({
+    fixture:f,competition:config,fixtures:rows,history,
+    venues:context.venues||[],matches:context.matches||[],events:context.events||[],
+    team:context.team||null,competitions:context.competitions||[config]
+   });
+  }catch{}
+  const ph=Number(predicted?.expectedGoals?.home),pa=Number(predicted?.expectedGoals?.away);
+  const fallbackDiff=scores.get(teams[h]).strength-scores.get(teams[a]).strength;
+  const home=Number.isFinite(ph)?ph:Math.max(.15,Math.min(4.3,avgGoal*1.1*Math.exp(fallbackDiff*.85)));
+  const away=Number.isFinite(pa)?pa:Math.max(.15,Math.min(4.3,avgGoal*.93*Math.exp(-fallbackDiff*.85)));
+  return {h,a,fixtureId:f.id,home,away,predicted:Boolean(predicted&&Number.isFinite(ph)&&Number.isFinite(pa))};
+ }).filter(Boolean);
  for(let simulation=0;simulation<iterations;simulation++){
   const p=Int32Array.from(initialPoints);
   const gf=new Int32Array(n),gs=new Int32Array(n);
-  for(const {h,a} of pairs){
-   const diff=scores.get(teams[h]).strength-scores.get(teams[a]).strength;
-   const home=Math.max(.15,Math.min(4.3,avgGoal*1.1*Math.exp(diff*.85)));
-   const away=Math.max(.15,Math.min(4.3,avgGoal*.93*Math.exp(-diff*.85)));
+  for(const {h,a,home,away} of pairs){
    const hg=poisson(home,rand),ag=poisson(away,rand);
    p[h]+=points(hg,ag,config);p[a]+=points(ag,hg,config);
    gf[h]+=hg;gs[h]+=ag;gf[a]+=ag;gs[a]+=hg;
@@ -135,6 +149,7 @@ export function projectLeague(config,fixtures,standings,iterations=10000,history
  const covered=completed.length/(completed.length+remaining.length);
  const output={
   complete:false,iterations,played:completed.length,remaining:remaining.length,
+  forecastModelGames:pairs.filter(x=>x.predicted).length,
   reliability:Math.round(100*covered), // data-completeness heuristic, NOT confidence.
   rows:teams.map((team,i)=>{
    const ordered=ranks[i].sort((a,b)=>a-b),q=p=>ordered[Math.floor((ordered.length-1)*p)];
