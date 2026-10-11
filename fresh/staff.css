@@ -876,3 +876,11 @@
  .lineup-minimal .lineup-bench,
  .lineup-minimal .lineup-bench-svg{width:14px!important;height:14px!important}
 }
+
+/* Configuration switch: keep every area visible, including bulk history. */
+.staff-switch{display:flex;flex-wrap:wrap;gap:6px;overflow:visible;max-width:100%}
+.staff-switch>button{flex:0 0 auto}
+@media(max-width:760px){
+ .staff-switch{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:4px}
+ .staff-switch>button{flex:0 0 auto;white-space:nowrap}
+}
