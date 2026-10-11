@@ -449,15 +449,18 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  const scoreByEvent=new Map();
  let home=0,away=0;
- const scoringGoals=[...goalEvents].sort((a,b)=>{
-  const ao=goalOrdinal.get(a),bo=goalOrdinal.get(b);
-  if(Number.isFinite(ao)&&Number.isFinite(bo)&&ao!==bo)return ao-bo;
-  const am=absoluteMinute(a),bm=absoluteMinute(b);
-  if(am===null&&bm!==null)return 1;
-  if(am!==null&&bm===null)return -1;
-  if(am!==null&&bm!==null&&am!==bm)return am-bm;
-  return String(a.created_at||'').localeCompare(String(b.created_at||''));
- });
+ const scoringOrder=e=>{
+  const manual=Number(e.payload?.timeline_order);
+  if(Number.isFinite(manual))return manual;
+  const minute=absoluteMinute(e);
+  if(minute!==null)return minute+recovery(e)/100;
+  const ordinal=goalOrdinal.get(e)||Number(e.payload?.goal_order)||Number(e.payload?.sequence_order)||9999;
+  return 100000+ordinal/1000;
+ };
+ const scoringGoals=[...goalEvents].sort((a,b)=>
+  scoringOrder(a)-scoringOrder(b)||
+  String(a.created_at||'').localeCompare(String(b.created_at||''))
+ );
  for(const e of scoringGoals){
   const counts=!['rejected','disputed'].includes(e.validation_status)&&e.payload?.count_score!==false;
   if(!counts)continue;
