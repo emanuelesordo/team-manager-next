@@ -1361,3 +1361,10 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 .match-timeline-unplaced{margin-top:10px;padding-top:8px;border-top:1px dashed color-mix(in srgb,var(--border) 82%,transparent)}
 .mt-unplaced-label{margin:0 0 6px;text-align:center;color:var(--muted);font:600 9px/1 Manrope,sans-serif;letter-spacing:.09em}
 .match-timeline-unplaced .mt-row{opacity:.86}
+
+/* Drag ordering for events without a known minute */
+.mt-draggable-unknown{cursor:grab}
+.mt-draggable-unknown:active{cursor:grabbing}
+.mt-draggable-unknown.is-dragging{opacity:.42}
+.mt-row.is-timeline-drop-target,.match-timeline-unplaced.is-timeline-drop-target{outline:1px dashed var(--accent);outline-offset:3px;border-radius:10px}
+.match-timeline-unplaced .mt-unplaced-label{user-select:none}
