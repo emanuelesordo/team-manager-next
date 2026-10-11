@@ -113,13 +113,20 @@ function strengthRows(teams,completed,allCompetitionRows,config,history){
   const potential=prior.seasons?
    clamp(prior.score*(1-.45*structuralEvidence)+structural*(.45*structuralEvidence)):
    clamp(.5*(1-structuralEvidence)+structural*structuralEvidence);
-  const historyShare=Math.min(.22,.22*historicalWeight(n,totalGames.get(club)));
+  const historyWeight=historicalWeight(n,totalGames.get(club));
+  const historyShare=Math.min(.22,.22*historyWeight);
   const strength=clamp(current*(1-historyShare)+prior.score*historyShare);
   const shrink=n/(n+3);
+  const observedAttack=leagueGoalRate*(1-shrink)+(n?gf/n:leagueGoalRate)*shrink;
+  const observedDefense=leagueGoalRate*(1-shrink)+(n?ga/n:leagueGoalRate)*shrink;
+  // In the opening rounds, historical level must also shape expected goal rates,
+  // not only the generic strength score. This avoids flattening a clear tier/
+  // performance gap into an artificial 50/50 just because current-season data is scarce.
+  const historicalRateBias=prior.seasons?(prior.score-.5)*2.2*historyWeight:0;
   raw.set(club,{club,played:n,gf,ga,ppg,recent,gd,current,structural,potential,prior:prior.score,historySeasons:prior.seasons,
-   historyShare,strength,totalGames:totalGames.get(club)||0,
-   attackRate:leagueGoalRate*(1-shrink)+(n?gf/n:leagueGoalRate)*shrink,
-   defenseRate:leagueGoalRate*(1-shrink)+(n?ga/n:leagueGoalRate)*shrink});
+   historyShare,historyWeight,strength,totalGames:totalGames.get(club)||0,
+   attackRate:clamp(observedAttack*Math.exp(historicalRateBias),.25,3.8),
+   defenseRate:clamp(observedDefense*Math.exp(-historicalRateBias),.25,3.8)});
  }
  return {rows:raw,leagueGoalRate};
 }
@@ -516,7 +523,8 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
     [targetVenue.surface_type,targetVenue.width_profile,targetVenue.length_profile].filter(Boolean).join(' · ')+' · fattore applicato solo con almeno 2 precedenti su profilo simile.':
     'Caratteristiche del campo non ancora configurate.'},
   {key:'history',label:'Storico stagioni passate',home:home.prior,away:away.prior,
-   detail:'Incidenza attuale: '+Math.round(home.historyShare*100)+'% '+fixture.home_team+' · '+Math.round(away.historyShare*100)+'% '+fixture.away_team+'.'}
+   detail:'Incidenza sulla forza: '+Math.round(home.historyShare*100)+'% '+fixture.home_team+' · '+Math.round(away.historyShare*100)+'% '+fixture.away_team+
+    '. Nelle prime giornate lo storico corregge anche attacco/difesa attesi; il peso cala automaticamente con l’aumentare delle gare correnti.'}
  ];
 
  const detailedAvailable=Number(Boolean(homeManagement&&!homeManagement.insufficient))+Number(Boolean(awayManagement&&!awayManagement.insufficient))+
