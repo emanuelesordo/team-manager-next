@@ -8,7 +8,7 @@ import {availabilityDefault,normalizedReason,unavailabilityReasons} from './avai
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js?live=20261005merge2';
-import {csiReviewPanel} from './csi-review.js?csi=20261007v1';
+import {csiReviewPanel} from './csi-review.js?csi=20261011recovery1';
 import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 
