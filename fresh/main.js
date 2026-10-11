@@ -391,9 +391,49 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return duration!==null&&minute!==null?Math.max(1,Math.ceil(Math.max(1,minute)/duration)):1;
  };
  const recovery=e=>Math.max(0,Number(e.stoppage_minute)||0);
- const order=e=>{const n=absoluteMinute(e);if(n===null)return 100000+(Number(e.payload?.sequence_order)||0)/1000;return n+recovery(e)/100};
  const periodEnds=[...(events||[])].filter(e=>type(e)==='period_end'&&e.validation_status!=='rejected');
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
+ const goalEvents=raw.filter(goal);
+ const explicitGoalOrder=new Map();
+ for(const e of goalEvents){
+  const n=Number(e.payload?.goal_order);
+  if(Number.isInteger(n)&&n>0&&!explicitGoalOrder.has(n))explicitGoalOrder.set(n,e);
+ }
+ const remainingGoals=goalEvents.filter(e=>![...explicitGoalOrder.values()].includes(e))
+  .sort((a,b)=>{
+   const am=absoluteMinute(a),bm=absoluteMinute(b);
+   if(am===null&&bm!==null)return 1;
+   if(am!==null&&bm===null)return -1;
+   if(am!==null&&bm!==null&&am!==bm)return am-bm;
+   return (Number(a.payload?.sequence_order)||0)-(Number(b.payload?.sequence_order)||0)||String(a.created_at||'').localeCompare(String(b.created_at||''));
+  });
+ const goalOrdinal=new Map(),openOrdinals=[];
+ for(let n=1;n<=goalEvents.length;n++){
+  const fixed=explicitGoalOrder.get(n);
+  if(fixed)goalOrdinal.set(fixed,n);else openOrdinals.push(n);
+ }
+ remainingGoals.forEach((e,i)=>goalOrdinal.set(e,openOrdinals[i]||goalEvents.length+i+1));
+ const goalsByOrdinal=[...goalEvents].sort((a,b)=>(goalOrdinal.get(a)||Infinity)-(goalOrdinal.get(b)||Infinity));
+ const effectiveOrder=e=>{
+  const minute=absoluteMinute(e);
+  if(minute!==null)return minute+recovery(e)/100;
+  if(goal(e)){
+   const ordinal=goalOrdinal.get(e)||Number(e.payload?.sequence_order)||1;
+   let prev=null,next=null;
+   for(const g of goalsByOrdinal){
+    const o=goalOrdinal.get(g)||0,m=absoluteMinute(g);
+    if(m===null||g===e)continue;
+    if(o<ordinal)prev=m;
+    if(o>ordinal){next=m;break}
+   }
+   if(prev!==null&&next!==null)return prev+(next-prev)/2;
+   if(prev!==null)return prev+.5;
+   if(next!==null)return Math.max(0,next-.5);
+   return 100000+ordinal/1000;
+  }
+  return 100000+(Number(e.payload?.sequence_order)||0)/1000;
+ };
+ const order=effectiveOrder;
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
  let home=0,away=0;
  const tracked=ordered.map(e=>{const counts=!['rejected','disputed'].includes(e.validation_status)&&e.payload?.count_score!==false;if(counts&&goal(e)){let s=side(e);if(type(e)==='own_goal')s=s==='home'?'away':s==='away'?'home':'unknown';if(s==='home')home++;if(s==='away')away++;}const saved=e.payload?.legacy_fixture_score;const snapshot=Number.isInteger(saved?.home)&&Number.isInteger(saved?.away)?saved:null;return {event:e,score:counts&&goal(e)?(snapshot?snapshot.home+' - '+snapshot.away:home+' - '+away):null}});
@@ -537,6 +577,12 @@ function timelineEventEditor(){
  const secondaryOptions='<option value="">—</option>'+people.map(p=>'<option value="'+E(p.id)+'" '+(ev?.secondary_player_id===p.id?'selected':'')+'>'+E(matchPlayerLabel(p))+'</option>').join('');
  const types=[['goal','Gol'],['own_goal','Autogol'],['penalty_scored','Rigore segnato'],['penalty_missed','Rigore sbagliato'],['yellow_card','Giallo'],['blue_card','Blu'],['red_card','Rosso'],['substitution','Cambio'],['assist','Assist'],['other','Altro']];
  const sideOptions=fixtureOnly?[['home','Casa'],['away','Ospiti']]:[['team','Nostra squadra'],['opponent','Avversario']];
+ const fixtureGoalCount=fixtureOnly?Math.max(0,Number(f.home_score)||0)+Math.max(0,Number(f.away_score)||0):0;
+ const goalOrderValue=Number(ev?.payload?.goal_order)||0;
+ const goalOrderField=fixtureOnly&&['goal','own_goal','penalty_scored'].includes(ev?.event_type||'goal')&&fixtureGoalCount?
+  '<label class="staff-field"><span>Ordine gol</span><select name="goal_order"><option value="">Automatico</option>'+
+   Array.from({length:fixtureGoalCount},(_,i)=>i+1).map(n=>'<option value="'+n+'" '+(goalOrderValue===n?'selected':'')+'>'+n+'° gol</option>').join('')+
+  '</select><small>Usalo se il minuto non è noto ma conosci la successione.</small></label>':'';
  return '<div class="live-sheet-backdrop timeline-editor-backdrop" data-timeline-close><section class="live-event-sheet timeline-event-sheet" role="dialog" aria-modal="true" aria-label="'+(ev?'Modifica evento':'Aggiungi evento')+'">'+
   '<div class="live-sheet-handle"></div><div class="live-sheet-head"><div><small>TIMELINE</small><h3>'+(ev?'Modifica evento':'Aggiungi evento')+'</h3></div><button type="button" data-timeline-close aria-label="Chiudi">×</button></div>'+
   '<form data-timeline-event-form class="staff-form live-sheet-form" data-event-id="'+E(ev?.id||'')+'" data-fixture-only="'+fixtureOnly+'">'+
@@ -546,6 +592,7 @@ function timelineEventEditor(){
    '<label class="staff-field"><span>Minuto</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+E(minute)+'"></label>'+
    '<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+E(stoppage)+'"></label>'+
    (!fixtureOnly?'<label class="staff-field"><span>Giocatore</span><select name="player_id">'+playerOptions+'</select></label><label class="staff-field"><span>Secondo giocatore</span><select name="secondary_player_id">'+secondaryOptions+'</select></label>':'')+
+   goalOrderField+
    '<label class="staff-field live-notes"><span>Note</span><input name="notes" maxlength="400" value="'+E(ev?.payload?.notes||ev?.notes||'')+'"></label></div>'+
    '<div class="live-sheet-actions">'+
     (ev?'<button type="button" class="staff-danger" data-timeline-delete="'+E(ev.id)+'">Elimina</button>':'')+
@@ -1403,13 +1450,16 @@ document.addEventListener('submit',async e=>{
     const periodNo=period==='unknown'?null:period==='second_half'?2:period==='extra'?3:1;
     const existingEvent=eventId?(state.fixtureEvents||[]).find(x=>String(x.id)===String(eventId)):null;
     const sequenceOrder=Number(existingEvent?.payload?.sequence_order)||fixtureEventSequence(state.fixtureEvents||[])+1;
+    const goalOrderRaw=String(fd.get('goal_order')||'').trim();
+    const goalOrder=goalOrderRaw?Number(goalOrderRaw):null;
     const periodPayload={
      origin:existingEvent?.payload?.origin||'timeline_admin',
      score_placeholder:Boolean(existingEvent?.payload?.score_placeholder),
      period,
      period_no:periodNo,
      minute_relative:period==='second_half'||period==='extra',
-     sequence_order:sequenceOrder
+     sequence_order:sequenceOrder,
+     goal_order:Number.isInteger(goalOrder)&&goalOrder>0?goalOrder:null
     };
     const payload={
      event_type:type,
