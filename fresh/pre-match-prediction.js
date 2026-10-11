@@ -367,10 +367,10 @@ function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
   if(situ.led>=2&&situ.lostLead/situ.led>=.5)push(name,'Vantaggio vulnerabile',Math.round(100*situ.lostLead/situ.led)+'%',situ.lostLead+' volte raggiunta dopo essere passata avanti','risk');
   if(situ.cardSample>=2&&situ.opponentRedRate>=.25)push(name,'Fa espellere avversari',situ.opponentReds,situ.opponentReds+' espulsioni avversarie in '+situ.cardSample+' gare con eventi disponibili','watch');
   if(situ.cardSample>=2&&situ.ownRedRate>=.25)push(name,'Rischio disciplina',situ.ownReds,situ.ownReds+' espulsioni proprie in '+situ.cardSample+' gare con eventi disponibili','risk');
-  if(situ.strongestFor&&situ.totalTimedGoalsFor>=2&&situ.strongestFor.for/situ.totalTimedGoalsFor>=.45)
-   push(name,'Picco offensivo '+situ.strongestFor.label,situ.strongestFor.for+' gol',Math.round(100*situ.strongestFor.for/situ.totalTimedGoalsFor)+'% dei gol con minutaggio completo arriva in questa fascia','strength');
-  if(situ.weakestAgainst&&situ.totalTimedGoalsAgainst>=2&&situ.weakestAgainst.against/situ.totalTimedGoalsAgainst>=.45)
-   push(name,'Fascia vulnerabile '+situ.weakestAgainst.label,situ.weakestAgainst.against+' subiti',Math.round(100*situ.weakestAgainst.against/situ.totalTimedGoalsAgainst)+'% dei gol subiti con minutaggio completo arriva in questa fascia','risk');
+  if(situ.scoringTiming?.n>=2)
+   push(name,'Minuto offensivo ricorrente',Math.round(situ.scoringTiming.mean)+"'",'I gol arrivano mediamente attorno al '+Math.round(situ.scoringTiming.mean)+"' (circa ±"+situ.scoringTiming.around+' min)','strength');
+  if(situ.concedingTiming?.n>=2)
+   push(name,'Minuto vulnerabile ricorrente',Math.round(situ.concedingTiming.mean)+"'",'I gol subiti arrivano mediamente attorno al '+Math.round(situ.concedingTiming.mean)+"' (circa ±"+situ.concedingTiming.around+' min)','risk');
   if(base.played>=2&&base.gfPerGame>=base.gaPerGame+.75)push(name,'Produzione offensiva','+'+(base.gfPerGame-base.gaPerGame).toFixed(1),base.gfPerGame.toFixed(1)+' gol fatti/gara contro '+base.gaPerGame.toFixed(1)+' subiti','strength');
  };
  inspect(homeName,homeBase,homeSitu);inspect(awayName,awayBase,awaySitu);
@@ -459,10 +459,15 @@ function matchNarrative({fixture,probability,expectedGoals,home,away,homeCompari
   add(70,'Gli xG non indicano necessariamente una gara ricca, ma sono sbilanciati verso '+favorite+': il vantaggio nasce dalla qualità attesa delle occasioni più che dal numero totale di gol.','goals');
  }
 
- const sameWindowHome=homeSituational?.strongestFor&&awaySituational?.weakestAgainst&&homeSituational.strongestFor.label===awaySituational.weakestAgainst.label;
- const sameWindowAway=awaySituational?.strongestFor&&homeSituational?.weakestAgainst&&awaySituational.strongestFor.label===homeSituational.weakestAgainst.label;
- if(sameWindowHome) add(92,'La fascia '+homeSituational.strongestFor.label+' è un incrocio concreto: coincide con il picco realizzativo di '+fixture.home_team+' e con il momento in cui '+fixture.away_team+' concede più spesso.','timing');
- if(sameWindowAway) add(92,'La fascia '+awaySituational.strongestFor.label+' è un incrocio concreto: coincide con il picco realizzativo di '+fixture.away_team+' e con il momento in cui '+fixture.home_team+' concede più spesso.','timing');
+ const timingOverlap=(attack,defense)=>{
+  if(!attack?.scoringTiming||!defense?.concedingTiming||attack.scoringTiming.n<2||defense.concedingTiming.n<2)return null;
+  const diff=Math.abs(attack.scoringTiming.mean-defense.concedingTiming.mean);
+  const around=clamp(Math.round((attack.scoringTiming.around+defense.concedingTiming.around)/2),5,10);
+  return diff<=around*1.7?{minute:Math.round((attack.scoringTiming.mean+defense.concedingTiming.mean)/2),around,diff}:null;
+ };
+ const homeTiming=timingOverlap(homeSituational,awaySituational),awayTiming=timingOverlap(awaySituational,homeSituational);
+ if(homeTiming) add(92,'C’è un incrocio temporale favorevole a '+fixture.home_team+': tende a segnare attorno al '+homeTiming.minute+"' ±"+homeTiming.around+' min, proprio vicino al minutaggio medio in cui '+fixture.away_team+' concede.','timing');
+ else if(awayTiming) add(92,'C’è un incrocio temporale favorevole a '+fixture.away_team+': tende a segnare attorno al '+awayTiming.minute+"' ±"+awayTiming.around+' min, proprio vicino al minutaggio medio in cui '+fixture.home_team+' concede.','timing');
 
  const minuteText=x=>x?Math.round(x.mean)+"' ±"+x.around:null;
  const homeFirstRisk=homeSituational?.concededFirst>=2&&homeSituational?.concedingTiming;
@@ -580,12 +585,14 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   return parts.length?parts.reduce((a,b)=>a+b,0)/parts.length:.5;
  };
  const timingMatchup=(attack,defense)=>{
-  if(!attack?.strongestFor||!defense?.weakestAgainst)return 0;
-  if(attack.totalTimedGoalsFor<2||defense.totalTimedGoalsAgainst<2)return 0;
-  if(attack.strongestFor.label!==defense.weakestAgainst.label)return 0;
-  const a=attack.strongestFor.for/Math.max(1,attack.totalTimedGoalsFor);
-  const d=defense.weakestAgainst.against/Math.max(1,defense.totalTimedGoalsAgainst);
-  return clamp((a+d-1)*.35,-.18,.18);
+  const a=attack?.scoringTiming,d=defense?.concedingTiming;
+  if(!a||!d||a.n<2||d.n<2)return 0;
+  const distance=Math.abs(a.mean-d.mean);
+  const tolerance=clamp((Number(a.around||7)+Number(d.around||7))*.8,7,16);
+  if(distance>tolerance*1.75)return 0;
+  const overlap=clamp(1-distance/(tolerance*1.75),0,1);
+  const reliability=clamp(Math.min(a.n,d.n)/5,.3,1);
+  return .18*overlap*reliability;
  };
 
  const homeGoals=completed.reduce((s,f)=>s+Number(f.home_score||0),0),awayGoals=completed.reduce((s,f)=>s+Number(f.away_score||0),0);
@@ -633,6 +640,10 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
     'Nessun precedente comparabile sufficiente nella competizione.'},
   {key:'management',label:'Gestione vantaggio/svantaggio',home:gameStateScore(homeSituational),away:gameStateScore(awaySituational),
    detail:'Rimonte e mantenimento del vantaggio entrano nel correttivo solo con almeno 2 casi osservabili; campioni insufficienti restano neutrali.'},
+  {key:'firstgoal',label:'Primo gol e 3 punti',
+   home:homeSituational.scoredFirstWinRate??.5,away:awaySituational.scoredFirstWinRate??.5,
+   detail:fixture.home_team+': '+(homeSituational.scoredFirst||0)+' volte avanti per prima, '+(homeSituational.scoredFirstWins||0)+' vittorie · '+
+    fixture.away_team+': '+(awaySituational.scoredFirst||0)+' volte avanti per prima, '+(awaySituational.scoredFirstWins||0)+' vittorie. Viene valutato anche il rendimento quando si subisce per primi.'},
   {key:'timing',label:'Periodi forti / vulnerabili',home:.5+timingMatchup(homeSituational,awaySituational),away:.5+timingMatchup(awaySituational,homeSituational),
    detail:'Il correttivo cresce quando il picco offensivo di una squadra coincide con la fascia in cui l’avversaria subisce più spesso, usando solo gol con minutaggio affidabile.'},
   {key:'numerical',label:'Superiorità / inferiorità',home:homeNumerical?.score??.5,away:awayNumerical?.score??.5,
