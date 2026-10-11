@@ -310,8 +310,22 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
    if(receiver===club)ownReds++;else if(receiver)opponentReds++;
   }
   const goals=all.filter(e=>goalTypes.has(e.event_type)&&e.payload?.count_score!==false);
-  if(goals.length!==Number(f.home_score)+Number(f.away_score)||goals.some(e=>!Number.isInteger(e.minute)))continue;
   const comp=(competitions||[]).find(x=>key(x.id)===key(f.competition_id));
+  const timedGoals=goals.filter(e=>Number.isInteger(e.minute)&&Number.isFinite(cumulativeEventMinute(e,comp)))
+   .sort((a,b)=>(cumulativeEventMinute(a,comp)??999)-(cumulativeEventMinute(b,comp)??999)||
+    Number(a.stoppage_minute||0)-Number(b.stoppage_minute||0)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  // Timing distributions can use every reliable minute we know, even when a
+  // historical tabellino is incomplete. Score-state / first-goal analysis stays
+  // conservative and only runs when the whole scoring sequence is reconstructable.
+  for(const e of timedGoals){
+   const scorer=eventClub(e,f,primaryTeam,true);if(!scorer)continue;
+   const minute=Math.max(1,Number(cumulativeEventMinute(e,comp)||1));
+   if(scorer===club)scoredMinutes.push(minute);else concededMinutes.push(minute);
+  }
+
+  const completeTimeline=goals.length===Number(f.home_score)+Number(f.away_score)&&goals.length>0&&goals.every(e=>Number.isInteger(e.minute)&&Number.isFinite(cumulativeEventMinute(e,comp)));
+  if(!completeTimeline)continue;
+
   goals.sort((a,b)=>(cumulativeEventMinute(a,comp)??999)-(cumulativeEventMinute(b,comp)??999)||
    Number(a.stoppage_minute||0)-Number(b.stoppage_minute||0)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
   let ours=0,theirs=0,wasBehind=false,wasAhead=false,reachedEqualAfterBehind=false,reachedEqualAfterAhead=false;
@@ -324,7 +338,7 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
    const windowIndex=Math.max(0,Math.min(3,rawIndex));
    const start=Math.floor(windowIndex*windowSize)+1,end=Math.round(Math.min(matchMinutes,(windowIndex+1)*windowSize));
    const label=start+"′–"+end+"′",bucket=timing.get(label)||{label,start,end,for:0,against:0};
-   if(scorer===club){ours++;bucket.for++;scoredMinutes.push(minute)}else{theirs++;bucket.against++;concededMinutes.push(minute)}
+   if(scorer===club){ours++;bucket.for++}else{theirs++;bucket.against++}
    timing.set(label,bucket);
    const beforeBehind=wasBehind;
    if(ours<theirs)wasBehind=true;if(ours>theirs)wasAhead=true;
@@ -470,6 +484,20 @@ function matchNarrative({fixture,probability,expectedGoals,home,away,homeCompari
  else if(awayTiming) add(92,'C’è un incrocio temporale favorevole a '+fixture.away_team+': tende a segnare attorno al '+awayTiming.minute+"' ±"+awayTiming.around+' min, proprio vicino al minutaggio medio in cui '+fixture.home_team+' concede.','timing');
 
  const minuteText=x=>x?Math.round(x.mean)+"' ±"+x.around:null;
+ const homeTimingStory=homeSituational?.scoringTiming?.n>=2||homeSituational?.concedingTiming?.n>=2;
+ const awayTimingStory=awaySituational?.scoringTiming?.n>=2||awaySituational?.concedingTiming?.n>=2;
+ if(homeTimingStory){
+  const bits=[];
+  if(homeSituational.scoringTiming?.n>=2)bits.push('segna mediamente attorno al '+minuteText(homeSituational.scoringTiming));
+  if(homeSituational.concedingTiming?.n>=2)bits.push('subisce mediamente attorno al '+minuteText(homeSituational.concedingTiming));
+  add(89,fixture.home_team+' '+bits.join(' e ')+'.','timing-home');
+ }
+ if(awayTimingStory){
+  const bits=[];
+  if(awaySituational.scoringTiming?.n>=2)bits.push('segna mediamente attorno al '+minuteText(awaySituational.scoringTiming));
+  if(awaySituational.concedingTiming?.n>=2)bits.push('subisce mediamente attorno al '+minuteText(awaySituational.concedingTiming));
+  add(89,fixture.away_team+' '+bits.join(' e ')+'.','timing-away');
+ }
  const homeFirstRisk=homeSituational?.concededFirst>=2&&homeSituational?.concedingTiming;
  const awayFirstRisk=awaySituational?.concededFirst>=2&&awaySituational?.concedingTiming;
  if(homeFirstRisk&&homeSituational.recoveryRate>=.4&&homeSituational.equalizerTiming){
