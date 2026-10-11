@@ -1334,3 +1334,25 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 .prematch-player-rating{display:inline-flex;align-items:baseline;justify-content:center;gap:3px;padding:2px 5px;border-radius:999px;background:#071d1999;border:1px solid #ffffff24;box-shadow:none;white-space:nowrap;backdrop-filter:blur(2px)}
 .prematch-player-rating b{font-size:8px;color:#fff;font-weight:750}.prematch-player-rating small{font-size:5.7px;color:#d9ede5b8;text-transform:uppercase;letter-spacing:.03em}.prematch-player-rating>i{font-style:normal;font-size:7px;color:#ffffff5c}
 @media(max-width:760px){.prematch-player-rating{padding:1px 4px;gap:2px}.prematch-player-rating b{font-size:7.3px}.prematch-player-rating small{font-size:5px}.prematch-player-rating>i{font-size:6px}.prematch-narrative p{font-size:10px}}
+
+/* Match Center contextual navigation in the topbar */
+.match-topbar-page{display:flex;align-items:center;gap:10px;min-width:0}
+.match-topbar-back,.match-topbar-step{appearance:none;border:1px solid var(--border);background:color-mix(in srgb,var(--surface) 58%,transparent);color:var(--ink);font:700 11px Manrope,sans-serif;cursor:pointer}
+.match-topbar-back{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 12px;border-radius:11px;white-space:nowrap}
+.match-topbar-arrows{display:inline-flex;align-items:center;gap:5px}
+.match-topbar-step{width:38px;height:38px;display:grid;place-items:center;padding:0;border-radius:11px}
+.match-topbar-back:hover,.match-topbar-step:hover:not(:disabled){background:color-mix(in srgb,var(--surface) 88%,transparent);border-color:color-mix(in srgb,var(--ink) 20%,var(--border))}
+.match-topbar-step:disabled{opacity:.28;cursor:default}
+.match-topbar-back:focus-visible,.match-topbar-step:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:760px){
+ .match-topbar-page{gap:5px;flex:1}
+ .match-topbar-back{min-height:34px;padding:0 8px;gap:4px;font-size:9px}
+ .match-topbar-step{width:34px;height:34px;border-radius:10px}
+ body[data-page="match"] .topbar-page{min-width:0}
+ body[data-page="match"] .top-actions{margin-left:auto}
+}
+@media(max-width:430px){
+ .match-topbar-back span{max-width:78px;overflow:hidden;text-overflow:ellipsis}
+ .match-topbar-back{padding-inline:6px}
+ .match-topbar-step{width:31px;height:31px}
+}
