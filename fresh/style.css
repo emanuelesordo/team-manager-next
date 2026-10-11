@@ -905,7 +905,7 @@ body[data-page="competitions"] .comp-stand .table-scroller{width:100%;overflow-x
 @media(max-width:760px){.roster-table{min-width:680px}.roster-table .roster-player-identity{min-width:140px;gap:7px}.roster-table .roster-avatar{flex-basis:29px;width:29px;height:29px}}
 
 /* Match Center overview: colonne indipendenti, badge rating assoluto e campo compatto. */
-@media(min-width:961px){.match-overview-grid{align-items:stretch;height:clamp(540px,calc(100dvh - 210px),1000px);min-height:0}.match-overview-events,.match-overview-formation{min-height:0;max-height:100%;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}}
+@media(min-width:961px){.match-overview-grid{align-items:stretch;height:clamp(540px,calc(100dvh - 210px),1000px);min-height:0}.match-overview-events,.match-overview-formation{min-height:0;max-height:100%;overflow-y:auto;overscroll-behavior-y:auto;scrollbar-width:thin}}
 .match-overview-grid .inner-card{min-width:0}
 .match-overview-grid .mt-row{min-height:43px;padding:3px 0}
 .match-overview-grid .mt-minute-group{padding-block:5px}
