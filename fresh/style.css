@@ -1368,3 +1368,16 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 .mt-draggable-unknown.is-dragging{opacity:.42}
 .mt-row.is-timeline-drop-target,.match-timeline-unplaced.is-timeline-drop-target{outline:1px dashed var(--accent);outline-offset:3px;border-radius:10px}
 .match-timeline-unplaced .mt-unplaced-label{user-select:none}
+
+/* Compact pre-match forecast recap shown in Info after the match. */
+.match-past-prediction{margin:12px 0 16px;padding:14px 16px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--surface) 72%,transparent)}
+.match-past-prediction-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.match-past-prediction-head h3{margin:3px 0 0;font-size:20px}
+.match-past-prediction-head h3 small{font-size:.65em;color:var(--muted);font-weight:700}
+.match-prediction-hit{flex:0 0 auto;padding:5px 8px;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.match-prediction-hit.is-outcome,.match-prediction-hit.is-exact{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 45%,var(--border));background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.match-past-prediction-probs{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:11px}
+.match-past-prediction-probs span{display:inline-flex;gap:4px;align-items:baseline}
+.match-past-prediction-probs b{color:var(--ink)}
+.match-past-prediction p{margin:8px 0 0;color:var(--muted);font-size:10px}
+@media(max-width:650px){.match-past-prediction-head{align-items:flex-start}.match-past-prediction-head h3{font-size:17px}.match-past-prediction-probs{gap:8px}}
