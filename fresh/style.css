@@ -1381,3 +1381,39 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 .match-past-prediction-probs b{color:var(--ink)}
 .match-past-prediction p{margin:8px 0 0;color:var(--muted);font-size:10px}
 @media(max-width:650px){.match-past-prediction-head{align-items:flex-start}.match-past-prediction-head h3{font-size:17px}.match-past-prediction-probs{gap:8px}}
+
+/* Bulk historical season entry */
+.staff-history-bulk{min-width:0}
+.history-year-select{max-width:240px;margin:12px 0}
+.history-bulk-scroll{overflow:auto;max-width:100%}
+.history-bulk-table{width:100%;border-collapse:collapse;font-size:11px}
+.history-bulk-table th{padding:8px 5px;text-align:left;color:var(--muted);font-size:9px;white-space:nowrap}
+.history-bulk-table td{padding:5px;border-top:1px solid var(--border)}
+.history-bulk-table .history-club{min-width:155px;font-weight:800;color:var(--ink)}
+.history-bulk-table input{width:72px;min-width:0;padding:8px 6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-variant-numeric:tabular-nums}
+.history-bulk-table td:nth-child(2) input{width:58px}
+@media(max-width:760px){
+ .history-bulk-table{font-size:10px}
+ .history-bulk-table .history-club{min-width:125px}
+ .history-bulk-table input{width:58px;padding:7px 4px}
+}
+/* Mobile roster: whole table remains within viewport. */
+@media(max-width:760px){
+ .roster-table-wrap{overflow-x:hidden;width:100%}
+ .roster-table{width:100%;min-width:0;table-layout:fixed;font-size:8px}
+ .roster-table th,.roster-table td{padding:7px 2px;text-align:center}
+ .roster-table th button{padding:4px 1px;font-size:7px;white-space:normal;line-height:1.05}
+ .roster-table th:nth-child(1),.roster-table td:nth-child(1){width:6%}
+ .roster-table th:nth-child(2),.roster-table td:nth-child(2){width:28%;text-align:left}
+ .roster-table th:nth-child(3),.roster-table td:nth-child(3){width:9%}
+ .roster-table th:nth-child(4),.roster-table td:nth-child(4){width:7%}
+ .roster-table th:nth-child(5),.roster-table td:nth-child(5){width:8%}
+ .roster-table th:nth-child(6),.roster-table td:nth-child(6){width:10%}
+ .roster-table th:nth-child(7),.roster-table td:nth-child(7){width:7%}
+ .roster-table th:nth-child(8),.roster-table td:nth-child(8){width:10%}
+ .roster-table th:nth-child(9),.roster-table td:nth-child(9){width:5%}
+ .roster-table .roster-player-identity{min-width:0;width:100%;gap:3px}
+ .roster-table .roster-player-identity strong{font-size:8px;line-height:1.05;white-space:normal;overflow-wrap:anywhere}
+ .roster-table .roster-avatar{display:none}
+ .roster-table .roster-status-dot{width:7px;height:7px}
+}
