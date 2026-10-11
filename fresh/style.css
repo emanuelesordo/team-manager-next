@@ -1356,3 +1356,8 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
  .match-topbar-back{padding-inline:6px}
  .match-topbar-step{width:31px;height:31px}
 }
+
+/* Events whose exact minute cannot be placed safely stay visible outside the chronology. */
+.match-timeline-unplaced{margin-top:10px;padding-top:8px;border-top:1px dashed color-mix(in srgb,var(--border) 82%,transparent)}
+.mt-unplaced-label{margin:0 0 6px;text-align:center;color:var(--muted);font:600 9px/1 Manrope,sans-serif;letter-spacing:.09em}
+.match-timeline-unplaced .mt-row{opacity:.86}
