@@ -1,4 +1,4 @@
-import {projectLeague,projectionSignature} from './projection.js?history=20261006v3';
+import {projectLeague,projectionSignature} from './projection.js?history=20261012prematch1';
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let lastKey='',busyKey='';
 export function projectionContainer(competition){
@@ -6,16 +6,16 @@ export function projectionContainer(competition){
   return '';
  return '<section class="projected glass panel" aria-label="Classifica proiettata"><div class="panel-heading"><h2>Classifica proiettata</h2><span class="projected-meta">SIMULAZIONE</span></div><div data-projection-target="'+escape(competition.id)+'"><p class="empty">Calcolo delle 10.000 stagioni…</p></div></section>';
 }
-export function updateProjection(config,allFixtures,allStandings,history=[],crest=()=>'' ){
+export function updateProjection(config,allFixtures,allStandings,history=[],crest=()=>'',context={}){
  const target=document.querySelector('[data-projection-target]');
  if(!target||!config||target.dataset.projectionTarget!==config.id)return;
- const key=projectionSignature(config,allFixtures,allStandings,history);
+ const key=projectionSignature(config,allFixtures,allStandings,history,context);
  if(target.dataset.ready===key)return;
  if(busyKey===key)return;
  busyKey=key;
  setTimeout(()=>{
   try{
-   const output=projectLeague(config,allFixtures,allStandings,10000,history);
+   const output=projectLeague(config,allFixtures,allStandings,10000,history,context);
    const node=document.querySelector('[data-projection-target="'+CSS.escape(config.id)+'"]');
    if(!node||node.dataset.ready===key)return;
    node.innerHTML=renderProjection(output,crest);
@@ -45,5 +45,5 @@ export function renderProjection(result,crest=()=>'' ){
  return '<div class="table-scroller"><table class="standing-table projection-table"><thead><tr>'+
   '<th>#</th><th>Squadra</th><th>Pt</th><th>GF</th><th>GS</th><th>DR</th><th>+/-</th>'+
   '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
-  '<p class="projection-footnote">'+result.iterations.toLocaleString('it-IT')+' simulazioni · '+result.remaining+' gare da disputare · '+result.reliability+'% stagione disputata. Valori attesi arrotondati; variazione rispetto alla posizione attuale. Stima indicativa, spareggi non simulati.</p>';
+  '<p class="projection-footnote">'+result.iterations.toLocaleString('it-IT')+' simulazioni · '+result.remaining+' gare da disputare · '+result.reliability+'% stagione disputata · '+(result.forecastModelGames??0)+' gare future stimate col modello pre-partita. Valori attesi arrotondati; variazione rispetto alla posizione attuale. Stima indicativa, spareggi non simulati.</p>';
 }
