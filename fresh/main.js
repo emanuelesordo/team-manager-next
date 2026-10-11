@@ -10,7 +10,7 @@ import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261005callup-lineup-sync1';
-import {projectionContainer,updateProjection} from './projection-ui.js?history=20261006v3';
+import {projectionContainer,updateProjection} from './projection-ui.js?history=20261012prematch1';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261005legacy1';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js?live=20261006halftime1';
@@ -57,7 +57,7 @@ const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar'
 const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchOrigin:null,matchTab:'overview',scoreEditing:false,matchData:null,timelineEditor:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',rosterSort:'name',rosterDesc:false,theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
 let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
 let verifiedEventCache=null,analyticsBusy=false;
-let predictionEventCache=null,predictionBusy=false,pastPredictionBusy=false;
+let predictionEventCache=null,predictionBusy=false,pastPredictionBusy=false,projectionBusy=false;
 async function pollLive(){
  if(pollBusy||document.hidden||state.loading||!state.season||state.overlay||state.page==='admin'||state.page==='match'&&state.matchTab==='staff')return;
  pollBusy=true;const currentSeason=state.season;
@@ -880,7 +880,7 @@ function render(){
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading){paintMatchHeaderCompact();requestAnimationFrame(()=>requestAnimationFrame(centerVotePickers))}
  if(state.page==='home'&&!state.loading){void hydrateHomeRatings();void hydrateHomeTeamRatings();}if(state.page==='match'&&!state.loading){void hydrateMatchTeamRating();void hydrateMatchPrediction();void hydratePastPredictionSummary();}
- manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)updateProjection(currentComp(),fixtures(),state.data?.standings||[],state.base?.clubHistory||[],(row)=>{const match=(state.data?.standings||[]).find(x=>('team:'+x.team_id===row.club_id&&x.team_id)||('opponent:'+x.opponent_id===row.club_id&&x.opponent_id));return match?club(row.team,'tiny',{team_id:match.team_id,opponent_id:match.opponent_id}):''});paintLineupPitch();paintCallups();if(state.page==='match'&&!state.loading)startStaffClock(isStaff(staffContext())?staffContext():null);
+ manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player)hydratePlayerTrend(state.season,state.player);if(state.page==='competitions'&&!state.loading)void hydrateProjection();paintLineupPitch();paintCallups();if(state.page==='match'&&!state.loading)startStaffClock(isStaff(staffContext())?staffContext():null);
 }
 function centerVotePickers(){
  document.querySelectorAll('[data-vote-picker]').forEach(picker=>{
@@ -970,6 +970,37 @@ async function refreshLive(){
   state.matchData=await loadMatchInfo(m.id);
  }
  if(state.match===id)render();
+}
+async function hydrateProjection(){
+ if(projectionBusy||state.page!=='competitions'||state.loading||state.standingsView!=='projected'||!state.data)return;
+ const comp=currentComp();if(!comp)return;
+ projectionBusy=true;
+ try{
+  const chosen=state.season,matches=(state.data.matches||[]).filter(m=>!m.is_test);
+  let events=[];
+  if(predictionEventCache?.season===chosen)events=predictionEventCache.events;
+  else{
+   const ids=matches.map(m=>m.id).filter(Boolean);
+   const fixtureIds=realFixtures().filter(x=>x.status==='finished').map(x=>x.id).filter(Boolean);
+   const queries=[];
+   if(ids.length)queries.push(get('app_match_events','select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+ids.map(encodeURIComponent).join(',')+')&limit=3000').catch(()=>[]));
+   if(fixtureIds.length)queries.push(get('app_match_events','select=id,match_id,fixture_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&fixture_id=in.('+fixtureIds.map(encodeURIComponent).join(',')+')&limit=3000').catch(()=>[]));
+   const batches=queries.length?await Promise.all(queries):[];
+   const merged=new Map();for(const batch of batches)for(const event of batch)merged.set(event.id,event);
+   events=[...merged.values()];
+   if(chosen!==state.season)return;
+   predictionEventCache={season:chosen,events};
+  }
+  if(state.page!=='competitions'||state.standingsView!=='projected'||comp.id!==currentComp()?.id)return;
+  updateProjection(
+   comp,fixtures(),state.data?.standings||[],state.base?.clubHistory||[],
+   (row)=>{const match=(state.data?.standings||[]).find(x=>('team:'+x.team_id===row.club_id&&x.team_id)||('opponent:'+x.opponent_id===row.club_id&&x.opponent_id));return match?club(row.team,'tiny',{team_id:match.team_id,opponent_id:match.opponent_id}):''},
+   {venues:state.base?.venues||[],matches,events,team:team(),competitions:state.data?.competitions||[]}
+  );
+ }catch(error){
+  const target=document.querySelector('[data-projection-target]');
+  if(target)target.textContent='Proiezione non disponibile: '+(error.message||error);
+ }finally{projectionBusy=false}
 }
 async function hydrateMatchPrediction(){
  const target=document.querySelector('[data-prematch-prediction]');
