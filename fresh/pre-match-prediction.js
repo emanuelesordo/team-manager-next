@@ -31,23 +31,38 @@ function historicalWeight(gamesPlayed,totalGames){
 function historicalPrior(club,history=[]){
  const rows=history.filter(r=>identity(r.team_id,r.opponent_id)===club)
   .sort((a,b)=>Number(b.season_start_year)-Number(a.season_start_year)).slice(0,5);
- if(!rows.length)return {score:.5,seasons:0};
- let sum=0,weightsTotal=0;
+ if(!rows.length)return {score:.5,seasons:0,tierScore:.5};
+ let sum=0,weightsTotal=0,tierSum=0;
+ const tierValue=tier=>{
+  const t=Math.max(1,Number(tier)||3);
+  if(t===1)return 1;
+  if(t===2)return .68;
+  if(t===3)return .36;
+  return clamp(1-(t-1)*.32,.12,1);
+ };
+ const recency=[1,.72,.52,.38,.28];
  rows.forEach((r,index)=>{
   const tier=Number(r.tier_level),position=Math.max(1,Number(r.final_position)||1);
   const totalPositions=Number(r.total_positions);
   const maxPoints=Math.max(1,Number(r.max_points)||1),earned=clamp(Number(r.points||0)/maxPoints);
-  const tierScore=clamp(1-(Math.max(1,tier)-1)*.2,.1,1);
+  const tierScore=tierValue(tier);
   const absolutePositionScore=clamp(1/(1+.18*(position-1)),.15,1);
   const relativePositionScore=Number.isInteger(totalPositions)&&totalPositions>=2?
    clamp((totalPositions-position)/(totalPositions-1),0,1):absolutePositionScore;
-  const base=.55*tierScore+.30*earned+.15*relativePositionScore;
   const gd=Number(r.goal_difference),hasGd=Number.isFinite(gd)&&r.goal_difference!==null&&r.goal_difference!=='';
-  const gdScale=Math.max(8,Number.isInteger(totalPositions)?totalPositions:12)*4;
-  const seasonScore=hasGd ? .9*base+.1*clamp(.5+gd/gdScale) : base;
-  const weight=5-index;sum+=seasonScore*weight;weightsTotal+=weight;
+  const gdScale=Math.max(8,Number.isInteger(totalPositions)?totalPositions:12)*3;
+  const gdScore=hasGd?clamp(.5+gd/gdScale):.5;
+  // League level is deliberately the dominant historical signal: a poor season
+  // one tier higher should still rate above a middling season one tier lower.
+  const seasonScore=.64*tierScore+.18*earned+.10*relativePositionScore+.08*gdScore;
+  const weight=recency[index]??.2;
+  sum+=seasonScore*weight;tierSum+=tierScore*weight;weightsTotal+=weight;
  });
- return {score:weightsTotal?clamp(sum/weightsTotal):.5,seasons:rows.length};
+ return {
+  score:weightsTotal?clamp(sum/weightsTotal):.5,
+  tierScore:weightsTotal?clamp(tierSum/weightsTotal):.5,
+  seasons:rows.length
+ };
 }
 function recentResultScore(rows,club,config){
  const list=rows.filter(f=>homeId(f)===club||awayId(f)===club)
@@ -124,7 +139,7 @@ function strengthRows(teams,completed,allCompetitionRows,config,history){
   // performance gap into an artificial 50/50 just because current-season data is scarce.
   const historicalRateBias=prior.seasons?(prior.score-.5)*2.2*historyWeight:0;
   raw.set(club,{club,played:n,gf,ga,ppg,recent,gd,current,structural,potential,prior:prior.score,historySeasons:prior.seasons,
-   historyShare,historyWeight,strength,totalGames:totalGames.get(club)||0,
+   historyShare,historyWeight,historyTier:prior.tierScore,strength,totalGames:totalGames.get(club)||0,
    attackRate:clamp(observedAttack*Math.exp(historicalRateBias),.25,3.8),
    defenseRate:clamp(observedDefense*Math.exp(-historicalRateBias),.25,3.8)});
  }
@@ -483,6 +498,15 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
 
  const strengthDiff=home.strength-away.strength;
  homeLambda*=Math.exp(strengthDiff*.70);awayLambda*=Math.exp(-strengthDiff*.70);
+ // Pairwise historical level gap matters most before current-season evidence
+ // is mature. This is separate from generic strength so a tier-2 vs tier-3
+ // mismatch is not flattened just because both teams had mediocre records.
+ const earlyEvidence=Math.min(home.historyWeight??0,away.historyWeight??0);
+ const tierGap=clamp((home.historyTier??.5)-(away.historyTier??.5),-.7,.7);
+ const priorGap=clamp((home.prior??.5)-(away.prior??.5),-.7,.7);
+ const historicalMatchupDelta=earlyEvidence*(.72*tierGap+.28*priorGap);
+ homeLambda*=Math.exp(historicalMatchupDelta*1.05);
+ awayLambda*=Math.exp(-historicalMatchupDelta*1.05);
  const managementDelta=(homeManagement?.delta||0)-(awayManagement?.delta||0);
  const numericalDelta=(homeNumerical?.delta||0)-(awayNumerical?.delta||0);
  const rankDelta=homeBehavior.delta-awayBehavior.delta;
@@ -524,7 +548,7 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
     'Caratteristiche del campo non ancora configurate.'},
   {key:'history',label:'Storico stagioni passate',home:home.prior,away:away.prior,
    detail:'Incidenza sulla forza: '+Math.round(home.historyShare*100)+'% '+fixture.home_team+' · '+Math.round(away.historyShare*100)+'% '+fixture.away_team+
-    '. Nelle prime giornate lo storico corregge anche attacco/difesa attesi; il peso cala automaticamente con l’aumentare delle gare correnti.'}
+    '. Il livello della serie è il segnale storico principale e, nelle prime giornate, pesa anche direttamente sul confronto degli xG; poi cala con l’aumentare delle gare correnti.'}
  ];
 
  const detailedAvailable=Number(Boolean(homeManagement&&!homeManagement.insufficient))+Number(Boolean(awayManagement&&!awayManagement.insufficient))+
