@@ -382,6 +382,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const duration=Number.isFinite(configuredMinutes)&&configuredMinutes>0?configuredMinutes:null;
  const absoluteMinute=e=>cumulativeEventMinute(e,competitionSettings);
  const periodNo=e=>{
+  if(norm(e.payload?.period)==='unknown')return 0;
   if(norm(e.payload?.period)==='halftime')return 2;
   const explicit=Number(e.payload?.period_no);
   if(Number.isInteger(explicit)&&explicit>0)return explicit;
@@ -390,7 +391,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return duration!==null&&minute!==null?Math.max(1,Math.ceil(Math.max(1,minute)/duration)):1;
  };
  const recovery=e=>Math.max(0,Number(e.stoppage_minute)||0);
- const order=e=>{const n=absoluteMinute(e);return n===null?Infinity:n+recovery(e)/100};
+ const order=e=>{const n=absoluteMinute(e);if(n===null)return 100000+(Number(e.payload?.sequence_order)||0)/1000;return n+recovery(e)/100};
  const periodEnds=[...(events||[])].filter(e=>type(e)==='period_end'&&e.validation_status!=='rejected');
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
  const ordered=raw.sort((a,b)=>order(a)-order(b)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
@@ -427,7 +428,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return '';
  };
  const eventContent=entry=>{const e=entry.event,t=type(e),isChange=['substitution','sub_out','sub_in'].includes(t);
-  const primary=isChange&&e.secondary_player_id?playerName(e.secondary_player_id):e.player_id?playerName(e.player_id):goal(e)?'Gol avversario':e.payload?.opponent_shirt_number?'#'+e.payload.opponent_shirt_number:'Squadra';
+  const primary=isChange&&e.secondary_player_id?playerName(e.secondary_player_id):e.player_id?playerName(e.player_id):goal(e)?(match?'Gol avversario':'Gol'):e.payload?.opponent_shirt_number?'#'+e.payload.opponent_shirt_number:'Squadra';
   const secondary=isChange?(e.secondary_player_id&&e.player_id?playerName(e.player_id):''):(goal(e)&&e.secondary_player_id?playerName(e.secondary_player_id):'');
   const score=entry.score?'<span class="mt-score">'+E(entry.score)+'</span>':'';
   const names='<span class="mt-names"><strong>'+E(primary)+'</strong>'+(secondary?'<small>'+E(secondary)+'</small>':'')+'</span>';
@@ -464,7 +465,11 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const complete=['finished','completed','full_time','ft'].includes(norm(fixture.status));
  const maxPeriod=Math.max(1,...tracked.map(x=>periodNo(x.event)),...Array.from(recoveryByPeriod.keys()).map(Number));
  const descending=[...tracked].reverse();
- const sameMoment=(a,b)=>periodNo(a.event)===periodNo(b.event)&&absoluteMinute(a.event)===absoluteMinute(b.event)&&recovery(a.event)===recovery(b.event);
+ const sameMoment=(a,b)=>{
+  const am=absoluteMinute(a.event),bm=absoluteMinute(b.event);
+  if(am===null||bm===null)return false;
+  return periodNo(a.event)===periodNo(b.event)&&am===bm&&recovery(a.event)===recovery(b.event);
+ };
  const groupedRows=items=>{
   let output='';
   for(let i=0;i<items.length;){
@@ -497,7 +502,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO +'+E(declared)+"'":'RECUPERO','recovery');
   return output+groupedRows(regular);
  };
- let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI','title');
+ const unknownRows=groupedRows(descending.filter(x=>periodNo(x.event)===0));
+ let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI','title')+unknownRows;
  if(maxPeriod===2){
   parts+=renderPeriod(2)+(periodEndByPeriod.has(1)?'':heading('HT '+halfScore))+renderPeriod(1);
  }else if(maxPeriod>2){
@@ -525,7 +531,7 @@ function timelineEventEditor(){
  const sideValue=ev?.team_side||ev?.side||(fixtureOnly?'home':'team');
  const minute=ev?.minute??edit.minute??'';
  const stoppage=ev?.stoppage_minute??edit.stoppage??0;
- const periodValue=ev?.payload?.period||((Number(minute)>=Number(matchRules(m,competition(f.competition_id))?.minutes_per_period||40))?'second_half':'first_half');
+ const periodValue=ev?.payload?.period||(fixtureOnly&&minute===''?'unknown':((Number(minute)>=Number(matchRules(m,competition(f.competition_id))?.minutes_per_period||40))?'second_half':'first_half'));
  const people=state.data?.players||[];
  const playerOptions='<option value="">—</option>'+people.map(p=>'<option value="'+E(p.id)+'" '+(ev?.player_id===p.id?'selected':'')+'>'+E(matchPlayerLabel(p))+'</option>').join('');
  const secondaryOptions='<option value="">—</option>'+people.map(p=>'<option value="'+E(p.id)+'" '+(ev?.secondary_player_id===p.id?'selected':'')+'>'+E(matchPlayerLabel(p))+'</option>').join('');
@@ -536,7 +542,7 @@ function timelineEventEditor(){
   '<form data-timeline-event-form class="staff-form live-sheet-form" data-event-id="'+E(ev?.id||'')+'" data-fixture-only="'+fixtureOnly+'">'+
    '<div class="live-sheet-grid"><label class="staff-field"><span>Tipo</span><select name="event_type">'+types.map(([k,l])=>'<option value="'+k+'" '+((ev?.event_type||'goal')===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
    '<label class="staff-field"><span>Squadra</span><select name="team_side">'+sideOptions.map(([k,l])=>'<option value="'+k+'" '+(sideValue===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
-   '<label class="staff-field"><span>Periodo</span><select name="period"><option value="first_half" '+(periodValue==='first_half'?'selected':'')+'>1° tempo</option><option value="halftime" '+(periodValue==='halftime'?'selected':'')+'>Intervallo</option><option value="second_half" '+(periodValue==='second_half'?'selected':'')+'>2° tempo</option><option value="extra" '+(periodValue==='extra'?'selected':'')+'>Supplementari</option></select></label>'+
+   '<label class="staff-field"><span>Periodo</span><select name="period">'+(fixtureOnly?'<option value="unknown" '+(periodValue==='unknown'?'selected':'')+'>Non noto</option>':'')+'<option value="first_half" '+(periodValue==='first_half'?'selected':'')+'>1° tempo</option><option value="halftime" '+(periodValue==='halftime'?'selected':'')+'>Intervallo</option><option value="second_half" '+(periodValue==='second_half'?'selected':'')+'>2° tempo</option><option value="extra" '+(periodValue==='extra'?'selected':'')+'>Supplementari</option></select></label>'+
    '<label class="staff-field"><span>Minuto</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+E(minute)+'"></label>'+
    '<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+E(stoppage)+'"></label>'+
    (!fixtureOnly?'<label class="staff-field"><span>Giocatore</span><select name="player_id">'+playerOptions+'</select></label><label class="staff-field"><span>Secondo giocatore</span><select name="secondary_player_id">'+secondaryOptions+'</select></label>':'')+
@@ -1116,7 +1122,11 @@ document.addEventListener('click',async e=>{
  if(x.dataset.scoreEdit!==undefined){
   if(state.identity?.role?.role!=='admin')return;
   state.timelineEditor=null;
-  state.scoreEditing=!state.scoreEditing;
+  if(!state.scoreEditing){
+   const {fixture:f,operational:m}=resolveMatch();
+   if(f&&!m&&hasScore(f))await ensureManualGoalSlots(f);
+   state.scoreEditing=true;
+  }else state.scoreEditing=false;
   render();
   return;
  }
@@ -1210,6 +1220,8 @@ async function enterTournamentFinalScore(fixtureId){
     await adminWrite('app_matches','PATCH',{home_score:home,away_score:away,status:'finished'},{id:operational.id});
     Object.assign(operational,{home_score:home,away_score:away,status:'finished'});
    }catch(error){console.warn('Tabellino operativo non allineato al risultato torneo:',error.message)}
+  }else{
+   await ensureManualGoalSlots(f);
   }
   render();toast('Risultato finale salvato');
  }catch(error){toast('Risultato non salvato: '+error.message)}
@@ -1228,6 +1240,34 @@ function fixtureGoalsFromEvents(events){
   if(side==='away')a.away++;
   return a;
  },{home:0,away:0});
+}
+function fixtureEventSequence(events){
+ return Math.max(0,...(events||[]).map(e=>Number(e.payload?.sequence_order)||0));
+}
+async function ensureManualGoalSlots(fixture){
+ if(!fixture||state.identity?.role?.role!=='admin')return [];
+ const operational=(state.data?.matches||[]).find(m=>String(m.fixture_id)===String(fixture.id));
+ if(operational)return [];
+ const target={home:Math.max(0,Number(fixture.home_score)||0),away:Math.max(0,Number(fixture.away_score)||0)};
+ let events=await loadFixtureEvents(fixture.id).catch(()=>[]);
+ const current=fixtureGoalsFromEvents(events);
+ let sequence=fixtureEventSequence(events),created=0;
+ for(const side of ['home','away']){
+  const missing=Math.max(0,target[side]-current[side]);
+  for(let i=0;i<missing;i++){
+   sequence++;
+   await adminWrite('app_match_events','POST',{
+    fixture_id:fixture.id,match_id:null,event_type:'goal',team_side:side,minute:null,stoppage_minute:0,
+    source:'manual',source_raw:{period:null},
+    payload:{origin:'manual_score_slot',score_placeholder:true,count_score:true,period:'unknown',period_no:null,minute_relative:false,sequence_order:sequence},
+    proposed_by:state.identity.user
+   });
+   created++;
+  }
+ }
+ if(created)events=await loadFixtureEvents(fixture.id);
+ if(String(state.match)===String(fixture.id))state.fixtureEvents=events;
+ return events;
 }
 async function saveExtraScore({closeEditor=true,toastResult=true}={}){
  const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
@@ -1359,13 +1399,17 @@ document.addEventListener('submit',async e=>{
     }
     state.matchData=await loadMatchInfo(m.id);
    }else{
-    const period=String(fd.get('period')||'first_half');
-    const periodNo=period==='second_half'?2:period==='extra'?3:1;
+    const period=String(fd.get('period')||(minute===null?'unknown':'first_half'));
+    const periodNo=period==='unknown'?null:period==='second_half'?2:period==='extra'?3:1;
+    const existingEvent=eventId?(state.fixtureEvents||[]).find(x=>String(x.id)===String(eventId)):null;
+    const sequenceOrder=Number(existingEvent?.payload?.sequence_order)||fixtureEventSequence(state.fixtureEvents||[])+1;
     const periodPayload={
-     origin:'timeline_admin',
+     origin:existingEvent?.payload?.origin||'timeline_admin',
+     score_placeholder:Boolean(existingEvent?.payload?.score_placeholder),
      period,
      period_no:periodNo,
-     minute_relative:period==='second_half'||period==='extra'
+     minute_relative:period==='second_half'||period==='extra',
+     sequence_order:sequenceOrder
     };
     const payload={
      event_type:type,
