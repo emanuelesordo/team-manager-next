@@ -415,9 +415,10 @@ export function predictionSignature({fixture,fixtures=[],history=[],venues=[],ev
  ]);
 }
 
-export function predictMatch({fixture,competition,fixtures=[],history=[],venues=[],matches=[],events=[],team,competitions=[]}={}){
+export function predictMatch({fixture,competition,fixtures=[],history=[],venues=[],matches=[],events=[],team,competitions=[],retrospective=false}={}){
  if(!fixture?.id||!competition?.id)return null;
- if(['live','finished','cancelled'].includes(fixture.status))return null;
+ if(!retrospective&&['live','finished','cancelled'].includes(fixture.status))return null;
+ if(retrospective&&fixture.status==='cancelled')return null;
  const kickoff=Date.parse(fixture.kickoff_at||'');
  const rows=fixtures.filter(f=>f.competition_id===competition.id&&f.id!==fixture.id&&f.status!=='cancelled');
  const completed=rows.filter(f=>isPlayed(f)&&(!Number.isFinite(kickoff)||Date.parse(f.kickoff_at||'')<kickoff));
