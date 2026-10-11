@@ -450,6 +450,24 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const awayManagement=managementBehavior(awayClub,team,completed,matches,events,competitions);
  const homeNumerical=numericalBehavior(homeClub,team,completed,matches,events,competitions);
  const awayNumerical=numericalBehavior(awayClub,team,completed,matches,events,competitions);
+ const homeComparison=comparisonMetrics(homeClub,completed,competition),awayComparison=comparisonMetrics(awayClub,completed,competition);
+ const homeSituational=situationalMetrics(homeClub,completed,matches,events,competitions,team);
+ const awaySituational=situationalMetrics(awayClub,completed,matches,events,competitions,team);
+
+ const gameStateScore=situ=>{
+  const parts=[];
+  if(situ?.trailed>=2&&Number.isFinite(situ.recoveryRate))parts.push(situ.recoveryRate);
+  if(situ?.led>=2&&Number.isFinite(situ.leadHoldRate))parts.push(situ.leadHoldRate);
+  return parts.length?parts.reduce((a,b)=>a+b,0)/parts.length:.5;
+ };
+ const timingMatchup=(attack,defense)=>{
+  if(!attack?.strongestFor||!defense?.weakestAgainst)return 0;
+  if(attack.totalTimedGoalsFor<2||defense.totalTimedGoalsAgainst<2)return 0;
+  if(attack.strongestFor.label!==defense.weakestAgainst.label)return 0;
+  const a=attack.strongestFor.for/Math.max(1,attack.totalTimedGoalsFor);
+  const d=defense.weakestAgainst.against/Math.max(1,defense.totalTimedGoalsAgainst);
+  return clamp((a+d-1)*.35,-.18,.18);
+ };
 
  const homeGoals=completed.reduce((s,f)=>s+Number(f.home_score||0),0),awayGoals=completed.reduce((s,f)=>s+Number(f.away_score||0),0);
  const homeFactor=clamp(Math.sqrt((homeGoals+4*leagueGoalRate)/(awayGoals+4*leagueGoalRate)),.88,1.15);
@@ -462,14 +480,13 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const numericalDelta=(homeNumerical?.delta||0)-(awayNumerical?.delta||0);
  const rankDelta=homeBehavior.delta-awayBehavior.delta;
  const venueDelta=(homeVenue.sample>=2?homeVenue.delta:0)-(awayVenue.sample>=2?awayVenue.delta:0);
- const context=.30*rankDelta+.22*managementDelta+.18*numericalDelta+.20*venueDelta;
+ const gameStateDelta=clamp(gameStateScore(homeSituational)-gameStateScore(awaySituational),-.35,.35);
+ const timingDelta=timingMatchup(homeSituational,awaySituational)-timingMatchup(awaySituational,homeSituational);
+ const context=.30*rankDelta+.12*managementDelta+.16*gameStateDelta+.16*numericalDelta+.16*venueDelta+.10*timingDelta;
  homeLambda*=Math.exp(context);awayLambda*=Math.exp(-context);
  homeLambda=clamp(homeLambda,.15,4.5);awayLambda=clamp(awayLambda,.15,4.5);
 
  const probability=outcomeProbabilities(homeLambda,awayLambda);
- const homeComparison=comparisonMetrics(homeClub,completed,competition),awayComparison=comparisonMetrics(awayClub,completed,competition);
- const homeSituational=situationalMetrics(homeClub,completed,matches,events,competitions,team);
- const awaySituational=situationalMetrics(awayClub,completed,matches,events,competitions,team);
  const attention=attentionPoints(fixture.home_team,fixture.away_team,homeComparison,awayComparison,homeSituational,awaySituational);
  const narrative=matchNarrative({
   fixture,probability,expectedGoals:{home:homeLambda,away:awayLambda},home,away,
@@ -486,10 +503,10 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
    detail:(homeBehavior.sample||awayBehavior.sample)?
     fixture.home_team+': '+homeBehavior.sample+' precedenti contro '+bucketLabel(homeBehavior.bucket)+' · '+fixture.away_team+': '+awayBehavior.sample+' contro '+bucketLabel(awayBehavior.bucket):
     'Nessun precedente comparabile sufficiente nella competizione.'},
-  {key:'management',label:'Gestione vantaggio/svantaggio',home:homeManagement?.score??.5,away:awayManagement?.score??.5,
-   detail:homeManagement||awayManagement?
-    'Usati solo tabellini con sequenza gol completa; campioni insufficienti restano neutrali.':
-    'Timeline dettagliata non disponibile per queste squadre.'},
+  {key:'management',label:'Gestione vantaggio/svantaggio',home:gameStateScore(homeSituational),away:gameStateScore(awaySituational),
+   detail:'Rimonte e mantenimento del vantaggio entrano nel correttivo solo con almeno 2 casi osservabili; campioni insufficienti restano neutrali.'},
+  {key:'timing',label:'Periodi forti / vulnerabili',home:.5+timingMatchup(homeSituational,awaySituational),away:.5+timingMatchup(awaySituational,homeSituational),
+   detail:'Il correttivo cresce quando il picco offensivo di una squadra coincide con la fascia in cui l’avversaria subisce più spesso, usando solo gol con minutaggio affidabile.'},
   {key:'numerical',label:'Superiorità / inferiorità',home:homeNumerical?.score??.5,away:awayNumerical?.score??.5,
    detail:(homeNumerical&&!homeNumerical.insufficient)||(awayNumerical&&!awayNumerical.insufficient)?
     'Rendimento dei gol durante periodi realmente giocati con differenza numerica.':
