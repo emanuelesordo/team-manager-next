@@ -1510,6 +1510,16 @@ function syncTieList(list){
  items.forEach((el,i)=>{el.querySelector('[data-staff-tie-move=up]').disabled=i===0;el.querySelector('[data-staff-tie-move=down]').disabled=i===items.length-1});
 }
 if(typeof document!=='undefined'){
+document.addEventListener('input',event=>{
+ const input=event.target.closest?.('.history-bulk-table input');if(!input)return;
+ const row=input.closest('[data-history-bulk-row]'),form=row?.closest('form');if(!row||!form)return;
+ const rows=[...form.querySelectorAll('[data-history-bulk-row]')],index=rows.indexOf(row);if(index<0)return;
+ const gf=form.elements['h_'+index+'_gf'],ga=form.elements['h_'+index+'_ga'],gd=form.elements['h_'+index+'_gd'];
+ if(input===gf||input===ga){
+  const a=String(gf?.value||'').trim(),b=String(ga?.value||'').trim();
+  if(a!==''&&b!==''&&Number.isFinite(Number(a))&&Number.isFinite(Number(b)))gd.value=String(Number(a)-Number(b));
+ }
+});
 document.addEventListener('click',event=>{
  const btn=event.target.closest('[data-staff-tie-move]');if(!btn)return;
  const item=btn.closest('[data-tie-key]'),list=item?.parentElement;if(!list)return;
