@@ -54,7 +54,7 @@ const ico=(n,size=20)=>{const paths={
  spark:'<path d="m2 16 6-6 4 3 9-9m-6 0h6v6"/>'
  };return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[n]||paths.home}</svg>`};
 const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar','calendar','Calendario'],['roster','users','Rosa'],['stats','chart','Numeri']];
-const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchTab:'overview',scoreEditing:false,matchData:null,timelineEditor:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',rosterSort:'name',rosterDesc:false,theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
+const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchOrigin:null,matchTab:'overview',scoreEditing:false,matchData:null,timelineEditor:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',rosterSort:'name',rosterDesc:false,theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
 let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
 let verifiedEventCache=null,analyticsBusy=false;
 let predictionEventCache=null,predictionBusy=false;
@@ -122,8 +122,50 @@ function topbarPage(){
  club:['IL CLUB','Squadra e avversarie'],admin:['GESTIONALE','Amministrazione'],account:['ACCOUNT','Area personale']};
  return pages[state.page]||['TEAM MANAGER','Home'];
 }
+function matchOriginForOpen(element,fixture){
+ if(state.page==='competitions')return {kind:'competition',page:'competitions',competitionId:fixture?.competition_id||state.comp||null};
+ if(state.page==='calendar')return {kind:'team',page:'calendar',calendarCompetitionId:state.comp||null};
+ if(state.page==='home'){
+  const homeSection=element?.closest?.('.hero-panel,[data-home-hero]')?'carousel':
+   element?.closest?.('.home-right-calendar,[data-home-calendar]')?'calendar':'carousel';
+  return {kind:'team',page:'home',homeSection};
+ }
+ if(fixture&&involvesTeam(fixture,team()))return {kind:'team',page:state.page==='match'?'calendar':state.page};
+ return {kind:'competition',page:'competitions',competitionId:fixture?.competition_id||null};
+}
+function matchNavigationFixtures(){
+ const current=fixtures().find(f=>String(f.id)===String(state.match));
+ const origin=state.matchOrigin;
+ let rows;
+ if(origin?.kind==='competition'){
+  const compId=origin.competitionId||current?.competition_id;
+  rows=realFixtures().filter(f=>String(f.competition_id)===String(compId));
+ }else if(origin?.kind==='team'){
+  rows=ownFixtures().filter(f=>!f.is_test);
+ }else if(current&&involvesTeam(current,team())){
+  rows=ownFixtures().filter(f=>!f.is_test);
+ }else{
+  rows=realFixtures().filter(f=>String(f.competition_id)===String(current?.competition_id));
+ }
+ return rows.sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at)||String(a.id).localeCompare(String(b.id)));
+}
+function matchNavigationState(){
+ const rows=matchNavigationFixtures(),index=rows.findIndex(f=>String(f.id)===String(state.match));
+ return {previous:index>0?rows[index-1]:null,next:index>=0&&index<rows.length-1?rows[index+1]:null};
+}
+function matchTopbarNavigation(){
+ const nav=matchNavigationState();
+ return '<div class="topbar-page match-topbar-page">'+
+  '<button type="button" class="match-topbar-back" data-match-back>'+ico('back',18)+'<span>Torna indietro</span></button>'+
+  '<div class="match-topbar-arrows" role="group" aria-label="Scorri le partite">'+
+   '<button type="button" class="match-topbar-step" data-match-nav="-1" aria-label="Partita precedente" '+(nav.previous?'':'disabled')+'>'+ico('back',18)+'</button>'+
+   '<button type="button" class="match-topbar-step" data-match-nav="1" aria-label="Partita successiva" '+(nav.next?'':'disabled')+'>'+ico('chevron',18)+'</button>'+
+  '</div></div>';
+}
 function header(){
- return `<header class="topbar"><div class="mobile-symbol">${club(team().name,'tiny',{team_id:team().id})}</div><div class="topbar-page"><span class="topbar-kicker">${E(topbarPage()[0])}</span><h1>${E(topbarPage()[1])}</h1></div><div class="top-actions"><span class="connection-pill"><i></i> Dati sincronizzati</span><button type="button" class="icon-btn theme-btn" data-action="theme" aria-label="Cambia aspetto">${ico(state.theme==='night'?'sun':'moon')}</button><button type="button" class="icon-btn" data-action="reload" aria-label="Aggiorna dati">${ico('refresh')}</button>${hasSession()?`<button type="button" class="icon-btn bell-btn" data-notifications-open aria-label="Notifiche">${ico("bell")}<span class="notification-count" hidden data-notification-badge></span></button>`:""}<button type="button" class="icon-btn user-btn" data-action="account" aria-label="Area personale">${ico('user')}</button><button type="button" class="icon-btn mobile-more" data-action="menu" aria-label="Apri menu">${ico('menu')}</button></div></header>`
+ const pageBlock=state.page==='match'?matchTopbarNavigation():
+  '<div class="topbar-page"><span class="topbar-kicker">'+E(topbarPage()[0])+'</span><h1>'+E(topbarPage()[1])+'</h1></div>';
+ return `<header class="topbar"><div class="mobile-symbol">${club(team().name,'tiny',{team_id:team().id})}</div>${pageBlock}<div class="top-actions"><span class="connection-pill"><i></i> Dati sincronizzati</span><button type="button" class="icon-btn theme-btn" data-action="theme" aria-label="Cambia aspetto">${ico(state.theme==='night'?'sun':'moon')}</button><button type="button" class="icon-btn" data-action="reload" aria-label="Aggiorna dati">${ico('refresh')}</button>${hasSession()?`<button type="button" class="icon-btn bell-btn" data-notifications-open aria-label="Notifiche">${ico("bell")}<span class="notification-count" hidden data-notification-badge></span></button>`:""}<button type="button" class="icon-btn user-btn" data-action="account" aria-label="Area personale">${ico('user')}</button><button type="button" class="icon-btn mobile-more" data-action="menu" aria-label="Apri menu">${ico('menu')}</button></div></header>`
 }
 function currentMatchIsLive(){
  if(state.page!=='match'||!state.match)return false;
@@ -633,8 +675,7 @@ function match(){
   else body=prediction+(extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
    '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>');
  }
- return '<button class="back-link" data-page="calendar">'+ico('back')+' Torna al calendario</button>'+
-  '<div class="match-header-sentinel" aria-hidden="true"></div>'+header+compactHeader+'<section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">'+
+ return '<div class="match-header-sentinel" aria-hidden="true"></div>'+header+compactHeader+'<section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">'+
   tabs.map(([id,label])=>'<button role="tab" aria-selected="'+(selectedTab===id)+'" data-tab="'+id+
    '" class="'+(selectedTab===id?'active':'')+'">'+label+'</button>').join('')+
   '</div><div class="match-tab-body">'+notice+body+(selectedTab==='lineup'?
@@ -769,8 +810,9 @@ async function switchSeason(id){
  try{const data=await loadSeason(id,isStaff(staffContext()),state.identity?.role?.role==='admin');if(loadId!==state.loadId)return;state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render()}
  catch(e){state.loading=false;render();toast('Dati non disponibili: '+e.message)}
 }
-async function openMatch(id){
+async function openMatch(id,origin){
  if(!fixtures().some(x=>x.id===id))return;
+ if(origin!==undefined)state.matchOrigin=origin;
  state.match=id;state.matchTab='overview';state.scoreEditing=false;state.timelineEditor=null;state.matchData=null;state.fixtureEvents=[];navigate('match');
  const matched=resolveMatch().operational;
  const [op,fx]=await Promise.allSettled([matched?loadMatchInfo(matched.id):Promise.resolve(null),loadFixtureEvents(id)]);
@@ -780,6 +822,34 @@ async function openMatch(id){
  if(fx.status==='fulfilled')state.fixtureEvents=fx.value;
  else toast('Eventi fixture non caricati: '+fx.reason.message);
  render();
+}
+async function stepMatch(direction){
+ const nav=matchNavigationState(),target=direction<0?nav.previous:nav.next;
+ if(!target)return;
+ await openMatch(target.id);
+}
+function returnFromMatch(){
+ const origin=state.matchOrigin||{kind:'team',page:'calendar'};
+ state.match=null;state.matchData=null;state.fixtureEvents=[];state.timelineEditor=null;state.scoreEditing=false;
+ state.matchOrigin=null;
+ if(origin.page==='competitions'){
+  state.comp=origin.competitionId||state.comp;
+  navigate('competitions');
+  return;
+ }
+ if(origin.page==='calendar'){
+  navigate('calendar');
+  state.comp=origin.calendarCompetitionId||null;
+  render();
+  return;
+ }
+ navigate(origin.page==='home'?'home':(origin.page||'calendar'));
+ if(origin.page==='home'){
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   const target=origin.homeSection==='calendar'?document.querySelector('.home-right-calendar'):document.querySelector('[data-home-hero],.hero-panel');
+   target?.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  }));
+ }
 }
 async function reload(){
  const saved=state.season;await switchSeason(saved);toast('Dati aggiornati')}
@@ -1036,6 +1106,8 @@ document.addEventListener('click',async e=>{
  if(x.dataset.dismiss!==undefined&&e.target===x){state.overlay=null;render();return}
  if(x.dataset.rosterNew!==undefined){if(isStaff(staffContext())){openNewPlayer();navigate('admin')}return}
  if(x.dataset.rosterSort){const k=x.dataset.rosterSort;state.rosterDesc=state.rosterSort===k?!state.rosterDesc:['shirt','age','appearances','goals','avg_rating'].includes(k);state.rosterSort=k;render();return}
+ if(x.dataset.matchBack!==undefined){returnFromMatch();return}
+ if(x.dataset.matchNav!==undefined){await stepMatch(Number(x.dataset.matchNav));return}
  if(x.dataset.page){navigate(x.dataset.page);return}
  if(x.dataset.scoreEdit!==undefined){
   if(state.identity?.role?.role!=='admin')return;
@@ -1050,7 +1122,10 @@ document.addEventListener('click',async e=>{
  }
  if(x.dataset.scoreCancel!==undefined){state.scoreEditing=false;render();return}
  if(x.dataset.extraRemove){if(state.identity?.role?.role==='admin'){try{await adminWrite('app_match_events','PATCH',{validation_status:'rejected'},{id:x.dataset.extraRemove});state.fixtureEvents=await loadFixtureEvents(state.match);render();toast('Evento escluso')}catch(error){toast(error.message)}}return}
- if(x.dataset.match){openMatch(x.dataset.match);return}
+ if(x.dataset.match){
+  const fixture=fixtures().find(f=>String(f.id)===String(x.dataset.match));
+  openMatch(x.dataset.match,matchOriginForOpen(x,fixture));return
+ }
  if(x.dataset.player){state.player=x.dataset.player;navigate('player');return}
  if(x.dataset.slide!==undefined){changeSlide(Number(x.dataset.slide));return}
  if(x.dataset.homeMonth!==undefined){state.homeMonth=x.dataset.homeMonth==='0'?monthIndex(new Date(),TIME_ZONE):monthOnHome()+Number(x.dataset.homeMonth);const el=document.querySelector('.home-right-calendar');if(el)el.innerHTML=monthMarkup();return}
