@@ -369,43 +369,109 @@ function fixtureOpponentRelevance(club,targetOpponent,completed,strengths){
  }
  return out;
 }
+function stableChoice(seed,items=[]){
+ if(!items.length)return '';
+ let h=0;for(const ch of String(seed||''))h=(h*31+ch.charCodeAt(0))>>>0;
+ return items[h%items.length];
+}
 function matchNarrative({fixture,probability,expectedGoals,home,away,homeComparison,awayComparison,homeSituational,awaySituational,venue,attention=[]}){
  const score=probability?.topScorelines?.[0]||probability?.mostLikely||{home:0,away:0,probability:0};
- const total=Number(expectedGoals.home||0)+Number(expectedGoals.away||0),parts=[];
+ const total=Number(expectedGoals.home||0)+Number(expectedGoals.away||0);
+ const gap=Number(expectedGoals.home||0)-Number(expectedGoals.away||0);
  const homeForm=Number(homeComparison?.recentPpg||0)-Number(homeComparison?.ppg||0);
  const awayForm=Number(awayComparison?.recentPpg||0)-Number(awayComparison?.ppg||0);
  const rankGap=Math.abs(Number(home?.potentialRank||0)-Number(away?.potentialRank||0));
- if(probability.home-probability.away>.14)
-  parts.push(fixture.home_team+' parte avanti nel modello: il punteggio singolo più probabile è '+score.home+'–'+score.away+', coerente con un potenziale atteso superiore'+(rankGap>=2?' e con un divario di rango non trascurabile':'')+'.');
- else if(probability.away-probability.home>.14)
-  parts.push(fixture.away_team+' ha il profilo statistico migliore nonostante la trasferta: lo scoreline più probabile è '+score.home+'–'+score.away+(rankGap>=2?', con un potenziale atteso sensibilmente più alto.':'.'));
- else
-  parts.push('I valori di '+fixture.home_team+' e '+fixture.away_team+' sono vicini: '+score.home+'–'+score.away+' è lo scoreline più probabile e nessuna delle due ha un margine netto nel modello.');
+ const favorite=probability.home>probability.away?fixture.home_team:probability.away>probability.home?fixture.away_team:null;
+ const underdog=favorite===fixture.home_team?fixture.away_team:favorite===fixture.away_team?fixture.home_team:null;
+ const favProb=Math.max(Number(probability.home||0),Number(probability.away||0));
+ const seed=fixture.id||fixture.home_team+'-'+fixture.away_team;
+ const candidates=[];
+ const add=(priority,text,key)=>{if(text)candidates.push({priority,text,key})};
 
- if(Math.abs(homeForm-awayForm)>=.45){
-  const better=homeForm>awayForm?fixture.home_team:fixture.away_team;
-  const worse=homeForm>awayForm?fixture.away_team:fixture.home_team;
-  parts.push('Il momento recente spinge verso '+better+': la sua forma sta rendendo meglio rispetto alla media stagionale, mentre '+worse+' arriva con un trend meno favorevole.');
- }else if(total<=1.8)parts.push('Il volume di gol previsto è basso: il primo episodio utile può rendere la gara molto più bloccata del normale.');
- else if(total>=3.1)parts.push('Il volume offensivo atteso è alto: il modello vede una gara più aperta, con maggiore probabilità di cambi di inerzia.');
- else parts.push('Il volume offensivo previsto è intermedio, quindi è plausibile una fase iniziale di studio prima che il peso dei singoli episodi aumenti.');
+ if(favorite&&favProb>=.62){
+  add(100,stableChoice(seed+'fav',[
+   favorite+' parte con un vantaggio strutturale piuttosto netto: il modello assegna '+Math.round(favProb*100)+'% all’esito favorevole e lo score singolo più probabile è '+score.home+'–'+score.away+'.',
+   'La partita pende verso '+favorite+': il '+Math.round(favProb*100)+'% sull’esito e il '+score.home+'–'+score.away+' come score più probabile descrivono un margine che non è solo di forma recente.',
+   favorite+' è la squadra da battere in questo incrocio: probabilità di esito '+Math.round(favProb*100)+'%, con '+score.home+'–'+score.away+' come risultato esatto più frequente nella distribuzione.'
+  ]),'fav');
+ }else if(favorite&&favProb>=.52){
+  add(90,stableChoice(seed+'edge',[
+   favorite+' ha un vantaggio, ma non abbastanza ampio da rendere la gara unidirezionale: '+score.home+'–'+score.away+' resta lo score più probabile.',
+   'Il modello inclina verso '+favorite+' senza creare uno strappo netto: il risultato esatto più probabile è '+score.home+'–'+score.away+'.',
+   'C’è un margine per '+favorite+', ma la distribuzione resta compatta: '+score.home+'–'+score.away+' è il singolo score con più massa.'
+  ]),'edge');
+ }else{
+  add(85,stableChoice(seed+'bal',[
+   'Il confronto è molto equilibrato: '+score.home+'–'+score.away+' emerge come score più probabile, ma nessun esito prende davvero il largo.',
+   'Le due squadre arrivano su valori vicini: il modello concentra la probabilità attorno a '+score.home+'–'+score.away+' senza un favorito netto.',
+   'È uno degli incroci più bilanciati del turno: '+score.home+'–'+score.away+' guida gli score esatti, con margini ridotti tra 1, X e 2.'
+  ]),'balance');
+ }
+
+ if(rankGap>=3&&favorite){
+  add(96,'Il rango atteso crea un divario di '+rankGap+' posizioni a favore di '+favorite+'; nelle prime giornate questo segnale pesa più della classifica corrente, che è ancora poco stabile.','rank');
+ }else if(rankGap===2&&favorite){
+  add(78,'Il potenziale atteso separa le squadre di due fasce: è un vantaggio reale per '+favorite+', ma non abbastanza forte da annullare forma e contesto della gara.','rank');
+ }
+
+ const formDiff=homeForm-awayForm;
+ if(Math.abs(formDiff)>=.65){
+  const better=formDiff>0?fixture.home_team:fixture.away_team,worse=formDiff>0?fixture.away_team:fixture.home_team;
+  add(88,'La dinamica recente è uno dei segnali più forti: '+better+' sta rendendo sopra la propria media, mentre '+worse+' arriva con una traiettoria sensibilmente peggiore.','form');
+ }else if(Math.abs(formDiff)>=.3){
+  const better=formDiff>0?fixture.home_team:fixture.away_team;
+  add(62,'La forma recente dà un piccolo vantaggio a '+better+', ma il campione non è abbastanza forte da dominare il pronostico.','form');
+ }
+
+ if(total>=3.35){
+  if(Math.abs(gap)>=.85&&favorite)
+   add(82,'Il volume di gol atteso è alto soprattutto perché '+favorite+' produce molto più dell’avversaria: il rischio principale è che la gara si apra dopo il primo vantaggio, non necessariamente che sia equilibrata.','goals');
+  else
+   add(72,stableChoice(seed+'highgoals',[
+    'Gli xG complessivi sono elevati e distribuiti su entrambe le squadre: sono plausibili più fasi offensive e un punteggio che si muove più di una volta.',
+    'Il modello concentra parecchia massa su score con almeno tre reti complessive; qui il tema è il volume offensivo, più che un generico equilibrio.',
+    'La somma degli xG è alta: una gara con più episodi da gol è sensibilmente più probabile rispetto a un match bloccato.'
+   ]),'goals');
+ }else if(total<=1.75){
+  add(76,stableChoice(seed+'lowgoals',[
+   'Il modello vede poco margine offensivo complessivo: un gol iniziale avrebbe un peso molto superiore alla media.',
+   'Gli xG bassi suggeriscono una partita da pochi episodi, dove il pareggio resta vivo a lungo se nessuno trova presto il vantaggio.',
+   'La distribuzione premia score corti: è più probabile una gara compressa che una sequenza di ribaltamenti.'
+  ]),'goals');
+ }else if(Math.abs(gap)>=.75&&favorite){
+  add(70,'Gli xG non indicano necessariamente una gara ricca, ma sono sbilanciati verso '+favorite+': il vantaggio nasce dalla qualità attesa delle occasioni più che dal numero totale di gol.','goals');
+ }
 
  const sameWindowHome=homeSituational?.strongestFor&&awaySituational?.weakestAgainst&&homeSituational.strongestFor.label===awaySituational.weakestAgainst.label;
  const sameWindowAway=awaySituational?.strongestFor&&homeSituational?.weakestAgainst&&awaySituational.strongestFor.label===homeSituational.weakestAgainst.label;
- if(sameWindowHome)parts.push('La fascia '+homeSituational.strongestFor.label+' è particolarmente sensibile: coincide con il picco realizzativo di '+fixture.home_team+' e con il momento in cui '+fixture.away_team+' concede più spesso.');
- else if(sameWindowAway)parts.push('Occhio alla fascia '+awaySituational.strongestFor.label+': è il momento migliore di '+fixture.away_team+' e coincide con la principale vulnerabilità temporale di '+fixture.home_team+'.');
- else{
-  const notable=attention.find(x=>/Rimonta|Vantaggio vulnerabile|Protegge bene|espellere|disciplina|Picco offensivo|Fascia vulnerabile/i.test(x.label));
-  if(notable)parts.push(notable.club+' porta un segnale specifico da monitorare: '+notable.label.toLowerCase()+' ('+notable.detail+').');
+ if(sameWindowHome) add(92,'La fascia '+homeSituational.strongestFor.label+' è un incrocio concreto: coincide con il picco realizzativo di '+fixture.home_team+' e con il momento in cui '+fixture.away_team+' concede più spesso.','timing');
+ if(sameWindowAway) add(92,'La fascia '+awaySituational.strongestFor.label+' è un incrocio concreto: coincide con il picco realizzativo di '+fixture.away_team+' e con il momento in cui '+fixture.home_team+' concede più spesso.','timing');
+
+ const stateSignals=attention.filter(x=>/Rimonta|Vantaggio vulnerabile|Protegge bene/i.test(x.label));
+ if(stateSignals.length){
+  const s=stateSignals[0];
+  add(84,s.club+': '+s.label.toLowerCase()+'. '+s.detail+'. Questo incide sulla lettura della gara soprattutto se il punteggio si sblocca presto.','state');
+ }
+ const discipline=attention.find(x=>/espellere|disciplina/i.test(x.label));
+ if(discipline) add(64,discipline.club+' ha anche un segnale disciplinare rilevante: '+discipline.detail+'. È un fattore secondario, ma può amplificare un vantaggio già esistente.','discipline');
+
+ if((home.played<=3||away.played<=3)&&(Number(home.historyShare||0)+Number(away.historyShare||0)>.1)){
+  const stronger=(home.prior??.5)>(away.prior??.5)?fixture.home_team:(away.prior??.5)>(home.prior??.5)?fixture.away_team:null;
+  add(80,stronger?
+   'Con pochi risultati stagionali disponibili, lo storico recente continua a pesare molto e favorisce '+stronger+'; il suo peso scenderà progressivamente con l’aumentare delle gare correnti.':
+   'Con pochi risultati stagionali disponibili, lo storico recente resta una parte importante del modello; il suo peso scenderà man mano che cresce il campione corrente.','history');
  }
 
- if(home.played<=3||away.played<=3){
-  const historical=Number(home.historyShare||0)+Number(away.historyShare||0);
-  if(historical>.1)parts.push('Essendo ancora nelle prime giornate, il giudizio resta ancorato anche allo storico recente delle due squadre; questo peso diminuirà man mano che aumentano i risultati della competizione.');
+ if(venue&&[venue.surface_type,venue.width_profile,venue.length_profile].some(Boolean)){
+  add(42,'Il profilo di '+venue.name+' è usato solo come correttivo quando esistono precedenti su campi simili; non viene trasformato automaticamente in vantaggio casa.','venue');
  }
- if(venue&&[venue.surface_type,venue.width_profile,venue.length_profile].some(Boolean))
-  parts.push('Il profilo di '+venue.name+' entra solo come correttivo basato sui precedenti reali su campi simili, non come vantaggio teorico assegnato a priori.');
- return parts.slice(0,4).join(' ');
+
+ const unique=[],seen=new Set();
+ for(const item of candidates.sort((a,b)=>b.priority-a.priority)){
+  if(seen.has(item.key))continue;seen.add(item.key);unique.push(item);
+  if(unique.length>=4)break;
+ }
+ return unique.map(x=>x.text).join(' ');
 }
 function factorial(n){let r=1;for(let i=2;i<=n;i++)r*=i;return r}
 function poissonProbability(k,lambda){return Math.exp(-lambda)*Math.pow(lambda,k)/factorial(k)}
