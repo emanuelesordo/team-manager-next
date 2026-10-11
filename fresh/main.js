@@ -382,6 +382,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const duration=Number.isFinite(configuredMinutes)&&configuredMinutes>0?configuredMinutes:null;
  const absoluteMinute=e=>cumulativeEventMinute(e,competitionSettings);
  const periodNo=e=>{
+  const manualPeriod=Number(e.payload?.timeline_period_no);
+  if(Number.isInteger(manualPeriod)&&manualPeriod>0)return manualPeriod;
   if(norm(e.payload?.period)==='unknown')return 0;
   if(norm(e.payload?.period)==='halftime')return 2;
   const explicit=Number(e.payload?.period_no);
@@ -417,6 +419,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const inferredUnknownPlacement=new Map();
  const effectiveOrder=e=>{
   const minute=absoluteMinute(e);
+  const manualTimelineOrder=Number(e.payload?.timeline_order);
+  if(minute===null&&Number.isFinite(manualTimelineOrder))return manualTimelineOrder;
   if(minute!==null)return minute+recovery(e)/100;
   if(goal(e)){
    const ordinal=goalOrdinal.get(e)||Number(e.payload?.sequence_order)||1;
@@ -543,10 +547,14 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
    let j=i+1;while(j<items.length&&sameMoment(items[i],items[j]))j++;
    const group=items.slice(i,j),first=group[0].event;
    const contentFor=which=>group.filter(x=>side(x.event)===which||(which==='away'&&side(x.event)==='unknown'))
-    .map(x=>adminEdit&&x.event.id?
-     '<button type="button" class="mt-group-item mt-editable-event" data-timeline-event="'+E(x.event.id)+'" title="Modifica evento">'+eventContent(x)+'</button>':
-     '<div class="mt-group-item">'+eventContent(x)+'</div>').join('');
-   output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
+    .map(x=>{
+     const unknown=absoluteMinute(x.event)===null;
+     return adminEdit&&x.event.id?
+      '<button type="button" class="mt-group-item mt-editable-event'+(unknown?' mt-draggable-unknown':'')+'" data-timeline-event="'+E(x.event.id)+'"'+(unknown?' draggable="true" data-timeline-drag="'+E(x.event.id)+'"':'')+' title="'+(unknown?'Trascina per ordinare · clicca per modificare':'Modifica evento')+'">'+eventContent(x)+'</button>':
+      '<div class="mt-group-item">'+eventContent(x)+'</div>';
+    }).join('');
+   const targetOrder=order(first),targetPeriod=periodNo(first);
+   output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"'+(adminEdit?' data-timeline-drop-order="'+E(targetOrder)+'" data-timeline-drop-period="'+E(targetPeriod)+'"':'')+'><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
    i=j;
   }
   return output;
@@ -585,7 +593,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  }else parts+=renderPeriod(1);
  const unplaced=descending.filter(x=>periodNo(x.event)===0&&!inferredUnknownPlacement.get(x.event));
  const unplacedBlock=unplaced.length?
-  '<div class="match-timeline-unplaced" aria-label="Eventi senza minuto collocabile"><div class="mt-unplaced-label">MINUTO NON NOTO</div>'+groupedRows(unplaced)+'</div>':'';
+  '<div class="match-timeline-unplaced" data-timeline-unplaced-drop aria-label="Eventi senza minuto collocabile"><div class="mt-unplaced-label">MINUTO NON NOTO · TRASCINA PER ORDINARE</div>'+groupedRows(unplaced)+'</div>':'';
  return '<div class="match-timeline'+(adminEdit?' is-admin-editable':'')+'" aria-label="Cronologia eventi della partita">'+
   (tracked.length||recoveryByPeriod.size?parts:parts+'<div class="empty padded">Nessun evento registrato.</div>')+'</div>'+unplacedBlock;
 }
@@ -1071,6 +1079,48 @@ async function reloadAll(){
  const season=state.season;state.base=await loadBase();const chosen=state.base.seasons.some(s=>s.id===season)?season:state.base.seasons.find(s=>s.status==='active')?.id||state.base.seasons[0].id;
  await switchSeason(chosen);
 }
+let timelineDraggedEventId=null;
+document.addEventListener('dragstart',e=>{
+ const item=e.target.closest?.('[data-timeline-drag]');
+ if(!item||state.identity?.role?.role!=='admin'||!state.scoreEditing)return;
+ timelineDraggedEventId=item.dataset.timelineDrag;
+ item.classList.add('is-dragging');
+ e.dataTransfer?.setData('text/plain',timelineDraggedEventId);
+ if(e.dataTransfer)e.dataTransfer.effectAllowed='move';
+});
+document.addEventListener('dragend',e=>{
+ e.target.closest?.('[data-timeline-drag]')?.classList.remove('is-dragging');
+ document.querySelectorAll('.is-timeline-drop-target').forEach(el=>el.classList.remove('is-timeline-drop-target'));
+ timelineDraggedEventId=null;
+});
+document.addEventListener('dragover',e=>{
+ if(!timelineDraggedEventId||state.identity?.role?.role!=='admin'||!state.scoreEditing)return;
+ const target=e.target.closest?.('[data-timeline-drop-order],[data-timeline-unplaced-drop]');
+ if(!target)return;
+ e.preventDefault();
+ document.querySelectorAll('.is-timeline-drop-target').forEach(el=>el.classList.remove('is-timeline-drop-target'));
+ target.classList.add('is-timeline-drop-target');
+ if(e.dataTransfer)e.dataTransfer.dropEffect='move';
+});
+document.addEventListener('drop',async e=>{
+ if(!timelineDraggedEventId||state.identity?.role?.role!=='admin'||!state.scoreEditing)return;
+ const target=e.target.closest?.('[data-timeline-drop-order],[data-timeline-unplaced-drop]');
+ if(!target)return;
+ e.preventDefault();
+ const id=timelineDraggedEventId;
+ timelineDraggedEventId=null;
+ document.querySelectorAll('.is-timeline-drop-target').forEach(el=>el.classList.remove('is-timeline-drop-target'));
+ try{
+  if(target.hasAttribute('data-timeline-unplaced-drop'))await reorderUnknownTimelineEvent(id,null,null);
+  else{
+   const base=Number(target.dataset.timelineDropOrder);
+   const period=Number(target.dataset.timelineDropPeriod)||null;
+   // Place just before the visual target in ascending chronological order.
+   await reorderUnknownTimelineEvent(id,base-0.001,period);
+  }
+  toast('Ordine evento aggiornato');
+ }catch(error){toast('Ordine non salvato: '+(error.message||error))}
+});
 document.addEventListener('click',async e=>{
  if(staffLogoEvent(e))return;
  const kitChoice=e.target.closest('[data-match-kit-choice]');
@@ -1376,6 +1426,23 @@ function mergeMatchPlayerState(rows){
   if(current)Object.assign(current,next);
   else{state.matchData.players.push(next);byId.set(row.player_id,next)}
  }
+}
+async function reorderUnknownTimelineEvent(eventId,targetOrder,targetPeriod=null){
+ const {fixture:f,operational:m}=resolveMatch();if(!f||state.identity?.role?.role!=='admin')return;
+ const source=m?(state.matchData?.events||[]):(state.fixtureEvents||[]);
+ const ev=source.find(x=>String(x.id)===String(eventId));
+ if(!ev||ev.minute!==null&&ev.minute!==undefined)return;
+ const payload={...(ev.payload||{})};
+ if(targetOrder===null){
+  delete payload.timeline_order;delete payload.timeline_period_no;
+ }else{
+  payload.timeline_order=Number(targetOrder);
+  if(Number.isInteger(Number(targetPeriod))&&Number(targetPeriod)>0)payload.timeline_period_no=Number(targetPeriod);
+ }
+ await adminWrite('app_match_events','PATCH',{payload},{id:eventId});
+ if(m)state.matchData=await loadMatchInfo(m.id);
+ else state.fixtureEvents=await loadFixtureEvents(f.id);
+ render();
 }
 async function reloadMatchDataIfCurrent(matchId){
  const current=resolveMatch().operational;
