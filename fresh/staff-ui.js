@@ -993,12 +993,12 @@ export async function staffClick(e,button,ctx){
    if(!/^[0-9a-f-]{36}$/i.test(String(sourceId||'')))throw Error('Evento CSI non valido');
    const decision=action==='csi-event-approve'?'approve':'reject';
    if(decision==='reject'&&!window.confirm('Scartare questo evento CSI dalla revisione?'))return true;
-   await rpc('tm_csi_review_event',{p_source_event_id:sourceId,p_decision:decision});
+   const reviewResult=await rpc('tm_csi_review_event',{p_source_event_id:sourceId,p_decision:decision});
    await loadCsiReview(ctx);
    await reloadMatch(ctx);
    if(!ctx.resolveMatch().operational)ctx.state.fixtureEvents=await get('app_match_events','select=*&fixture_id=eq.'+encodeURIComponent(ctx.state.match)+'&match_id=is.null&order=minute.asc.nullslast,created_at.asc&limit=250');
    ctx.render();
-   ctx.toast(decision==='approve'?'Evento CSI approvato e inserito nel tabellino':'Evento CSI scartato');
+   ctx.toast(decision==='approve'?(reviewResult?.merged_existing?'Evento CSI unificato con quello già presente':'Evento CSI approvato e inserito nel tabellino'):'Evento CSI scartato');
    return true;
   }
   if(action==='csi-check'){
