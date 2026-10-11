@@ -583,7 +583,7 @@ function match(){
   '</div>';
  const scorers=matchScorerRows(activeEvents.filter(e=>['official','proposed','community_confirmed'].includes(e.validation_status)),f,team(),playerName,rules);
  const recordedGoals=(state.fixtureEvents||[]).filter(e=>e.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
- const eventGoals=recordedGoals.reduce((a,e)=>{const side=e.event_type==='own_goal'?(e.side==='home'?'away':'home'):e.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
+ const eventGoals=fixtureGoalsFromEvents(recordedGoals);
  const scoreMismatch=extraMatch&&hasScore(f)&&(eventGoals.home!==Number(f.home_score)||eventGoals.away!==Number(f.away_score));
  const officialHome=Number.isInteger(f.home_score)?Number(f.home_score):0,officialAway=Number.isInteger(f.away_score)?Number(f.away_score):0;
  const pendingGoals=activeEvents.filter(e=>['proposed','community_confirmed'].includes(e.validation_status)&&e.payload?.count_score!==false&&['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type));
@@ -1032,7 +1032,11 @@ document.addEventListener('click',async e=>{
    if(m)await rpc('tm_app_match_action',{p_match_id:m.id,p_action:'void_event',p_payload:{event_id:id}});
    else await adminWrite('app_match_events','PATCH',{validation_status:'rejected'},{id});
    state.timelineEditor=null;
-   if(m)state.matchData=await loadMatchInfo(m.id);else state.fixtureEvents=await loadFixtureEvents(state.match);
+   if(m)state.matchData=await loadMatchInfo(m.id);
+   else{
+    state.fixtureEvents=await loadFixtureEvents(state.match);
+    await saveExtraScore({closeEditor:false,toastResult:false});
+   }
    render();toast('Evento eliminato');
   }catch(error){toast('Eliminazione non riuscita: '+error.message)}
   return;
@@ -1111,13 +1115,9 @@ document.addEventListener('click',async e=>{
  if(x.dataset.page){navigate(x.dataset.page);return}
  if(x.dataset.scoreEdit!==undefined){
   if(state.identity?.role?.role!=='admin')return;
-  if(!state.scoreEditing){state.scoreEditing=true;state.timelineEditor=null;render()}
-  else{
-   const f=resolveMatch().fixture;
-   state.timelineEditor=null;
-   if(f&&!involvesTeam(f,team()))await saveExtraScore();
-   else{state.scoreEditing=false;render()}
-  }
+  state.timelineEditor=null;
+  state.scoreEditing=!state.scoreEditing;
+  render();
   return;
  }
  if(x.dataset.scoreCancel!==undefined){state.scoreEditing=false;render();return}
@@ -1214,11 +1214,31 @@ async function enterTournamentFinalScore(fixtureId){
   render();toast('Risultato finale salvato');
  }catch(error){toast('Risultato non salvato: '+error.message)}
 }
-async function saveExtraScore(){
+function fixtureEventSide(event){
+ const raw=String(event?.team_side||event?.side||'').trim().toLowerCase();
+ if(['home','casa'].includes(raw))return 'home';
+ if(['away','ospite'].includes(raw))return 'away';
+ return null;
+}
+function fixtureGoalsFromEvents(events){
+ return (events||[]).filter(x=>x.validation_status!=='rejected'&&x.payload?.count_score!==false&&['goal','penalty_goal','penalty_scored','own_goal'].includes(x.event_type)).reduce((a,x)=>{
+  let side=fixtureEventSide(x);
+  if(x.event_type==='own_goal')side=side==='home'?'away':side==='away'?'home':null;
+  if(side==='home')a.home++;
+  if(side==='away')a.away++;
+  return a;
+ },{home:0,away:0});
+}
+async function saveExtraScore({closeEditor=true,toastResult=true}={}){
  const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
- const goals=(state.fixtureEvents||[]).filter(x=>x.validation_status!=='rejected'&&['goal','penalty_goal','penalty_scored','own_goal'].includes(x.event_type)).reduce((a,x)=>{const side=x.event_type==='own_goal'?(x.side==='home'?'away':'home'):x.side;if(side==='home')a.home++;if(side==='away')a.away++;return a},{home:0,away:0});
- try{await adminWrite('app_competition_fixtures','PATCH',{home_score:goals.home,away_score:goals.away},{id:f.id});f.home_score=goals.home;f.away_score=goals.away;state.scoreEditing=false;render();toast('Risultato aggiornato dai gol registrati')}
- catch(error){toast('Salvataggio risultato non riuscito: '+error.message)}
+ const goals=fixtureGoalsFromEvents(state.fixtureEvents||[]);
+ try{
+  await adminWrite('app_competition_fixtures','PATCH',{home_score:goals.home,away_score:goals.away},{id:f.id});
+  f.home_score=goals.home;f.away_score=goals.away;
+  if(closeEditor)state.scoreEditing=false;
+  render();
+  if(toastResult)toast('Risultato aggiornato dai gol registrati');
+ }catch(error){toast('Salvataggio risultato non riuscito: '+error.message)}
 }
 async function saveExtraDetail(field,value){
  const f=resolveMatch().fixture;if(!f||state.identity?.role?.role!=='admin')return;
@@ -1343,6 +1363,7 @@ document.addEventListener('submit',async e=>{
     if(eventId)await adminWrite('app_match_events','PATCH',payload,{id:eventId});
     else await adminWrite('app_match_events','POST',{...payload,fixture_id:f.id,match_id:null});
     state.fixtureEvents=await loadFixtureEvents(f.id);
+    await saveExtraScore({closeEditor:false,toastResult:false});
    }
    state.timelineEditor=null;render();toast(eventId?'Evento aggiornato':'Evento aggiunto');
   }catch(error){toast('Evento non salvato: '+error.message)}
@@ -1362,7 +1383,7 @@ document.addEventListener('submit',async e=>{
   const payload={event_type:kind,team_side:side,minute,source_raw:{period:'first_half'},payload:{origin:'extra_manual'},source:'manual'};
   try{
    await adminWrite('app_match_events',existing?'PATCH':'POST',existing?{event_type:kind,team_side:side,minute,source_raw:payload.source_raw,payload:payload.payload}:{...payload,fixture_id:f.id,match_id:null,proposed_by:state.identity.user},existing?{id:existing.id}:{});
-   state.fixtureEvents=await loadFixtureEvents(f.id);render();toast('Evento salvato');
+   state.fixtureEvents=await loadFixtureEvents(f.id);await saveExtraScore({closeEditor:false,toastResult:false});render();toast('Evento salvato');
   }catch(error){toast('Evento non salvato: '+error.message)}return;
  }
  if(e.target.id==='private-match-form'){
