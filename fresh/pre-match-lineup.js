@@ -205,10 +205,16 @@ function playerScores(players,allPriorMatches,sampleMatches,selections,formation
  const metrics=new Map();
  for(const p of players){
   const r=ratings.get(key(p.player_id))||{},rs=resultScore.get(key(p.player_id));
+  const recentMatches=allPriorMatches.slice().sort((a,b)=>Date.parse(b.kickoff_at)-Date.parse(a.kickoff_at)).slice(0,3);
+  const recentIds=new Set(recentMatches.map(m=>key(m.id)));
+  const recentRows=selections.filter(s=>key(s.player_id)===key(p.player_id)&&recentIds.has(key(s.match_id)));
+  const recentStarts=recentRows.filter(s=>s.started||s.selection_status==='starter').length;
+  const recentMinutes=recentRows.reduce((sum,s)=>sum+Math.max(0,Number(s.minutes_played)||0),0);
   metrics.set(key(p.player_id),{
    general:score.get(key(p.player_id))||0,
    meanRating:r.mean??null,contextRating:r.context??r.mean??null,ratingMatches:r.votes||0,
-   resultQuality:rs?.w?rs.sum/rs.w:.5
+   resultQuality:rs?.w?rs.sum/rs.w:.5,
+   recentStarts,recentMinutes,recentMatchCount:recentMatches.length
   });
  }
  return {score,slotScore,shirts,metrics};
@@ -223,7 +229,7 @@ function synergyWithUsed(playerId,used,coPlay){
  }
  return n?total/n:.5;
 }
-function bestForSlot(candidates,used,slot,targetRole,scores,coPlay){
+function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOpportunity=0){
  let best=null,bestScore=-Infinity;
  for(const c of candidates){
   if(used.has(key(c.player_id)))continue;
@@ -232,7 +238,15 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay){
   const rating=finite(m.contextRating)?(Number(m.contextRating)-6)*1.15:0;
   const result=(Number(m.resultQuality||.5)-.5)*1.6;
   const synergy=(synergyWithUsed(id,used,coPlay)-.5)*2.2;
-  const value=slotFit+general+roleFit+rating+result+synergy+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
+  const recentLoad=(m.recentMatchCount?m.recentStarts/Math.max(1,m.recentMatchCount):0)*.65+
+   clamp(Number(m.recentMinutes||0)/(Math.max(1,m.recentMatchCount||1)*80),0,1)*.35;
+  const ratingTrust=finite(m.contextRating)?clamp((Number(m.contextRating)-5.8)/1.8,0,1):.45;
+  // Turnover is a soft pressure, never a hard exclusion: in clearly favorable
+  // matches heavily-used starters lose a little priority, while reliable alternatives
+  // become more competitive. Goalkeepers are deliberately almost unaffected.
+  const turnoverPenalty=rotationOpportunity*(role==='P'?.12:1.15)*recentLoad*(.75+.25*ratingTrust);
+  const rotationBonus=rotationOpportunity*(role==='P'?0:.42)*(1-recentLoad)*(.55+.45*ratingTrust);
+  const value=slotFit+general+roleFit+rating+result+synergy-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
   if(value>bestScore){best=c;bestScore=value}
  }
  return best;
@@ -258,6 +272,17 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  let sample=ownPrior.filter(m=>comparableIds.has(key(m.fixture_id)));
  if(!sample.length)sample=ownPrior.slice(-4);
  const formation=modalFormation(sample.length?sample:ownPrior,fixtureWeights,data,team);
+ const teamProbability=teamSide==='home'?Number(prediction?.probabilities?.home||0):Number(prediction?.probabilities?.away||0);
+ const ourPotential=teamSide==='home'?Number(prediction?.home?.potential||.5):Number(prediction?.away?.potential||.5);
+ const oppPotential=teamSide==='home'?Number(prediction?.away?.potential||.5):Number(prediction?.home?.potential||.5);
+ const potentialEdge=ourPotential-oppPotential;
+ // Only clearly favorable matches create turnover pressure. The effect is
+ // progressive and capped so the hypothetical XI remains competitive.
+ const rotationOpportunity=clamp(
+  Math.max(0,(teamProbability-.55)/.22)*.65+
+  Math.max(0,(potentialEdge-.05)/.22)*.35,
+  0,1
+ );
  const roster=eligibleRoster(data,fixture.kickoff_at).map(r=>({...r,person:(data.players||[]).find(p=>p.id===r.player_id)})).filter(x=>x.person);
  const available=roster.filter(x=>availabilityFor(x.player_id,{targetMatch,data,matchData,competition}).status!=='absent');
  const ratings=ratingAverages(data,ownPrior,fixtureWeights,team);
@@ -266,7 +291,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const targets=roleTargets(formation),positions=prematchPositions(formation),used=new Set(),players=[];
  for(let i=0;i<positions.length;i++){
   const slot=positions[i].slot,targetRole=targets[i]||'C';
-  const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay);if(!picked)continue;
+  const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay,rotationOpportunity);if(!picked)continue;
   used.add(key(picked.player_id));
   const habitual=(data.habitual||[]).find(h=>h.player_id===picked.player_id)?.shirt_number;
   players.push({
@@ -280,7 +305,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const rated=players.filter(p=>finite(p.expectedRating));
  const xiExpectedRating=rated.length?rated.reduce((s,p)=>s+Number(p.expectedRating),0)/rated.length:null;
  return {
-  formation,players,availableCount:available.length,sampleSize:sample.length,
+  formation,players,availableCount:available.length,sampleSize:sample.length,rotationOpportunity,
   comparableUsed:Boolean(comparableIds.size&&sample.some(m=>comparableIds.has(key(m.fixture_id)))),
   kit:kit||{},confidence:clamp((sample.length/3)*.55+(players.length/11)*.3+(rated.length/11)*.15),
   xiExpectedRating
@@ -301,5 +326,6 @@ export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
   '<div class="prematch-lineup-field visual-field"><span class="field-circle"></span><span class="field-midline"></span>'+nodes+'</div>'+
   '<p class="prematch-lineup-note">'+
    (model.comparableUsed?'Ponderate soprattutto '+model.sampleSize+' formazion'+(model.sampleSize===1?'e':'i')+' contro avversarie di potenziale comparabile.':'Campione comparabile ridotto: integrate le formazioni recenti.')+
-   ' La scelta combina disponibilità, ruolo/slot, voti, risultati, tipo di avversaria e rendimento delle coppie di giocatori realmente contemporanee in campo. Sotto ogni giocatore: voto atteso e media storica. Considerati '+model.availableCount+' disponibili.</p>';
+   (model.rotationOpportunity>=.35?' Partita valutata relativamente abbordabile: applicato anche un correttivo turnover ('+Math.round(model.rotationOpportunity*100)+'%), premiando alternative affidabili meno utilizzate senza stravolgere l’XI.':'')+
+   ' La scelta combina disponibilità, ruolo/slot, voti, risultati, tipo di avversaria, carico recente e rendimento delle coppie di giocatori realmente contemporanee in campo. Sotto ogni giocatore: voto atteso e media storica. Considerati '+model.availableCount+' disponibili.</p>';
 }
