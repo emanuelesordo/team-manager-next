@@ -921,16 +921,21 @@ async function switchSeason(id){
   const data=await loadSeason(id,isStaff(staffContext()),state.identity?.role?.role==='admin');
   if(loadId!==state.loadId)return;
   const matches=(data.matches||[]).filter(m=>!m.is_test&&m.status==='finished'),ids=matches.map(m=>m.id).filter(Boolean);
-  if(ids.length){
-   const encoded=ids.map(encodeURIComponent).join(',');
-   const [events,matchPlayers]=await Promise.all([
-    get('app_match_events','select=match_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+encoded+')&limit=3000').catch(()=>[]),
-    get('app_match_players','select=match_id,player_id,started,selection_status&match_id=in.('+encoded+')&limit=3000').catch(()=>[])
-   ]);
-   const minuteMap=aggregatePlayerMinutes(matches,matchPlayers,events,data.competitions||[]);
-   data.playerStats=(data.playerStats||[]).map(row=>({...row,minutes:minuteMap.has(String(row.player_id))?minuteMap.get(String(row.player_id)):Number(row.minutes)||0}));
-   verifiedEventCache={season:id,events,matchPlayers};
-  }
+  const fixtureIds=(data.fixtures||[]).filter(f=>f.status==='finished'&&!f.is_test).map(f=>f.id).filter(Boolean);
+  const encoded=ids.map(encodeURIComponent).join(',');
+  const [events,matchPlayers,rawPredictions]=await Promise.all([
+   ids.length?get('app_match_events','select=match_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+encoded+')&limit=3000').catch(()=>[]):Promise.resolve([]),
+   ids.length?get('app_match_players','select=match_id,player_id,started,selection_status&match_id=in.('+encoded+')&limit=3000').catch(()=>[]):Promise.resolve([]),
+   fixtureIds.length?get('app_match_prediction_snapshots','select=fixture_id,calculated_at,model&fixture_id=in.('+fixtureIds.map(encodeURIComponent).join(',')+')&limit=500').catch(()=>[]):Promise.resolve([])
+  ]);
+  data.predictionSnapshots=rawPredictions.map(row=>({
+   fixture_id:row.fixture_id,generated_at:row.calculated_at,
+   home_probability:row.model?.probabilities?.home,draw_probability:row.model?.probabilities?.draw,
+   away_probability:row.model?.probabilities?.away
+  }));
+  const minuteMap=aggregatePlayerMinutes(matches,matchPlayers,events,data.competitions||[]);
+  data.playerStats=(data.playerStats||[]).map(row=>({...row,minutes:minuteMap.has(String(row.player_id))?minuteMap.get(String(row.player_id)):Number(row.minutes)||0}));
+  verifiedEventCache={season:id,events,matchPlayers};
   if(loadId!==state.loadId)return;
   state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render();
  }
@@ -1173,11 +1178,11 @@ async function fillAnalytics(){
  const box=document.querySelector('[data-event-analysis]');if(!box||!state.data)return;
  if(verifiedEventCache?.season===state.season){
   const matches=(state.data.matches||[]).filter(m=>!m.is_test);
-  box.innerHTML=renderEventAnalytics(realFixtures(),matches,verifiedEventCache.events.filter(e=>matches.some(m=>m.id===e.match_id)),team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],verifiedEventCache.matchPlayers||[],state.base?.venues||[]);return;
+  box.innerHTML=renderEventAnalytics(realFixtures(),matches,verifiedEventCache.events.filter(e=>matches.some(m=>m.id===e.match_id)),team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],verifiedEventCache.matchPlayers||[],state.base?.venues||[],state.data?.predictionSnapshots||[]);return;
  }
  if(analyticsBusy)return;
  const chosen=state.season,matches=(state.data.matches||[]).filter(m=>!m.is_test),ids=matches.map(m=>m.id).filter(Boolean);
- if(!ids.length){verifiedEventCache={season:chosen,events:[],matchPlayers:[]};box.innerHTML=renderEventAnalytics(realFixtures(),matches,[],team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],[],state.base?.venues||[]);return}
+ if(!ids.length){verifiedEventCache={season:chosen,events:[],matchPlayers:[]};box.innerHTML=renderEventAnalytics(realFixtures(),matches,[],team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],[],state.base?.venues||[],state.data?.predictionSnapshots||[]);return}
  analyticsBusy=true;
  try{
   const encodedIds=ids.map(encodeURIComponent).join(',');
@@ -1187,7 +1192,7 @@ async function fillAnalytics(){
   if(chosen!==state.season)return;
   verifiedEventCache={season:chosen,events,matchPlayers};
   const current=document.querySelector('[data-event-analysis]');
-  if(current)current.innerHTML=renderEventAnalytics(realFixtures(),matches,events,team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],matchPlayers,state.base?.venues||[]);
+  if(current)current.innerHTML=renderEventAnalytics(realFixtures(),matches,events,team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],matchPlayers,state.base?.venues||[],state.data?.predictionSnapshots||[]);
  }catch(error){const current=document.querySelector('[data-event-analysis]');if(current)current.textContent='Eventi non leggibili: '+error.message}
  finally{analyticsBusy=false}
 }
