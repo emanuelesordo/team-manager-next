@@ -37,7 +37,7 @@ export function seasonNumbers(fixtures,matches,events,team,competitions=[],playe
  const fixtureForMatch=m=>fixtureById.get(key(m?.fixture_id));
  const validMatchIds=new Set([...matchById].filter(([,m])=>fixtureForMatch(m)).map(([id])=>id));
  const rows=(events||[]).filter(e=>validMatchIds.has(key(e.match_id))&&acceptedEvent(e));
- const totals={...split,substitutions:0,yellows:0,blues:0,reds:0,assists:0,
+ const totals={...split,substitutions:0,yellows:0,blues:0,reds:0,opponentReds:0,assists:0,
   goalsByPeriod:[0,0],concededByPeriod:[0,0],goalIntervals:[0,0,0,0],
   matches:[],players:playerStats||[]};
 
@@ -91,6 +91,7 @@ export function seasonNumbers(fixtures,matches,events,team,competitions=[],playe
    if(e.event_type==='blue_card')totals.blues++;
    if(e.event_type==='red_card'||e.event_type==='second_yellow')totals.reds++;
   }
+  if(side==='opponent'&&(e.event_type==='red_card'||e.event_type==='second_yellow'))totals.opponentReds++;
   if(goalEvent(e)){
    const scoreSide=scoringSide(e),p=periodIndex(e);
    if(scoreSide==='team'){
