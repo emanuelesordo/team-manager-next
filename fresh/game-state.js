@@ -87,7 +87,7 @@ export function mergeGameStateAnalyses(rows=[]){
   quickResponsesFor:0,quickResponsesAgainst:0,quick5For:0,quick5Against:0,
   doubleLeads:0,opponentNarrowing:0,firstScoredWins:0,firstConcededLosses:0,
   pointsDroppedAfterFirst:0,pointsRecoveredAfterFirstConceded:0,
-  progressions:{team:{},opponent:{}},maxDeficitRecovered:0
+  progressions:{team:{},opponent:{}},maxDeficitRecovered:0,closeThroughout:0
  };
  for(const x of rows||[]){
   if(!x)continue;out.matches++;out.duration+=x.duration||0;
@@ -114,6 +114,7 @@ export function mergeGameStateAnalyses(rows=[]){
    const group=out.progressions[e.rowSide];
    group[label]=(group[label]||0)+1;
   }
+  if(Math.max(x.maxLead||0,x.maxDeficit||0)<=1)out.closeThroughout++;
   if((x.trailsRecovered||0)>0)out.maxDeficitRecovered=Math.max(out.maxDeficitRecovered,x.maxDeficit||0);
  }
  out.stateShare=Object.fromEntries(Object.entries(out.stateMinutes).map(([k,v])=>[k,out.duration?v/out.duration:0]));
