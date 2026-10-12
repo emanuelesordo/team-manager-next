@@ -595,8 +595,8 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   return {...all,cleanSheets:rows.filter(f=>scoreFor(f,club)?.[1]===0).length,home:part(homeRows),away:part(awayRows),
    matches:rows.map(f=>{const s=scoreFor(f,club);return {kickoff_at:f.kickoff_at,goals:s?.[0]||0,conceded:s?.[1]||0,result:s?.[0]>s?.[1]?'W':s?.[0]<s?.[1]?'L':'D'}})};
  };
- const homeIntelligence=analyseResults(completed,homeClub,{competitions,venues,before:fixture.kickoff_at});
- const awayIntelligence=analyseResults(completed,awayClub,{competitions,venues,before:fixture.kickoff_at});
+ const homeIntelligence=analyseResults(completed,homeClub,{competitions,venues,history,before:fixture.kickoff_at});
+ const awayIntelligence=analyseResults(completed,awayClub,{competitions,venues,history,before:fixture.kickoff_at});
  const isSpecificEvent=e=>['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type)&&['official','community_confirmed'].includes(e.validation_status);
  const validFixtureIds=new Set(completed.map(f=>String(f.id)));
  const matchIds=new Map((matches||[]).map(m=>[String(m.id),String(m.fixture_id)]));
