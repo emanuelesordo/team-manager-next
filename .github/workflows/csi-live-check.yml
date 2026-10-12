@@ -1,25 +1,44 @@
-name: CSI Live connection check
+name: CSI Live scraper
 
 on:
   workflow_dispatch:
+    inputs:
+      match_url:
+        description: 'URL completo Info gara CSI Live (?j=...)'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: csi-live-connection-check
+  group: csi-scraper
   cancel-in-progress: false
 
 jobs:
-  connection-check:
+  scrape-match:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Compile probe script
-        run: python -m py_compile scripts/csi_connection_check.py
-      - name: Check CSI Live public robots endpoint
-        run: python scripts/csi_connection_check.py
+      - name: Install parser dependencies
+        run: python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2'
+      - name: Validate source syntax
+        run: python -m py_compile scripts/csi_match.py
+      - name: Scrape CSI Live match into JSON
+        env:
+          CSI_MATCH_URL: ${{ inputs.match_url }}
+        run: |
+          mkdir -p out
+          python scripts/csi_match.py "$CSI_MATCH_URL" --output out/csi-match.json
+          python -c 'import json; d=json.load(open("out/csi-match.json")); assert d.get("code") and d.get("home",{}).get("name") and d.get("away",{}).get("name"); print("CSI JSON valid:", d["code"], "-", len(d["events"]), "events")'
+      - name: Downloadable JSON result
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: csi-match-json
+          path: out/csi-match.json
+          retention-days: 7
