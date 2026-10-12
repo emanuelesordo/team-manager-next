@@ -1520,3 +1520,30 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
   -webkit-backdrop-filter:blur(24px);
  }
 }
+
+/* Recovery marker: compact centered pill, like a timeline phase label. */
+.match-timeline .mt-divider-recovery{
+ margin:10px 0 5px;
+ gap:0;
+ color:var(--ink);
+ font-size:10px;
+ letter-spacing:.045em;
+}
+.match-timeline .mt-divider-recovery:before,
+.match-timeline .mt-divider-recovery:after{display:none}
+.match-timeline .mt-divider-recovery>span{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ min-height:24px;
+ padding:4px 12px;
+ border-radius:999px;
+ background:color-mix(in srgb,var(--ink) 8%,var(--surface-solid));
+ border:0;
+ box-shadow:none;
+ white-space:nowrap;
+}
+@media(max-width:550px){
+ .match-timeline .mt-divider-recovery{margin:8px 0 3px;font-size:9px}
+ .match-timeline .mt-divider-recovery>span{min-height:21px;padding:3px 10px}
+}
