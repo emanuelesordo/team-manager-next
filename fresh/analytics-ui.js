@@ -1,6 +1,7 @@
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers,aggregatePlayerMinutes} from './analytics.js?stats=20261013minutes1';
 import {buildTeamProfile,profileHighlights} from './team-profile.js';
+import {analyseResults} from './result-intelligence.js';
 
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(value,digits=1)=>Number(value).toLocaleString('it-IT',{minimumFractionDigits:digits,maximumFractionDigits:digits});
@@ -52,9 +53,66 @@ function resultProfilePanel(profile){
    cell('GF / GS per gara',fmt(profile.gfpg)+' / '+fmt(profile.gapg))+
   '</div><p class="subnote">Questi indicatori richiedono solo risultati finali affidabili e restano disponibili anche quando gli eventi della partita sono assenti.</p></section>';
 }
+function resultIntelligencePanel(result){
+ const r=result||{},m=r.margins||{},v=r.venue||{};
+ const pct=x=>x==null?'—':Math.round(100*x)+'%';
+ const number=x=>x==null?'—':fmt(x,2);
+ const group=(key,label)=>{const x=r.opponentTier?.[key]||{};return '<tr><td><b>'+label+'</b></td><td>'+E(x.matches||0)+'</td><td>'+number(x.ppg)+'</td><td>'+number(x.gfpg)+'</td><td>'+number(x.gapg)+'</td><td>'+number(x.gdpg)+'</td></tr>'};
+ const results='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Profili di risultato</h2></div>'+
+  '<div class="team-metric-grid">'+cell('Entrambe segnano',pct(r.bothScore?.rate))+cell('0–1 gol totali',pct(r.totalGoals?.zeroOneRate))+
+  cell('2 gol totali',pct(r.totalGoals?.twoRate))+cell('3+ gol totali',pct(r.totalGoals?.threePlusRate))+
+  cell('Margine medio',number(r.marginStats?.mean))+cell('Margine mediano',number(r.marginStats?.median))+
+  cell('Margine vittorie',number(r.marginStats?.winning))+cell('Margine sconfitte',number(r.marginStats?.losing))+
+  cell('Variabilità GF / GS',number(r.marginStats?.goalsForStd)+' / '+number(r.marginStats?.goalsAgainstStd))+
+  cell('Forma ultime 5',pct(r.form?.raw))+cell('Forma corretta per rango',pct(r.form?.opponentAdjusted))+
+  cell('Indice forza stimata',r.strength?.index??'—')+'</div>'+
+  '<div class="table-scroller"><table class="standing-table"><thead><tr><th>Scarto finale</th><th>Gare</th></tr></thead><tbody>'+
+  [['Vittoria +1','win1'],['Vittoria +2','win2'],['Vittoria +3 o più','win3plus'],['Parità','draw'],['Sconfitta −1','loss1'],['Sconfitta −2','loss2'],['Sconfitta −3 o più','loss3plus']].map(([label,k])=>'<tr><td>'+label+'</td><td>'+E(m[k]||0)+'</td></tr>').join('')+
+  '</tbody></table></div></section>';
+ const rank='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Contro avversarie di diverso rango</h2></div>'+
+  '<div class="table-scroller"><table class="standing-table"><thead><tr><th>Rango</th><th>G</th><th>PT/G</th><th>GF/G</th><th>GS/G</th><th>DR/G</th></tr></thead><tbody>'+
+  group('higher','Superiore')+group('similar','Simile')+group('lower','Inferiore')+'</tbody></table></div>'+
+  '<p class="subnote">Rango stimato prima di ciascuna gara, senza leggere risultati successivi. Gare con confronto ancora incerto escluse dai tre gruppi: '+E(r.opponentTier?.unknown?.matches||0)+'.</p></section>';
+ const selections=[['Casa',v.home],['Trasferta',v.away],...(v.bySurface||[]).filter(x=>x.matches>=2).map(x=>['Superficie: '+x.label,x]),...(v.byWidth||[]).filter(x=>x.matches>=2).map(x=>['Larghezza: '+x.label,x]),...(v.byLength||[]).filter(x=>x.matches>=2).map(x=>['Lunghezza: '+x.label,x])];
+ const place='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Casa, trasferta e tipo di campo</h2></div>'+
+  '<div class="table-scroller"><table class="standing-table"><thead><tr><th>Sede / profilo</th><th>G</th><th>PT/G</th><th>GF/G</th><th>GS/G</th></tr></thead><tbody>'+
+  selections.map(([label,row])=>'<tr><td><b>'+E(label)+'</b></td><td>'+E(row?.matches||0)+'</td><td>'+number(row?.ppg)+'</td><td>'+number(row?.gfpg)+'</td><td>'+number(row?.gapg)+'</td></tr>').join('')+
+  '</tbody></table></div></section>';
+ const strength='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Forza stimata nel tempo</h2></div>'+
+  '<div class="team-metric-grid">'+cell('Indice recente',r.strength?.index??'—')+cell('Variazione ultime gare',r.strength?.deltaFive==null?'—':(r.strength.deltaFive>0?'+':'')+r.strength.deltaFive)+
+  cell('Risultato vs previsto',r.vsPrediction?.matches?(r.vsPrediction.delta>=0?'+':'')+number(r.vsPrediction.delta)+' punti':'Non disponibile')+'</div>'+
+  '<p class="subnote">Il trend è un indice Elo descrittivo, non una probabilità. Lo scostamento dal pronostico richiede previsioni archiviate prima del calcio d’inizio; le previsioni ricalcolate dopo la gara non vengono utilizzate.</p></section>';
+ const scorelines='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Risultati esatti ricorrenti</h2></div>'+
+  '<div class="team-metric-grid">'+(r.scorelines||[]).slice(0,6).map(x=>cell(x.count+' su '+r.played+' gare',x.score)).join('')+'</div></section>';
+ return results+scorelines+rank+place+strength;
+}
+function progressionsPanel(gs={},halftime={}){
+ const count=Number(gs.matches)||0;
+ const first='<section class="glass panel"><div class="panel-heading"><h2>Primo gol e risposta</h2></div><div class="team-metric-grid">'+
+  cell('Vince segnando per prima',gs.firstScored?(Math.round(gs.firstScoredWinRate*100)+'% · '+gs.firstScored+' gare'):'—')+
+  cell('Perde subendo per prima',gs.firstConceded?(Math.round(gs.firstConcededLossRate*100)+'% · '+gs.firstConceded+' gare'):'—')+
+  cell('Punti persi dopo 1–0',gs.firstScored?gs.pointsDroppedAfterFirst:'—')+
+  cell('Punti recuperati dopo 0–1',gs.firstConceded?gs.pointsRecoveredAfterFirstConceded:'—')+
+  cell('Da +1 a +2',count?gs.doubleLeads:'—')+cell('Avversaria accorcia da +2',count?gs.opponentNarrowing:'—')+
+  cell('Risposta entro 5′ · fatti/subiti',count?gs.quick5For+' / '+gs.quick5Against:'—')+
+  cell('Risposta entro 10′ · fatti/subiti',count?gs.quickResponsesFor+' / '+gs.quickResponsesAgainst:'—')+'</div>'+
+  '<p class="subnote">Campione: '+count+' timeline gol riconciliate. Reazioni calcolate sul lato squadra/avversaria, senza attribuire causalità.</p></section>';
+ const trans=Object.entries(gs.progressions||{}).flatMap(([side,items])=>Object.entries(items).map(([step,n])=>({side,step,n})))
+  .sort((a,b)=>b.n-a.n||a.step.localeCompare(b.step)).slice(0,10);
+ const scores='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Progressione del punteggio</h2></div>'+
+  (trans.length?'<div class="table-scroller"><table class="standing-table"><thead><tr><th>Parziale → parziale</th><th>Gol</th><th>N</th></tr></thead><tbody>'+
+   trans.map(x=>'<tr><td><b>'+E(x.step)+'</b></td><td>'+E(x.side==='team'?'Squadra':'Avversaria')+'</td><td>'+x.n+'</td></tr>').join('')+'</tbody></table></div>':
+   '<p class="subnote">Non ci sono ancora timeline riconciliate con reti.</p>')+'</section>';
+ const row=(key,label)=>{const x=halftime[key]||{};return '<tr><td><b>'+label+'</b></td><td>'+E(x.matches||0)+'</td><td>'+E(x.wins||0)+'</td><td>'+E(x.draws||0)+'</td><td>'+E(x.losses||0)+'</td></tr>'};
+ const half='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Intervallo → risultato finale</h2></div>'+
+  '<div class="table-scroller"><table class="standing-table"><thead><tr><th>Situazione HT</th><th>G</th><th>V</th><th>N</th><th>P</th></tr></thead><tbody>'+
+  row('leading','In vantaggio')+row('drawing','In parità')+row('trailing','In svantaggio')+'</tbody></table></div>'+
+  '<p class="subnote">'+E(halftime.sample||0)+' gare con parziale HT verificabile. Non rappresenta una percentuale di tempo.</p></section>';
+ return first+scores+half;
+}
 function gameStatePanels(gameState){
  const g=gameState||{},share=g.stateShare||{},roles=g.roles||{team:{},opponent:{}};
- const pct=v=>Math.round((Number(v)||0)*100)+'%';
+ const pct=v=>!g.matches?'—':Math.round((Number(v)||0)*100)+'%';
  const state='<section class="glass panel"><div class="panel-heading"><h2>Stato della gara</h2></div><div class="team-metric-grid">'+
   cell('Tempo in vantaggio',pct(share.leading))+cell('Tempo in parità',pct(share.drawing))+cell('Tempo in svantaggio',pct(share.trailing))+
   cell('Vantaggi persi',(g.leadsLost||0)+' / '+(g.leadsTaken||0))+cell('Svantaggi recuperati',(g.trailsRecovered||0)+' / '+(g.trailsEntered||0))+
@@ -119,12 +177,14 @@ export function eventAnalyticsPlaceholder(){
  return '<div data-event-analysis><section class="glass panel event-analysis"><div class="panel-heading"><h2>Statistiche stagione</h2></div><div class="empty">Caricamento numeri…</div></section></div>';
 }
 
-export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[]){
+export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[]){
  const minuteMap=aggregatePlayerMinutes(matches,matchPlayers,events,competitions);
  const computedPlayers=(playerStats||[]).map(p=>({...p,minutes:minuteMap.has(String(p.player_id))?minuteMap.get(String(p.player_id)):Number(p.minutes)||0}));
  const numbers=seasonNumbers(fixtures,matches,events,team,competitions,computedPlayers);
  const coverage=eventCoverage(fixtures,matches,events,team,competitions);
- const profile=buildTeamProfile({numbers,gameState:coverage.gameState,eventMatches:coverage.complete});
+ const intelligence=analyseResults(fixtures,team?.id?'team:'+team.id:null,{competitions,venues});
+ const specificEventMatches=new Set(verifiedEvents(events).filter(e=>['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type)).map(e=>e.match_id)).size;
+ const profile=buildTeamProfile({numbers,gameState:coverage.gameState,eventMatches:specificEventMatches,resultAnalysis:intelligence});
  const validated=verifiedEvents(events);
  const proposed=(events||[]).filter(e=>e.validation_status==='proposed').length;
  const diff=numbers.gf-numbers.ga;
@@ -144,7 +204,7 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
   ranking('Minuti giocati',computedPlayers,'minutes')+ranking('Media voti',computedPlayers,'avg_rating',{digits:2,empty:'Nessun voto valido'})+
   goalDistribution(numbers)+discipline(numbers,computedPlayers)+'</div>'+
   '<section class="glass panel"><div class="panel-heading"><h2>Ultime partite</h2></div>'+lastResults(numbers.matches,opponents)+'</section>'+
-  teamProfilePanel(profile)+resultProfilePanel(profile)+period+gameStatePanels(coverage.gameState)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
+  teamProfilePanel(profile)+resultProfilePanel(profile)+resultIntelligencePanel(intelligence)+period+gameStatePanels(coverage.gameState)+progressionsPanel(coverage.gameState,coverage.halftime)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
 }
 
 export function fixtureEventsPanel(events,competition=null,fixture=null){
