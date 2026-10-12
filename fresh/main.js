@@ -13,6 +13,7 @@ import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.j
 import {projectionContainer,updateProjection} from './projection-ui.js?history=20261012prematch1';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261013minutes1';
+import {aggregatePlayerMinutes} from './analytics.js?stats=20261013minutes1';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js?live=20261006halftime1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
 
@@ -916,7 +917,23 @@ function manageCarousel(){
 async function switchSeason(id){
  if(!state.base.seasons.some(x=>x.id===id))return;
  const loadId=++state.loadId;state.season=id;state.comp=null;state.match=null;state.player=null;state.slide=0;predictionEventCache=null;state.loading=true;render();
- try{const data=await loadSeason(id,isStaff(staffContext()),state.identity?.role?.role==='admin');if(loadId!==state.loadId)return;state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render()}
+ try{
+  const data=await loadSeason(id,isStaff(staffContext()),state.identity?.role?.role==='admin');
+  if(loadId!==state.loadId)return;
+  const matches=(data.matches||[]).filter(m=>!m.is_test&&m.status==='finished'),ids=matches.map(m=>m.id).filter(Boolean);
+  if(ids.length){
+   const encoded=ids.map(encodeURIComponent).join(',');
+   const [events,matchPlayers]=await Promise.all([
+    get('app_match_events','select=match_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+encoded+')&limit=3000').catch(()=>[]),
+    get('app_match_players','select=match_id,player_id,started,selection_status&match_id=in.('+encoded+')&limit=3000').catch(()=>[])
+   ]);
+   const minuteMap=aggregatePlayerMinutes(matches,matchPlayers,events,data.competitions||[]);
+   data.playerStats=(data.playerStats||[]).map(row=>({...row,minutes:minuteMap.has(String(row.player_id))?minuteMap.get(String(row.player_id)):Number(row.minutes)||0}));
+   verifiedEventCache={season:id,events,matchPlayers};
+  }
+  if(loadId!==state.loadId)return;
+  state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render();
+ }
  catch(e){state.loading=false;render();toast('Dati non disponibili: '+e.message)}
 }
 async function openMatch(id,origin){
