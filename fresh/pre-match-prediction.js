@@ -329,9 +329,8 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
    const label=start+"′–"+end+"′",bucket=timing.get(label)||{label,start,end,for:0,against:0};
    if(scorer===club){ours++;bucket.for++}else{theirs++;bucket.against++}
    timing.set(label,bucket);
-   const beforeBehind=wasBehind;
    if(ours<theirs)wasBehind=true;if(ours>theirs)wasAhead=true;
-   if(wasBehind&&ours>=theirs)reachedEqualAfterBehind=true
+   if(wasBehind&&ours>=theirs)reachedEqualAfterBehind=true;
    if(wasAhead&&ours<=theirs)reachedEqualAfterAhead=true;
   }
   const recovery=all.filter(e=>e.event_type==='period_end').reduce((sum,e)=>{
@@ -653,7 +652,7 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
    detail:fixture.home_team+': '+(homeSituational.scoredFirst||0)+' volte avanti per prima, '+(homeSituational.scoredFirstWins||0)+' vittorie · '+
     fixture.away_team+': '+(awaySituational.scoredFirst||0)+' volte avanti per prima, '+(awaySituational.scoredFirstWins||0)+' vittorie. Viene valutato anche il rendimento quando si subisce per primi.'},
   {key:'state-pattern',label:'Pattern sul parziale',home:.5+stateMatchup(homeSituational,awaySituational),away:.5+stateMatchup(awaySituational,homeSituational),
-   detail:'Il correttivo cresce quando il picco offensivo di una squadra coincide con la fascia in cui l’avversaria subisce più spesso, usando solo gol con minutaggio affidabile.'},
+   detail:'Incrocia pareggi, accorciamenti, vantaggi concessi e risposte entro 10 minuti. Usa solo timeline complete.'},
   {key:'numerical',label:'Superiorità / inferiorità',home:homeNumerical?.score??.5,away:awayNumerical?.score??.5,
    detail:(homeNumerical&&!homeNumerical.insufficient)||(awayNumerical&&!awayNumerical.insufficient)?
     'Rendimento dei gol durante periodi realmente giocati con differenza numerica.':
