@@ -1,5 +1,6 @@
 import {cumulativeEventMinute} from './match-minutes.js';
 import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
+import {buildTeamProfile,profileHighlights} from './team-profile.js';
 
 const clamp=(x,low=0,hi=1)=>Math.max(low,Math.min(hi,x));
 const key=v=>String(v??'');
@@ -581,6 +582,20 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const homeComparison=comparisonMetrics(homeClub,completed,competition),awayComparison=comparisonMetrics(awayClub,completed,competition);
  const homeSituational=situationalMetrics(homeClub,completed,matches,events,competitions,team);
  const awaySituational=situationalMetrics(awayClub,completed,matches,events,competitions,team);
+ const profileNumbers=club=>{
+  const rows=completed.filter(f=>homeId(f)===club||awayId(f)===club).sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at));
+  const homeRows=rows.filter(f=>homeId(f)===club),awayRows=rows.filter(f=>awayId(f)===club);
+  const part=list=>{
+   let wins=0,draws=0,losses=0,gf=0,ga=0;
+   for(const f of list){const s=scoreFor(f,club);if(!s)continue;gf+=s[0];ga+=s[1];if(s[0]>s[1])wins++;else if(s[0]<s[1])losses++;else draws++}
+   return {played:list.length,wins,draws,losses,gf,ga};
+  };
+  const all=part(rows);
+  return {...all,cleanSheets:rows.filter(f=>scoreFor(f,club)?.[1]===0).length,home:part(homeRows),away:part(awayRows),
+   matches:rows.map(f=>{const s=scoreFor(f,club);return {kickoff_at:f.kickoff_at,goals:s?.[0]||0,conceded:s?.[1]||0,result:s?.[0]>s?.[1]?'W':s?.[0]<s?.[1]?'L':'D'}})};
+ };
+ const homeProfile=buildTeamProfile({numbers:profileNumbers(homeClub),gameState:homeSituational.gameState,eventMatches:homeSituational.timelineSample});
+ const awayProfile=buildTeamProfile({numbers:profileNumbers(awayClub),gameState:awaySituational.gameState,eventMatches:awaySituational.timelineSample});
 
  const gameStateScore=situ=>{
   const parts=[];
@@ -635,6 +650,8 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   homeComparison,awayComparison,homeSituational,awaySituational,venue:targetVenue,attention
  });
  const factors=[
+  {key:'profile',label:'Team Profile',home:homeProfile.overall,away:awayProfile.overall,
+   detail:'Sintesi degli indicatori disponibili con confidenza A/B/C. Non aggiunge un secondo peso al modello: organizza le stesse feature ed evidenzia quanto sono affidabili.'},
   {key:'form',label:'Forma recente',home:home.recent,away:away.recent,
    detail:home.played&&away.played?'Ultime gare pesate con maggiore importanza alle più recenti.':'Campione ancora ridotto.'},
   {key:'potential',label:'Potenziale atteso',home:home.potential,away:away.potential,
@@ -683,6 +700,7 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   completedCompetitionMatches:completed.length,
   comparison:{home:homeComparison,away:awayComparison},
   situational:{home:homeSituational,away:awaySituational},
+  profiles:{home:{...homeProfile,highlights:profileHighlights(homeProfile)},away:{...awayProfile,highlights:profileHighlights(awayProfile)}},
   attention,
   comparableFixtureIds:{home:homeComparableFixtures,away:awayComparableFixtures},
   lineupFixtureWeights:{home:homeFixtureRelevance,away:awayFixtureRelevance},
