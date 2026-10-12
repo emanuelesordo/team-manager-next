@@ -14,18 +14,33 @@ const emptyGroup=()=>({matches:0,points:0,gf:0,ga:0,wins:0,draws:0,losses:0,ppg:
 const addGroup=(group,r)=>{group.matches++;group.points+=r.points;group.gf+=r.gf;group.ga+=r.ga;group[r.result==='W'?'wins':r.result==='D'?'draws':'losses']++;};
 const finishGroup=group=>({...group,ppg:group.matches?group.points/group.matches:null,gfpg:group.matches?group.gf/group.matches:null,gapg:group.matches?group.ga/group.matches:null,gdpg:group.matches?(group.gf-group.ga)/group.matches:null});
 
-export function analyseResults(fixtures=[],club,{competitions=[],venues=[],predictionSnapshots=[],before=null}={}){
+export function analyseResults(fixtures=[],club,{competitions=[],venues=[],history=[],predictionSnapshots=[],before=null}={}){
  const cutoff=before==null?null:safeDate(before);
  const played=(fixtures||[]).filter(valid).filter(f=>cutoff===null||(safeDate(f.kickoff_at)!=null&&safeDate(f.kickoff_at)<cutoff))
   .sort((a,b)=>(safeDate(a.kickoff_at)??0)-(safeDate(b.kickoff_at)??0)||String(a.id).localeCompare(String(b.id)));
  const competitionMap=new Map(competitions.map(c=>[String(c.id),c]));
  const ratings=new Map(),appearances=new Map(),own=[],all=[];
  const ratingKey=(f,id)=>String(f.competition_id??'all')+'|'+id;
+ const prior=(f,id)=>{
+  const kickoff=safeDate(f.kickoff_at);
+  if(kickoff===null)return null;
+  const date=new Date(kickoff);
+  const year=date.getUTCFullYear()-(date.getUTCMonth()<6?1:0);
+  const previous=history.filter(h=>(h.team_id?'team:'+h.team_id:h.opponent_id?'opponent:'+h.opponent_id:null)===id&&
+   Number(h.season_start_year)<year).sort((a,b)=>Number(b.season_start_year)-Number(a.season_start_year))[0];
+  if(!previous)return null;
+  const tier=Math.max(1,Number(previous.tier_level)||3);
+  const n=Number(previous.total_positions),position=Number(previous.final_position);
+  const placement=Number.isFinite(n)&&n>=2&&Number.isFinite(position)?clamp((n-position)/(n-1)):.5;
+  const pointsShare=Number(previous.max_points)>0?clamp(Number(previous.points||0)/Number(previous.max_points)):.5;
+  return Math.max(1300,Math.min(1670,1500+(2-tier)*65+(placement-.5)*50+(pointsShare-.5)*60));
+ };
  for(const f of played){
   const home=clubAt(f,'home'),away=clubAt(f,'away');
   if(!home||!away||home===away)continue;
   const ck=ratingKey(f,home),ak=ratingKey(f,away);
-  const rh=ratings.get(ck)??1500,ra=ratings.get(ak)??1500;
+  const homePrior=prior(f,home),awayPrior=prior(f,away);
+  const rh=ratings.get(ck)??homePrior??1500,ra=ratings.get(ak)??awayPrior??1500;
   const nh=appearances.get(ck)||0,na=appearances.get(ak)||0;
   const eh=1/(1+Math.pow(10,(ra-rh-45)/400)),ea=1-eh;
   const homeGoals=Number(f.home_score),awayGoals=Number(f.away_score);
@@ -40,14 +55,16 @@ export function analyseResults(fixtures=[],club,{competitions=[],venues=[],predi
   const gf=atHome?homeGoals:awayGoals,ga=atHome?awayGoals:homeGoals;
   const result=status(gf,ga),config=competitionMap.get(String(f.competition_id));
   const expectation=atHome?eh:ea;
-  const bucket=ownAppearances>=2&&oppAppearances>=2?(oppRating-ourRating>60?'higher':oppRating-ourRating< -60?'lower':'similar'):'unknown';
+  const ownKnown=ownAppearances>=2||(atHome?homePrior:awayPrior)!=null;
+  const opponentKnown=oppAppearances>=2||(atHome?awayPrior:homePrior)!=null;
+  const bucket=ownKnown&&opponentKnown?(oppRating-ourRating>60?'higher':oppRating-ourRating< -60?'lower':'similar'):'unknown';
   const r={
    fixture_id:f.id,kickoff_at:f.kickoff_at,competition_id:f.competition_id,
    opponent:atHome?away:home,venue:f.venue_name||f.venue||null,
    atHome,gf,ga,margin:gf-ga,result,points:points(gf,ga,config),
    ratingBefore:ourRating,ratingAfter:atHome?rh+shift:ra-shift,
    opponentRatingBefore:oppRating,opponentTier:bucket,expectedOutcome:expectation,
-   opponentSample:oppAppearances,ownSample:ownAppearances
+   opponentSample:oppAppearances,ownSample:ownAppearances,rankReliable:ownKnown&&opponentKnown
   };
   own.push(r);
   all.push({fixture:f,row:r});
@@ -67,9 +84,9 @@ export function analyseResults(fixtures=[],club,{competitions=[],venues=[],predi
   draw:count(r=>r.margin===0)
  };
  const lastFive=own.slice(-5),formRaw=lastFive.length?lastFive.reduce((acc,r,i)=>acc+(i+1)*winFraction(r.result),0)/lastFive.reduce((acc,_,i)=>acc+i+1,0):null;
- const qualified=lastFive.filter(r=>r.ownSample>=2&&r.opponentSample>=2);
+ const qualified=lastFive.filter(r=>r.rankReliable);
  const adjusted=qualified.length>=2?lastFive.reduce((acc,r,i)=>{
-  const observed=winFraction(r.result),expected=r.ownSample>=2&&r.opponentSample>=2?r.expectedOutcome:.5;
+  const observed=winFraction(r.result),expected=r.rankReliable?r.expectedOutcome:.5;
   return acc+(i+1)*clamp(.5+observed-expected);
  },0)/lastFive.reduce((acc,_,i)=>acc+i+1,0):null;
  const venueIndex=new Map(venues.map(v=>[norm(v.name),v]));
@@ -114,6 +131,6 @@ export function analyseResults(fixtures=[],club,{competitions=[],venues=[],predi
   form:{raw:formRaw,opponentAdjusted:adjusted,sample:lastFive.length,adjustedSample:qualified.length},
   strength:{index:trend.length?trend.at(-1).rating:null,deltaFive:trend.length>=2?trend.at(-1).rating-trend[Math.max(0,trend.length-6)].rating:null,trend,model:'Elo descrittivo, non forza ufficiale'},
   vsPrediction:snapshotCount?{matches:snapshotCount,actualPoints,expectedPoints,delta:actualPoints-expectedPoints}:{matches:0,actualPoints:null,expectedPoints:null,delta:null},
-  source:'Risultati finali verificati; forza avversaria calcolata prima di ciascuna partita'
+  source:'Risultati finali verificati; forza avversaria stimata da storico antecedente e risultati prima della gara'
  };
 }
