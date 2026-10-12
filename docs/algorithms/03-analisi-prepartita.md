@@ -6,9 +6,9 @@
 
 ## ATTUALE
 - Confronti: punti/gara, GF/gara, GS/gara, DR/gara, forma recente e fasce di maggiore efficacia/vulnerabilità.
-- Pattern di attenzione: forma crescente/calante, primo gol, rimonte, tenuta del vantaggio, espulsioni, minuti dei gol e bilancio offensivo.
+- Pattern di attenzione: forma crescente/calante, primo gol, rimonte, tenuta del vantaggio, espulsioni, gol di pareggio/accorciamento/allungo, reazioni entro 10 minuti e bilancio offensivo.
 - I pattern hanno soglie minime (per esempio almeno due osservazioni in vari indicatori) e `attentionPoints` restituisce al massimo 8 elementi.
-- La narrativa è costruita da `matchNarrative` usando probabilità, punteggio modale, forma, rango, xG, caratteristiche del campo e pattern. `stableChoice` seleziona varianti deterministiche dal seed della fixture.
+- La narrativa è costruita da `matchNarrative` usando probabilità, punteggio modale, forma, rango, xG, caratteristiche del campo e pattern di game state; il minuto medio generico dei gol non viene usato come segnale. `stableChoice` seleziona varianti deterministiche dal seed della fixture.
 - La UI stampa il testo restituito dal modello; non deve inventare caratteristiche o riscrivere valori.
 
 ## Requisiti di qualità
