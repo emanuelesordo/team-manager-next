@@ -14,7 +14,7 @@ export function confidenceLevel({resultMatches=0,timelineMatches=0,eventMatches=
  };
 }
 
-export function buildTeamProfile({numbers={},gameState={},eventMatches=0}={}){
+export function buildTeamProfile({numbers={},gameState={},eventMatches=0,resultAnalysis=null}={}){
  const matches=[...(numbers.matches||[])];
  const played=Number(numbers.played)||matches.length||0;
  const gf=Number(numbers.gf)||0,ga=Number(numbers.ga)||0;
@@ -38,9 +38,10 @@ export function buildTeamProfile({numbers={},gameState={},eventMatches=0}={}){
  const role=(side,k)=>Number(gameState.roles?.[side]?.[k])||0;
  const timeline=Math.max(0,Number(gameState.matches)||0);
  const metrics=[
-  {key:'form',label:'Forma recente',value:recentWeights?recentWeighted/recentWeights:.5,confidence:'A',sample:recent.length},
-  {key:'attack',label:'Produzione offensiva',value:clamp(gfpg/2.5),raw:gfpg,confidence:'A',sample:played},
-  {key:'defense',label:'Tenuta difensiva',value:clamp(1-gapg/2.5),raw:gapg,confidence:'A',sample:played},
+  {key:'form',label:'Forma recente',value:recentWeights?recentWeighted/recentWeights:null,confidence:'A',sample:recent.length},
+  {key:'adjusted-form',label:'Forma corretta per avversaria',value:resultAnalysis?.form?.opponentAdjusted??null,confidence:'A',sample:resultAnalysis?.form?.adjustedSample||0},
+  {key:'attack',label:'Produzione offensiva',value:played?clamp(gfpg/2.5):null,raw:played?gfpg:null,confidence:'A',sample:played},
+  {key:'defense',label:'Tenuta difensiva',value:played?clamp(1-gapg/2.5):null,raw:played?gapg:null,confidence:'A',sample:played},
   {key:'clean-sheet',label:'Clean sheet',value:cleanSheet,confidence:'A',sample:played},
   {key:'fail-to-score',label:'Continuità nel segnare',value:failToScore==null?null:1-failToScore,confidence:'A',sample:played},
   {key:'open-games',label:'Propensione a gare aperte',value:openRate,confidence:'A',sample:played},
@@ -55,9 +56,13 @@ export function buildTeamProfile({numbers={},gameState={},eventMatches=0}={}){
   {key:'reduce-deficit',label:'Capacità di riaprire',value:timeline?clamp(role('team','deficit_reduction')/timeline):null,confidence:'B',sample:timeline},
   {key:'protect-multi-goal',label:'Protezione vantaggi larghi',value:timeline?clamp(1-role('opponent','deficit_reduction')/timeline):null,confidence:'B',sample:timeline},
   {key:'quick-response',label:'Reazione entro 10′',value:timeline?clamp((Number(gameState.quickResponsesFor)||0)/timeline):null,confidence:'C',sample:timeline},
-  {key:'post-goal-stability',label:'Tenuta nei 10′ dopo un gol',value:timeline?clamp(1-(Number(gameState.quickResponsesAgainst)||0)/timeline):null,confidence:'C',sample:timeline}
+  {key:'post-goal-stability',label:'Tenuta nei 10′ dopo un gol',value:timeline?clamp(1-(Number(gameState.quickResponsesAgainst)||0)/timeline):null,confidence:'C',sample:timeline},
+  {key:'both-score',label:'Entrambe a segno',value:resultAnalysis?.bothScore?.rate??null,confidence:'A',sample:resultAnalysis?.played||0},
+  {key:'low-scoring',label:'Partite da 0–1 gol totali',value:resultAnalysis?.totalGoals?.zeroOneRate??null,confidence:'A',sample:resultAnalysis?.played||0},
+  {key:'margin-trend',label:'Evoluzione forza stimata',value:resultAnalysis?.strength?.deltaFive==null?null:clamp(.5+resultAnalysis.strength.deltaFive/120),raw:resultAnalysis?.strength?.deltaFive??null,confidence:'A',sample:Math.min(resultAnalysis?.played||0,5)},
+  {key:'vs-higher-rank',label:'Rendimento vs rango superiore',value:resultAnalysis?.opponentTier?.higher?.ppg==null?null:clamp(resultAnalysis.opponentTier.higher.ppg/3),confidence:'A',sample:resultAnalysis?.opponentTier?.higher?.matches||0}
  ];
- const available=metrics.filter(x=>Number.isFinite(Number(x.value)));
+ const available=metrics.filter(x=>x.value!==null&&x.value!==undefined&&Number.isFinite(Number(x.value))&&x.sample>0);
  const overall=available.length?available.reduce((s,x)=>{
   const conf=resultConfidence[x.confidence]?.score??0;
   const weight=x.confidence==='A'?1:(x.confidence==='B'?0.65:0.35);
@@ -69,13 +74,13 @@ export function buildTeamProfile({numbers={},gameState={},eventMatches=0}={}){
  },0):.5;
  return {
   overall:clamp(overall),played,gfpg,gapg,failToScore,cleanSheet,openRate,tightRate,bigWinRate,bigLossRate,volatility,
-  homePpg,awayPpg,metrics,confidence:resultConfidence,
+  homePpg,awayPpg,metrics,confidence:resultConfidence,resultAnalysis,
   timelineCoverage:played?timeline/played:0
  };
 }
 
 export function profileHighlights(profile,limit=5){
- const candidates=(profile?.metrics||[]).filter(x=>Number.isFinite(Number(x.value))&&x.sample>0);
+ const candidates=(profile?.metrics||[]).filter(x=>x.value!==null&&x.value!==undefined&&Number.isFinite(Number(x.value))&&x.sample>0);
  return candidates.map(x=>({...x,distance:Math.abs(Number(x.value)-.5)}))
   .filter(x=>x.distance>=.12)
   .sort((a,b)=>b.distance-a.distance||({A:0,B:1,C:2}[a.confidence]-({A:0,B:1,C:2}[b.confidence])))
