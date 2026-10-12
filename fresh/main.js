@@ -584,8 +584,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
     scoreHome+' - '+scoreAway:(p===1?halfScore:'');
    output+=heading(label+(scoreText?' '+scoreText:''));
   }
-  if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO '+E(declared)+"'":'RECUPERO','recovery');
   output+=groupedRows(stoppage);
+  if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO '+E(declared)+"'":'RECUPERO','recovery');
   return output+groupedRows(regular);
  };
  let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI','title');
