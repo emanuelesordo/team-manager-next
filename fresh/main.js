@@ -820,8 +820,14 @@ function paintMatchHeaderCompact(){
  const mobile=window.innerWidth<=650;
  const compactHeight=mobile?64:74;
  const range=mobile?120:170;
- const bottom=head.getBoundingClientRect().bottom;
- const raw=Math.max(0,Math.min(1,(top+compactHeight+range-bottom)/range));
+ const sentinel=document.querySelector('.match-header-sentinel');
+ const sentinelTop=(sentinel||head).getBoundingClientRect().top;
+ // Progress starts strictly at 0 while the match header is at its natural top.
+ // It then follows the actual amount scrolled past the header sentinel.
+ // The former bottom-based formula could already produce a positive value at
+ // scrollTop=0 when the expanded header was shorter than the transition range.
+ const scrolledPast=Math.max(0,top-sentinelTop);
+ const raw=Math.max(0,Math.min(1,scrolledPast/range));
  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  const progress=reduced?(raw>=0.5?1:0):raw;
  // Top offset and compact size change on resize only, not during normal scroll.
