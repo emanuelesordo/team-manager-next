@@ -93,6 +93,7 @@ function progressionsPanel(gs={},halftime={}){
   cell('Perde subendo per prima',gs.firstConceded?(Math.round(gs.firstConcededLossRate*100)+'% · '+gs.firstConceded+' gare'):'—')+
   cell('Punti persi dopo 1–0',gs.firstScored?gs.pointsDroppedAfterFirst:'—')+
   cell('Punti recuperati dopo 0–1',gs.firstConceded?gs.pointsRecoveredAfterFirstConceded:'—')+
+  cell('Sempre entro 1 gol',count?gs.closeThroughout+' / '+count:'—')+
   cell('Da +1 a +2',count?gs.doubleLeads:'—')+cell('Avversaria accorcia da +2',count?gs.opponentNarrowing:'—')+
   cell('Risposta entro 5′ · fatti/subiti',count?gs.quick5For+' / '+gs.quick5Against:'—')+
   cell('Risposta entro 10′ · fatti/subiti',count?gs.quickResponsesFor+' / '+gs.quickResponsesAgainst:'—')+'</div>'+
@@ -159,7 +160,7 @@ function venue(team){
 }
 function discipline(team,players){
  const cards='<section class="glass panel"><div class="panel-heading"><h2>Disciplina</h2></div><div class="team-metric-grid">'+
-  cell('Gialli',team.yellows)+cell('Blu',team.blues)+cell('Rossi',team.reds)+cell('Sostituzioni',team.substitutions)+'</div></section>';
+  cell('Gialli',team.yellows)+cell('Blu',team.blues)+cell('Rossi propri',team.reds)+cell('Rossi avversari',team.opponentReds)+cell('Sostituzioni',team.substitutions)+'</div></section>';
  return cards+ranking('Più sanzionati',players,'disciplinary_cards');
 }
 
