@@ -24,7 +24,7 @@ import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
 import {weightedTeamRating} from './team-rating.js?legacy=20261006v1';
-import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261012minutes3';
+import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261013intelligence1';
 import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261007v2';
 import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261012turnover1';
 
