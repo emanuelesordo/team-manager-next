@@ -60,11 +60,11 @@ export function buildTeamProfile({numbers={},gameState={},eventMatches=0}={}){
  const available=metrics.filter(x=>Number.isFinite(Number(x.value)));
  const overall=available.length?available.reduce((s,x)=>{
   const conf=resultConfidence[x.confidence]?.score??0;
-  const weight=x.confidence==='A'?1:x.confidence==='B'?.65:.35;
+  const weight=x.confidence==='A'?1:(x.confidence==='B'?.65:.35);
   return s+Number(x.value)*weight*(.35+.65*conf);
  },0)/available.reduce((s,x)=>{
   const conf=resultConfidence[x.confidence]?.score??0;
-  const weight=x.confidence==='A'?1:x.confidence==='B'?.65:.35;
+  const weight=x.confidence==='A'?1:(x.confidence==='B'?.65:.35);
   return s+weight*(.35+.65*conf);
  },0):.5;
  return {
