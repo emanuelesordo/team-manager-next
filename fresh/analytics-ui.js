@@ -36,6 +36,25 @@ function goalDistribution(team){
    '<strong>'+E(label)+'</strong><div class="leader-bar"><span style="width:'+Math.max(team.goalIntervals[i]?3:0,Math.round((team.goalIntervals[i]||0)/total*100))+'%"></span></div>'+
    '<b>'+E(team.goalIntervals[i]||0)+'</b></div>').join('')+'</section>';
 }
+function gameStatePanels(gameState){
+ const g=gameState||{},share=g.stateShare||{},roles=g.roles||{team:{},opponent:{}};
+ const pct=v=>Math.round((Number(v)||0)*100)+'%';
+ const state='<section class="glass panel"><div class="panel-heading"><h2>Stato della gara</h2></div><div class="team-metric-grid">'+
+  cell('Tempo in vantaggio',pct(share.leading))+cell('Tempo in parità',pct(share.drawing))+cell('Tempo in svantaggio',pct(share.trailing))+
+  cell('Vantaggi persi',(g.leadsLost||0)+' / '+(g.leadsTaken||0))+cell('Svantaggi recuperati',(g.trailsRecovered||0)+' / '+(g.trailsEntered||0))+
+  cell('Risposta entro 10′',g.quickResponsesFor||0)+'</div></section>';
+ const labels=[['opener','Apertura (0-0)'],['go_ahead','Gol del sorpasso'],['equalizer','Gol del pareggio'],['deficit_reduction','Accorcia le distanze'],['lead_extension','Allunga il vantaggio']];
+ const contexts='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Gol per parziale</h2></div>'+
+  '<div class="table-scroller"><table class="standing-table"><thead><tr><th>Tipo di rete</th><th>Fatti</th><th>Subiti</th></tr></thead><tbody>'+
+  labels.map(([k,label])=>'<tr><td><b>'+E(label)+'</b></td><td>'+E(roles.team?.[k]||0)+'</td><td>'+E(roles.opponent?.[k]||0)+'</td></tr>').join('')+
+  '</tbody></table></div></section>';
+ const by=g.byState||{scored:{},conceded:{}};
+ const before='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Situazione prima del gol</h2></div>'+
+  '<div class="table-scroller"><table class="standing-table"><thead><tr><th>Parziale</th><th>Gol fatti</th><th>Gol subiti</th></tr></thead><tbody>'+
+  [['leading','In vantaggio'],['drawing','In parità'],['trailing','In svantaggio']].map(([k,label])=>'<tr><td><b>'+label+'</b></td><td>'+E(by.scored?.[k]||0)+'</td><td>'+E(by.conceded?.[k]||0)+'</td></tr>').join('')+
+  '</tbody></table></div></section>';
+ return state+contexts+before;
+}
 function balance(team){
  const pct=v=>team.played?Math.round(v*100/team.played):0;
  return '<section class="glass panel"><div class="panel-heading"><h2>Bilancio dei risultati</h2></div>'+
@@ -82,20 +101,16 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
  const period='<section class="glass panel"><div class="panel-heading"><h2>Gol per tempo</h2></div><div class="team-metric-grid">'+
   cell('1° tempo',numbers.goalsByPeriod[0])+cell('2° tempo',numbers.goalsByPeriod[1])+
   cell('Subiti 1° tempo',numbers.concededByPeriod[0])+cell('Subiti 2° tempo',numbers.concededByPeriod[1])+'</div></section>';
- const advanced='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Eventi e rimonte verificabili</h2></div>'+
+ const advanced='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Copertura eventi</h2></div>'+
   '<div class="team-metric-grid">'+cell('Eventi ufficializzati',validated.length)+cell('Proposte registrate',proposed)+
   cell('Timeline complete',coverage.complete+'/'+coverage.possible)+'</div>'+
-  (coverage.complete?'<div class="team-metric-grid">'+cell('Rimonte documentate',coverage.comebacks)+
-   cell('Rimonte avversarie',coverage.concededComebacks)+cell('Rimonte con vittoria',coverage.comebackWins)+'</div>'+
-   '<div class="table-scroller"><table class="standing-table"><thead><tr><th>Situazione prima della rete</th><th>Gol fatti</th><th>Gol subiti</th></tr></thead><tbody>'+
-   [['In vantaggio','ahead'],['In parità','equal'],['In svantaggio','behind']].map(([label,k])=>'<tr><td>'+label+'</td><td>'+coverage.goalSituations[k]+'</td><td>'+coverage.concededSituations[k]+'</td></tr>').join('')+
-   '</tbody></table></div>':'<p class="subnote">Rimonte e situazione del punteggio richiedono una timeline dei gol completa e riconciliata. Le altre statistiche della pagina restano comunque disponibili.</p>')+'</section>';
+  (!coverage.complete?'<p class="subnote">Le metriche sullo stato della gara richiedono la sequenza completa dei gol e vengono calcolate solo sulle timeline riconciliate.</p>':'')+'</section>';
  return header+'<section class="glass panel">'+core+'</section><div class="leaderboard-grid">'+
   balance(numbers)+venue(numbers)+ranking('Classifica marcatori',computedPlayers,'goals')+ranking('Assist',computedPlayers,'assists')+
   ranking('Minuti giocati',computedPlayers,'minutes')+ranking('Media voti',computedPlayers,'avg_rating',{digits:2,empty:'Nessun voto valido'})+
   goalDistribution(numbers)+discipline(numbers,computedPlayers)+'</div>'+
   '<section class="glass panel"><div class="panel-heading"><h2>Ultime partite</h2></div>'+lastResults(numbers.matches,opponents)+'</section>'+
-  period+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Gli eventi rifiutati sono esclusi; i voti SV non entrano nella media.</p>';
+  period+gameStatePanels(coverage.gameState)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
 }
 
 export function fixtureEventsPanel(events,competition=null,fixture=null){
