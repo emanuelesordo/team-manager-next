@@ -1,4 +1,5 @@
 import {cumulativeEventMinute} from './match-minutes.js';
+import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
 
 const clamp=(x,low=0,hi=1)=>Math.max(low,Math.min(hi,x));
 const key=v=>String(v??'');
@@ -300,7 +301,7 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
  let timelineSample=0,trailed=0,recovered=0,comebackWins=0,led=0,heldLead=0,lostLead=0;
  let scoredFirst=0,scoredFirstWins=0,concededFirst=0,concededFirstWins=0,concededFirstRecoveredPoints=0;
  let opponentReds=0,ownReds=0,cardSample=0;
- const timing=new Map(),scoredMinutes=[],concededMinutes=[],equalizerMinutes=[];
+ const timing=new Map(),gameStates=[];
  for(const f of completed.filter(x=>homeId(x)===club||awayId(x)===club)){
   const all=byFixture.get(key(f.id))||[];
   cardSample++;
@@ -311,18 +312,6 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
   }
   const goals=all.filter(e=>goalTypes.has(e.event_type)&&e.payload?.count_score!==false);
   const comp=(competitions||[]).find(x=>key(x.id)===key(f.competition_id));
-  const timedGoals=goals.filter(e=>Number.isInteger(e.minute)&&Number.isFinite(cumulativeEventMinute(e,comp)))
-   .sort((a,b)=>(cumulativeEventMinute(a,comp)??999)-(cumulativeEventMinute(b,comp)??999)||
-    Number(a.stoppage_minute||0)-Number(b.stoppage_minute||0)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
-  // Timing distributions can use every reliable minute we know, even when a
-  // historical tabellino is incomplete. Score-state / first-goal analysis stays
-  // conservative and only runs when the whole scoring sequence is reconstructable.
-  for(const e of timedGoals){
-   const scorer=eventClub(e,f,primaryTeam,true);if(!scorer)continue;
-   const minute=Math.max(1,Number(cumulativeEventMinute(e,comp)||1));
-   if(scorer===club)scoredMinutes.push(minute);else concededMinutes.push(minute);
-  }
-
   const completeTimeline=goals.length===Number(f.home_score)+Number(f.away_score)&&goals.length>0&&goals.every(e=>Number.isInteger(e.minute)&&Number.isFinite(cumulativeEventMinute(e,comp)));
   if(!completeTimeline)continue;
 
@@ -342,9 +331,18 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
    timing.set(label,bucket);
    const beforeBehind=wasBehind;
    if(ours<theirs)wasBehind=true;if(ours>theirs)wasAhead=true;
-   if(wasBehind&&ours>=theirs){reachedEqualAfterBehind=true;if(beforeBehind&&ours===theirs)equalizerMinutes.push(minute)}
+   if(wasBehind&&ours>=theirs)reachedEqualAfterBehind=true
    if(wasAhead&&ours<=theirs)reachedEqualAfterAhead=true;
   }
+  const recovery=all.filter(e=>e.event_type==='period_end').reduce((sum,e)=>{
+   const n=Number(e.payload?.recovery_actual??e.payload?.recovery_minutes??e.stoppage_minute);
+   return sum+(Number.isFinite(n)&&n>0?n:0);
+  },0);
+  gameStates.push(analyseGoalTimeline(goals,{
+   sideOf:e=>eventClub(e,f,primaryTeam,true)===club?'team':'opponent',
+   minuteOf:e=>cumulativeEventMinute(e,comp),
+   duration:matchMinutes+recovery,responseWindow:10
+  }));
   timelineSample++;
   const s=scoreFor(f,club);if(!s)continue;
   const firstGoal=goals[0],firstScorer=firstGoal?eventClub(firstGoal,f,primaryTeam,true):null;
@@ -357,16 +355,14 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
  const totalFor=goalWindows.reduce((s,x)=>s+x.for,0),totalAgainst=goalWindows.reduce((s,x)=>s+x.against,0);
  const strongestFor=goalWindows.slice().sort((a,b)=>b.for-a.for||a.start-b.start)[0]||null;
  const weakestAgainst=goalWindows.slice().sort((a,b)=>b.against-a.against||a.start-b.start)[0]||null;
- const mean=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
- const spreadAround=a=>{if(!a.length)return null;const m=mean(a),variance=a.reduce((s,x)=>s+(x-m)*(x-m),0)/a.length;return {mean:m,around:clamp(Math.round(Math.sqrt(variance)),5,10),n:a.length}};
+ const gameState=mergeGameStateAnalyses(gameStates);
  return {timelineSample,trailed,recovered,comebackWins,led,heldLead,lostLead,cardSample,opponentReds,ownReds,
   scoredFirst,scoredFirstWins,concededFirst,concededFirstWins,concededFirstRecoveredPoints,
   scoredFirstWinRate:scoredFirst?scoredFirstWins/scoredFirst:null,
   concededFirstWinRate:concededFirst?concededFirstWins/concededFirst:null,
   recoveryRate:trailed?recovered/trailed:null,leadHoldRate:led?heldLead/led:null,
   opponentRedRate:cardSample?opponentReds/cardSample:null,ownRedRate:cardSample?ownReds/cardSample:null,
-  scoringTiming:spreadAround(scoredMinutes),concedingTiming:spreadAround(concededMinutes),equalizerTiming:spreadAround(equalizerMinutes),
-  goalWindows,totalTimedGoalsFor:totalFor,totalTimedGoalsAgainst:totalAgainst,strongestFor,weakestAgainst};
+  gameState,goalWindows,totalTimedGoalsFor:totalFor,totalTimedGoalsAgainst:totalAgainst,strongestFor,weakestAgainst};
 }
 function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
  const out=[];
@@ -381,10 +377,13 @@ function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
   if(situ.led>=2&&situ.lostLead/situ.led>=.5)push(name,'Vantaggio vulnerabile',Math.round(100*situ.lostLead/situ.led)+'%',situ.lostLead+' volte raggiunta dopo essere passata avanti','risk');
   if(situ.cardSample>=2&&situ.opponentRedRate>=.25)push(name,'Fa espellere avversari',situ.opponentReds,situ.opponentReds+' espulsioni avversarie in '+situ.cardSample+' gare con eventi disponibili','watch');
   if(situ.cardSample>=2&&situ.ownRedRate>=.25)push(name,'Rischio disciplina',situ.ownReds,situ.ownReds+' espulsioni proprie in '+situ.cardSample+' gare con eventi disponibili','risk');
-  if(situ.scoringTiming?.n>=2)
-   push(name,'Minuto offensivo ricorrente',Math.round(situ.scoringTiming.mean)+"'",'I gol arrivano mediamente attorno al '+Math.round(situ.scoringTiming.mean)+"' (circa ±"+situ.scoringTiming.around+' min)','strength');
-  if(situ.concedingTiming?.n>=2)
-   push(name,'Minuto vulnerabile ricorrente',Math.round(situ.concedingTiming.mean)+"'",'I gol subiti arrivano mediamente attorno al '+Math.round(situ.concedingTiming.mean)+"' (circa ±"+situ.concedingTiming.around+' min)','risk');
+  const gs=situ.gameState||{},teamRoles=gs.roles?.team||{},oppRoles=gs.roles?.opponent||{};
+  if((teamRoles.equalizer||0)>=2)push(name,'Reazione al vantaggio avversario',teamRoles.equalizer,(teamRoles.equalizer||0)+' pareggi trovati durante la timeline dopo uno svantaggio','strength');
+  if((teamRoles.deficit_reduction||0)>=2)push(name,'Riapre gare compromesse',teamRoles.deficit_reduction,(teamRoles.deficit_reduction||0)+' gol di accorciamento segnati restando ancora sotto','watch');
+  if((oppRoles.equalizer||0)>=2)push(name,'Si fa raggiungere',oppRoles.equalizer,(oppRoles.equalizer||0)+' gol del pareggio concessi mentre era avanti','risk');
+  if((oppRoles.deficit_reduction||0)>=2)push(name,'Non chiude il vantaggio',oppRoles.deficit_reduction,(oppRoles.deficit_reduction||0)+' gol di accorciamento concessi con vantaggio di almeno due reti','risk');
+  if((gs.quickResponsesFor||0)>=2)push(name,'Risposta rapida',gs.quickResponsesFor,(gs.quickResponsesFor||0)+' risposte entro 10 minuti da una rete avversaria','strength');
+  if((gs.quickResponsesAgainst||0)>=2)push(name,'Vulnerabile dopo il gol',gs.quickResponsesAgainst,(gs.quickResponsesAgainst||0)+' reti subite entro 10 minuti da una propria marcatura','risk');
   if(base.played>=2&&base.gfPerGame>=base.gaPerGame+.75)push(name,'Produzione offensiva','+'+(base.gfPerGame-base.gaPerGame).toFixed(1),base.gfPerGame.toFixed(1)+' gol fatti/gara contro '+base.gaPerGame.toFixed(1)+' subiti','strength');
  };
  inspect(homeName,homeBase,homeSitu);inspect(awayName,awayBase,awaySitu);
@@ -473,42 +472,20 @@ function matchNarrative({fixture,probability,expectedGoals,home,away,homeCompari
   add(70,'Gli xG non indicano necessariamente una gara ricca, ma sono sbilanciati verso '+favorite+': il vantaggio nasce dalla qualità attesa delle occasioni più che dal numero totale di gol.','goals');
  }
 
- const timingOverlap=(attack,defense)=>{
-  if(!attack?.scoringTiming||!defense?.concedingTiming||attack.scoringTiming.n<2||defense.concedingTiming.n<2)return null;
-  const diff=Math.abs(attack.scoringTiming.mean-defense.concedingTiming.mean);
-  const around=clamp(Math.round((attack.scoringTiming.around+defense.concedingTiming.around)/2),5,10);
-  return diff<=around*1.7?{minute:Math.round((attack.scoringTiming.mean+defense.concedingTiming.mean)/2),around,diff}:null;
+ const roleRate=(situ,side,role)=>{
+  const gs=situ?.gameState,count=gs?.roles?.[side]?.[role]||0;
+  return gs?.matches?count/gs.matches:0;
  };
- const homeTiming=timingOverlap(homeSituational,awaySituational),awayTiming=timingOverlap(awaySituational,homeSituational);
- if(homeTiming) add(92,'C’è un incrocio temporale favorevole a '+fixture.home_team+': tende a segnare attorno al '+homeTiming.minute+"' ±"+homeTiming.around+' min, proprio vicino al minutaggio medio in cui '+fixture.away_team+' concede.','timing');
- else if(awayTiming) add(92,'C’è un incrocio temporale favorevole a '+fixture.away_team+': tende a segnare attorno al '+awayTiming.minute+"' ±"+awayTiming.around+' min, proprio vicino al minutaggio medio in cui '+fixture.home_team+' concede.','timing');
-
- const minuteText=x=>x?Math.round(x.mean)+"' ±"+x.around:null;
- const homeTimingStory=homeSituational?.scoringTiming?.n>=2||homeSituational?.concedingTiming?.n>=2;
- const awayTimingStory=awaySituational?.scoringTiming?.n>=2||awaySituational?.concedingTiming?.n>=2;
- if(homeTimingStory){
-  const bits=[];
-  if(homeSituational.scoringTiming?.n>=2)bits.push('segna mediamente attorno al '+minuteText(homeSituational.scoringTiming));
-  if(homeSituational.concedingTiming?.n>=2)bits.push('subisce mediamente attorno al '+minuteText(homeSituational.concedingTiming));
-  add(89,fixture.home_team+' '+bits.join(' e ')+'.','timing-home');
- }
- if(awayTimingStory){
-  const bits=[];
-  if(awaySituational.scoringTiming?.n>=2)bits.push('segna mediamente attorno al '+minuteText(awaySituational.scoringTiming));
-  if(awaySituational.concedingTiming?.n>=2)bits.push('subisce mediamente attorno al '+minuteText(awaySituational.concedingTiming));
-  add(89,fixture.away_team+' '+bits.join(' e ')+'.','timing-away');
- }
- const homeFirstRisk=homeSituational?.concededFirst>=2&&homeSituational?.concedingTiming;
- const awayFirstRisk=awaySituational?.concededFirst>=2&&awaySituational?.concedingTiming;
- if(homeFirstRisk&&homeSituational.recoveryRate>=.4&&homeSituational.equalizerTiming){
-  add(94,fixture.home_team+' tende a concedere per prima attorno al '+minuteText(homeSituational.concedingTiming)+
-   ', ma quando reagisce il pareggio arriva mediamente verso il '+minuteText(homeSituational.equalizerTiming)+
-   '. È un profilo da partenza fragile ma con capacità di recupero.','firstgoal-home');
- }else if(awayFirstRisk&&awaySituational.recoveryRate>=.4&&awaySituational.equalizerTiming){
-  add(94,fixture.away_team+' tende a concedere per prima attorno al '+minuteText(awaySituational.concedingTiming)+
-   ', ma quando recupera lo fa mediamente verso il '+minuteText(awaySituational.equalizerTiming)+
-   '. Il primo vantaggio avversario quindi non chiude necessariamente la partita.','firstgoal-away');
- }
+ const homeEqualize=roleRate(homeSituational,'team','equalizer'),awayLoseLead=roleRate(awaySituational,'opponent','equalizer');
+ const awayEqualize=roleRate(awaySituational,'team','equalizer'),homeLoseLead=roleRate(homeSituational,'opponent','equalizer');
+ if(homeEqualize>=.35&&awayLoseLead>=.35)
+  add(94,fixture.home_team+' mostra capacità di pareggiare quando va sotto, mentre '+fixture.away_team+' concede spesso il pareggio dopo essere passata avanti: è un incrocio favorevole a una riapertura della gara.','state-matchup-home');
+ if(awayEqualize>=.35&&homeLoseLead>=.35)
+  add(94,fixture.away_team+' mostra capacità di pareggiare quando va sotto, mentre '+fixture.home_team+' concede spesso il pareggio dopo essere passata avanti: il vantaggio iniziale potrebbe non essere stabile.','state-matchup-away');
+ const homeQuick=homeSituational?.gameState?.quickResponsesFor||0,awayQuickAgainst=awaySituational?.gameState?.quickResponsesAgainst||0;
+ const awayQuick=awaySituational?.gameState?.quickResponsesFor||0,homeQuickAgainst=homeSituational?.gameState?.quickResponsesAgainst||0;
+ if(homeQuick>=2&&awayQuickAgainst>=2)add(90,fixture.home_team+' ha già mostrato reazioni rapide dopo aver subito, mentre '+fixture.away_team+' tende a concedere poco dopo aver segnato. Attenzione ai 10 minuti successivi a un eventuale vantaggio ospite.','response-home');
+ if(awayQuick>=2&&homeQuickAgainst>=2)add(90,fixture.away_team+' ha già mostrato reazioni rapide dopo aver subito, mentre '+fixture.home_team+' tende a concedere poco dopo aver segnato. Attenzione ai 10 minuti successivi a un eventuale vantaggio di casa.','response-away');
  const firstSignal=attention.find(x=>/Capitalizza il primo gol|Soffre il primo svantaggio/i.test(x.label));
  if(firstSignal)add(86,firstSignal.club+': '+firstSignal.label.toLowerCase()+'. '+firstSignal.detail+'.','firstgoal');
  const stateSignals=attention.filter(x=>/Rimonta|Vantaggio vulnerabile|Protegge bene/i.test(x.label));
@@ -612,15 +589,18 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   if(situ?.led>=2&&Number.isFinite(situ.leadHoldRate))parts.push(situ.leadHoldRate);
   return parts.length?parts.reduce((a,b)=>a+b,0)/parts.length:.5;
  };
- const timingMatchup=(attack,defense)=>{
-  const a=attack?.scoringTiming,d=defense?.concedingTiming;
-  if(!a||!d||a.n<2||d.n<2)return 0;
-  const distance=Math.abs(a.mean-d.mean);
-  const tolerance=clamp((Number(a.around||7)+Number(d.around||7))*.8,7,16);
-  if(distance>tolerance*1.75)return 0;
-  const overlap=clamp(1-distance/(tolerance*1.75),0,1);
-  const reliability=clamp(Math.min(a.n,d.n)/5,.3,1);
-  return .18*overlap*reliability;
+ const stateMatchup=(attack,defense)=>{
+  const a=attack?.gameState,d=defense?.gameState;
+  if(!a?.matches||!d?.matches)return 0;
+  const equalize=(a.roles?.team?.equalizer||0)/a.matches;
+  const oppEqualized=(d.roles?.opponent?.equalizer||0)/d.matches;
+  const reduce=(a.roles?.team?.deficit_reduction||0)/a.matches;
+  const oppReduce=(d.roles?.opponent?.deficit_reduction||0)/d.matches;
+  const quick=Math.min(1,(a.quickResponsesFor||0)/Math.max(1,a.matches));
+  const vulnerable=Math.min(1,(d.quickResponsesAgainst||0)/Math.max(1,d.matches));
+  const signal=.38*Math.min(equalize,oppEqualized)+.24*Math.min(reduce,oppReduce)+.38*Math.min(quick,vulnerable);
+  const reliability=clamp(Math.min(a.matches,d.matches)/5,.25,1);
+  return .18*clamp(signal,0,1)*reliability;
  };
 
  const homeGoals=completed.reduce((s,f)=>s+Number(f.home_score||0),0),awayGoals=completed.reduce((s,f)=>s+Number(f.away_score||0),0);
@@ -644,8 +624,8 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const rankDelta=homeBehavior.delta-awayBehavior.delta;
  const venueDelta=(homeVenue.sample>=2?homeVenue.delta:0)-(awayVenue.sample>=2?awayVenue.delta:0);
  const gameStateDelta=clamp(gameStateScore(homeSituational)-gameStateScore(awaySituational),-.35,.35);
- const timingDelta=timingMatchup(homeSituational,awaySituational)-timingMatchup(awaySituational,homeSituational);
- const context=.30*rankDelta+.12*managementDelta+.16*gameStateDelta+.16*numericalDelta+.16*venueDelta+.10*timingDelta;
+ const statePatternDelta=stateMatchup(homeSituational,awaySituational)-stateMatchup(awaySituational,homeSituational);
+ const context=.30*rankDelta+.12*managementDelta+.16*gameStateDelta+.16*numericalDelta+.16*venueDelta+.10*statePatternDelta;
  homeLambda*=Math.exp(context);awayLambda*=Math.exp(-context);
  homeLambda=clamp(homeLambda,.15,4.5);awayLambda=clamp(awayLambda,.15,4.5);
 
@@ -672,7 +652,7 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
    home:homeSituational.scoredFirstWinRate??.5,away:awaySituational.scoredFirstWinRate??.5,
    detail:fixture.home_team+': '+(homeSituational.scoredFirst||0)+' volte avanti per prima, '+(homeSituational.scoredFirstWins||0)+' vittorie · '+
     fixture.away_team+': '+(awaySituational.scoredFirst||0)+' volte avanti per prima, '+(awaySituational.scoredFirstWins||0)+' vittorie. Viene valutato anche il rendimento quando si subisce per primi.'},
-  {key:'timing',label:'Periodi forti / vulnerabili',home:.5+timingMatchup(homeSituational,awaySituational),away:.5+timingMatchup(awaySituational,homeSituational),
+  {key:'state-pattern',label:'Pattern sul parziale',home:.5+stateMatchup(homeSituational,awaySituational),away:.5+stateMatchup(awaySituational,homeSituational),
    detail:'Il correttivo cresce quando il picco offensivo di una squadra coincide con la fascia in cui l’avversaria subisce più spesso, usando solo gol con minutaggio affidabile.'},
   {key:'numerical',label:'Superiorità / inferiorità',home:homeNumerical?.score??.5,away:awayNumerical?.score??.5,
    detail:(homeNumerical&&!homeNumerical.insufficient)||(awayNumerical&&!awayNumerical.insufficient)?
