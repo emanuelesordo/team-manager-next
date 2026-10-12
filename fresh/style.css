@@ -1504,3 +1504,19 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
  body[data-page="match"] .top-actions .icon-btn{width:30px;height:30px}
  body[data-page="match"] .mobile-symbol .crest{width:32px;height:32px}
 }
+
+/* Restore the normal translucent topbar. The previous visual issue was the
+   match-header crossfade starting too early, not the topbar surface itself. */
+.topbar{
+ background:color-mix(in srgb,var(--bg) 68%,transparent);
+ backdrop-filter:blur(24px);
+ -webkit-backdrop-filter:blur(24px);
+}
+@media(max-width:760px){
+ .topbar,
+ body[data-page="match"] .topbar{
+  background:#f4f7d6a8;
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+ }
+}
