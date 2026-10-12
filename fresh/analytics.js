@@ -174,12 +174,26 @@ export function eventCoverage(fixtures,matches,events,team,competitions=[]){
  }
  let complete=0,possible=0,unverified=0,withoutMinutes=0,comebacks=0,concededComebacks=0,comebackWins=0;
  const location={equal:0,ahead:0,behind:0},conceded={equal:0,ahead:0,behind:0},gameStates=[];
+ const halftime={sample:0,leading:{matches:0,wins:0,draws:0,losses:0},drawing:{matches:0,wins:0,draws:0,losses:0},trailing:{matches:0,wins:0,draws:0,losses:0}};
  for(const f of fixtures){
   if(!isPlayed(f)||(!isTeam(f,'home',team)&&!isTeam(f,'away',team)))continue;
   const m=matches.find(x=>x.fixture_id===f.id&&map.get(x.id)===x);
   if(!m)continue;
   possible++;
-  const rows=(eventsByMatch.get(m.id)||[]).filter(e=>goalEvent(e));
+  const periodRows=eventsByMatch.get(m.id)||[];
+  const halfRow=periodRows.find(e=>e.event_type==='period_end'&&(e.payload?.period==='first_half'||Number(e.payload?.period_no)===1)&&e.payload?.score_home!=null&&e.payload?.score_away!=null);
+  if(halfRow){
+   const h=Number(halfRow.payload.score_home),a=Number(halfRow.payload.score_away);
+   if(Number.isInteger(h)&&Number.isInteger(a)&&h>=0&&a>=0){
+    const htFor=isTeam(f,'home',team)?h:a,htAgainst=isTeam(f,'home',team)?a:h;
+    const label=htFor>htAgainst?'leading':htFor<htAgainst?'trailing':'drawing';
+    const fullFor=isTeam(f,'home',team)?f.home_score:f.away_score;
+    const fullAgainst=isTeam(f,'home',team)?f.away_score:f.home_score;
+    halftime.sample++;halftime[label].matches++;
+    halftime[label][fullFor>fullAgainst?'wins':fullFor<fullAgainst?'losses':'draws']++;
+   }
+  }
+  const rows=periodRows.filter(e=>goalEvent(e));
   const expected=f.home_score+f.away_score;
   if(rows.length!==expected){unverified++;continue}
   if(rows.some(e=>!Number.isInteger(e.minute))){withoutMinutes++;continue}
@@ -218,5 +232,5 @@ export function eventCoverage(fixtures,matches,events,team,competitions=[]){
   complete++;if(positive)comebacks++;if(negative)concededComebacks++;
   if(positive&&teamGoals>oppGoals)comebackWins++;
  }
- return {possible,complete,unverified,withoutMinutes,goalSituations:location,concededSituations:conceded,comebacks,concededComebacks,comebackWins,gameState:mergeGameStateAnalyses(gameStates)};
+ return {possible,complete,unverified,withoutMinutes,goalSituations:location,concededSituations:conceded,comebacks,concededComebacks,comebackWins,halftime,gameState:mergeGameStateAnalyses(gameStates)};
 }
