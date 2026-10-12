@@ -1,0 +1,25 @@
+name: CSI Live connection check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: csi-live-connection-check
+  cancel-in-progress: false
+
+jobs:
+  connection-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile probe script
+        run: python -m py_compile scripts/csi_connection_check.py
+      - name: Check CSI Live public robots endpoint
+        run: python scripts/csi_connection_check.py
