@@ -46,3 +46,25 @@ test('mergeGameStateAnalyses mantiene separati fatti e subiti',()=>{
  assert.equal(x.firstScored,1);
  assert.equal(x.firstConceded,1);
 });
+
+test('complete game states distinguish close-throughout from a reopened two-goal gap',()=>{
+ const alwaysClose=analyseGoalTimeline([
+  {side:'team',minute:14},{side:'opponent',minute:31}
+ ],{sideOf:e=>e.side,minuteOf:e=>e.minute,duration:80});
+ const reopened=analyseGoalTimeline([
+  {side:'opponent',minute:5},{side:'opponent',minute:21},
+  {side:'team',minute:45},{side:'team',minute:59}
+ ],{sideOf:e=>e.side,minuteOf:e=>e.minute,duration:80});
+ const summary=mergeGameStateAnalyses([alwaysClose,reopened]);
+ assert.equal(summary.closeThroughout,1);
+ assert.equal(summary.firstScored,1);
+ assert.equal(summary.firstConceded,1);
+ assert.equal(summary.firstScoredWinRate,0);
+ assert.equal(summary.firstConcededLossRate,0);
+ assert.equal(summary.pointsDroppedAfterFirst,2);
+ assert.equal(summary.pointsRecoveredAfterFirstConceded,1);
+ assert.equal(summary.progressions.team['0–2 → 1–2'],1);
+ assert.equal(summary.progressions.team['1–2 → 2–2'],1);
+ assert.equal(summary.doubleLeads,0);
+ assert.equal(summary.opponentNarrowing,0);
+});
