@@ -25,3 +25,14 @@ test('fully verified timeline detects comeback without inferring causality',()=>
 });
 
 test('analytics uses UUID even when labels differ',()=>{const game={...f('Calcio Caselle','A',1,0),home_team:'Renamed club'};assert.equal(resultSplit([game],team).wins,1)});
+
+test('half-time fallback is valid without a complete goal timeline',()=>{
+ const fixture=f('Calcio Caselle','A',2,1),match={id:'m',fixture_id:'f'};
+ const events=[{match_id:'m',event_type:'period_end',validation_status:'official',payload:{period:'first_half',score_home:0,score_away:1}}];
+ const s=eventCoverage([fixture],[match],events,team);
+ assert.equal(s.complete,0);
+ assert.equal(s.halftime.sample,1);
+ assert.equal(s.halftime.trailing.matches,1);
+ assert.equal(s.halftime.trailing.wins,1);
+ assert.equal(s.gameState.matches,0);
+});
