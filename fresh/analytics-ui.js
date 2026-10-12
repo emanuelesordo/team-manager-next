@@ -177,12 +177,12 @@ export function eventAnalyticsPlaceholder(){
  return '<div data-event-analysis><section class="glass panel event-analysis"><div class="panel-heading"><h2>Statistiche stagione</h2></div><div class="empty">Caricamento numeri…</div></section></div>';
 }
 
-export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[]){
+export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[]){
  const minuteMap=aggregatePlayerMinutes(matches,matchPlayers,events,competitions);
  const computedPlayers=(playerStats||[]).map(p=>({...p,minutes:minuteMap.has(String(p.player_id))?minuteMap.get(String(p.player_id)):Number(p.minutes)||0}));
  const numbers=seasonNumbers(fixtures,matches,events,team,competitions,computedPlayers);
  const coverage=eventCoverage(fixtures,matches,events,team,competitions);
- const intelligence=analyseResults(fixtures,team?.id?'team:'+team.id:null,{competitions,venues});
+ const intelligence=analyseResults(fixtures,team?.id?'team:'+team.id:null,{competitions,venues,predictionSnapshots});
  const specificEventMatches=new Set(verifiedEvents(events).filter(e=>['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type)).map(e=>e.match_id)).size;
  const profile=buildTeamProfile({numbers,gameState:coverage.gameState,eventMatches:specificEventMatches,resultAnalysis:intelligence});
  const validated=verifiedEvents(events);
