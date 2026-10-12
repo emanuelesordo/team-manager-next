@@ -1,5 +1,6 @@
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers,aggregatePlayerMinutes} from './analytics.js?stats=20261013minutes1';
+import {buildTeamProfile,profileHighlights} from './team-profile.js';
 
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(value,digits=1)=>Number(value).toLocaleString('it-IT',{minimumFractionDigits:digits,maximumFractionDigits:digits});
@@ -55,6 +56,23 @@ function gameStatePanels(gameState){
   '</tbody></table></div></section>';
  return state+contexts+before;
 }
+function confidenceBadge(level){
+ const row=level||{level:'—',label:'n.d.',sample:0};
+ return '<span class="eyebrow">CONF. '+E(row.level)+' · '+E(row.label)+' · n='+E(row.sample)+'</span>';
+}
+function teamProfilePanel(profile){
+ const highlights=profileHighlights(profile,6);
+ const label=x=>x.value>=.62?'Punto forte':x.value<=.38?'Punto debole':'Profilo neutro';
+ const rows=highlights.map(x=>'<tr><td><b>'+E(x.label)+'</b><br><small>'+E(label(x))+'</small></td><td>'+Math.round(Number(x.value)*100)+'</td><td>'+confidenceBadge(profile.confidence?.[x.confidence])+'</td></tr>').join('');
+ const confidence='<div class="team-metric-grid">'+
+  cell('Dati risultati','A · '+E(profile.confidence?.A?.label||'—'))+
+  cell('Timeline gol','B · '+E(profile.confidence?.B?.label||'—'))+
+  cell('Eventi specifici','C · '+E(profile.confidence?.C?.label||'—'))+
+  cell('Copertura timeline',Math.round((profile.timelineCoverage||0)*100)+'%')+'</div>';
+ return '<section class="glass panel event-analysis"><div class="panel-heading"><div><span class="eyebrow">TEAM PROFILE</span><h2>Identità statistica</h2></div></div>'+
+  confidence+(rows?'<div class="table-scroller"><table class="standing-table"><thead><tr><th>Indicatore</th><th>Indice</th><th>Attendibilità</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">Campione ancora insufficiente.</div>')+
+  '<p class="subnote">Gli indici A usano risultati e calendario; B usa timeline gol complete; C usa eventi più specifici. I livelli meno affidabili pesano meno nel modello.</p></section>';
+}
 function balance(team){
  const pct=v=>team.played?Math.round(v*100/team.played):0;
  return '<section class="glass panel"><div class="panel-heading"><h2>Bilancio dei risultati</h2></div>'+
@@ -91,6 +109,7 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
  const computedPlayers=(playerStats||[]).map(p=>({...p,minutes:minuteMap.has(String(p.player_id))?minuteMap.get(String(p.player_id)):Number(p.minutes)||0}));
  const numbers=seasonNumbers(fixtures,matches,events,team,competitions,computedPlayers);
  const coverage=eventCoverage(fixtures,matches,events,team,competitions);
+ const profile=buildTeamProfile({numbers,gameState:coverage.gameState,eventMatches:coverage.complete});
  const validated=verifiedEvents(events);
  const proposed=(events||[]).filter(e=>e.validation_status==='proposed').length;
  const diff=numbers.gf-numbers.ga;
@@ -110,7 +129,7 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
   ranking('Minuti giocati',computedPlayers,'minutes')+ranking('Media voti',computedPlayers,'avg_rating',{digits:2,empty:'Nessun voto valido'})+
   goalDistribution(numbers)+discipline(numbers,computedPlayers)+'</div>'+
   '<section class="glass panel"><div class="panel-heading"><h2>Ultime partite</h2></div>'+lastResults(numbers.matches,opponents)+'</section>'+
-  period+gameStatePanels(coverage.gameState)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
+  teamProfilePanel(profile)+period+gameStatePanels(coverage.gameState)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
 }
 
 export function fixtureEventsPanel(events,competition=null,fixture=null){
