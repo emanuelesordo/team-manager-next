@@ -37,6 +37,21 @@ function goalDistribution(team){
    '<strong>'+E(label)+'</strong><div class="leader-bar"><span style="width:'+Math.max(team.goalIntervals[i]?3:0,Math.round((team.goalIntervals[i]||0)/total*100))+'%"></span></div>'+
    '<b>'+E(team.goalIntervals[i]||0)+'</b></div>').join('')+'</section>';
 }
+function resultProfilePanel(profile){
+ const pct=v=>v==null?'—':Math.round(Number(v)*100)+'%';
+ const vol=profile?.volatility==null?'—':Number(profile.volatility).toFixed(2);
+ return '<section class="glass panel"><div class="panel-heading"><div><span class="eyebrow">CONF. A · RISULTATI</span><h2>Profilo delle partite</h2></div></div>'+
+  '<div class="team-metric-grid">'+
+   cell('Clean sheet',pct(profile.cleanSheet))+
+   cell('Partite senza segnare',pct(profile.failToScore))+
+   cell('Gare da 3+ gol',pct(profile.openRate))+
+   cell('Gare entro 1 gol',pct(profile.tightRate))+
+   cell('Vittorie di 2+ gol',pct(profile.bigWinRate))+
+   cell('Sconfitte di 2+ gol',pct(profile.bigLossRate))+
+   cell('Volatilità margine',vol)+
+   cell('GF / GS per gara',fmt(profile.gfpg)+' / '+fmt(profile.gapg))+
+  '</div><p class="subnote">Questi indicatori richiedono solo risultati finali affidabili e restano disponibili anche quando gli eventi della partita sono assenti.</p></section>';
+}
 function gameStatePanels(gameState){
  const g=gameState||{},share=g.stateShare||{},roles=g.roles||{team:{},opponent:{}};
  const pct=v=>Math.round((Number(v)||0)*100)+'%';
@@ -129,7 +144,7 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
   ranking('Minuti giocati',computedPlayers,'minutes')+ranking('Media voti',computedPlayers,'avg_rating',{digits:2,empty:'Nessun voto valido'})+
   goalDistribution(numbers)+discipline(numbers,computedPlayers)+'</div>'+
   '<section class="glass panel"><div class="panel-heading"><h2>Ultime partite</h2></div>'+lastResults(numbers.matches,opponents)+'</section>'+
-  teamProfilePanel(profile)+period+gameStatePanels(coverage.gameState)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
+  teamProfilePanel(profile)+resultProfilePanel(profile)+period+gameStatePanels(coverage.gameState)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
 }
 
 export function fixtureEventsPanel(events,competition=null,fixture=null){
