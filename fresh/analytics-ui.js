@@ -1,5 +1,5 @@
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
-import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers} from './analytics.js?stats=20261005legacy1';
+import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers,aggregatePlayerMinutes} from './analytics.js?stats=20261013minutes1';
 
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(value,digits=1)=>Number(value).toLocaleString('it-IT',{minimumFractionDigits:digits,maximumFractionDigits:digits});
@@ -67,8 +67,10 @@ export function eventAnalyticsPlaceholder(){
  return '<div data-event-analysis><section class="glass panel event-analysis"><div class="panel-heading"><h2>Statistiche stagione</h2></div><div class="empty">Caricamento numeri…</div></section></div>';
 }
 
-export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[]){
- const numbers=seasonNumbers(fixtures,matches,events,team,competitions,playerStats);
+export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[]){
+ const minuteMap=aggregatePlayerMinutes(matches,matchPlayers,events,competitions);
+ const computedPlayers=(playerStats||[]).map(p=>({...p,minutes:minuteMap.has(String(p.player_id))?minuteMap.get(String(p.player_id)):Number(p.minutes)||0}));
+ const numbers=seasonNumbers(fixtures,matches,events,team,competitions,computedPlayers);
  const coverage=eventCoverage(fixtures,matches,events,team,competitions);
  const validated=verifiedEvents(events);
  const proposed=(events||[]).filter(e=>e.validation_status==='proposed').length;
@@ -89,9 +91,9 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
    [['In vantaggio','ahead'],['In parità','equal'],['In svantaggio','behind']].map(([label,k])=>'<tr><td>'+label+'</td><td>'+coverage.goalSituations[k]+'</td><td>'+coverage.concededSituations[k]+'</td></tr>').join('')+
    '</tbody></table></div>':'<p class="subnote">Rimonte e situazione del punteggio richiedono una timeline dei gol completa e riconciliata. Le altre statistiche della pagina restano comunque disponibili.</p>')+'</section>';
  return header+'<section class="glass panel">'+core+'</section><div class="leaderboard-grid">'+
-  balance(numbers)+venue(numbers)+ranking('Classifica marcatori',playerStats,'goals')+ranking('Assist',playerStats,'assists')+
-  ranking('Minuti giocati',playerStats,'minutes')+ranking('Media voti',playerStats,'avg_rating',{digits:2,empty:'Nessun voto valido'})+
-  goalDistribution(numbers)+discipline(numbers,playerStats)+'</div>'+
+  balance(numbers)+venue(numbers)+ranking('Classifica marcatori',computedPlayers,'goals')+ranking('Assist',computedPlayers,'assists')+
+  ranking('Minuti giocati',computedPlayers,'minutes')+ranking('Media voti',computedPlayers,'avg_rating',{digits:2,empty:'Nessun voto valido'})+
+  goalDistribution(numbers)+discipline(numbers,computedPlayers)+'</div>'+
   '<section class="glass panel"><div class="panel-heading"><h2>Ultime partite</h2></div>'+lastResults(numbers.matches,opponents)+'</section>'+
   period+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Gli eventi rifiutati sono esclusi; i voti SV non entrano nella media.</p>';
 }
