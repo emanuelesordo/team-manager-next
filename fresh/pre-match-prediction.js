@@ -1,6 +1,7 @@
 import {cumulativeEventMinute} from './match-minutes.js';
 import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
 import {buildTeamProfile,profileHighlights} from './team-profile.js';
+import {analyseResults} from './result-intelligence.js';
 
 const clamp=(x,low=0,hi=1)=>Math.max(low,Math.min(hi,x));
 const key=v=>String(v??'');
@@ -594,8 +595,18 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   return {...all,cleanSheets:rows.filter(f=>scoreFor(f,club)?.[1]===0).length,home:part(homeRows),away:part(awayRows),
    matches:rows.map(f=>{const s=scoreFor(f,club);return {kickoff_at:f.kickoff_at,goals:s?.[0]||0,conceded:s?.[1]||0,result:s?.[0]>s?.[1]?'W':s?.[0]<s?.[1]?'L':'D'}})};
  };
- const homeProfile=buildTeamProfile({numbers:profileNumbers(homeClub),gameState:homeSituational.gameState,eventMatches:homeSituational.timelineSample});
- const awayProfile=buildTeamProfile({numbers:profileNumbers(awayClub),gameState:awaySituational.gameState,eventMatches:awaySituational.timelineSample});
+ const homeIntelligence=analyseResults(completed,homeClub,{competitions,venues,before:fixture.kickoff_at});
+ const awayIntelligence=analyseResults(completed,awayClub,{competitions,venues,before:fixture.kickoff_at});
+ const isSpecificEvent=e=>['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type)&&['official','community_confirmed'].includes(e.validation_status);
+ const validFixtureIds=new Set(completed.map(f=>String(f.id)));
+ const matchIds=new Map((matches||[]).map(m=>[String(m.id),String(m.fixture_id)]));
+ const specificCount=club=>new Set((events||[]).filter(isSpecificEvent).filter(e=>{
+  const fixture=completed.find(f=>String(f.id)===String(e.fixture_id||matchIds.get(String(e.match_id))||''));
+  if(!fixture||!validFixtureIds.has(String(fixture.id)))return false;
+  return homeId(fixture)===club||awayId(fixture)===club;
+ }).map(e=>String(e.fixture_id||matchIds.get(String(e.match_id))))).size;
+ const homeProfile=buildTeamProfile({numbers:profileNumbers(homeClub),gameState:homeSituational.gameState,eventMatches:specificCount(homeClub),resultAnalysis:homeIntelligence});
+ const awayProfile=buildTeamProfile({numbers:profileNumbers(awayClub),gameState:awaySituational.gameState,eventMatches:specificCount(awayClub),resultAnalysis:awayIntelligence});
 
  const gameStateScore=situ=>{
   const parts=[];
@@ -700,6 +711,7 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   completedCompetitionMatches:completed.length,
   comparison:{home:homeComparison,away:awayComparison},
   situational:{home:homeSituational,away:awaySituational},
+  resultIntelligence:{home:homeIntelligence,away:awayIntelligence},
   profiles:{home:{...homeProfile,highlights:profileHighlights(homeProfile)},away:{...awayProfile,highlights:profileHighlights(awayProfile)}},
   attention,
   comparableFixtureIds:{home:homeComparableFixtures,away:awayComparableFixtures},
