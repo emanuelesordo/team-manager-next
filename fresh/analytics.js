@@ -1,4 +1,5 @@
 import {cumulativeEventMinute} from './match-minutes.js';
+import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
 
 const key=v=>String(v??'');
 const isTeam=(f,side,team)=>Boolean(team?.id&&key(f?.[side+'_team_id'])===key(team.id));
@@ -172,7 +173,7 @@ export function eventCoverage(fixtures,matches,events,team,competitions=[]){
   const list=eventsByMatch.get(event.match_id)||[];list.push(event);eventsByMatch.set(event.match_id,list);
  }
  let complete=0,possible=0,unverified=0,withoutMinutes=0,comebacks=0,concededComebacks=0,comebackWins=0;
- const location={equal:0,ahead:0,behind:0},conceded={equal:0,ahead:0,behind:0};
+ const location={equal:0,ahead:0,behind:0},conceded={equal:0,ahead:0,behind:0},gameStates=[];
  for(const f of fixtures){
   if(!isPlayed(f)||(!isTeam(f,'home',team)&&!isTeam(f,'away',team)))continue;
   const m=matches.find(x=>x.fixture_id===f.id&&map.get(x.id)===x);
@@ -203,8 +204,19 @@ export function eventCoverage(fixtures,matches,events,team,competitions=[]){
   const officialAgainst=isTeam(f,'home',team)?f.away_score:f.home_score;
   if(ambiguousSide||teamGoals!==officialFor||oppGoals!==officialAgainst){unverified++;continue}
   for(const k of ['equal','ahead','behind']){location[k]+=localFor[k];conceded[k]+=localAgainst[k]}
+  const allRows=eventsByMatch.get(m.id)||[];
+  const baseDuration=Math.max(1,Number(competition?.periods||2))*Math.max(1,Number(competition?.minutes_per_period||40));
+  const recovery=allRows.filter(e=>e.event_type==='period_end').reduce((sum,e)=>{
+   const n=Number(e.payload?.recovery_actual??e.payload?.recovery_minutes??e.stoppage_minute);
+   return sum+(Number.isFinite(n)&&n>0?n:0);
+  },0);
+  gameStates.push(analyseGoalTimeline(rows,{
+   sideOf:e=>{let side=e.team_side;if(e.event_type==='own_goal')side=side==='team'?'opponent':side==='opponent'?'team':side;return side},
+   minuteOf:e=>cumulativeEventMinute(e,competition),
+   duration:baseDuration+recovery,responseWindow:10
+  }));
   complete++;if(positive)comebacks++;if(negative)concededComebacks++;
   if(positive&&teamGoals>oppGoals)comebackWins++;
  }
- return {possible,complete,unverified,withoutMinutes,goalSituations:location,concededSituations:conceded,comebacks,concededComebacks,comebackWins};
+ return {possible,complete,unverified,withoutMinutes,goalSituations:location,concededSituations:conceded,comebacks,concededComebacks,comebackWins,gameState:mergeGameStateAnalyses(gameStates)};
 }
