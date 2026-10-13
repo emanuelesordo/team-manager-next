@@ -134,6 +134,7 @@ function overlapMinutes(a,b){
 }
 function coPlayMap(matches,data,events,competitions,fixtureWeights,team){
  const pairs=new Map(),selections=data.priorSelections||[];
+ if(data.playerSeasonFacts?.complete===false)return pairs;
  const cached=data.playerSeasonFacts?.perMatch;
  for(const m of matches){
   const own=selections.filter(s=>key(s.match_id)===key(m.id));
