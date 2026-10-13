@@ -136,7 +136,7 @@ function confidenceBadge(level){
 }
 function teamProfilePanel(profile){
  const highlights=profileHighlights(profile,6);
- const label=x=>x.value>=.62?'Punto forte':x.value<=.38?'Punto debole':'Profilo neutro';
+ const label=x=>profile.descriptiveKeys?.includes(x.key)?'Caratteristica del gioco':x.value>=.62?'Punto forte':x.value<=.38?'Punto debole':'Profilo neutro';
  const rows=highlights.map(x=>'<tr><td><b>'+E(x.label)+'</b><br><small>'+E(label(x))+'</small></td><td>'+Math.round(Number(x.value)*100)+'</td><td>'+confidenceBadge(profile.confidence?.[x.confidence])+'</td></tr>').join('');
  const confidence='<div class="team-metric-grid">'+
   cell('Dati risultati','A · '+E(profile.confidence?.A?.label||'—'))+
