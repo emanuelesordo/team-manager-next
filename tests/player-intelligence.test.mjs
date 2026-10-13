@@ -64,3 +64,14 @@ test('canonical roster counts govern appearances, starters, subentries, goals an
  assert.match(html,/Espulsioni<\/span><strong>1/);
  assert.match(html,/Gol da subentrato<\/span><strong>—/);
 });
+
+test('three confirmed entries across finished games are counted as three sub appearances',()=>{
+ const source={...base,matches:[
+  {id:'m1',status:'finished'}, {id:'m2',status:'finished'}, {id:'m3',status:'finished'}
+ ],events:[...base.events,
+  {match_id:'m2',event_type:'substitution',minute:70,team_side:'team',secondary_player_id:'p',validation_status:'official'},
+  {match_id:'m3',event_type:'substitution',minute:51,team_side:'team',secondary_player_id:'p',validation_status:'official'}
+ ],stats:{appearances:2,starts:0,minutes:49}};
+ const html=renderPlayerIntelligence('p',source);
+ assert.match(html,/Presenze<\\/span><strong>3<\\/strong><small>0 titolare · 3 subentrato/);
+});
