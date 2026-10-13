@@ -82,3 +82,17 @@ test('4-4-2 pre-match positions are symmetric and evenly spaced',()=>{
  const gaps=defenders.slice(1).map((p,i)=>p.x-defenders[i].x);
  assert.ok(Math.max(...gaps)-Math.min(...gaps)<0.001);
 });
+
+test('model fallback rating is never displayed as a factual player average',()=>{
+ const unobserved={...data,
+  playerStats:data.playerStats.map(r=>r.player_id==='p1'?{...r,avg_rating:null}:r),
+  seasonRatings:data.seasonRatings.filter(r=>r.player_id!=='p1')};
+ const model=buildHypotheticalLineup({fixture,targetMatch,data:unobserved,matchData:{players:[]},
+  team,competition,competitions:[competition],prediction,kit:{},events:[]});
+ const keeper=model.players.find(p=>p.player_id==='p1');
+ assert.ok(keeper);
+ assert.equal(keeper.meanRating,null);
+ assert.ok(Number.isFinite(keeper.expectedRating));
+ const html=renderHypotheticalLineup(model);
+ assert.match(html,/prematch-player-rating/);
+});
