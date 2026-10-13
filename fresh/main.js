@@ -13,7 +13,7 @@ import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.j
 import {projectionContainer,updateProjection} from './projection-ui.js?history=20261012prematch1';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261013intelligence2';
-import {aggregatePlayerMinutes} from './analytics.js?stats=20261013recovered5';
+import {aggregatePlayerMinutes} from './analytics.js?stats=20261013recovered6';
 import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute} from './match-minutes.js?live=20261013periodaudit1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
 
@@ -21,7 +21,7 @@ import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=202610
 import {matchPlayerLabel} from './match-player-label.js';
 import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
-import {renderPlayerIntelligence} from './player-intelligence.js?v=20261013recovered5';
+import {renderPlayerIntelligence} from './player-intelligence.js?v=20261013recovered6';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
 import {weightedTeamRating} from './team-rating.js?legacy=20261006v1';
@@ -644,7 +644,7 @@ function timelineEventEditor(){
    '<div class="live-sheet-grid"><label class="staff-field"><span>Tipo</span><select name="event_type">'+types.map(([k,l])=>'<option value="'+k+'" '+((ev?.event_type||'goal')===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
    '<label class="staff-field"><span>Squadra</span><select name="team_side">'+sideOptions.map(([k,l])=>'<option value="'+k+'" '+(sideValue===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
    '<label class="staff-field"><span>Periodo</span><select name="period">'+(fixtureOnly?'<option value="unknown" '+(periodValue==='unknown'?'selected':'')+'>Non noto</option>':'')+'<option value="first_half" '+(periodValue==='first_half'?'selected':'')+'>1° tempo</option><option value="halftime" '+(periodValue==='halftime'?'selected':'')+'>Intervallo</option><option value="second_half" '+(periodValue==='second_half'?'selected':'')+'>2° tempo</option><option value="extra" '+(periodValue==='extra'?'selected':'')+'>Supplementari</option></select></label>'+
-   '<label class="staff-field"><span>Minuto</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+E(minute)+'"></label>'+
+   '<label class="staff-field"><span>Minuto del tempo</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+E(minute)+'"></label>'+
    '<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+E(stoppage)+'"></label>'+
    (!fixtureOnly?'<label class="staff-field"><span>Giocatore</span><select name="player_id">'+playerOptions+'</select></label><label class="staff-field"><span>Secondo giocatore</span><select name="secondary_player_id">'+secondaryOptions+'</select></label>':'')+
    goalOrderField+
