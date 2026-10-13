@@ -1,5 +1,5 @@
 import {cumulativeEventMinute} from './match-minutes.js';
-import {matchPlayerIntervals} from './player-participation.js';
+import {matchPlayerIntervals,matchTiming,matchElapsedMinute} from './player-participation.js';
 import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
 
 const key=v=>String(v??'');
@@ -189,15 +189,11 @@ export function eventCoverage(fixtures,matches,events,team,competitions=[]){
   if(ambiguousSide||teamGoals!==officialFor||oppGoals!==officialAgainst){unverified++;continue}
   for(const k of ['equal','ahead','behind']){location[k]+=localFor[k];conceded[k]+=localAgainst[k]}
   const allRows=eventsByMatch.get(m.id)||[];
-  const baseDuration=Math.max(1,Number(competition?.periods||2))*Math.max(1,Number(competition?.minutes_per_period||40));
-  const recovery=allRows.filter(e=>e.event_type==='period_end').reduce((sum,e)=>{
-   const n=Number(e.payload?.recovery_actual??e.payload?.recovery_minutes??e.stoppage_minute);
-   return sum+(Number.isFinite(n)&&n>0?n:0);
-  },0);
+  const timing=matchTiming(m,competition,allRows);
   gameStates.push(analyseGoalTimeline(rows,{
    sideOf:e=>{let side=e.team_side;if(e.event_type==='own_goal')side=side==='team'?'opponent':side==='opponent'?'team':side;return side},
-   minuteOf:e=>cumulativeEventMinute(e,competition),
-   duration:baseDuration+recovery,responseWindow:10
+   minuteOf:e=>matchElapsedMinute(e,competition,timing),
+   duration:timing.duration,responseWindow:10
   }));
   complete++;if(positive)comebacks++;if(negative)concededComebacks++;
   if(positive&&teamGoals>oppGoals)comebackWins++;
