@@ -125,3 +125,17 @@ test('cumulative plus-minus chart does not silently skip unknown game contributi
  assert.equal(result.trend[0].verified,true);
  assert.equal(result.trend[1].value,null);
 });
+
+test('minuti per partita comes from confirmed SQL per-match facts, not local partial sums',()=>{
+ const source={...base,stats:{appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',
+  goals:1,assists:1,match_minutes:[{match_id:'m1',minutes:25,valid:true,appeared:true}]}};
+ const html=renderPlayerIntelligence('p',source);
+ assert.match(html,/Minuti per partita<\/h3><div class="psi-line-wrap">/);
+});
+test('a player with no starts has all official goals and assists as a substitute',()=>{
+ const source={...base,matches:[],events:[],matchPlayers:[],stats:{
+  appearances:3,starts:0,subentries:3,minutes:50,minutes_coverage:'complete',goals:1,assists:2}};
+ const html=renderPlayerIntelligence('p',source);
+ assert.match(html,/Gol da subentrato<\/span><strong>1/);
+ assert.match(html,/Assist da subentrato<\/span><strong>2/);
+});
