@@ -43,3 +43,10 @@ test('team profile adds game-state features without replacing result metrics',()
  assert.equal(p.metrics.find(x=>x.key==='recovery').value,.5);
  assert.ok(profileHighlights(p).every(x=>['A','B','C'].includes(x.confidence)));
 });
+
+test('style-of-play proportions do not inflate the overall strength index',()=>{
+ const a=buildTeamProfile({numbers,resultAnalysis:{played:5,bothScore:{rate:.1},totalGoals:{zeroOneRate:.1}}});
+ const b=buildTeamProfile({numbers,resultAnalysis:{played:5,bothScore:{rate:.9},totalGoals:{zeroOneRate:.9}}});
+ assert.equal(a.overall,b.overall);
+ assert.ok(a.descriptiveKeys.includes('both-score'));
+});
