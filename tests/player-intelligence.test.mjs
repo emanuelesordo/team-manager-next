@@ -55,3 +55,12 @@ test('player card uses canonical roster minutes for displayed total and per-goal
  assert.match(html,/Minuti \/ gol<\/span><strong>49′/);
  assert.match(html,/Stessa fonte della Rosa/);
 });
+
+test('canonical roster counts govern appearances, starters, subentries, goals and cards',()=>{
+ const html=renderPlayerIntelligence('p',{...base,stats:{appearances:3,starts:2,minutes:49,goals:4,assists:2,yellow_cards:3,red_cards:1}});
+ assert.match(html,/Presenze<\/span><strong>3<\/strong><small>2 titolare · 1 subentrato/);
+ assert.match(html,/Gol \+ assist<\/span><strong>6/);
+ assert.match(html,/Ammonizioni<\/span><strong>3/);
+ assert.match(html,/Espulsioni<\/span><strong>1/);
+ assert.match(html,/Gol da subentrato<\/span><strong>—/);
+});
