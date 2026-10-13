@@ -99,3 +99,18 @@ test('missing event feed does not certify any detailed results or minutes chart'
  assert.match(html,/Gol da subentrato<\/span><strong>—/);
  assert.match(html,/Minuti per partita<\/h3><p class="psi-note">/);
 });
+
+test('a goal at the last minute of declared recovery counts while the player is still on the field',()=>{
+ const f={...fixture,home_score:1,away_score:0};
+ const source={...base,fixtures:[f],events:[
+  {match_id:'m1',event_type:'substitution',minute:51,team_side:'team',player_id:'out',secondary_player_id:'p',validation_status:'official',payload:{period:'second_half',entered_from:'tm_app_live'}},
+  {match_id:'m1',event_type:'goal',minute:80,stoppage_minute:4,team_side:'team',player_id:'p',validation_status:'official',payload:{period:'second_half',entered_from:'tm_app_live'}},
+  {match_id:'m1',event_type:'period_end',validation_status:'official',payload:{period:'first_half',recovery_actual:6}},
+  {match_id:'m1',event_type:'period_end',validation_status:'official',payload:{period:'second_half',recovery_actual:4}}
+ ],matches:[{...match,home_away:'home'}]};
+ const v=playerIntelligence('p',source);
+ assert.equal(v.covered,1);
+ assert.equal(v.minutes,33);
+ assert.equal(v.gfOn,1);
+ assert.equal(v.goals,1);
+});
