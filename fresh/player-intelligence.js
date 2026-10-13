@@ -139,6 +139,7 @@ export function renderPlayerIntelligence(id,source){
  const canonicalTotalsKnown=goals!=null&&assists!=null&&games!=null&&starts!=null;
  const timelineLoaded=source?.eventsLoaded!==false&&source?.playersLoaded!==false;
  const splitGames=timelineLoaded&&games===v.games&&starts===v.starts&&v.matches.length===v.games;
+ const completeScoreTimelines=v.covered===v.games&&v.minutesKnown===v.games;
  const splitGoals=splitGames&&goals===v.goals;
  const splitAssists=splitGames&&assists===v.assists;
  const allMinutes=splitGames&&v.minutesKnown===v.games&&minuteCoverage&&v.minutes===minutes;
@@ -156,7 +157,7 @@ export function renderPlayerIntelligence(id,source){
  segment('Rendimento per tempo',[['Gol / '+base+"′",safeRate(goals)],['Assist / '+base+"′",safeRate(assists)],['Gol + assist / '+base+"′",safeRate(goals!=null&&assists!=null?goals+assists:null)],['Minuti / gol',goals&&minutes&&minuteCoverage?number(minutes/goals)+'′':'—'],['Minuti / G+A',goals!=null&&assists!=null&&(goals+assists)&&minutes&&minuteCoverage?number(minutes/(goals+assists))+'′':'—']], 'Il totale dei minuti proviene dalla stessa statistica visualizzata nella Rosa. Il plus/minus richiede invece una timeline verificabile.'));
  const attack=title('Produzione offensiva',segment('Gol e assist',[
  ['Gol',n(goals)],['Assist',n(assists)],['Gol da subentrato',!splitGoals||!totalsConsistent?'—':v.subGoals],['Assist da subentrato',!splitAssists||!totalsConsistent?'—':v.subAssists],['Doppiette',!splitGoals?'—':v.braces],['Triplette',!splitGoals?'—':v.hattricks],['% gol squadra',splitGoals&&splitGames&&v.teamGoalsDuringAppearances?number(goals/v.teamGoalsDuringAppearances*100)+'%':'—'],['% coinvolgimento',splitGoals&&splitAssists&&splitGames&&v.teamGoalsDuringAppearances?number((goals+assists)/v.teamGoalsDuringAppearances*100)+'%':'—']])+
- segment('Contesto delle reti',[['Apre le marcature',!splitGoals?'—':v.firstGoals],['Gol del pareggio',!splitGoals?'—':v.equalizers],['Gol del vantaggio',!splitGoals?'—':v.leadGoals],['Gol in rimonta',!splitGoals?'—':v.comeFromBehindGoals],['Gol potenzialmente decisivi',!splitGoals?'—':v.goalWins]],'Gol decisivi: criterio descrittivo legato al punteggio finale, non una misura causale.'));
+ segment('Contesto delle reti',[['Apre le marcature',!splitGoals||!completeScoreTimelines?'—':v.firstGoals],['Gol del pareggio',!splitGoals||!completeScoreTimelines?'—':v.equalizers],['Gol del vantaggio',!splitGoals||!completeScoreTimelines?'—':v.leadGoals],['Gol in rimonta',!splitGoals||!completeScoreTimelines?'—':v.comeFromBehindGoals],['Gol potenzialmente decisivi',!splitGoals||!completeScoreTimelines?'—':v.goalWins]],'Gol decisivi: criterio descrittivo legato al punteggio finale, non una misura causale.'));
  const impact=title('Impatto in campo',segment('Differenza reti con il giocatore',[
  ['GF in campo',hasOn?v.gfOn:'—'],['GS in campo',hasOn?v.gaOn:'—'],['Plus/minus',hasOn?(pm>0?'+':'')+pm:'—'],['GF / '+base+"′",hasOn?rate(v.gfOn,v.onMinutes,base):'—'],['GS / '+base+"′",hasOn?rate(v.gaOn,v.onMinutes,base):'—'],['+/- / '+base+"′",hasOn?rate(pm,v.onMinutes,base):'—']],coverage)+
  segment('Dentro / fuori',[
