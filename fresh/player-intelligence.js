@@ -85,7 +85,7 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
   if(gOwn>=2)total.braces++;if(gOwn>=3)total.hattricks++;
   total.yellow+=gameEvents.filter(e=>e.event_type==='yellow_card'&&e.team_side==='team'&&K(e.player_id)===K(playerId)).length;
   total.red+=redEvents.length;
-  const game={label:new Date(f.kickoff_at||m.kickoff_at).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}),gf,ga,minutes:bad?null:intervals.reduce((n,[a,b])=>n+b-a,0),goals:gOwn,assists:aOwn,pm:null,rating:null,quality:goalsGood&&!bad?'verificata':'parziale'};
+  const game={match_id:K(m.id),label:new Date(f.kickoff_at||m.kickoff_at).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}),gf,ga,minutes:bad?null:intervals.reduce((n,[a,b])=>n+b-a,0),goals:gOwn,assists:aOwn,pm:null,rating:null,quality:goalsGood&&!bad?'verificata':'parziale'};
   // Reconcile full score, otherwise plus/minus and state times remain N/D.
   if(goalsGood&&!bad&&normalized.filter(x=>x.scoreSide==='team').length===gf&&normalized.filter(x=>x.scoreSide==='opponent').length===ga){
    let localGF=0,localGA=0,last=0,curF=0,curA=0;
@@ -142,7 +142,12 @@ export function renderPlayerIntelligence(id,source){
  const completeScoreTimelines=v.covered===v.games&&v.minutesKnown===v.games;
  const splitGoals=splitGames&&goals===v.goals;
  const splitAssists=splitGames&&assists===v.assists;
+ const matchFacts=Array.isArray(canonical.match_minutes)?canonical.match_minutes:[];
+ const perMatchMinutes=new Map(matchFacts.map(x=>[K(x.match_id),x.valid===true&&x.minutes!=null?Number(x.minutes):null]));
+ const matchMinutesReady=minuteCoverage&&games===matchFacts.length&&matchFacts.every(x=>x.valid===true&&Number.isFinite(Number(x.minutes)))
+  &&matchFacts.reduce((n,x)=>n+Number(x.minutes),0)===minutes;
  const allMinutes=splitGames&&v.minutesKnown===v.games&&minuteCoverage&&v.minutes===minutes;
+ const minutesHistory=matchFacts.length?((source?.matches||[]).filter(m=>perMatchMinutes.has(K(m.id))).sort((a,b)=>Date.parse(a.kickoff_at||0)-Date.parse(b.kickoff_at||0)).map(m=>({minute:perMatchMinutes.get(K(m.id)),label:new Date(m.kickoff_at).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'})}))):[];
  const verifiedImpact=allMinutes&&v.covered===v.games;
  const hasOn=v.covered>0&&v.onMinutes>0;
  const impactComplete=verifiedImpact;
@@ -157,7 +162,7 @@ export function renderPlayerIntelligence(id,source){
  ['Partite giocate',n(games)],['Titolare',n(starts)],['Subentrato',totalsConsistent?subentries:'—'],['Panchina inutilizzata',splitGames?v.unused:'—'],['Partite complete',allMinutes?v.fullGames:'—'],['Minuti per presenza',minuteCoverage&&games?number(minutes/games):'—'],['% titolarità',games&&starts!=null?number(starts/games*100)+'%':'—']])+segment('Ingressi e uscite', [['Minuto medio ingresso',avg(v.entryMinutes)],['Minuto medio uscita',avg(v.exitMinutes)],['Ingresso registrato',allMinutes?v.entryMinutes.length:'—'],['Uscita registrata',allMinutes?v.exitMinutes.length:'—']])+
  segment('Rendimento per tempo',[['Gol / '+base+"′",safeRate(goals)],['Assist / '+base+"′",safeRate(assists)],['Gol + assist / '+base+"′",safeRate(goals!=null&&assists!=null?goals+assists:null)],['Minuti / gol',goals&&minutes&&minuteCoverage?number(minutes/goals)+'′':'—'],['Minuti / G+A',goals!=null&&assists!=null&&(goals+assists)&&minutes&&minuteCoverage?number(minutes/(goals+assists))+'′':'—']], 'Il totale dei minuti proviene dalla stessa statistica visualizzata nella Rosa. Il plus/minus richiede invece una timeline verificabile.'));
  const attack=title('Produzione offensiva',segment('Gol e assist',[
- ['Gol',n(goals)],['Assist',n(assists)],['Gol da subentrato',goals===0?0:!splitGoals||!totalsConsistent?'—':v.subGoals],['Assist da subentrato',assists===0?0:!splitAssists||!totalsConsistent?'—':v.subAssists],['Doppiette',goals<=1&&goals!=null?0:!splitGoals?'—':v.braces],['Triplette',goals<=2&&goals!=null?0:!splitGoals?'—':v.hattricks],['% gol squadra',splitGoals&&splitGames&&v.teamGoalsDuringAppearances?number(goals/v.teamGoalsDuringAppearances*100)+'%':'—'],['% coinvolgimento',splitGoals&&splitAssists&&splitGames&&v.teamGoalsDuringAppearances?number((goals+assists)/v.teamGoalsDuringAppearances*100)+'%':'—']])+
+ ['Gol',n(goals)],['Assist',n(assists)],['Gol da subentrato',goals===0?0:starts===0&&totalsConsistent?goals:!splitGoals||!totalsConsistent?'—':v.subGoals],['Assist da subentrato',assists===0?0:starts===0&&totalsConsistent?assists:!splitAssists||!totalsConsistent?'—':v.subAssists],['Doppiette',goals<=1&&goals!=null?0:!splitGoals?'—':v.braces],['Triplette',goals<=2&&goals!=null?0:!splitGoals?'—':v.hattricks],['% gol squadra',splitGoals&&splitGames&&v.teamGoalsDuringAppearances?number(goals/v.teamGoalsDuringAppearances*100)+'%':'—'],['% coinvolgimento',splitGoals&&splitAssists&&splitGames&&v.teamGoalsDuringAppearances?number((goals+assists)/v.teamGoalsDuringAppearances*100)+'%':'—']])+
  segment('Contesto delle reti',[['Apre le marcature',!splitGoals||!completeScoreTimelines?'—':v.firstGoals],['Gol del pareggio',!splitGoals||!completeScoreTimelines?'—':v.equalizers],['Gol del vantaggio',!splitGoals||!completeScoreTimelines?'—':v.leadGoals],['Gol in rimonta',!splitGoals||!completeScoreTimelines?'—':v.comeFromBehindGoals],['Gol potenzialmente decisivi',!splitGoals||!completeScoreTimelines?'—':v.goalWins]],'Gol decisivi: criterio descrittivo legato al punteggio finale, non una misura causale.'));
  const impact=title('Impatto in campo',segment('Differenza reti con il giocatore',[
  ['GF in campo',hasOn?v.gfOn:'—'],['GS in campo',hasOn?v.gaOn:'—'],['Plus/minus',hasOn?(pm>0?'+':'')+pm:'—'],['GF / '+base+"′",hasOn?rate(v.gfOn,v.onMinutes,base):'—'],['GS / '+base+"′",hasOn?rate(v.gaOn,v.onMinutes,base):'—'],['+/- / '+base+"′",hasOn?rate(pm,v.onMinutes,base):'—']],coverage)+
@@ -172,7 +177,7 @@ export function renderPlayerIntelligence(id,source){
  '<article class="psi-slide"><h3>Momento dei gol</h3>'+(splitGoals&&completeScoreTimelines?donut([['Primo tempo',v.goalsByPeriod[0]],['Secondo tempo',v.goalsByPeriod[1]]]):'<p class="psi-note">Distribuzione non verificata.</p>')+'</article>'+
  '<article class="psi-slide"><h3>Situazione prima del gol</h3>'+(splitGoals&&verifiedImpact?donut([['In vantaggio',v.goalsByContext[0]],['In parità',v.goalsByContext[1]],['In svantaggio',v.goalsByContext[2]]]):'<p class="psi-note">Sequenza non verificata.</p>')+'</article>');
  const trends=title('Andamento partita per partita','<article class="psi-slide"><h3>Plus/minus cumulativo</h3>'+lineChart(hasOn?v.trend.map(x=>x.value):[],v.trend.map(x=>x.label),'Andamento plus/minus')+'</article>'+
- '<article class="psi-slide"><h3>Minuti per partita</h3>'+lineChart(allMinutes?v.matches.map(x=>x.minutes):[],v.matches.map(x=>x.label),'Minuti giocati')+'</article>'+
+ '<article class="psi-slide"><h3>Minuti per partita</h3>'+lineChart(matchMinutesReady?minutesHistory.map(x=>x.minute):[],minutesHistory.map(x=>x.label),'Minuti giocati')+'</article>'+
  '<article class="psi-slide"><h3>Gol e assist per partita</h3>'+lineChart(splitGoals&&splitAssists?v.matches.map(x=>x.goals+x.assists):[],v.matches.map(x=>x.label),'Partecipazioni al gol')+'</article>');
  return '<div class="psi-root"><p class="psi-subtitle">Analisi stagionale · statistiche descrittive calcolate dai tabellini</p>'+intro+use+attack+impact+outcomes+places+context+trends+'<p class="psi-disclaimer">'+E(coverage)+' Presenze, titolarità, subentri, minuti, gol, assist e disciplina derivano dalla stessa vista SQL della Rosa; le distribuzioni avanzate richiedono eventi completi. I grafici con copertura parziale non sono una certificazione dei minuti.</p></div>';
 }
