@@ -30,6 +30,16 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
   ['Fascia gol più forte',homeSitu.strongestFor?(homeSitu.strongestFor.label+' · '+homeSitu.strongestFor.for):'—',awaySitu.strongestFor?(awaySitu.strongestFor.label+' · '+awaySitu.strongestFor.for):'—'],
   ['Fascia più vulnerabile',homeSitu.weakestAgainst?(homeSitu.weakestAgainst.label+' · '+homeSitu.weakestAgainst.against):'—',awaySitu.weakestAgainst?(awaySitu.weakestAgainst.label+' · '+awaySitu.weakestAgainst.against):'—']
  ];
+ const rich=result.resultIntelligence||{},hRich=rich.home||{},aRich=rich.away||{};
+ const fmtRate=(value,n)=>n>=2&&value!=null?Math.round(value*100)+'% · '+n+' g.':'—';
+ if(hRich.played>=2||aRich.played>=2){
+  comparisonRows.push(
+   ['Entrambe segnano',fmtRate(hRich.bothScore?.rate,hRich.played),fmtRate(aRich.bothScore?.rate,aRich.played)],
+   ['Gare con 3+ gol totali',fmtRate(hRich.totalGoals?.threePlusRate,hRich.played),fmtRate(aRich.totalGoals?.threePlusRate,aRich.played)],
+   ['Gare con 0–1 gol totali',fmtRate(hRich.totalGoals?.zeroOneRate,hRich.played),fmtRate(aRich.totalGoals?.zeroOneRate,aRich.played)],
+   ['Forma corretta per rango',fmtRate(hRich.form?.opponentAdjusted,hRich.form?.adjustedSample),fmtRate(aRich.form?.opponentAdjusted,aRich.form?.adjustedSample)]
+  );
+ }
  const attention=(result.attention||[]);
  const outcomes=[
   ['1',result.home.name,p.home],
@@ -65,5 +75,5 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
   (result.narrative?'<section class="prematch-narrative"><div class="prematch-section-title"><span class="eyebrow">SCENARIO ATTESO</span><h4>Come può svilupparsi la gara</h4></div><p>'+escape(result.narrative)+'</p></section>':'')+
   '<details class="prematch-details"><summary>Dettaglio dei fattori del modello</summary><div class="prematch-factor-grid">'+factorRows+'</div></details>'+
   '<p class="prematch-footnote">Copertura dati: <b>'+escape(result.coverage)+'%</b> · '+escape(result.completedCompetitionMatches)+
-  ' gare concluse della competizione disponibili prima di questa partita. Il modello usa solo dati antecedenti al match e non incorpora informazioni successive.</p>';
+  ' gare concluse della competizione disponibili prima di questa partita. Timeline complete: '+escape(result.profiles?.home?.confidence?.B?.sample||0)+' / '+escape(result.profiles?.away?.confidence?.B?.sample||0)+' (casa / ospiti). Il modello usa solo dati antecedenti al match e non incorpora informazioni successive.</p>';
 }
