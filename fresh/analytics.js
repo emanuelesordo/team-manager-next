@@ -27,10 +27,7 @@ export function resultSplit(fixtures,team){
  return result;
 }
 
-/* Le statistiche stagionali seguono la sorgente storica di team-manager:
-   gare concluse + tutti gli eventi registrati salvo quelli esplicitamente rifiutati.
-   La validazione completa viene richiesta solo per le metriche che dipendono
-   dall'ordine esatto della timeline (rimonte/situazione del punteggio). */
+/* The fixture score is final; confirmed match events are the single input for event breakdowns. */
 export function seasonNumbers(fixtures,matches,events,team,competitions=[],playerStats=[]){
  const split=resultSplit(fixtures,team);
  const fixtureById=new Map((fixtures||[]).filter(isPlayed).map(f=>[key(f.id),f]));
@@ -76,11 +73,11 @@ export function seasonNumbers(fixtures,matches,events,team,competitions=[],playe
   return cumulative!=null&&cumulative>half?1:0;
  };
  const intervalIndex=e=>{
-  const c=competitionFor(e),half=Math.max(1,Number(c?.minutes_per_period)||45);
+  const c=competitionFor(e),half=Math.max(1,Number(c?.minutes_per_period)||40);
   const period=periodIndex(e);
-  let relative=Number(e.minute);
-  if(!Number.isFinite(relative))return period*2;
-  if(relative>half)relative-=period*half;
+  const cumulative=cumulativeEventMinute(e,c);
+  if(cumulative===null)return null;
+  const relative=period===1?cumulative-half:cumulative;
   return period*2+(relative>half/2?1:0);
  };
 
@@ -97,7 +94,7 @@ export function seasonNumbers(fixtures,matches,events,team,competitions=[],playe
    const scoreSide=scoringSide(e),p=periodIndex(e);
    if(scoreSide==='team'){
     totals.goalsByPeriod[p]++;
-    totals.goalIntervals[intervalIndex(e)]++;
+    const interval=intervalIndex(e);if(interval!==null)totals.goalIntervals[interval]++;
     if(e.secondary_player_id!=null&&key(e.secondary_player_id)!==key(e.player_id))totals.assists++;
    }else if(scoreSide==='opponent')totals.concededByPeriod[p]++;
   }
@@ -168,7 +165,10 @@ export function eventCoverage(fixtures,matches,events,team,competitions=[]){
   if(rows.length!==expected){unverified++;continue}
   if(rows.some(e=>!Number.isInteger(e.minute))){withoutMinutes++;continue}
   const competition=competitions.find(c=>c.id===f.competition_id)||null;
-  rows.sort((a,b)=>(cumulativeEventMinute(a,competition)??999)-(cumulativeEventMinute(b,competition)??999)||(a.stoppage_minute||0)-(b.stoppage_minute||0)||String(a.created_at).localeCompare(String(b.created_at)));
+  const allRows=eventsByMatch.get(m.id)||[];
+  const timing=matchTiming(m,competition,allRows);
+  if(rows.some(e=>matchElapsedMinute(e,competition,timing)===null)){withoutMinutes++;continue}
+  rows.sort((a,b)=>matchElapsedMinute(a,competition,timing)-matchElapsedMinute(b,competition,timing)||String(a.created_at).localeCompare(String(b.created_at)));
   let teamGoals=0,oppGoals=0,wasBehind=false,wasAhead=false,positive=false,negative=false;
   const localFor={equal:0,ahead:0,behind:0},localAgainst={equal:0,ahead:0,behind:0};
   let ambiguousSide=false;
@@ -188,8 +188,6 @@ export function eventCoverage(fixtures,matches,events,team,competitions=[]){
   const officialAgainst=isTeam(f,'home',team)?f.away_score:f.home_score;
   if(ambiguousSide||teamGoals!==officialFor||oppGoals!==officialAgainst){unverified++;continue}
   for(const k of ['equal','ahead','behind']){location[k]+=localFor[k];conceded[k]+=localAgainst[k]}
-  const allRows=eventsByMatch.get(m.id)||[];
-  const timing=matchTiming(m,competition,allRows);
   gameStates.push(analyseGoalTimeline(rows,{
    sideOf:e=>{let side=e.team_side;if(e.event_type==='own_goal')side=side==='team'?'opponent':side==='opponent'?'team':side;return side},
    minuteOf:e=>matchElapsedMinute(e,competition,timing),
