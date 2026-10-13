@@ -147,7 +147,7 @@ export function renderPlayerIntelligence(id,source){
  v.assists=canonicalNumber('assists',v.assists);
  v.yellow=canonicalNumber('yellow_cards',v.yellow);
  v.red=canonicalNumber('red_cards',v.red);
- const incompleteGames=v.matches.length!==v.games;
+ const incompleteGames=v.matches.length!==v.games||v.matches.filter(m=>m.minutes===null).length>0;
  const incompleteGoals=v.matches.reduce((n,m)=>n+m.goals,0)!==v.goals;
  const incompleteAssists=v.matches.reduce((n,m)=>n+m.assists,0)!==v.assists;
  const officialMinutes=source?.stats?.minutes==null?null:Number(source.stats.minutes),minutes=Number.isFinite(officialMinutes)&&officialMinutes>=0?officialMinutes:v.minutes,base=v.duration,pm=v.gfOn-v.gaOn,hasOn=v.covered>0;
@@ -172,12 +172,12 @@ export function renderPlayerIntelligence(id,source){
  ['Vittorie',incompleteGames?'—':v.results.W],['Pareggi',incompleteGames?'—':v.results.D],['Sconfitte',incompleteGames?'—':v.results.L],['Win rate',!incompleteGames&&v.games?number(100*v.results.W/v.games)+'%':'—'],['Punti / gara',!incompleteGames&&v.games?number((v.results.W*3+v.results.D)/v.games):'—']])+
  segment('Impatto del cambio e disciplina',[
  ['Punti con ingresso',incompleteGames?'—':v.subPoints],['Punti gare da titolare',incompleteGames?'—':v.starterPoints],['Variazione punti dopo ingresso',hasOn?v.entryPointsDelta:'—'],['Variazione punti dopo uscita',hasOn?v.exitPointsDelta:'—'],['Ammonizioni',v.yellow],['Espulsioni',v.red]],'Le variazioni sono punti virtuali, non punti causalmente attribuiti al calciatore.'));
- const places=title('Casa e trasferta',segment('Rendimento per sede',[['Gare in casa',incompleteGames?'—':v.home.games],['Gol in casa',v.home.goals],['Assist in casa',v.home.assists],['Punti / gara in casa',v.home.games?number(v.home.points/v.home.games):'—'],['Gare in trasferta',incompleteGames?'—':v.away.games],['Gol in trasferta',v.away.goals],['Assist in trasferta',v.away.assists],['Punti / gara in trasferta',v.away.games?number(v.away.points/v.away.games):'—']]));
+ const places=title('Casa e trasferta',segment('Rendimento per sede',[['Gare in casa',incompleteGames?'—':v.home.games],['Gol in casa',incompleteGoals?'—':v.home.goals],['Assist in casa',incompleteAssists?'—':v.home.assists],['Punti / gara in casa',!incompleteGames&&v.home.games?number(v.home.points/v.home.games):'—'],['Gare in trasferta',incompleteGames?'—':v.away.games],['Gol in trasferta',incompleteGoals?'—':v.away.goals],['Assist in trasferta',incompleteAssists?'—':v.away.assists],['Punti / gara in trasferta',!incompleteGames&&v.away.games?number(v.away.points/v.away.games):'—']]));
  const context=title('Distribuzioni','<article class="psi-slide"><h3>Stato del punteggio nei minuti giocati</h3>'+donut([['Vantaggio',v.states.leading],['Parità',v.states.drawing],['Svantaggio',v.states.trailing]])+'</article>'+
  '<article class="psi-slide"><h3>Momento dei gol</h3>'+donut([['Primo tempo',v.goalsByPeriod[0]],['Secondo tempo',v.goalsByPeriod[1]]])+'</article>'+
  '<article class="psi-slide"><h3>Situazione prima del gol</h3>'+donut([['In vantaggio',v.goalsByContext[0]],['In parità',v.goalsByContext[1]],['In svantaggio',v.goalsByContext[2]]])+'</article>');
  const trends=title('Andamento partita per partita','<article class="psi-slide"><h3>Plus/minus cumulativo</h3>'+lineChart(v.trend.map(x=>x.value),v.trend.map(x=>x.label),'Andamento plus/minus')+'</article>'+
  '<article class="psi-slide"><h3>Minuti per partita</h3>'+lineChart(v.matches.map(x=>x.minutes),v.matches.map(x=>x.label),'Minuti giocati')+'</article>'+
  '<article class="psi-slide"><h3>Gol e assist per partita</h3>'+lineChart(v.matches.map(x=>x.goals+x.assists),v.matches.map(x=>x.label),'Partecipazioni al gol')+'</article>');
- return '<div class="psi-root"><p class="psi-subtitle">Analisi stagionale · statistiche descrittive calcolate dai tabellini</p>'+intro+use+attack+impact+outcomes+places+context+trends+'<p class="psi-disclaimer">'+E(coverage)+' Gol e assist dipendono dagli eventi disponibili: non equivalgono necessariamente ai totali ufficiali del profilo. I grafici con copertura parziale non sono una certificazione dei minuti.</p></div>';
+ return '<div class="psi-root"><p class="psi-subtitle">Analisi stagionale · statistiche descrittive calcolate dai tabellini</p>'+intro+use+attack+impact+outcomes+places+context+trends+'<p class="psi-disclaimer">'+E(coverage)+' Presenze, titolarità, gol, assist e disciplina derivano dalla stessa fonte della Rosa; le distribuzioni avanzate richiedono eventi completi. I grafici con copertura parziale non sono una certificazione dei minuti.</p></div>';
 }
