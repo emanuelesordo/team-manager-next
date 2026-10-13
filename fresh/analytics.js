@@ -5,7 +5,7 @@ import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
 const key=v=>String(v??'');
 const isTeam=(f,side,team)=>Boolean(team?.id&&key(f?.[side+'_team_id'])===key(team.id));
 const goalTypes=new Set(['goal','penalty_goal','penalty_scored','own_goal']);
-const acceptedEvent=e=>e?.validation_status!=='rejected';
+const acceptedEvent=e=>['official','community_confirmed'].includes(e?.validation_status);
 const goalEvent=e=>goalTypes.has(e?.event_type)&&e?.payload?.count_score!==false;
 
 export const isPlayed=f=>f?.status==='finished'&&Number.isInteger(f.home_score)&&Number.isInteger(f.away_score);
@@ -54,8 +54,8 @@ export function seasonNumbers(fixtures,matches,events,team,competitions=[],playe
   const m=matchById.get(key(e.match_id)),f=fixtureForMatch(m);
   if(!f)return null;
   const home=isTeam(f,'home',team);
-  if(e.side==='home')return home?'team':'opponent';
-  if(e.side==='away')return home?'opponent':'team';
+  if(e.team_side==='home'||e.side==='home')return home?'team':'opponent';
+  if(e.team_side==='away'||e.side==='away')return home?'opponent':'team';
   return null;
  };
  const scoringSide=e=>{
