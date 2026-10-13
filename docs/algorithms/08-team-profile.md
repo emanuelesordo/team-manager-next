@@ -22,7 +22,9 @@ Disponibili anche senza eventi:
 - vittorie larghe;
 - sconfitte larghe;
 - volatilità del margine;
-- adattabilità casa/trasferta.
+- adattabilità casa/trasferta;
+- risultati esatti ricorrenti, entrambe segnano, fasce di gol, margini medio/mediano;
+- forma ponderata corretta per rango pre-gara e trend di forza descrittivo.
 
 ### B — timeline gol completa
 Usate solo quando la sequenza dei gol è completa e riconcilia il risultato:
@@ -45,7 +47,7 @@ Segnali esplorativi e attenuati:
 
 Il profilo usa una scala normalizzata 0–1. Le feature A hanno peso pieno; B e C hanno peso inferiore e vengono ulteriormente attenuate dalla dimensione del campione.
 
-Una metrica con campione nullo non viene interpretata come 0: viene considerata non disponibile.
+Una metrica con campione nullo non viene interpretata come 0: viene considerata non disponibile. Frequenze di stile di gioco (es. entrambe segnano, partite con 3+ gol, gare strette) restano descrittive e **non** aumentano automaticamente l'indice sintetico di forza.
 
 ## Uso
 
