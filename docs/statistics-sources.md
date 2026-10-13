@@ -18,14 +18,22 @@
 ## Contratto implementato
 - Dopo il caricamento stagionale `fresh/player-season-facts.js` produce **una volta** il dataset riconciliato. Tutte le viste usano `state.data.playerStats`; `fresh/analytics-ui.js` non ricalcola indipendentemente i minuti.
 - `state.data.playerSeasonFacts.perMatch` rende disponibili gli intervalli condivisi al calcolo delle coppie della formazione ipotetica. `fresh/team-rating.js` usa lo stesso `matchPlayerIntervals`.
-- Nel database corrente `app_player_season_stats.minutes` è 0 perché `app_match_players.minutes_played` è nullo nelle gare giocate. **Non rappresenta i minuti reali** e viene rimpiazzato solamente se la timeline è verificabile.
+- La vista SQL **`app_player_season_stats` è ora la fonte finale anche di `minutes`, `subentries` e `minutes_coverage`**: legge gli intervalli calcolati dalle viste interne `private.tm_player_match_participation` e `private.tm_player_season_participation`. I campi grezzi `app_match_players.minutes_played` possono restare NULL; non vengono sovrascritti.
 - Una mancanza di copertura genera `null` (N/D), non uno zero oppure un totale parziale. Anche il numero di ingressi deriva da sostituzioni confermate, non dall'etichetta «panchina».
 - `tm_player_recent_votes` è dettaglio delle ultime valutazioni: non è la media ufficiale della stagione, che resta `app_player_season_stats.avg_rating`.
 - `app_competition_standings` è la classifica di competizione; proiezioni ed Elo non sono una fonte di classifica.
 - Gli eventi proposti, contestati o rifiutati non contribuiscono alle metriche ufficiali. La loro presenza rimane consultabile per moderazione.
 
 ## Persistenza e copertura
-Al momento minuti e subentri verificati sono **finali per la sessione frontend**, non per il database. La vista SQL non è stata modificata. Un futuro servizio server-side dovrebbe condividere la stessa definizione, essere confrontato con queste metriche e diventare fonte per applicazioni esterne prima di sostituire valori esistenti.
+**Riconciliazione DB completata il 13/10/2026.** I valori sono prodotti da SQL su Supabase a ogni lettura, non salvati come duplicati su righe giocatore. Il frontend confronta in lettura il motore JavaScript con la vista ufficiale e segnala discrepanze, senza rimpiazzare i valori SQL. Per le gare concluse, l'assenza di fine 1T o fine 2T con validazione ufficiale impedisce di dichiarare completi i minuti. Le partite con oltre due tempi restano N/D fino all'estensione concordata del modello temporale.
 
 ## Test
 `tests/player-season-facts.test.mjs` verifica aggregazione unica, mancati caricamenti, discrepanze, rating squadra ponderato e recuperi effettivi. `tests/player-participation.test.mjs` testa i minuti misti dei periodi e le tre entrate.
+
+## Verifiche del 13/10/2026
+- 26 giocatori stagionali, 22 con presenze; 54 presenze totali, 33 titolarità e 21 subentri.
+- 77 righe giocatore/partita, nessun intervallo invalido; 2.937 minuti di squadra, pari a 11 × (89 + 88 + 90).
+- Pellegrino: 3 presenze, 0 titolarità, 3 subentri, 50 minuti (13 + 4 + 33).
+- `public.tm_app_public_weighted_rating` usa gli stessi minuti; risultati sulle 3 gare: 6,22 / 6,09 / 6,16.
+- La vista pubblica è stata verificata anche con il ruolo anon. Le viste di dettaglio sono collocate in schema `private`, senza USAGE per anon/authenticated.
+- Migrazione riproducibile: `supabase/migrations/20261013_tm_shared_verified_player_facts.sql`.
