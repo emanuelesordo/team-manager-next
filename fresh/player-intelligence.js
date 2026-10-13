@@ -70,7 +70,7 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
    if(e.scoreSide==='team'){
     if(K(e.player_id)===K(playerId)&&e.event_type!=='own_goal'){
      gOwn++;total.goals++;if(!started)total.subGoals++;
-     if(e.t!=null){total.scoredMinutes.push(e.t);total.goalsByPeriod[e.t<=half?0:1]++}
+     if(e.t!=null){total.scoredMinutes.push(e.t);total.goalsByPeriod[e.payload?.period==='first_half'?0:e.payload?.period==='second_half'?1:e.t<=half?0:1]++}
      if(beforeF===0&&beforeA===0)total.firstGoals++;
      if(beforeF<beforeA&&beforeF+1===beforeA)total.equalizers++;
      if(beforeF===beforeA)total.leadGoals++;
@@ -117,7 +117,7 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
   }
   total.matches.push(game);
  }
- total.trend=total.matches.map((x,i)=>({label:x.label,value:x.pm===null?null:total.matches.slice(0,i+1).reduce((n,m)=>n+(m.pm??0),0),verified:x.pm!==null}));
+ total.trend=total.matches.map((x,i)=>({label:x.label,value:total.matches.slice(0,i+1).every(m=>m.pm!==null)?total.matches.slice(0,i+1).reduce((n,m)=>n+m.pm,0):null,verified:x.pm!==null}));
  return total;
 }
 export function renderPlayerIntelligence(id,source){
