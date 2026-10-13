@@ -70,7 +70,7 @@ export function matchPlayerIntervals(match,players=[],events=[],competition={}){
  }
  let valid=true;
  const timeline=events.filter(e=>confirmedMatchEvent(e)&&ourEvent(e,match)&&
-  ['substitution','red_card','second_yellow'].includes(e.event_type))
+  ['substitution','red_card','second_yellow','blue_card','blue_return','temporary_return','return_from_blue'].includes(e.event_type))
   .map(e=>({event:e,time:matchElapsedMinute(e,competition,timing)}))
   .sort((a,b)=>(a.time??Infinity)-(b.time??Infinity)||key(a.event.created_at).localeCompare(key(b.event.created_at)));
  for(const {event:e,time} of timeline){
@@ -83,8 +83,15 @@ export function matchPlayerIntervals(match,players=[],events=[],competition={}){
    intervals.get(out).push([starts.get(out),time]);starts.delete(out);starts.set(inId,time);
   }else{
    if(!e.player_id||!roster.has(out)){valid=false;continue}
-   // A second-yellow and its derived red card can share the same instant.
-   if(starts.has(out)){intervals.get(out).push([starts.get(out),time]);starts.delete(out)}
+   if(['blue_return','temporary_return','return_from_blue'].includes(e.event_type)){
+    if(starts.has(out)){valid=false;continue}
+    starts.set(out,time);
+   }else if(starts.has(out)){
+    // A second-yellow and its derived red card may share an instant.
+    intervals.get(out).push([starts.get(out),time]);starts.delete(out);
+   }else if(e.event_type==='blue_card'){
+    valid=false;
+   }
   }
  }
  for(const [id,start] of starts)intervals.get(id).push([start,timing.duration]);
