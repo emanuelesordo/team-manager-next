@@ -142,7 +142,17 @@ export function renderPlayerIntelligence(id,source){
  // Roster / app_player_season_stats is the single source of truth for totals.
  v.games=canonicalNumber('appearances',v.games);
  v.starts=canonicalNumber('starts',v.starts);
- v.bench=Math.max(0,v.games-v.starts);
+ // Count actual entrances, not the difference between appearances and starts.
+ const finishedIds=new Set((source?.matches||[]).filter(m=>m.status==='finished'&&!m.is_test).map(m=>K(m.id)));
+ const confirmedEntries=new Set((source?.events||[]).filter(e=>
+  finishedIds.has(K(e.match_id))&&e.event_type==='substitution'&&
+  K(e.secondary_player_id)===K(id)&&['official','community_confirmed'].includes(e.validation_status)
+ ).map(e=>K(e.match_id)));
+ const hasCanonicalAppearances=canonical.appearances!==null&&canonical.appearances!==undefined;
+ const hasCanonicalStarts=canonical.starts!==null&&canonical.starts!==undefined;
+ // An unambiguous official entrance is positive evidence, even if another view or local reconstruction is stale.
+ v.bench=Math.max(confirmedEntries.size,hasCanonicalAppearances&&hasCanonicalStarts?Math.max(0,v.games-v.starts):0);
+ if(v.bench+v.starts>v.games)v.games=v.bench+v.starts;
  v.goals=canonicalNumber('goals',v.goals);
  v.assists=canonicalNumber('assists',v.assists);
  v.yellow=canonicalNumber('yellow_cards',v.yellow);
