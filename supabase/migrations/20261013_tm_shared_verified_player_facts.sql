@@ -465,7 +465,7 @@ SELECT CASE
  THEN round(sum(v.avg_rating*p.minutes)/sum(p.minutes),2)
  ELSE NULL END
 FROM validated p JOIN votes v ON v.player_id=p.player_id
-$function$
+$function$;
 REVOKE ALL ON FUNCTION public.tm_app_public_weighted_rating(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.tm_app_public_weighted_rating(uuid) TO anon, authenticated;
 NOTIFY pgrst, 'reload schema';
