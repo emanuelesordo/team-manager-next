@@ -2,7 +2,7 @@ import {formationModules} from './lineup-pitch.js';
 import {shirtSvg} from './kit-editor.js';
 import {availabilityDefault} from './availability.js';
 import {matchPlayerLabel} from './match-player-label.js';
-import {cumulativeEventMinute} from './match-minutes.js';
+import {matchPlayerIntervals} from './player-participation.js';
 
 const key=v=>String(v??'');
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
@@ -125,56 +125,32 @@ function ratingAverages(data,matches,fixtureWeights,team){
  return result;
 }
 function pairKey(a,b){return [key(a),key(b)].sort().join('|')}
-function matchDuration(match,competitions){
- const c=(competitions||[]).find(x=>key(x.id)===key(match?.competition_id))||{};
- const periods=Math.max(1,Number(match?.periods_override||c.periods||2));
- const half=Math.max(1,Number(match?.minutes_per_period_override||c.minutes_per_period||40));
- return periods*half;
-}
-function matchEvents(match,events){
- return (events||[]).filter(e=>key(e.match_id)===key(match.id)&&e.validation_status!=='rejected');
-}
-function addPairExposure(map,field,minutes,quality,relevance){
- if(minutes<=0||field.size<2)return;
- const ids=[...field];
- for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){
-  const k=pairKey(ids[i],ids[j]),row=map.get(k)||{minutes:0,quality:0};
-  const weighted=minutes*(.6+.8*relevance);
-  row.minutes+=weighted;row.quality+=weighted*quality;map.set(k,row);
- }
+function overlapMinutes(a,b){
+ let total=0;
+ for(const [aStart,aEnd] of a)for(const [bStart,bEnd] of b)
+  total+=Math.max(0,Math.min(aEnd,bEnd)-Math.max(aStart,bStart));
+ return total;
 }
 function coPlayMap(matches,data,events,competitions,fixtureWeights,team){
- const selections=data.priorSelections||[],pairs=new Map();
+ const pairs=new Map(),selections=data.priorSelections||[];
+ const cached=data.playerSeasonFacts?.perMatch;
  for(const m of matches){
   const own=selections.filter(s=>key(s.match_id)===key(m.id));
-  const starters=new Set(own.filter(s=>s.started||s.selection_status==='starter').map(s=>key(s.player_id)));
-  if(!starters.size)continue;
-  const quality=resultQuality(m,data,team),relevance=matchRelevance(m,fixtureWeights,data),duration=matchDuration(m,competitions);
+  if(own.length<2)continue;
   const comp=(competitions||[]).find(x=>key(x.id)===key(m.competition_id))||{};
-  const ordered=matchEvents(m,events).filter(e=>e.team_side==='team'&&['substitution','red_card','blue_card','blue_return','temporary_return','return_from_blue'].includes(e.event_type))
-   .map((e,i)=>({e,t:cumulativeEventMinute(e,comp),i})).filter(x=>Number.isFinite(x.t))
-   .sort((a,b)=>a.t-b.t||String(a.e.created_at||'').localeCompare(String(b.e.created_at||''))||a.i-b.i);
-  if(!ordered.length){
-   const ids=own.filter(s=>(s.started||s.selection_status==='starter')&&Number(s.minutes_played||duration)>0);
-   for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){
-    const overlap=Math.min(Number(ids[i].minutes_played||duration),Number(ids[j].minutes_played||duration));
-    addPairExposure(pairs,new Set([key(ids[i].player_id),key(ids[j].player_id)]),overlap,quality,relevance);
-   }
-   continue;
+  const timeline=cached?.get(key(m.id))||matchPlayerIntervals(m,own,
+   (events||[]).filter(e=>key(e.match_id)===key(m.id)),comp);
+  if(!timeline.valid)continue;
+  const list=[...timeline.players.entries()].filter(([,p])=>p.valid&&p.minutes>0);
+  const quality=resultQuality(m,data,team),relevance=matchRelevance(m,fixtureWeights,data);
+  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+   const [a,pa]=list[i],[b,pb]=list[j];
+   const minutes=overlapMinutes(pa.intervals,pb.intervals);
+   if(minutes<=0)continue;
+   const k=pairKey(a,b),row=pairs.get(k)||{minutes:0,quality:0};
+   const weighted=minutes*(.6+.8*relevance);
+   row.minutes+=weighted;row.quality+=weighted*quality;pairs.set(k,row);
   }
-  const field=new Set(starters);let cursor=0;
-  for(const {e,t} of ordered){
-   const at=clamp(Number(t),0,duration),delta=Math.max(0,at-cursor);
-   addPairExposure(pairs,field,delta,quality,relevance);cursor=Math.max(cursor,at);
-   const pid=e.player_id==null?null:key(e.player_id);
-   if(e.event_type==='substitution'){
-    if(pid)field.delete(pid);
-    if(e.secondary_player_id!=null)field.add(key(e.secondary_player_id));
-   }else if(['red_card','blue_card'].includes(e.event_type)){
-    if(pid)field.delete(pid);
-   }else if(['blue_return','temporary_return','return_from_blue'].includes(e.event_type)&&pid)field.add(pid);
-  }
-  addPairExposure(pairs,field,Math.max(0,duration-cursor),quality,relevance);
  }
  const score=new Map();
  for(const [k,row] of pairs){
@@ -209,7 +185,10 @@ function playerScores(players,allPriorMatches,sampleMatches,selections,formation
   const recentIds=new Set(recentMatches.map(m=>key(m.id)));
   const recentRows=selections.filter(s=>key(s.player_id)===key(p.player_id)&&recentIds.has(key(s.match_id)));
   const recentStarts=recentRows.filter(s=>s.started||s.selection_status==='starter').length;
-  const recentMinutes=recentRows.reduce((sum,s)=>sum+Math.max(0,Number(s.minutes_played)||0),0);
+  const intervals=data.playerSeasonFacts?.perMatch;
+  const recentValues=recentRows.map(s=>intervals?.get(key(s.match_id))?.players.get(key(s.player_id))?.minutes);
+  const recentMinutes=recentValues.length&&recentValues.every(Number.isFinite)
+   ?recentValues.reduce((sum,n)=>sum+n,0):null;
   metrics.set(key(p.player_id),{
    general:score.get(key(p.player_id))||0,
    meanRating:r.mean??null,contextRating:r.context??r.mean??null,ratingMatches:r.votes||0,
@@ -239,7 +218,7 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
   const result=(Number(m.resultQuality||.5)-.5)*1.6;
   const synergy=(synergyWithUsed(id,used,coPlay)-.5)*2.2;
   const recentLoad=(m.recentMatchCount?m.recentStarts/Math.max(1,m.recentMatchCount):0)*.65+
-   clamp(Number(m.recentMinutes||0)/(Math.max(1,m.recentMatchCount||1)*80),0,1)*.35;
+   (m.recentMinutes==null?.18:clamp(m.recentMinutes/(Math.max(1,m.recentMatchCount||1)*80),0,1)*.35);
   const ratingTrust=finite(m.contextRating)?clamp((Number(m.contextRating)-5.8)/1.8,0,1):.45;
   // Turnover is a soft pressure, never a hard exclusion: in clearly favorable
   // matches heavily-used starters lose a little priority, while reliable alternatives
