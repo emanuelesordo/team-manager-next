@@ -4,9 +4,9 @@ const K=x=>String(x??'');
 const whole=x=>x!=null&&x!==''&&Number.isInteger(Number(x))&&Number(x)>=0;
 
 /** Authoritative seasonal facts are constructed once after data acquisition.
- * SQL's app_player_season_stats is authoritative for appearances, starts,
- * goals, assists, cards and rating. Actual played minutes and explicit
- * substitution entrances are verified from the common match timeline.
+ * SQL app_player_season_stats is authoritative for appearances, starts,
+ * goals, assists, cards, rating, verified minutes and actual entries.
+ * The client timeline is a diagnostic cross-check, not a second authority.
  *
  * Missing information is null, never an invented zero or partial sum.
  */
