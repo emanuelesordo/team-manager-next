@@ -75,3 +75,27 @@ test('three confirmed entries across finished games are counted as three sub app
  const html=renderPlayerIntelligence('p',source);
  assert.ok(html.includes('0 titolare · 3 subentrato'));
 });
+
+test('authoritative SQL zero minutes and no entered match must not become invented local minutes',()=>{
+ const html=renderPlayerIntelligence('p',{...base,stats:{appearances:1,starts:0,subentries:1,minutes:null,minutes_coverage:'unavailable',goals:1,assists:1,yellow_cards:0,red_cards:0}});
+ assert.match(html,/Minuti giocati<\/span><strong>—/);
+ assert.match(html,/Minuti \/ gol<\/span><strong>—/);
+ assert.match(html,/GF in campo<\/span><strong>—/);
+});
+test('a SQL aggregate mismatch preserves official totals and withholds misleading derived splits',()=>{
+ const html=renderPlayerIntelligence('p',{...base,stats:{appearances:3,starts:0,subentries:3,minutes:50,minutes_coverage:'complete',goals:4,assists:2,yellow_cards:2,red_cards:1}});
+ assert.match(html,/Presenze<\/span><strong>3/);
+ assert.match(html,/Subentrato<\/span><strong>3/);
+ assert.match(html,/Gol<\/span><strong>4/);
+ assert.match(html,/Ammonizioni<\/span><strong>2/);
+ assert.match(html,/Gol da subentrato<\/span><strong>—/);
+ assert.match(html,/Plus\/minus<\/span><strong>—/);
+ assert.match(html,/Minuti per partita<\/h3><p class="psi-note">/);
+});
+test('missing event feed does not certify any detailed results or minutes chart',()=>{
+ const html=renderPlayerIntelligence('p',{...base,events:[],eventsLoaded:false,playersLoaded:false,
+  stats:{appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',goals:1,assists:1}});
+ assert.match(html,/Minuti giocati<\/span><strong>25′/);
+ assert.match(html,/Gol da subentrato<\/span><strong>—/);
+ assert.match(html,/Minuti per partita<\/h3><p class="psi-note">/);
+});
