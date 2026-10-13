@@ -48,3 +48,10 @@ test('rejected goals do not contribute to the statistics',()=>{
  assert.equal(result.goals,0);
  assert.equal(result.covered,0);
 });
+
+test('player card uses canonical roster minutes for displayed total and per-goal ratios',()=>{
+ const html=renderPlayerIntelligence('p',{...base,stats:{minutes:49}});
+ assert.match(html,/Minuti giocati<\/span><strong>49′/);
+ assert.match(html,/Minuti \/ gol<\/span><strong>49′/);
+ assert.match(html,/Stessa fonte della Rosa/);
+});
