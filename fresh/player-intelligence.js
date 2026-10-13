@@ -96,7 +96,7 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
     curF=before.filter(x=>x.scoreSide==='team').length;curA=before.length-curF;
     if(inRange(mid,intervals))total.states[curF>curA?'leading':curF<curA?'trailing':'drawing']+=b-a;
    }
-   for(const e of normalized){if(inRange(e.t+0.00001,intervals)){if(e.scoreSide==='team')localGF++;else localGA++}}
+   for(const e of normalized){const instant=Math.min(duration-0.00001,e.t+0.00001);if(inRange(instant,intervals)){if(e.scoreSide==='team')localGF++;else localGA++}}
    const on=game.minutes;
    total.covered++;total.gfOn+=localGF;total.gaOn+=localGA;if(localGA===0)total.cleanOn++;
    total.gfOff+=gf-localGF;total.gaOff+=ga-localGA;
