@@ -5,12 +5,12 @@ import {playerIntelligence,renderPlayerIntelligence} from '../fresh/player-intel
 const fixture={id:'f1',status:'finished',home_team_id:'team',away_team_id:'opp',home_score:2,away_score:1,competition_id:'c1',kickoff_at:'2026-10-01T20:00:00Z'};
 const match={id:'m1',fixture_id:'f1',status:'finished'};
 const competition={id:'c1',minutes_per_period:40,periods:2};
-const base={fixtures:[fixture],matches:[match],matchPlayers:[{match_id:'m1',player_id:'p',started:false,selection_status:'bench'}],events:[
+const base={fixtures:[fixture],matches:[match],matchPlayers:[{match_id:'m1',player_id:'p',started:false,selection_status:'bench'},{match_id:'m1',player_id:'out',started:true}],events:[
  {match_id:'m1',event_type:'goal',minute:30,team_side:'away',player_id:'opp'},
  {match_id:'m1',event_type:'substitution',minute:55,team_side:'home',player_id:'out',secondary_player_id:'p'},
  {match_id:'m1',event_type:'goal',minute:60,team_side:'home',player_id:'p'},
  {match_id:'m1',event_type:'goal',minute:70,team_side:'home',player_id:'other',secondary_player_id:'p'},
-],competitions:[competition],team:{id:'team'}};
+].map(e=>({...e,validation_status:'official'})),competitions:[competition],team:{id:'team'}};
 
 test('substitute: 25 minutes, +2 on field, goal and assist',()=>{
  const result=playerIntelligence('p',base);
