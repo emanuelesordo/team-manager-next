@@ -89,3 +89,25 @@ test('temporary blue-card interval excludes the suspension minutes but keeps sub
  assert.deepEqual(result.intervals,[[0,10],[20,89]]);
  assert.equal(result.minutes,79);
 });
+
+test('server-calculated final totals override local reconciliation with an audit discrepancy',()=>{
+ const fromServer=playerStats.map(row=>row.player_id==='p'?{...row,minutes:49,subentries:3,minutes_coverage:'complete'}:row);
+ const result=reconcilePlayerSeasonFacts({...opts,playerStats:fromServer});
+ const p=result.stats.find(x=>x.player_id==='p');
+ assert.equal(p.minutes,49);assert.equal(p.subentries,3);assert.equal(p.minutesCoverage,'complete');
+ assert.equal(result.derivedByPlayer.get('p').source,'app_player_season_stats');
+ assert.ok(result.discrepancies.some(x=>x.kind==='sql_frontend_mismatch'&&x.sql_minutes===49&&x.local_minutes===50));
+});
+test('server facts remain available even if a client-side events request fails',()=>{
+ const fromServer=playerStats.map(row=>row.player_id==='p'?{...row,minutes:50,subentries:3,minutes_coverage:'complete'}:row);
+ const result=reconcilePlayerSeasonFacts({...opts,playerStats:fromServer,events:[],eventsLoaded:false});
+ const p=result.stats.find(x=>x.player_id==='p');
+ assert.equal(p.minutes,50);assert.equal(p.subentries,3);
+ assert.equal(p.minutesCoverage,'complete');
+});
+test('server unavailable is never replaced by a partially reconstructed local value',()=>{
+ const fromServer=playerStats.map(row=>row.player_id==='p'?{...row,minutes:null,subentries:null,minutes_coverage:'unavailable'}:row);
+ const result=reconcilePlayerSeasonFacts({...opts,playerStats:fromServer});
+ const p=result.stats.find(x=>x.player_id==='p');
+ assert.equal(p.minutes,null);assert.equal(p.subentries,null);assert.equal(p.minutesCoverage,'unavailable');
+});
