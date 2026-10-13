@@ -37,3 +37,25 @@
 - `public.tm_app_public_weighted_rating` usa gli stessi minuti; risultati sulle 3 gare: 6,22 / 6,09 / 6,16.
 - La vista pubblica è stata verificata anche con il ruolo anon. Le viste di dettaglio sono collocate in schema `private`, senza USAGE per anon/authenticated.
 - Migrazione riproducibile: `supabase/migrations/20261013_tm_shared_verified_player_facts.sql`.
+
+## Audit trasversale delle viste e dei caroselli · 13/10/2026
+
+| Superficie | Dati definitivi | Dettaglio/indicatore derivato | Regola adottata |
+|---|---|---|---|
+| Rosa, header scheda, pannello personale | `app_player_season_stats` | — | I totali provengono dalla vista SQL senza risommarli |
+| Scheda · Impiego, gol/assist, disciplina | `app_player_season_stats` | Goal/subentry, medie e rate | Totali SQL; inferenze certe (es. 0 titolarità => tutti i gol da subentrato) non dipendono da una timeline esaustiva |
+| Scheda · Minuti per partita | `app_player_season_stats.match_minutes` | Grafico cronologico | Il totale e ciascun punto del grafico provengono dalla stessa vista SQL; intera serie solo con copertura verificata |
+| Scheda · Plus/minus, on/off, risultati e distribuzioni | Risultato delle fixture + eventi ufficiali | `matchPlayerIntervals` / `matchElapsedMinute` | Campione verificato identificato; non simulare contributi zero per partite senza timeline |
+| Numeri · Marcatori, assist, minuti, rating | `app_player_season_stats` | Ranking | Non vengono ricalcolati dal dettaglio eventi |
+| Numeri · Primo/secondo tempo, quarti e distribuzioni | Risultati ufficiali e timeline eventi confermati | `cumulativeEventMinute` / `matchElapsedMinute` | Minuti legacy relativi e Live cumulativi usano lo stesso convertitore; se copertura incompleta, N/D |
+| Numeri · Risultati, casa/trasferta | `app_competition_fixtures` | Bilanci, margini, forma | Il risultato ufficiale resta indipendente dagli eventi |
+| Numeri · Rimonte, vantaggi, game state | Fixture + sequenza gol confermata | `eventCoverage` + `game-state` | Richiesta parità degli eventi con i gol finali e ora interpretabile |
+| Match center · Cronologia e parziali | Eventi confermati + punteggio fixture | `match-minutes` / `canonical-events` | Non conteggiare proposte non ufficializzate nei dati finali |
+| Home · Ultima/prossima gara, rating recenti | Fixture ufficiali / voti aggregati di partita | `home-dashboard`, `player-trend` | Non sostituire risultati o voti reali con pronostici |
+| Formazione ipotetica | Media voti reale / minuti validati | `player-season-facts.perMatch` e modello di posizione | Voto *atteso* distinto dal voto medio *osservato* |
+| Pronostici, proiezioni | Risultati e storico ufficiali | Modelli previsionali | Output stimati, mai fatti ufficiali |
+| Rating ponderato, backend e UI | Minuti validati | `tm_app_public_weighted_rating` / `team-rating` | Entrambi consumano la stessa timeline/intervalli |
+
+Le statistiche con distribuzioni non sono campi finali autonomi: non devono sopravvivere a una modifica di gol, cambi o periodi senza essere ricalcolate. `NULL` in un dettaglio non equivale a 0. Le discrepanze tra proiezioni locali e SQL si segnalano, non si sovrascrivono.
+
+L'audit comprende i componenti dell'app e le API esaminate; **il rendering dal browser autenticato rimane da verificare separatamente**. I test automatici validano le principali invarianti ma non certificano la completezza dei tabellini importati da servizi esterni.
