@@ -11,10 +11,10 @@ const metric=(title,value,note='')=>'<div class="psi-metric"><span>'+E(title)+'<
 const segment=(title,items,note='')=>'<article class="psi-slide"><h3>'+E(title)+'</h3><div class="psi-metrics">'+items.map(x=>metric(...x)).join('')+'</div>'+(note?'<p class="psi-note">'+E(note)+'</p>':'')+'</article>';
 function lineChart(values,labels,title){
  if(!values.length)return '<p class="psi-note">Dati insufficienti per il grafico.</p>';
- const nums=values.filter(Number.isFinite),lo=Math.min(0,...nums),hi=Math.max(1,...nums),w=560,h=176,p=26;
+ const nums=values.filter(Number.isFinite);if(!nums.length)return '<p class="psi-note">Nessuna gara con intervalli affidabili.</p>';const lo=Math.min(0,...nums),hi=Math.max(1,...nums),w=560,h=176,p=26;
  const pts=values.map((v,i)=>Number.isFinite(v)?[p+i*(w-2*p)/Math.max(1,values.length-1),h-p-(v-lo)/(hi-lo)*(h-2*p)]:null);
- const poly=pts.filter(Boolean).map(a=>a.join(',')).join(' ');
- return '<div class="psi-line-wrap"><svg class="psi-line" viewBox="0 0 560 176" role="img" aria-label="'+E(title)+'"><path d="M26 150H534M26 25H534" fill="none" stroke="currentColor" opacity=".15"/><polyline points="'+poly+'" fill="none" stroke="#55af95" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>'+pts.map((a,i)=>a?'<circle cx="'+a[0]+'" cy="'+a[1]+'" r="4" fill="#55af95"><title>'+E(labels[i])+': '+E(number(values[i]))+'</title></circle>':'').join('')+'</svg><div class="psi-axis"><span>'+E(labels[0]||'')+'</span><span>'+E(labels.at(-1)||'')+'</span></div></div>';
+ const groups=[];let run=[];for(const a of pts){if(a)run.push(a);else if(run.length){groups.push(run);run=[]}}if(run.length)groups.push(run);const poly=groups.map(g=>'<polyline points="'+g.map(p=>p.join(',')).join(' ')+'" fill="none" stroke="#55af95" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>').join('');
+ return '<div class="psi-line-wrap"><svg class="psi-line" viewBox="0 0 560 176" role="img" aria-label="'+E(title)+'"><path d="M26 150H534M26 25H534" fill="none" stroke="currentColor" opacity=".15"/>'+poly+''+pts.map((a,i)=>a?'<circle cx="'+a[0]+'" cy="'+a[1]+'" r="4" fill="#55af95"><title>'+E(labels[i])+': '+E(number(values[i]))+'</title></circle>':'').join('')+'</svg><div class="psi-axis"><span>'+E(labels[0]||'')+'</span><span>'+E(labels.at(-1)||'')+'</span></div></div>';
 }
 function donut(values){
  const entries=values.filter(x=>x[1]>0),sum=entries.reduce((n,x)=>n+x[1],0);
@@ -44,7 +44,7 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
   const comp=competitions.find(x=>K(x.id)===K(f.competition_id||m.competition_id))||{};
   const half=Number(m.minutes_per_period_override||comp.minutes_per_period)||40;
   const base=half*(Number(m.periods_override||comp.periods)||2);
-  const gameEvents=byMatch.get(K(m.id))||[];
+  const gameEvents=(byMatch.get(K(m.id))||[]).map(e=>({...e,team_side:e.team_side==='home'?(home?'team':'opponent'):e.team_side==='away'?(away?'team':'opponent'):e.team_side}));
   const periodEnds=gameEvents.filter(e=>e.event_type==='period_end');
   const recovery=periodEnds.reduce((n,e)=>n+Math.max(0,Number(e.payload?.recovery_actual??e.payload?.recovery_minutes??0)||0),0);
   const duration=base+recovery;total.duration=base;
@@ -52,6 +52,7 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
   const subEvents=gameEvents.filter(e=>e.event_type==='substitution'&&e.team_side==='team');
   const ownSubs=subEvents.filter(e=>K(e.player_id)===K(playerId)||K(e.secondary_player_id)===K(playerId)).sort((a,b)=>(minute(a)??999)-(minute(b)??999));
   const started=me.started===true;
+  const explicitMinutes=me.minutes_played==null?null:Number(me.minutes_played);
   let inside=started,start=started?0:null;
   const intervals=[];let bad=false;
   for(const e of ownSubs){
@@ -66,6 +67,8 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
   if(!bad){for(const e of redEvents){const t=minute(e);if(t===null){bad=true;break}if(inside){intervals.push([start,t]);inside=false;start=null}}}
   if(inside&&!bad)intervals.push([start,duration]);
   if(intervals.some(([a,b])=>a==null||a>b))bad=true;
+  if(explicitMinutes!=null&&Number.isFinite(explicitMinutes)&&!bad){const reconstructed=intervals.reduce((n,[a,b])=>n+b-a,0);if(Math.abs(explicitMinutes-reconstructed)>2)bad=true;}
+  if(started&&subEvents.some(e=>!e.player_id&&!e.secondary_player_id))bad=true;
   const played=intervals.some(([a,b])=>b>a);
   const record=started||played||(!bad&&Number(me.minutes_played)>0);
   if(!record){if(me.selection_status!=='unavailable')total.unused++;continue}
@@ -129,7 +132,7 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
   }
   total.matches.push(game);
  }
- total.trend=total.matches.map((x,i)=>({label:x.label,value:total.matches.slice(0,i+1).reduce((n,m)=>n+(m.pm??0),0),verified:x.pm!==null}));
+ total.trend=total.matches.map((x,i)=>({label:x.label,value:x.pm===null?null:total.matches.slice(0,i+1).reduce((n,m)=>n+(m.pm??0),0),verified:x.pm!==null}));
  return total;
 }
 export function renderPlayerIntelligence(id,source){
