@@ -13,7 +13,7 @@ import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.j
 import {projectionContainer,updateProjection} from './projection-ui.js?history=20261012prematch1';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261013intelligence2';
-import {aggregatePlayerMinutes} from './analytics.js?stats=20261013recovered6';
+import {reconcilePlayerSeasonFacts} from './player-season-facts.js';
 import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute} from './match-minutes.js?live=20261013periodaudit1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
 
@@ -929,19 +929,22 @@ async function switchSeason(id){
   const matches=(data.matches||[]).filter(m=>!m.is_test&&m.status==='finished'),ids=matches.map(m=>m.id).filter(Boolean);
   const fixtureIds=(data.fixtures||[]).filter(f=>f.status==='finished'&&!f.is_test).map(f=>f.id).filter(Boolean);
   const encoded=ids.map(encodeURIComponent).join(',');
-  const [events,matchPlayers,rawPredictions]=await Promise.all([
-   ids.length?get('app_match_events','select=match_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+encoded+')&limit=3000').catch(()=>[]):Promise.resolve([]),
-   ids.length?get('app_match_players','select=match_id,player_id,started,selection_status,minutes_played&match_id=in.('+encoded+')&limit=3000').catch(()=>[]):Promise.resolve([]),
+  const [eventResult,playerResult,rawPredictions]=await Promise.all([
+   ids.length?get('app_match_events','select=match_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+encoded+')&limit=3000').then(rows=>({rows,loaded:true})).catch(()=>({rows:[],loaded:false})):Promise.resolve({rows:[],loaded:true}),
+   ids.length?get('app_match_players','select=match_id,player_id,started,selection_status,minutes_played&match_id=in.('+encoded+')&limit=3000').then(rows=>({rows,loaded:true})).catch(()=>({rows:[],loaded:false})):Promise.resolve({rows:[],loaded:true}),
    fixtureIds.length?get('app_match_prediction_snapshots','select=fixture_id,calculated_at,model&fixture_id=in.('+fixtureIds.map(encodeURIComponent).join(',')+')&limit=500').catch(()=>[]):Promise.resolve([])
   ]);
+  const events=eventResult.rows,matchPlayers=playerResult.rows;
   data.predictionSnapshots=rawPredictions.map(row=>({
    fixture_id:row.fixture_id,generated_at:row.calculated_at,
    home_probability:row.model?.probabilities?.home,draw_probability:row.model?.probabilities?.draw,
    away_probability:row.model?.probabilities?.away
   }));
-  const minuteMap=aggregatePlayerMinutes(matches,matchPlayers,events,data.competitions||[]);
-  data.playerStats=(data.playerStats||[]).map(row=>({...row,minutes:minuteMap.has(String(row.player_id))?minuteMap.get(String(row.player_id)):Number(row.minutes)||0}));
-  verifiedEventCache={season:id,events,matchPlayers};
+  const facts=reconcilePlayerSeasonFacts({playerStats:data.playerStats||[],matches,matchPlayers,events,
+   competitions:data.competitions||[],eventsLoaded:eventResult.loaded,playersLoaded:playerResult.loaded});
+  data.playerStats=facts.stats;
+  data.playerSeasonFacts=facts;
+  verifiedEventCache={season:id,events,matchPlayers,complete:facts.complete};
   if(loadId!==state.loadId)return;
   state.data=data;state.loading=false;sessionStorage.setItem('tm_next_season',id);render();
  }
