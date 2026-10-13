@@ -13,7 +13,7 @@ import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.j
 import {projectionContainer,updateProjection} from './projection-ui.js?history=20261012prematch1';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261013intelligence2';
-import {aggregatePlayerMinutes} from './analytics.js?stats=20261013minutes1';
+import {aggregatePlayerMinutes} from './analytics.js?stats=20261013recovered5';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js?live=20261006halftime1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
 
@@ -21,7 +21,7 @@ import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=202610
 import {matchPlayerLabel} from './match-player-label.js';
 import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
-import {renderPlayerIntelligence} from './player-intelligence.js?v=20261013subentries4';
+import {renderPlayerIntelligence} from './player-intelligence.js?v=20261013recovered5';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
 import {weightedTeamRating} from './team-rating.js?legacy=20261006v1';
