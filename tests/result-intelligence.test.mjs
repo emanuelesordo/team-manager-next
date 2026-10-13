@@ -56,3 +56,17 @@ test('field profiles need configured venue names, no invented categories',()=>{
  assert.equal(r.venue.bySurface.reduce((s,x)=>s+x.matches,0),4);
  assert.equal(r.venue.bySurface.length,2);
 });
+
+test('historical strength applies only from seasons completed before the played fixture',()=>{
+ const earlier=[
+  {opponent_id:'A',season_start_year:2025,tier_level:1,final_position:2,total_positions:12,points:39,max_points:45},
+  {opponent_id:'B',season_start_year:2025,tier_level:3,final_position:11,total_positions:12,points:8,max_points:45}
+ ];
+ const active=analyseResults(fixtures,'opponent:A',{competitions:[competition],history:earlier,before:'2026-09-10T00:00:00Z'});
+ assert.equal(active.played,1);
+ assert.equal(active.opponentTier.lower.matches,1);
+ const future=[{opponent_id:'B',season_start_year:2026,tier_level:1,final_position:1,total_positions:12,points:45,max_points:45}];
+ const plain=analyseResults(fixtures,'opponent:A',{competitions:[competition],before:'2026-09-10T00:00:00Z'});
+ const unreleased=analyseResults(fixtures,'opponent:A',{competitions:[competition],history:future,before:'2026-09-10T00:00:00Z'});
+ assert.deepEqual(unreleased,plain);
+});
