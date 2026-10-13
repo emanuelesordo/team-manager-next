@@ -49,19 +49,29 @@ export function reconcilePlayerSeasonFacts({
   const complete=eventsLoaded&&playersLoaded&&officialApps!==null&&officialStarts!==null
     &&played.length===officialApps&&startsRebuilt===officialStarts&&
     played.every(p=>p.valid&&p.minutes!==null);
-  const minutes=complete?played.reduce((n,p)=>n+p.minutes,0):officialApps===0&&eventsLoaded&&playersLoaded?0:null;
-  const subentries=eventsLoaded&&playersLoaded&&officialApps!==null&&officialStarts!==null
-    &&played.length===officialApps&&startsRebuilt===officialStarts
-    ?entryCount:null;
-  const detail={minutes,subentries,complete,checked:played.length,expected:officialApps,
-   perMatch:participations,source:'confirmed_match_timeline'};
+  const serverCoverage=['complete','unavailable','not_applicable'].includes(row.minutes_coverage)
+   ?row.minutes_coverage:null;
+  const localMinutes=complete?played.reduce((n,p)=>n+p.minutes,0):officialApps===0&&eventsLoaded&&playersLoaded?0:null;
+  const localSubentries=eventsLoaded&&playersLoaded&&officialApps!==null&&officialStarts!==null
+    &&played.length===officialApps&&startsRebuilt===officialStarts?entryCount:null;
+  // The final SQL view is authoritative. Client intervals are a cross-check and
+  // are never allowed to replace official persisted/database-calculated facts.
+  const minutes=serverCoverage?(row.minutes==null?null:Number(row.minutes)):localMinutes;
+  const subentries=serverCoverage?(row.subentries==null?null:Number(row.subentries)):localSubentries;
+  if(serverCoverage&&eventsLoaded&&playersLoaded&&complete&&
+     (minutes!==localMinutes||subentries!==localSubentries))
+   discrepancies.push({player_id:id,kind:'sql_frontend_mismatch',sql_minutes:minutes,local_minutes:localMinutes,
+     sql_subentries:subentries,local_subentries:localSubentries});
+  const detail={minutes,subentries,complete:serverCoverage?serverCoverage==='complete':complete,
+   checked:played.length,expected:officialApps,perMatch:participations,
+   source:serverCoverage?'app_player_season_stats':'confirmed_match_timeline'};
   derivedByPlayer.set(id,detail);
   if(officialApps!==null&&(officialApps!==played.length||officialStarts!==startsRebuilt)){
    discrepancies.push({player_id:id,kind:'appearances',official:officialApps,detected:played.length});
   }else if(officialApps>0&&!complete){
    discrepancies.push({player_id:id,kind:'minutes_incomplete',official:officialApps,checked:played.filter(p=>p.valid).length});
   }
-  return {...row,minutes,subentries,minutesCoverage:complete?'complete':officialApps===0?'not_applicable':'unavailable'};
+  return {...row,minutes,subentries,minutesCoverage:serverCoverage||(complete?'complete':officialApps===0?'not_applicable':'unavailable')};
  });
  return {stats,derivedByPlayer,perMatch,discrepancies,complete:eventsLoaded&&playersLoaded};
 }
