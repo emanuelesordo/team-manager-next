@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {predictMatch,predictionSignature} from '../fresh/pre-match-prediction.js';
+import {renderPreMatchPrediction} from '../fresh/pre-match-prediction-ui.js';
 
 const competition={id:'c1',kind:'league',win_points:3,draw_points:1,loss_points:0,periods:2,minutes_per_period:40};
 const fixture=(id,status,date,home,away,hs=null,as=null,venue='Campo A')=>({
@@ -109,4 +110,13 @@ test('pre-match output exposes robust result intelligence without events',()=>{
  assert.ok(result.factors.some(x=>x.key==='adjusted-form'));
  assert.equal(result.profiles.home.resultAnalysis.played,2);
  assert.equal(result.profiles.home.confidence.B.sample,0);
+});
+
+test('pre-match comparison renders event-free profiles with sample counts',()=>{
+ const result=predictMatch({fixture:fixtures[4],competition,fixtures,history,venues,matches:[],events:[],team:null,competitions:[competition]});
+ const markup=renderPreMatchPrediction(result);
+ assert.match(markup,/Entrambe segnano/);
+ assert.match(markup,/Gare con 3\+ gol totali/);
+ assert.match(markup,/Forma corretta per rango/);
+ assert.match(markup,/Timeline complete:/);
 });
