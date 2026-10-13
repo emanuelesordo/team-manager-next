@@ -114,3 +114,14 @@ test('a goal at the last minute of declared recovery counts while the player is 
  assert.equal(v.gfOn,1);
  assert.equal(v.goals,1);
 });
+
+test('cumulative plus-minus chart does not silently skip unknown game contributions',()=>{
+ const g={...base,fixtures:[fixture,{...fixture,id:'f2',kickoff_at:'2026-10-08T20:00:00Z'}],
+ matches:[match,{...match,id:'m2',fixture_id:'f2'}],
+ matchPlayers:[...base.matchPlayers,{match_id:'m2',player_id:'p',started:true}],
+ events:[...base.events,{match_id:'m2',event_type:'goal',minute:null,team_side:'home',player_id:'p',validation_status:'official'}]};
+ const result=playerIntelligence('p',g);
+ assert.equal(result.matches.length,2);
+ assert.equal(result.trend[0].verified,true);
+ assert.equal(result.trend[1].value,null);
+});
