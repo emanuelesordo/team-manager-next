@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import{resultSplit,eventCoverage}from '../fresh/analytics.js';
+import{resultSplit,eventCoverage,seasonNumbers}from '../fresh/analytics.js';
 const team={id:'T',name:'Calcio Caselle',short_name:'CAS'};
 const f=(home,away,hs,as,status='finished',id='f')=>({id,home_team:home,away_team:away,home_team_id:home==='Calcio Caselle'?'T':null,away_team_id:away==='Calcio Caselle'?'T':null,home_opponent_id:home==='Calcio Caselle'?null:'O',away_opponent_id:away==='Calcio Caselle'?null:'O',home_score:hs,away_score:as,status});
 test('zero-zero counts as clean sheet, incomplete score ignored',()=>{
@@ -35,4 +35,27 @@ test('half-time fallback is valid without a complete goal timeline',()=>{
  assert.equal(s.halftime.trailing.matches,1);
  assert.equal(s.halftime.trailing.wins,1);
  assert.equal(s.gameState.matches,0);
+});
+
+test('season goal quarters use one cumulative clock for mixed legacy and live periods',()=>{
+ const fixture={...f('Calcio Caselle','A',2,0),competition_id:'c'};
+ const match={id:'m',fixture_id:'f',competition_id:'c',status:'finished'};
+ const events=[
+  {match_id:'m',event_type:'goal',team_side:'team',minute:28,payload:{period:'second_half'},validation_status:'official'},
+  {match_id:'m',event_type:'goal',team_side:'team',minute:63,payload:{period:'second_half',entered_from:'tm_app_live'},validation_status:'official'}
+ ];
+ const r=seasonNumbers([fixture],[match],events,team,[{id:'c',minutes_per_period:40,periods:2}]);
+ assert.deepEqual(r.goalsByPeriod,[0,2]);
+ assert.deepEqual(r.goalIntervals,[0,0,0,2]);
+});
+test('official clock sorts goal situations even when first goal is stored in 2T-relative format',()=>{
+ const fixture={...f('Calcio Caselle','A',1,1),competition_id:'c'};
+ const match={id:'m',fixture_id:'f',status:'finished',home_away:'home'};
+ const events=[
+  {match_id:'m',event_type:'goal',team_side:'team',minute:18,payload:{period:'second_half'},validation_status:'official'},
+  {match_id:'m',event_type:'goal',team_side:'opponent',minute:55,payload:{period:'second_half',entered_from:'tm_app_live'},validation_status:'official'}
+ ];
+ const r=eventCoverage([fixture],[match],events,team,[{id:'c',minutes_per_period:40,periods:2}]);
+ assert.equal(r.complete,1);
+ assert.equal(r.goalSituations.behind,1);
 });
