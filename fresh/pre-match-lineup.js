@@ -118,7 +118,8 @@ function ratingAverages(data,matches,fixtureWeights,team){
   const row=byPlayer.get(key(p.id)),stat=seasonStats.get(key(p.id)),role=roleOf(p)||'GEN';
   const roleBucket=roleBuckets.get(role),roleAverage=roleBucket?.n?roleBucket.sum/roleBucket.n:null;
   const fallback=finite(stat?.avg_rating)?Number(stat.avg_rating):(finite(roleAverage)?Number(roleAverage):(finite(teamAverage)?Number(teamAverage):null));
-  const mean=row?.plainN?row.plainSum/row.plainN:fallback;
+  // A displayed historical mean must be observed; role/team means are only predictive priors.
+  const mean=finite(stat?.avg_rating)?Number(stat.avg_rating):(row?.plainN?row.plainSum/row.plainN:null);
   const context=row?.weight?row.weightedSum/row.weight:fallback;
   result.set(key(p.id),{mean,context,votes:row?.plainN||0,fallbackSource:finite(stat?.avg_rating)?'season':finite(roleAverage)?'role':finite(teamAverage)?'team':'none'});
  }
@@ -218,7 +219,7 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
   const result=(Number(m.resultQuality||.5)-.5)*1.6;
   const synergy=(synergyWithUsed(id,used,coPlay)-.5)*2.2;
   const recentLoad=(m.recentMatchCount?m.recentStarts/Math.max(1,m.recentMatchCount):0)*.65+
-   (m.recentMinutes==null?.18:clamp(m.recentMinutes/(Math.max(1,m.recentMatchCount||1)*80),0,1)*.35);
+   (m.recentMinutes==null ? .18 : clamp(m.recentMinutes/(Math.max(1,m.recentMatchCount||1)*80),0,1)*.35);
   const ratingTrust=finite(m.contextRating)?clamp((Number(m.contextRating)-5.8)/1.8,0,1):.45;
   // Turnover is a soft pressure, never a hard exclusion: in clearly favorable
   // matches heavily-used starters lose a little priority, while reliable alternatives
@@ -237,7 +238,7 @@ function expectedRatingFor(playerId,xiIds,scores,coPlay){
  let expected=context??mean;
  if(mean!=null&&context!=null)expected=.55*mean+.45*context;
  expected+=clamp((synergy-.5)*.55,-.28,.28)+clamp((Number(m.resultQuality||.5)-.5)*.22,-.11,.11);
- return {mean:mean??context,expected:clamp(expected,1,10),matches:m.ratingMatches||0,synergy};
+ return {mean,expected:clamp(expected,1,10),matches:m.ratingMatches||0,synergy};
 }
 export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team,competition,competitions=[],prediction,kit,events=[]}={}){
  if(!fixture||!team?.id||!data)return null;
