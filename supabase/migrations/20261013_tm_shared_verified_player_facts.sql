@@ -1,6 +1,5 @@
--- Canonical match-player participation / player season totals.
--- Source: live schema, verified on 2026-10-13. All definitions are CREATE OR REPLACE.
--- No historical event, match or player records are modified.
+-- Verified, reusable season facts. Generated from live reconciled Supabase view definitions 2026-10-13.
+-- No player/event records are changed. Missing period-end and invalid sequences yield NULL.
 SET search_path = public, private;
 
 CREATE OR REPLACE VIEW private.tm_player_match_participation AS
@@ -124,7 +123,7 @@ WITH base AS (
          SELECT e.match_id,
             e.player_id,
             e.t,
-            'out'::text,
+            'out'::text AS text,
             1,
             e.created_at,
             e.id
@@ -134,7 +133,7 @@ WITH base AS (
          SELECT e.match_id,
             e.secondary_player_id,
             e.t,
-            'in'::text,
+            'in'::text AS text,
             2,
             e.created_at,
             e.id
@@ -144,7 +143,7 @@ WITH base AS (
          SELECT e.match_id,
             e.player_id,
             e.t,
-            'in'::text,
+            'in'::text AS text,
             2,
             e.created_at,
             e.id
@@ -189,11 +188,15 @@ WITH base AS (
     mp.started OR COALESCE(en.n, 0::bigint) > 0 AS appeared,
     NOT mp.started AND COALESCE(en.n, 0::bigint) > 0 AS subentered,
         CASE
-            WHEN c.periods <> 2 OR COALESCE(mb.bad, false) OR COALESCE(pt.bad, false) OR mp.minutes_played IS NOT NULL AND abs(COALESCE(pt.mins, 0::numeric) - mp.minutes_played::numeric) > 2::numeric THEN NULL::integer
+            WHEN c.periods <> 2 OR (( SELECT count(*) AS count
+               FROM period_ends pe
+              WHERE pe.match_id = c.match_id AND (pe.pno = ANY (ARRAY[1, 2])))) <> 2 OR COALESCE(mb.bad, false) OR COALESCE(pt.bad, false) OR mp.minutes_played IS NOT NULL AND abs(COALESCE(pt.mins, 0::numeric) - mp.minutes_played::numeric) > 2::numeric THEN NULL::integer
             ELSE round(COALESCE(pt.mins, 0::numeric))::integer
         END AS minutes,
         CASE
-            WHEN c.periods <> 2 OR COALESCE(mb.bad, false) OR COALESCE(pt.bad, false) OR mp.minutes_played IS NOT NULL AND abs(COALESCE(pt.mins, 0::numeric) - mp.minutes_played::numeric) > 2::numeric THEN false
+            WHEN c.periods <> 2 OR (( SELECT count(*) AS count
+               FROM period_ends pe
+              WHERE pe.match_id = c.match_id AND (pe.pno = ANY (ARRAY[1, 2])))) <> 2 OR COALESCE(mb.bad, false) OR COALESCE(pt.bad, false) OR mp.minutes_played IS NOT NULL AND abs(COALESCE(pt.mins, 0::numeric) - mp.minutes_played::numeric) > 2::numeric THEN false
             ELSE true
         END AS valid,
     c.duration
@@ -467,6 +470,6 @@ SELECT CASE
 FROM validated p JOIN votes v ON v.player_id=p.player_id
 $function$;
 REVOKE ALL ON FUNCTION public.tm_app_public_weighted_rating(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.tm_app_public_weighted_rating(uuid) TO anon, authenticated;
-NOTIFY pgrst, 'reload schema';
+GRANT EXECUTE ON FUNCTION public.tm_app_public_weighted_rating(uuid) TO anon,authenticated;
+NOTIFY pgrst,'reload schema';
 RESET search_path;
