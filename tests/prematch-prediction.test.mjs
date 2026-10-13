@@ -98,3 +98,15 @@ test('match narrative reflects matchup-specific signals',()=>{
  assert.ok(second.narrative.includes('A')||second.narrative.includes('C'));
  assert.notEqual(first.narrative,second.narrative);
 });
+
+test('pre-match output exposes robust result intelligence without events',()=>{
+ const result=predictMatch({fixture:fixtures[4],competition,fixtures,history,venues,matches:[],events:[],team:null,competitions:[competition]});
+ assert.ok(result?.resultIntelligence?.home);
+ assert.ok(result?.resultIntelligence?.away);
+ assert.equal(result.resultIntelligence.home.played,2);
+ assert.equal(result.resultIntelligence.away.played,2);
+ assert.equal(result.resultIntelligence.home.vsPrediction.matches,0);
+ assert.ok(result.factors.some(x=>x.key==='adjusted-form'));
+ assert.equal(result.profiles.home.resultAnalysis.played,2);
+ assert.equal(result.profiles.home.confidence.B.sample,0);
+});
