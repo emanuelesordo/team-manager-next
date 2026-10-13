@@ -53,7 +53,7 @@ test('player card uses canonical roster minutes for displayed total and per-goal
  const html=renderPlayerIntelligence('p',{...base,stats:{minutes:49}});
  assert.match(html,/Minuti giocati<\/span><strong>49′/);
  assert.match(html,/Minuti \/ gol<\/span><strong>49′/);
- assert.match(html,/Stessa fonte della Rosa/);
+ assert.match(html,/Stessa fonte verificata della Rosa/);
 });
 
 test('canonical roster counts govern appearances, starters, subentries, goals and cards',()=>{
@@ -65,7 +65,7 @@ test('canonical roster counts govern appearances, starters, subentries, goals an
  assert.match(html,/Gol da subentrato<\/span><strong>—/);
 });
 
-test('three confirmed entries across finished games are counted as three sub appearances',()=>{
+test('SQL appearances remain authoritative even if local events claim extra entries',()=>{
  const source={...base,matches:[
   {id:'m1',status:'finished'}, {id:'m2',status:'finished'}, {id:'m3',status:'finished'}
  ],events:[...base.events,
@@ -73,7 +73,7 @@ test('three confirmed entries across finished games are counted as three sub app
   {match_id:'m3',event_type:'substitution',minute:51,team_side:'team',secondary_player_id:'p',validation_status:'official'}
  ],stats:{appearances:2,starts:0,minutes:49}};
  const html=renderPlayerIntelligence('p',source);
- assert.ok(html.includes('0 titolare · 3 subentrato'));
+ assert.ok(html.includes('0 titolare · 2 subentrato'));
 });
 
 test('authoritative SQL zero minutes and no entered match must not become invented local minutes',()=>{
