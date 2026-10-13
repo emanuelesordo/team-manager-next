@@ -62,7 +62,8 @@ export function buildTeamProfile({numbers={},gameState={},eventMatches=0,resultA
   {key:'margin-trend',label:'Evoluzione forza stimata',value:resultAnalysis?.strength?.deltaFive==null?null:clamp(.5+resultAnalysis.strength.deltaFive/120),raw:resultAnalysis?.strength?.deltaFive??null,confidence:'A',sample:Math.min(resultAnalysis?.played||0,5)},
   {key:'vs-higher-rank',label:'Rendimento vs rango superiore',value:resultAnalysis?.opponentTier?.higher?.ppg==null?null:clamp(resultAnalysis.opponentTier.higher.ppg/3),confidence:'A',sample:resultAnalysis?.opponentTier?.higher?.matches||0}
  ];
- const available=metrics.filter(x=>x.value!==null&&x.value!==undefined&&Number.isFinite(Number(x.value))&&x.sample>0);
+ const descriptiveKeys=new Set(['open-games','tight-games','both-score','low-scoring']);
+ const available=metrics.filter(x=>!descriptiveKeys.has(x.key)&&x.value!==null&&x.value!==undefined&&Number.isFinite(Number(x.value))&&x.sample>0);
  const overall=available.length?available.reduce((s,x)=>{
   const conf=resultConfidence[x.confidence]?.score??0;
   const weight=x.confidence==='A'?1:(x.confidence==='B'?0.65:0.35);
@@ -74,7 +75,7 @@ export function buildTeamProfile({numbers={},gameState={},eventMatches=0,resultA
  },0):.5;
  return {
   overall:clamp(overall),played,gfpg,gapg,failToScore,cleanSheet,openRate,tightRate,bigWinRate,bigLossRate,volatility,
-  homePpg,awayPpg,metrics,confidence:resultConfidence,resultAnalysis,
+  homePpg,awayPpg,metrics,confidence:resultConfidence,resultAnalysis,descriptiveKeys:[...descriptiveKeys],
   timelineCoverage:played?timeline/played:0
  };
 }
