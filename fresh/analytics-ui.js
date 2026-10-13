@@ -1,5 +1,5 @@
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
-import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers,aggregatePlayerMinutes} from './analytics.js?stats=20261013minutes1';
+import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers} from './analytics.js?stats=20261013sourcefacts1';
 import {buildTeamProfile,profileHighlights} from './team-profile.js';
 import {analyseResults} from './result-intelligence.js';
 
@@ -179,8 +179,8 @@ export function eventAnalyticsPlaceholder(){
 }
 
 export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[]){
- const minuteMap=aggregatePlayerMinutes(matches,matchPlayers,events,competitions);
- const computedPlayers=(playerStats||[]).map(p=>({...p,minutes:minuteMap.has(String(p.player_id))?minuteMap.get(String(p.player_id)):Number(p.minutes)||0}));
+ // These are already reconciled seasonal facts; never create a second independent minute total.
+ const computedPlayers=playerStats||[];
  const numbers=seasonNumbers(fixtures,matches,events,team,competitions,computedPlayers);
  const coverage=eventCoverage(fixtures,matches,events,team,competitions);
  const intelligence=analyseResults(fixtures,team?.id?'team:'+team.id:null,{competitions,venues,predictionSnapshots,history});
