@@ -5,7 +5,7 @@ const valid=f=>f?.status==='finished'&&f.is_test!==true&&f.home_score!=null&&f.a
 const points=(gf,ga,config)=>gf>ga?Number(config?.win_points??3):gf===ga?Number(config?.draw_points??1):Number(config?.loss_points??0);
 const mean=a=>a.length?a.reduce((v,x)=>v+x,0)/a.length:null;
 const median=a=>{if(!a.length)return null;const v=[...a].sort((x,y)=>x-y);return v.length%2?v[(v.length-1)/2]:(v[v.length/2-1]+v[v.length/2])/2};
-const std=a=>{const m=mean(a);return m==null?null:Math.sqrt(a.reduce((sum,x)=>sum+(x-m)**2,0)/a.length)};
+const std=a=>{if(a.length<2)return null;const m=mean(a);return Math.sqrt(a.reduce((sum,x)=>sum+(x-m)**2,0)/a.length)};
 const norm=x=>String(x??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'');
 const safeDate=x=>{const n=Date.parse(x??'');return Number.isFinite(n)?n:null};
 const status=(gf,ga)=>gf>ga?'W':gf===ga?'D':'L';
