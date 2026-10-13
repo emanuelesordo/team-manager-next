@@ -193,9 +193,11 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
   ' gol segnati <span>/</span> '+numbers.ga+' subiti</h2><p>'+numbers.played+' gare concluse con risultato valido</p></div></section>';
  const core='<div class="team-metric-grid">'+cell('Partite',numbers.played)+cell('Gol fatti',numbers.gf)+cell('Gol subiti',numbers.ga)+
   cell('Differenza reti',(diff>0?'+':'')+diff)+cell('Porte inviolate',numbers.cleanSheets)+cell('Sostituzioni',numbers.substitutions)+'</div>';
+ const fullGoalCoverage=coverage.complete===coverage.possible;
  const period='<section class="glass panel"><div class="panel-heading"><h2>Gol per tempo</h2></div><div class="team-metric-grid">'+
-  cell('1° tempo',numbers.goalsByPeriod[0])+cell('2° tempo',numbers.goalsByPeriod[1])+
-  cell('Subiti 1° tempo',numbers.concededByPeriod[0])+cell('Subiti 2° tempo',numbers.concededByPeriod[1])+'</div></section>';
+  cell('1° tempo',fullGoalCoverage?numbers.goalsByPeriod[0]:'—')+cell('2° tempo',fullGoalCoverage?numbers.goalsByPeriod[1]:'—')+
+  cell('Subiti 1° tempo',fullGoalCoverage?numbers.concededByPeriod[0]:'—')+cell('Subiti 2° tempo',fullGoalCoverage?numbers.concededByPeriod[1]:'—')+'</div>'+
+  (!fullGoalCoverage?'<p class="subnote">Distribuzione disponibile dopo la riconciliazione delle sequenze gol con i risultati ufficiali.</p>':'')+'</section>';
  const advanced='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Copertura eventi</h2></div>'+
   '<div class="team-metric-grid">'+cell('Eventi ufficializzati',validated.length)+cell('Proposte registrate',proposed)+
   cell('Timeline complete',coverage.complete+'/'+coverage.possible)+'</div>'+
@@ -203,15 +205,15 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
  return header+'<section class="glass panel">'+core+'</section><div class="leaderboard-grid">'+
   balance(numbers)+venue(numbers)+ranking('Classifica marcatori',computedPlayers,'goals')+ranking('Assist',computedPlayers,'assists')+
   ranking('Minuti giocati',computedPlayers,'minutes')+ranking('Media voti',computedPlayers,'avg_rating',{digits:2,empty:'Nessun voto valido'})+
-  goalDistribution(numbers)+discipline(numbers,computedPlayers)+'</div>'+
+  (fullGoalCoverage?goalDistribution(numbers):'<section class="glass panel leaderboard"><div class="panel-heading"><h2>Distribuzione gol</h2></div><p class="subnote">Dati in verifica: la ripartizione non copre tutte le partite concluse.</p></section>')+discipline(numbers,computedPlayers)+'</div>'+
   '<section class="glass panel"><div class="panel-heading"><h2>Ultime partite</h2></div>'+lastResults(numbers.matches,opponents)+'</section>'+
   teamProfilePanel(profile)+resultProfilePanel(profile)+resultIntelligencePanel(intelligence)+period+gameStatePanels(coverage.gameState)+progressionsPanel(coverage.gameState,coverage.halftime)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
 }
 
 export function fixtureEventsPanel(events,competition=null,fixture=null){
- const rows=(events||[]).filter(e=>e.event_type&&e.validation_status!=='rejected').sort((a,b)=>(cumulativeEventMinute(a,competition)??999)-(cumulativeEventMinute(b,competition)??999)||(a.stoppage_minute??0)-(b.stoppage_minute??0));
+ const rows=(events||[]).filter(e=>e.event_type&&['official','community_confirmed'].includes(e.validation_status)).sort((a,b)=>(cumulativeEventMinute(a,competition)??999)-(cumulativeEventMinute(b,competition)??999)||(a.stoppage_minute??0)-(b.stoppage_minute??0));
  if(!rows.length)return '';
- const goals=rows.filter(e=>['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type)&&e.validation_status!=='rejected');
+ const goals=rows.filter(e=>['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type)&&e.payload?.count_score!==false);
  const homeCount=goals.filter(e=>e.side==='home'&&e.event_type!=='own_goal'||e.side==='away'&&e.event_type==='own_goal').length;
  const awayCount=goals.filter(e=>e.side==='away'&&e.event_type!=='own_goal'||e.side==='home'&&e.event_type==='own_goal').length;
  const hasUntimedGoals=goals.some(e=>cumulativeEventMinute(e,competition)===null);
