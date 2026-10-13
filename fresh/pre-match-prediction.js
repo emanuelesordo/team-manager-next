@@ -405,7 +405,7 @@ function stableChoice(seed,items=[]){
  let h=0;for(const ch of String(seed||''))h=(h*31+ch.charCodeAt(0))>>>0;
  return items[h%items.length];
 }
-function matchNarrative({fixture,probability,expectedGoals,home,away,homeComparison,awayComparison,homeSituational,awaySituational,venue,attention=[]}){
+function matchNarrative({fixture,probability,expectedGoals,home,away,homeComparison,awayComparison,homeSituational,awaySituational,homeIntelligence,awayIntelligence,venue,attention=[]}){
  const score=probability?.topScorelines?.[0]||probability?.mostLikely||{home:0,away:0,probability:0};
  const total=Number(expectedGoals.home||0)+Number(expectedGoals.away||0);
  const gap=Number(expectedGoals.home||0)-Number(expectedGoals.away||0);
@@ -454,6 +454,17 @@ function matchNarrative({fixture,probability,expectedGoals,home,away,homeCompari
   add(62,'La forma recente dà un piccolo vantaggio a '+better+', ma il campione non è abbastanza forte da dominare il pronostico.','form');
  }
 
+ const hRes=homeIntelligence,aRes=awayIntelligence;
+ if(hRes?.played>=4&&aRes?.played>=4&&hRes.bothScore?.rate>=.7&&aRes.bothScore?.rate>=.7)
+  add(81,'Entrambe le squadre hanno visto segnare tutte e due le formazioni in almeno il 70% delle proprie gare concluse: un segnale descrittivo di partite con occasioni per entrambe, non una garanzia di gol.','bothscore');
+ if(hRes?.played>=4&&aRes?.played>=4&&hRes.closeAtFinal?.rate>=.7&&aRes.closeAtFinal?.rate>=.7)
+  add(80,'I risultati finali di entrambe sono stati spesso decisi da non più di un gol: il profilo storico suggerisce equilibrio nello scarto, indipendentemente da chi parta favorita.','tightness');
+ const hAdjusted=hRes?.form?.opponentAdjusted,aAdjusted=aRes?.form?.opponentAdjusted;
+ if(hRes?.form?.adjustedSample>=3&&aRes?.form?.adjustedSample>=3&&
+    hAdjusted!=null&&aAdjusted!=null&&Math.abs(hAdjusted-aAdjusted)>=.25){
+  const name=hAdjusted>aAdjusted?fixture.home_team:fixture.away_team;
+  add(88,'Anche correggendo gli ultimi risultati per il livello delle avversarie affrontate, '+name+' mantiene la forma recente più favorevole.','strength-adjusted-form');
+ }
  if(total>=3.35){
   if(Math.abs(gap)>=.85&&favorite)
    add(82,'Il volume di gol atteso è alto soprattutto perché '+favorite+' produce molto più dell’avversaria: il rischio principale è che la gara si apra dopo il primo vantaggio, non necessariamente che sia equilibrata.','goals');
@@ -650,7 +661,11 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const venueDelta=(homeVenue.sample>=2?homeVenue.delta:0)-(awayVenue.sample>=2?awayVenue.delta:0);
  const gameStateDelta=clamp(gameStateScore(homeSituational)-gameStateScore(awaySituational),-.35,.35);
  const statePatternDelta=stateMatchup(homeSituational,awaySituational)-stateMatchup(awaySituational,homeSituational);
- const context=.30*rankDelta+.12*managementDelta+.16*gameStateDelta+.16*numericalDelta+.16*venueDelta+.10*statePatternDelta;
+ const formSamples=Math.min(homeIntelligence.form.adjustedSample,awayIntelligence.form.adjustedSample);
+ const adjustedFormDelta=formSamples>=2&&homeIntelligence.form.opponentAdjusted!=null&&awayIntelligence.form.opponentAdjusted!=null?
+  clamp((homeIntelligence.form.opponentAdjusted-awayIntelligence.form.opponentAdjusted)*Math.min(1,formSamples/5),-.3,.3):0;
+ const context=.27*rankDelta+.12*managementDelta+.15*gameStateDelta+.15*numericalDelta+.15*venueDelta+
+  .10*statePatternDelta+.06*adjustedFormDelta;
  homeLambda*=Math.exp(context);awayLambda*=Math.exp(-context);
  homeLambda=clamp(homeLambda,.15,4.5);awayLambda=clamp(awayLambda,.15,4.5);
 
@@ -658,9 +673,11 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const attention=attentionPoints(fixture.home_team,fixture.away_team,homeComparison,awayComparison,homeSituational,awaySituational);
  const narrative=matchNarrative({
   fixture,probability,expectedGoals:{home:homeLambda,away:awayLambda},home,away,
-  homeComparison,awayComparison,homeSituational,awaySituational,venue:targetVenue,attention
+  homeComparison,awayComparison,homeSituational,awaySituational,homeIntelligence,awayIntelligence,venue:targetVenue,attention
  });
  const factors=[
+  {key:'adjusted-form',label:'Forma corretta per rango',home:homeIntelligence.form.opponentAdjusted??.5,away:awayIntelligence.form.opponentAdjusted??.5,
+   detail:'Correzione della forma recente sulla forza dell’avversaria stimata prima della gara. Con meno di due precedenti affidabili il correttivo resta neutro.'},
   {key:'profile',label:'Team Profile',home:homeProfile.overall,away:awayProfile.overall,
    detail:'Sintesi degli indicatori disponibili con confidenza A/B/C. Non aggiunge un secondo peso al modello: organizza le stesse feature ed evidenzia quanto sono affidabili.'},
   {key:'form',label:'Forma recente',home:home.recent,away:away.recent,
