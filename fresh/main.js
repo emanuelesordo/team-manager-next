@@ -926,7 +926,7 @@ async function switchSeason(id){
   const encoded=ids.map(encodeURIComponent).join(',');
   const [events,matchPlayers,rawPredictions]=await Promise.all([
    ids.length?get('app_match_events','select=match_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+encoded+')&limit=3000').catch(()=>[]):Promise.resolve([]),
-   ids.length?get('app_match_players','select=match_id,player_id,started,selection_status&match_id=in.('+encoded+')&limit=3000').catch(()=>[]):Promise.resolve([]),
+   ids.length?get('app_match_players','select=match_id,player_id,started,selection_status,minutes_played&match_id=in.('+encoded+')&limit=3000').catch(()=>[]):Promise.resolve([]),
    fixtureIds.length?get('app_match_prediction_snapshots','select=fixture_id,calculated_at,model&fixture_id=in.('+fixtureIds.map(encodeURIComponent).join(',')+')&limit=500').catch(()=>[]):Promise.resolve([])
   ]);
   data.predictionSnapshots=rawPredictions.map(row=>({
@@ -1188,7 +1188,7 @@ async function fillAnalytics(){
  try{
   const encodedIds=ids.map(encodeURIComponent).join(',');
   const eventQuery='select=match_id,event_type,minute,stoppage_minute,team_side,player_id,secondary_player_id,validation_status,payload,created_at&match_id=in.('+encodedIds+')&limit=2000';
-  const playerQuery='select=match_id,player_id,started,selection_status&match_id=in.('+encodedIds+')&limit=2000';
+  const playerQuery='select=match_id,player_id,started,selection_status,minutes_played&match_id=in.('+encodedIds+')&limit=2000';
   const [events,matchPlayers]=await Promise.all([get('app_match_events',eventQuery),get('app_match_players',playerQuery)]);
   if(chosen!==state.season)return;
   verifiedEventCache={season:chosen,events,matchPlayers};
