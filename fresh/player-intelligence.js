@@ -1,9 +1,9 @@
-import {cumulativeEventMinute} from './match-minutes.js';
+import {matchPlayerIntervals,matchElapsedMinute,confirmedMatchEvent} from './player-participation.js';
 
 const K=x=>String(x??'');
 const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;', '"':'&quot;',"'":'&#39;'}[c]));
 const GOALS=new Set(['goal','penalty_goal','penalty_scored','own_goal']);
-const ACCEPT=e=>e.validation_status!=='rejected'&&e.validation_status!=='disputed'&&e.payload?.count_score!==false;
+const ACCEPT=e=>confirmedMatchEvent(e)&&e.payload?.count_score!==false;
 const number=x=>Number.isFinite(x)?x.toLocaleString('it-IT',{maximumFractionDigits:2}):'—';
 const rate=(x,mins,unit)=>mins>0?number(x*unit/mins):'—';
 const inRange=(x,ints)=>ints.some(([a,b])=>x>=a&&x<b);
@@ -45,32 +45,15 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
   const half=Number(m.minutes_per_period_override||comp.minutes_per_period)||40;
   const base=half*(Number(m.periods_override||comp.periods)||2);
   const gameEvents=(byMatch.get(K(m.id))||[]).map(e=>({...e,team_side:e.team_side==='home'?(home?'team':'opponent'):e.team_side==='away'?(away?'team':'opponent'):e.team_side}));
-  const periodEnds=gameEvents.filter(e=>e.event_type==='period_end');
-  const recovery=periodEnds.reduce((n,e)=>n+Math.max(0,Number(e.payload?.recovery_actual??e.payload?.recovery_minutes??0)||0),0);
-  const duration=base+recovery;total.duration=base;
-  const minute=e=>{const v=cumulativeEventMinute(e,{...comp,minutes_per_period:half});return v==null?null:Math.max(0,Math.min(duration,v+(Number(e.stoppage_minute)||0)))};
-  const subEvents=gameEvents.filter(e=>e.event_type==='substitution'&&e.team_side==='team');
-  const ownSubs=subEvents.filter(e=>K(e.player_id)===K(playerId)||K(e.secondary_player_id)===K(playerId)).sort((a,b)=>(minute(a)??999)-(minute(b)??999));
+  const timeline=matchPlayerIntervals(m,p,gameEvents,comp);
+  const duration=timeline.timing.duration;total.duration=timeline.timing.half*timeline.timing.periods;
+  const minute=e=>matchElapsedMinute(e,comp,timeline.timing);
+  const participation=timeline.players.get(K(playerId));
   const started=me.started===true;
-  const explicitMinutes=me.minutes_played==null?null:Number(me.minutes_played);
-  let inside=started,start=started?0:null;
-  const intervals=[];let bad=false;
-  for(const e of ownSubs){
-   const t=minute(e);if(t===null){bad=true;break}
-   // Existing match convention: player_id = leaving player, secondary_player_id = entering player.
-   const outgoing=K(e.player_id)===K(playerId),incoming=K(e.secondary_player_id)===K(playerId);
-   if(outgoing&&incoming){bad=true;break}
-   if(outgoing){if(!inside){bad=true;break}intervals.push([start,t]);inside=false;start=null}
-   else if(incoming){if(inside){bad=true;break}inside=true;start=t}
-  }
+  const intervals=participation?.intervals||[],bad=!participation?.valid;
   const redEvents=gameEvents.filter(e=>e.team_side==='team'&&K(e.player_id)===K(playerId)&&['red_card','second_yellow'].includes(e.event_type));
-  if(!bad){for(const e of redEvents){const t=minute(e);if(t===null){bad=true;break}if(inside){intervals.push([start,t]);inside=false;start=null}}}
-  if(inside&&!bad)intervals.push([start,duration]);
-  if(intervals.some(([a,b])=>a==null||a>b))bad=true;
-  if(explicitMinutes!=null&&Number.isFinite(explicitMinutes)&&!bad){const reconstructed=intervals.reduce((n,[a,b])=>n+b-a,0);if(Math.abs(explicitMinutes-reconstructed)>2)bad=true;}
-  if(started&&subEvents.some(e=>!e.player_id&&!e.secondary_player_id))bad=true;
-  const played=intervals.some(([a,b])=>b>a);
-  const record=started||played||(!bad&&Number(me.minutes_played)>0);
+  const played=participation?.entered||intervals.some(([a,b])=>b>a);
+  const record=started||played;
   if(!record){if(me.selection_status!=='unavailable')total.unused++;continue}
   total.games++;if(started)total.starts++;else total.bench++;
   if(!bad){const mins=intervals.reduce((n,[a,b])=>n+b-a,0);total.minutes+=mins;total.minutesKnown++;total.eligible++;if(started&&intervals.length===1&&intervals[0][0]===0&&intervals[0][1]===duration)total.fullGames++;if(!started&&intervals.length)total.entryMinutes.push(intervals[0][0]);if(intervals.length&&intervals.at(-1)[1]<duration)total.exitMinutes.push(intervals.at(-1)[1]);}
