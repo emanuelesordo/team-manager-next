@@ -50,3 +50,14 @@ test('recovery appears with cumulative base plus added minutes',()=>{
  assert.equal(displayEventMinute(e,competition),'80+3′');
  assert.equal(displayEventMinute({...legacy,minute:null},competition,'Minuto ignoto'),'Minuto ignoto');
 });
+
+test('second-half editor round trips legacy relative and live cumulative events without double shifting',()=>{
+ const legacyEntry={minute:34,payload:{period:'second_half'}};
+ const liveEntry={minute:51,payload:{period:'second_half',entered_from:'tm_app_live'}};
+ assert.equal(periodRelativeMinute(cumulativeEventMinute(legacyEntry,competition),'second_half',competition),34);
+ assert.equal(periodRelativeMinute(cumulativeEventMinute(liveEntry,competition),'second_half',competition),11);
+ const savedLegacy={minute:cumulativeMinuteFromPeriod(34,'second_half',competition),payload:{period:'second_half',minute_relative:false}};
+ const savedLive={minute:cumulativeMinuteFromPeriod(11,'second_half',competition),payload:{period:'second_half',minute_relative:false}};
+ assert.equal(cumulativeEventMinute(savedLegacy,competition),74);
+ assert.equal(cumulativeEventMinute(savedLive,competition),51);
+});
