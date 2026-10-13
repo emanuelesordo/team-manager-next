@@ -38,3 +38,6 @@ Sono ancora necessari dati strutturati affidabili su ruoli per minuto, sinergie 
 
 ## Verifica
 `npm run check` include verifiche dei moduli `fresh/player-intelligence.js` e `fresh/player-participation.js`, e i test `tests/player-intelligence.test.mjs`, `tests/player-participation.test.mjs` e `tests/match-minutes.test.mjs`. Il caso reale verificato per Pellegrino è 13′ + 4′ + 33′ = 50′ stimati, con tre ingressi ufficiali. Questo sostituisce il precedente totale di 49′ che usava il recupero inizialmente dichiarato nella partita del 5 ottobre anziché quello effettivo.
+
+## Riconciliazione SQL definitiva · 13/10/2026
+`app_player_season_stats.minutes` e `app_player_season_stats.subentries` ora derivano dalle viste `private.tm_player_match_participation` e `private.tm_player_season_participation`. Un incontro senza eventi di fine 1T/2T confermati o con transizioni contraddittorie produce `NULL`, non minuti inventati. La UI li utilizza come fatti autoritativi; la timeline JavaScript serve per controlli e analisi di dettaglio. Il rating ponderato via RPC è stato allineato.
