@@ -1,4 +1,5 @@
 import {cumulativeEventMinute} from './match-minutes.js';
+import {matchTiming,matchElapsedMinute,confirmedMatchEvent} from './player-participation.js';
 import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
 import {buildTeamProfile,profileHighlights} from './team-profile.js';
 import {analyseResults} from './result-intelligence.js';
@@ -296,7 +297,7 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
  const matchesById=new Map((matches||[]).map(m=>[key(m.id),m]));
  const byFixture=new Map();
  for(const e of events||[]){
-  if(e.validation_status==='rejected')continue;
+  if(!confirmedMatchEvent(e))continue;
   const f=eventFixture(e,matchesById,fixturesById);if(!f)continue;
   const list=byFixture.get(key(f.id))||[];list.push(e);byFixture.set(key(f.id),list);
  }
@@ -314,11 +315,14 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
   }
   const goals=all.filter(e=>goalTypes.has(e.event_type)&&e.payload?.count_score!==false);
   const comp=(competitions||[]).find(x=>key(x.id)===key(f.competition_id));
-  const completeTimeline=goals.length===Number(f.home_score)+Number(f.away_score)&&goals.length>0&&goals.every(e=>Number.isInteger(e.minute)&&Number.isFinite(cumulativeEventMinute(e,comp)));
+  const operational=(matches||[]).find(m=>key(m.fixture_id)===key(f.id))||f;
+  const verifiedTiming=matchTiming(operational,comp,all);
+  const minuteOf=e=>matchElapsedMinute(e,comp,verifiedTiming);
+  const completeTimeline=goals.length===Number(f.home_score)+Number(f.away_score)&&goals.length>0&&goals.every(e=>minuteOf(e)!==null);
   if(!completeTimeline)continue;
 
-  goals.sort((a,b)=>(cumulativeEventMinute(a,comp)??999)-(cumulativeEventMinute(b,comp)??999)||
-   Number(a.stoppage_minute||0)-Number(b.stoppage_minute||0)||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+  goals.sort((a,b)=>(minuteOf(a)??Infinity)-(minuteOf(b)??Infinity)||
+   String(a.created_at||'').localeCompare(String(b.created_at||'')));
   let ours=0,theirs=0,wasBehind=false,wasAhead=false,reachedEqualAfterBehind=false,reachedEqualAfterAhead=false;
   const periodMinutes=Math.max(1,Number(comp?.minutes_per_period)||40),matchMinutes=Math.max(1,Number(comp?.periods)||2)*periodMinutes;
   const windowSize=Math.max(1,periodMinutes/2);
@@ -335,14 +339,10 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
    if(wasBehind&&ours>=theirs)reachedEqualAfterBehind=true;
    if(wasAhead&&ours<=theirs)reachedEqualAfterAhead=true;
   }
-  const recovery=all.filter(e=>e.event_type==='period_end').reduce((sum,e)=>{
-   const n=Number(e.payload?.recovery_actual??e.payload?.recovery_minutes??e.stoppage_minute);
-   return sum+(Number.isFinite(n)&&n>0?n:0);
-  },0);
   gameStates.push(analyseGoalTimeline(goals,{
    sideOf:e=>eventClub(e,f,primaryTeam,true)===club?'team':'opponent',
-   minuteOf:e=>cumulativeEventMinute(e,comp),
-   duration:matchMinutes+recovery,responseWindow:10
+   minuteOf,
+   duration:verifiedTiming.duration,responseWindow:10
   }));
   timelineSample++;
   const s=scoreFor(f,club);if(!s)continue;
