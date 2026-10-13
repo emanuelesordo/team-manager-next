@@ -1,4 +1,5 @@
 import {cumulativeEventMinute} from './match-minutes.js';
+import {matchPlayerIntervals} from './player-participation.js';
 import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
 
 const key=v=>String(v??'');
@@ -107,58 +108,26 @@ export function seasonNumbers(fixtures,matches,events,team,competitions=[],playe
 
 
 export function aggregatePlayerMinutes(matches=[],matchPlayers=[],events=[],competitions=[]){
- const totals=new Map(),matchById=new Map((matches||[]).map(m=>[key(m.id),m]));
- const byMatchPlayers=new Map(),byMatchEvents=new Map();
- for(const row of matchPlayers||[]){
-  const id=key(row.match_id);if(!matchById.has(id))continue;
-  const list=byMatchPlayers.get(id)||[];list.push(row);byMatchPlayers.set(id,list);
+ const totals=new Map(),byMatchPlayers=new Map(),byMatchEvents=new Map();
+ const finished=(matches||[]).filter(m=>m.status==='finished'&&!m.is_test);
+ const finishedIds=new Set(finished.map(m=>key(m.id)));
+ for(const p of matchPlayers||[]){
+  const mid=key(p.match_id);if(!finishedIds.has(mid))continue;
+  const rows=byMatchPlayers.get(mid)||[];rows.push(p);byMatchPlayers.set(mid,rows);
  }
  for(const e of events||[]){
-  const id=key(e.match_id);if(!matchById.has(id)||!acceptedEvent(e))continue;
-  const list=byMatchEvents.get(id)||[];list.push(e);byMatchEvents.set(id,list);
+  const mid=key(e.match_id);if(!finishedIds.has(mid))continue;
+  const rows=byMatchEvents.get(mid)||[];rows.push(e);byMatchEvents.set(mid,rows);
  }
- const add=(id,n)=>{if(id==null)return;const k=key(id);totals.set(k,(totals.get(k)||0)+Math.max(0,n||0));};
- for(const match of matches||[]){
-  const mid=key(match.id),players=byMatchPlayers.get(mid)||[],rows=byMatchEvents.get(mid)||[];
+ for(const match of finished){
+  const players=byMatchPlayers.get(key(match.id))||[];
   if(!players.length)continue;
-  const competition=competitions.find(c=>key(c.id)===key(match.competition_id))||null;
-  const half=Math.max(1,Number(competition?.minutes_per_period)||45);
-  const recovery=period=>{
-   const found=[...rows].filter(e=>e.event_type==='period_end'&&(e.payload?.period===period||Number(e.payload?.period_no)===(period==='first_half'?1:2))).at(-1);
-   const value=found?.payload?.recovery_minutes??found?.payload?.recovery_actual??found?.stoppage_minute;
-   return Number.isFinite(Number(value))?Math.max(0,Number(value)):0;
-  };
-  const rec1=recovery('first_half'),rec2=recovery('second_half'),end=half*2+rec1+rec2;
-  const elapsed=e=>{
-   if(e?.minute==null)return null;
-   const minute=Number(e.minute);if(!Number.isFinite(minute))return null;
-   const stoppage=Math.max(0,Number(e.stoppage_minute)||0),period=e.payload?.period;
-   if(period==='halftime')return Math.min(end,half+rec1);
-   const legacySecond=period==='second_half'&&e.payload?.minute_relative!==false&&e.payload?.entered_from!=='tm_app_live';
-   let value=legacySecond?half+rec1+minute:minute+(period==='second_half'||minute>half?rec1:0);
-   if(stoppage>0)value+=stoppage;
-   return Math.max(0,Math.min(end,value));
-  };
-  const active=new Set(players.filter(p=>p.started).map(p=>key(p.player_id)));
-  const durations=new Map([...active].map(id=>[id,0]));
-  const timeline=rows.filter(e=>['substitution','red_card','second_yellow'].includes(e.event_type)&&e.minute!=null)
-   .map(e=>({e,t:elapsed(e)})).filter(x=>x.t!=null)
-   .sort((a,b)=>a.t-b.t||String(a.e.created_at||'').localeCompare(String(b.e.created_at||'')));
-  let cursor=0;
-  for(const {e,t} of timeline){
-   const at=Math.max(cursor,Math.min(end,t)),delta=at-cursor;
-   active.forEach(id=>durations.set(id,(durations.get(id)||0)+delta));
-   if(e.event_type==='substitution'){
-    if(e.player_id!=null)active.delete(key(e.player_id));
-    if(e.secondary_player_id!=null){
-     const id=key(e.secondary_player_id);active.add(id);
-     if(!durations.has(id))durations.set(id,0);
-    }
-   }else if(e.player_id!=null)active.delete(key(e.player_id));
-   cursor=at;
+  const competition=competitions.find(c=>key(c.id)===key(match.competition_id))||{};
+  const timeline=matchPlayerIntervals(match,players,byMatchEvents.get(key(match.id))||[],competition);
+  for(const [id,row] of timeline.players){
+   if(row.minutes===null||(!row.started&&!row.entered))continue;
+   totals.set(id,(totals.get(id)||0)+row.minutes);
   }
-  active.forEach(id=>durations.set(id,(durations.get(id)||0)+Math.max(0,end-cursor)));
-  durations.forEach((minutes,id)=>add(id,Math.round(minutes)));
  }
  return totals;
 }
