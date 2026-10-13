@@ -131,7 +131,7 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
  const output={errors:{}};
  names.forEach((n,i)=>{const x=arr[i];output[n]=x.status==='fulfilled'?x.value:[];if(x.status==='rejected')output.errors[n]=x.reason.message});
  try{
-  const publicStats=await publicGet('app_player_season_stats','select=season_id,player_id,first_name,last_name,position_group,appearances,starts,minutes,goals,assists,yellow_cards,red_cards,blue_cards,avg_rating&season_id=eq.'+encodeURIComponent(id)+'&limit=1000');
+  const publicStats=await publicGet('app_player_season_stats','select=season_id,player_id,first_name,last_name,position_group,appearances,starts,minutes,goals,assists,yellow_cards,red_cards,blue_cards,avg_rating,subentries,minutes_coverage&season_id=eq.'+encodeURIComponent(id)+'&limit=1000');
   if(Array.isArray(publicStats)&&publicStats.length)output.playerStats=publicStats;
  }catch(error){}
 
