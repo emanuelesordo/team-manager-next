@@ -27,7 +27,7 @@ import {installNotifications,syncNotificationBell,resetNotifications} from './no
 import {weightedTeamRating} from './team-rating.js?facts=20261013facts2';
 import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261013facts2';
 import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261013intelligence1';
-import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261013facts3';
+import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261013sqlfacts2';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
