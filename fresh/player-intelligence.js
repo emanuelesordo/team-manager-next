@@ -172,21 +172,23 @@ export function renderPlayerIntelligence(id,source){
  const card=(name,val,extra='')=>'<div class="psi-stat"><span>'+E(name)+'</span><strong>'+E(val)+'</strong>'+(extra?'<small>'+E(extra)+'</small>':'')+'</div>';
  const section=(name,desc,content)=>'<section class="psi-area"><div class="psi-area-head"><h2>'+E(name)+'</h2>'+(desc?'<p>'+E(desc)+'</p>':'')+'</div>'+content+'</section>';
  const ribbon=(items)=>{const usable=items.filter(([,val])=>val!=null&&String(val)!=='—'&&String(val)!=='N/D');return usable.length?'<div class="psi-strip">'+usable.map(([name,val,extra])=>card(name,val,extra)).join('')+'</div>':''};
- const ordered=[...(source?.matches||[])].sort((a,b)=>Date.parse(a.kickoff_at||0)-Date.parse(b.kickoff_at||0));
+ const fixtureLookup=new Map((source?.fixtures||[]).map(f=>[K(f.id),f]));
+ const kickoff=m=>m.kickoff_at||fixtureLookup.get(K(m.fixture_id))?.kickoff_at||null;
+ const ordered=[...(source?.matches||[])].sort((a,b)=>Date.parse(kickoff(a)||0)-Date.parse(kickoff(b)||0));
  const matchFacts=Array.isArray(sql.match_minutes)?sql.match_minutes:[];
  const minuteMap=new Map(matchFacts.map(x=>[K(x.match_id),x.valid===true&&x.minutes!=null?Number(x.minutes):null]));
  const minutePoints=ordered.filter(m=>minuteMap.has(K(m.id)));
  const minutesReady=mins!=null&&minutePoints.length===games&&minutePoints.every(m=>minuteMap.get(K(m.id))!=null)&&minutePoints.reduce((n,m)=>n+minuteMap.get(K(m.id)),0)===mins;
- const label=m=>new Date(m.kickoff_at).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'});
+ const label=m=>kickoff(m)&&Number.isFinite(Date.parse(kickoff(m)))?new Date(kickoff(m)).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}):'Gara';
  // Fixture results are final inputs; SQL appearances are the gate, not reconstructed event appearances.
  const fixtureMap=new Map((source?.fixtures||[]).map(f=>[K(f.id),f]));
  const matchResults=ordered.flatMap(m=>{
   const played=rows.find(r=>K(r.match_id)===K(m.id));
   const f=fixtureMap.get(K(m.fixture_id));
-  if(!played||!f||f.status!=='finished'||!Number.isInteger(f.home_score)||!Number.isInteger(f.away_score))return [];
+  if(!played||!f||f.status!=='finished'||!Number.isInteger(Number(f.home_score))||!Number.isInteger(Number(f.away_score)))return [];
   const home=K(f.home_team_id)===K(source?.team?.id),away=K(f.away_team_id)===K(source?.team?.id);
   if(home===away)return [];
-  const forGoals=home?f.home_score:f.away_score,against=home?f.away_score:f.home_score;
+  const forGoals=Number(home?f.home_score:f.away_score),against=Number(home?f.away_score:f.home_score);
   return [{match_id:K(m.id),kickoff_at:m.kickoff_at,venue:home?'home':'away',points:forGoals>against?3:forGoals===against?1:0}];
  });
  const resultsComplete=games!=null&&matchResults.length===games;
@@ -211,7 +213,7 @@ export function renderPlayerIntelligence(id,source){
  const timelineComplete=scoreResults&&v.covered===games;
  const comp='Le statistiche non riconciliate vengono omesse e non sostituite con trattini.';
  const usage=section('Impiego','Partecipazione alla stagione',
-   '<div class="psi-dashboard-visual">'+vizMatchMinutes(ordered,minuteMap,minutesReady,unit)+'</div>'+ribbon([['Subentri',fmt(subs)],['Panchina inutilizzata',scoreResults?fmt(v.unused):'—'],['Gare intere',mins!=null&&scoreResults?fmt(v.fullGames):'—'],
+   '<div class="psi-dashboard-visual">'+vizMatchMinutes(ordered.map(m=>({...m,kickoff_at:kickoff(m)})),minuteMap,minutesReady,unit)+'</div>'+ribbon([['Subentri',fmt(subs)],['Panchina inutilizzata',scoreResults?fmt(v.unused):'—'],['Gare intere',mins!=null&&scoreResults?fmt(v.fullGames):'—'],
    ['Minuti / presenza',games&&mins!=null?number(mins/games)+'′':'—'],['Titolarità',percent]])+
    '<details class="psi-expand"><summary>Ingressi e uscite <span>Dettagli</span></summary>'+
    ribbon([['Ingresso medio',timelineComplete&&v.entryMinutes.length?number(v.entryMinutes.reduce((a,b)=>a+b,0)/v.entryMinutes.length)+'′':'—'],
