@@ -12,7 +12,7 @@ import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261005callup-lineup-sync1';
 import {projectionContainer,updateProjection} from './projection-ui.js?history=20261012prematch1';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
-import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261013projectaudit1';
+import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261014peruzzo1';
 import {reconcilePlayerSeasonFacts} from './player-season-facts.js';
 import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,timelinePeriodFromMinute} from './match-minutes.js?live=20261014periodplacement1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
@@ -21,13 +21,13 @@ import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=202610
 import {matchPlayerLabel} from './match-player-label.js';
 import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
-import {renderPlayerIntelligence} from './player-intelligence.js?v=20261013projectaudit1';
+import {renderPlayerIntelligence} from './player-intelligence.js?v=20261014peruzzo1';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
-import {weightedTeamRating} from './team-rating.js?facts=20261013facts2';
-import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261013facts2';
+import {weightedTeamRating} from './team-rating.js?facts=20261014peruzzo1';
+import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261014peruzzo1';
 import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261013intelligence1';
-import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261013sqlfacts2';
+import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261014peruzzo1';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
