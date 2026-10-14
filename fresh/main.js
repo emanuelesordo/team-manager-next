@@ -73,7 +73,17 @@ window.addEventListener('tm-calculated-source-changed',()=>{
    ]);
    state.data.playerStats=stats;
    state.data.calculatedPlayers=details;
-   state.data.playerComparisons=await get('app_player_numeri','select=*&season_id=eq.'+id+'&limit=1000').catch(()=>state.data.playerComparisons||[]);
+   const [comparisons,goalImpacts,ratings,comebacks]=await Promise.all([
+    get('app_player_numeri','select=*&season_id=eq.'+id+'&limit=1000'),
+    get('app_player_goal_impact','select=*&season_id=eq.'+id+'&limit=1000'),
+    get('app_player_rating_insights','select=*&season_id=eq.'+id+'&limit=1000'),
+    get('app_player_comeback_leads','select=*&season_id=eq.'+id+'&limit=1000')
+   ]);
+   if(state.season!==decodeURIComponent(id))return;
+   state.data.playerComparisons=comparisons;
+   const comebackMap=new Map(comebacks.map(r=>[String(r.player_id),r.comeback_go_ahead_goals]));
+   state.data.goalImpacts=goalImpacts.map(r=>({...r,comeback_go_ahead_goals:comebackMap.get(String(r.player_id))??0}));
+   state.data.ratingInsights=ratings;
    if(state.page==='player'||state.page==='roster'||state.page==='stats')render();
   }catch(error){console.warn('Aggiornamento statistiche in attesa:',error.message)}
   finally{calculatedRefreshBusy=false}
