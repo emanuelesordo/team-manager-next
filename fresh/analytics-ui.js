@@ -161,7 +161,7 @@ function venue(team){
 function discipline(team,players){
  const cards='<section class="glass panel"><div class="panel-heading"><h2>Disciplina</h2></div><div class="team-metric-grid">'+
   cell('Gialli',team.yellows)+cell('Blu',team.blues)+cell('Rossi propri',team.reds)+cell('Rossi avversari',team.opponentReds)+cell('Sostituzioni',team.substitutions)+'</div></section>';
- return cards+ranking('Più sanzionati',players,'disciplinary_cards');
+ return cards;
 }
 
 export function teamAnalyticsPanel(fixtures,team){
@@ -203,8 +203,7 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
   cell('Timeline complete',coverage.complete+'/'+coverage.possible)+'</div>'+
   (!coverage.complete?'<p class="subnote">Le metriche sullo stato della gara richiedono la sequenza completa dei gol e vengono calcolate solo sulle timeline riconciliate.</p>':'')+'</section>';
  return header+'<section class="glass panel">'+core+'</section><div class="leaderboard-grid">'+
-  balance(numbers)+venue(numbers)+ranking('Classifica marcatori',computedPlayers,'goals')+ranking('Assist',computedPlayers,'assists')+
-  ranking('Minuti giocati',computedPlayers,'minutes')+ranking('Media voti',computedPlayers,'avg_rating',{digits:2,empty:'Nessun voto valido'})+
+  balance(numbers)+venue(numbers)+
   (fullGoalCoverage?goalDistribution(numbers):'<section class="glass panel leaderboard"><div class="panel-heading"><h2>Distribuzione gol</h2></div><p class="subnote">Dati in verifica: la ripartizione non copre tutte le partite concluse.</p></section>')+discipline(numbers,computedPlayers)+'</div>'+
   '<section class="glass panel"><div class="panel-heading"><h2>Ultime partite</h2></div>'+lastResults(numbers.matches,opponents)+'</section>'+
   teamProfilePanel(profile)+resultProfilePanel(profile)+resultIntelligencePanel(intelligence)+period+gameStatePanels(coverage.gameState)+progressionsPanel(coverage.gameState,coverage.halftime)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
@@ -246,7 +245,7 @@ function playersNumbers(players,impacts=[],ratings=[]){
  const impactMap=new Map(impacts.map(x=>[String(x.player_id),x])),ratingMap=new Map(ratings.map(x=>[String(x.player_id),x]));
  const merged=players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}));
  const metrics=[
- ['Presenze','appearances'],['Minuti giocati','minutes'],['Gol','goals'],['Assist','assists'],
+ ['Presenze','appearances'],['Minuti giocati','minutes'],['Gol','goals'],['Assist','assists'],['Cartellini','disciplinary_cards'],
  ['Media voto ufficiale','avg_rating'],['Gare valutate','rated_matches'],['Voti ricevuti','votes_received'],
  ['Valutazioni ≥7','high_rating_games'],['Voto massimo','highest_rating'],['Voto minimo','lowest_rating'],['Variabilità rating','rating_volatility'],
  ['GF in campo','goals_for_on'],['GS in campo','goals_against_on'],['Plus/minus','plus_minus_on'],
