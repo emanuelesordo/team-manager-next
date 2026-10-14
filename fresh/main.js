@@ -1215,6 +1215,14 @@ async function hydratePastPredictionSummary(){
  }finally{pastPredictionBusy=false}
 }
 document.addEventListener('click',event=>{
+ const ranking=event.target.closest('[data-stats-ranking]');
+ if(ranking){
+  const wrapper=ranking.closest('.stats-player-section');if(!wrapper)return;
+  const active=ranking.dataset.statsRanking;
+  wrapper.querySelectorAll('[data-stats-ranking]').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.statsRanking===active)));
+  wrapper.querySelectorAll('[data-stats-ranking-panel]').forEach(x=>{x.hidden=x.dataset.statsRankingPanel!==active});
+  return;
+ }
  const btn=event.target.closest('[data-stats-scope]');
  if(!btn)return;
  const container=btn.closest('[data-event-analysis]');if(!container)return;
