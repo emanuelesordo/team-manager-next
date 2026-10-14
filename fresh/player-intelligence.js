@@ -258,6 +258,7 @@ export function renderPlayerIntelligence(id,source){
    ['Gol con squadra sotto',fmt(impactMetric('trailing_goals'))],
    ['Riducono lo svantaggio',fmt(impactMetric('deficit_reducers'))],
    ['Pareggi in rimonta',fmt(impactMetric('comeback_equalizers'))],
+   ['Vantaggi in rimonta',fmt(impactMetric('comeback_go_ahead_goals'))],
    ['Ampliano il vantaggio',fmt(impactMetric('lead_extenders'))],
    ['Portano a +1',fmt(impactMetric('goals_to_plus_1'))],
    ['Portano a +2',fmt(impactMetric('goals_to_plus_2'))],
@@ -265,7 +266,7 @@ export function renderPlayerIntelligence(id,source){
    ['Portano a -1',fmt(impactMetric('goals_to_minus_1'))],
    ['Portano a -2 o meno',fmt(impactMetric('goals_to_minus_2'))],
    ['Portano in parità',fmt(impactMetric('goals_to_draw'))]])+
-   '<p class="psi-footnote">Il vantaggio è classificato al momento del gol; una rimonta completata richiede il recupero di uno svantaggio precedente, non solo una rete mentre si è sotto.</p>'):'';
+   '<p class="psi-footnote">Il contesto misura il punteggio al momento del gol: +1/+2 è il margine dopo la rete. Il vantaggio in rimonta richiede uno svantaggio precedente nella stessa partita.</p>'):'';
  const rating=ratingInsights&&ratingMetric('rated_matches')>0?section('Rating','Le valutazioni delle partite, senza duplicare il voto medio iniziale',
   ribbon([['Gare valutate',fmt(ratingMetric('rated_matches'))],
   ['Voti ricevuti',fmt(ratingMetric('votes_received'))],
