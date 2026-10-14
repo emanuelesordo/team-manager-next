@@ -34,3 +34,15 @@ test('Tournament comparison uses both sides of every completed fixture',()=>{
  assert.match(html,/Serie B/);
  assert.match(html,/Gol complessivi/);
 });
+test('Complessivo focuses on verified match progression without repeating standings',()=>{
+ const f={status:'finished',competition_id:'c',home_team:'Caselle',away_team:'Avversari',home_score:2,away_score:1};
+ const flow={competition_id:'c',verified:true,duration:88,nil_minutes:30,draw_minutes:40,lead_minutes:48,trail_minutes:0,
+  leads_taken:1,leads_lost:0,deficits_recovered:0,deficits_entered:0,comeback_equalizers:0,opponent_equalizers:0,
+  goals_for:2,goals_against:1,substitutions_total:5,yellows_total:3,reds_total:0};
+ const html=renderEventAnalytics([f],[],[],{id:'caselle'},[{id:'c',name:'Serie B'}],[],[],[],[],[],[],[],[],[],[flow]);
+ const all=html.slice(html.indexOf('data-stats-panel="all"'));
+ assert.match(all,/Tempo nello stato di risultato/);
+ assert.match(all,/Vantaggi, svantaggi e rimonte/);
+ assert.match(all,/0-0/);
+ assert.doesNotMatch(all,/standing-table/);
+});
