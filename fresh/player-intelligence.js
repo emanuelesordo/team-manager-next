@@ -193,6 +193,7 @@ export function renderPlayerIntelligence(id,source){
  });
  const resultsComplete=games!=null&&matchResults.length===games;
  const tally={W:matchResults.filter(x=>x.points===3).length,D:matchResults.filter(x=>x.points===1).length,L:matchResults.filter(x=>x.points===0).length};
+ const homeResults=matchResults.filter(x=>x.venue==='home'),awayResults=matchResults.filter(x=>x.venue==='away');
  const scoreResults=games===v.games&&starts===v.starts&&v.matches.length===games;
  const completeGoals=scoreResults&&goals===v.goals;
  const completeAssists=scoreResults&&assists===v.assists;
@@ -210,7 +211,7 @@ export function renderPlayerIntelligence(id,source){
  const percent=games&&starts!=null?number(starts/games*100)+'%':'—';
  const splitSub=starts===0&&games===subs;
  const timelineComplete=scoreResults&&v.covered===games;
- const comp='Le statistiche non riconciliate vengono omesse e non sostituite con trattini.';
+ const comp='Sono visualizzate le statistiche con dati verificati disponibili.';
  const usage=section('Impiego','Partecipazione alla stagione',
    (minutesReady?'<div class="psi-dashboard-visual">'+vizMatchMinutes(ordered.map(m=>({...m,kickoff_at:kickoff(m)})),minuteMap,true,unit)+'</div>':'')+ribbon([['Subentri',fmt(subs)],['Panchina inutilizzata',scoreResults?fmt(v.unused):'—'],['Gare intere',mins!=null&&scoreResults?fmt(v.fullGames):'—'],
    ['Minuti / presenza',games&&mins!=null?number(mins/games)+'′':'—'],['Titolarità',percent]])+
@@ -251,11 +252,11 @@ export function renderPlayerIntelligence(id,source){
    (resultsComplete?vizRecord(tally.W,tally.D,tally.L,true):'')+ribbon([['Win rate',resultsComplete&&games?number(tally.W/games*100)+'%':'—'],
     ['Punti / gara',resultsComplete&&games?number((tally.W*3+tally.D)/games):'—']])+
    '<details class="psi-expand"><summary>Casa, trasferta e cambi <span>Approfondisci</span></summary>'+
-   ribbon([['Gare in casa',scoreResults?fmt(v.home.games):'—'],['Gare in trasferta',scoreResults?fmt(v.away.games):'—'],
+   ribbon([['Gare in casa',resultsComplete?fmt(homeResults.length):'—'],['Gare in trasferta',resultsComplete?fmt(awayResults.length):'—'],
    ['Gol casa',completeGoals?fmt(v.home.goals):'—'],['Gol trasferta',completeGoals?fmt(v.away.goals):'—'],
    ['Assist casa',completeAssists?fmt(v.home.assists):'—'],['Assist trasferta',completeAssists?fmt(v.away.assists):'—'],
-   ['Punti / gara casa',scoreResults&&v.home.games?number(v.home.points/v.home.games):'—'],
-   ['Punti / gara trasferta',scoreResults&&v.away.games?number(v.away.points/v.away.games):'—'],
+   ['Punti / gara casa',resultsComplete&&homeResults.length?number(homeResults.reduce((n,m)=>n+m.points,0)/homeResults.length):'—'],
+   ['Punti / gara trasferta',resultsComplete&&awayResults.length?number(awayResults.reduce((n,m)=>n+m.points,0)/awayResults.length):'—'],
    ['Punti da subentrato',scoreResults?fmt(v.subPoints):'—'],
    ['Punti da titolare',scoreResults?fmt(v.starterPoints):'—'],
    ['Variazione punti dopo ingresso',timelineComplete?fmt(v.entryPointsDelta):'—'],
