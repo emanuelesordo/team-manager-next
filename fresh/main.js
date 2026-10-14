@@ -1088,7 +1088,7 @@ async function hydrateMatchPrediction(){
     const kit=kits[operational?.match_kit_key]||kits[preferred]||kits.home||Object.values(kits)[0]||{};
     const matchIds=matches.map(m=>m.id).filter(Boolean);
     const [freshStats,freshRatings]=await Promise.all([
-     get('app_player_season_stats','select=season_id,player_id,first_name,last_name,position_group,appearances,starts,minutes,goals,assists,yellow_cards,red_cards,blue_cards,avg_rating,subentries,minutes_coverage,match_minutes&season_id=eq.'+encodeURIComponent(chosen)+'&limit=1000').catch(()=>[]),
+     get('app_player_calculated_season','select=season_id,player_id,first_name,last_name,position_group,appearances,starts,minutes,goals,assists,yellow_cards,red_cards,blue_cards,avg_rating,subentries,minutes_coverage,match_minutes,goals_for_on,goals_against_on,plus_minus_on,verified_impact_games,impact_coverage&season_id=eq.'+encodeURIComponent(chosen)+'&limit=1000').catch(()=>[]),
      matchIds.length?get('app_match_ratings','select=match_id,player_id,rating,created_at&match_id=in.('+matchIds.map(encodeURIComponent).join(',')+')&limit=10000').catch(()=>[]):Promise.resolve([])
     ]);
     const lineupData={...state.data,
