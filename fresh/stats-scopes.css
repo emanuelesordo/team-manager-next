@@ -1,0 +1,20 @@
+/* Statistics scopes and comparable player metrics */
+.stats-scope-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent);padding:0 0 12px}
+.stats-scope-tabs button{font:inherit;font-size:12px;font-weight:600;border:0;border-radius:999px;color:inherit;background:transparent;padding:10px 15px;cursor:pointer;opacity:.67;transition:background .2s,opacity .2s}
+.stats-scope-tabs button[aria-selected="true"]{background:color-mix(in srgb,currentColor 11%,transparent);opacity:1}
+.stats-scope-tabs button:focus-visible{outline:2px solid #55af95;outline-offset:3px}
+.stats-scope-panel[hidden]{display:none}
+.stats-hint{font-size:12px;opacity:.7;margin:0 0 18px;line-height:1.5}
+.stats-player-section{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 28px}
+.stats-player-section>.stats-hint{grid-column:1/-1;margin-bottom:-5px}
+.stats-player-ranking{min-width:0;border-bottom:1px solid color-mix(in srgb,currentColor 10%,transparent);padding-bottom:15px}
+.stats-player-ranking h3,.stats-tournament-group h3{font-size:14px;margin:0 0 14px}
+.stats-rank-rows{display:grid;gap:12px}
+.stats-rank-row{display:grid;grid-template-columns:24px minmax(115px,1fr) minmax(60px,.8fr) 46px;align-items:center;gap:10px;font-size:12px}
+.stats-rank-row>span{opacity:.5;font-size:10px}.stats-rank-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.stats-rank-row>b{text-align:right;font-variant-numeric:tabular-nums}
+.stats-rank-track{height:6px;background:color-mix(in srgb,currentColor 8%,transparent);border-radius:5px;overflow:hidden}
+.stats-rank-track i{display:block;height:100%;background:#55af95;border-radius:5px;animation:stats-grow .55s ease both;transform-origin:left}
+.stats-tournament-section{display:grid;gap:24px}.stats-tournament-group{border-bottom:1px solid color-mix(in srgb,currentColor 10%,transparent);padding-bottom:20px}
+@keyframes stats-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(max-width:800px){.stats-player-section{grid-template-columns:1fr}.stats-rank-row{grid-template-columns:21px minmax(115px,1fr) minmax(45px,.6fr) 45px;gap:6px}}
+@media(prefers-reduced-motion:reduce){.stats-rank-track i{animation:none}}
