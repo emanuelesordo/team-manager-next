@@ -209,7 +209,7 @@ test('on-field per-80 metrics use the same persisted 165 minutes as the 8/3/+5 S
   {player_id:'luca',match_id:'b',appeared:true,minutes:45,goals_for_on:2,goals_against_on:1,score_coverage:'complete'},
   {player_id:'luca',match_id:'c',appeared:true,minutes:31,goals_for_on:2,goals_against_on:1,score_coverage:'complete'}
  ]});
- assert.match(html,/GF \/ 80′<\/span><strong>3\.88/);
- assert.match(html,/GS \/ 80′<\/span><strong>1\.45/);
- assert.match(html,/\+\/- \/ 80′<\/span><strong>2\.42/);
+ assert.match(html,/GF \/ 80′<\/span><strong>3,88/);
+ assert.match(html,/GS \/ 80′<\/span><strong>1,45/);
+ assert.match(html,/\+\/- \/ 80′<\/span><strong>2,42/);
 });
