@@ -39,3 +39,39 @@
 @media(max-width:700px){.psi-clean .psi-area-head{display:block}.psi-clean .psi-area-head p{text-align:left;margin-top:4px}.psi-clean .psi-strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:15px 9px}.psi-clean .psi-stat strong{font-size:20px}.psi-clean .psi-visual-pair{grid-template-columns:1fr}.psi-clean .psi-area{padding-bottom:16px}}
 @media(max-width:390px){.psi-clean .psi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.psi-clean *, .psi-clean .psi-area{animation:none!important;transition:none!important}}
+
+
+/* Visual analytics, sourced only from reconciled match/player facts. */
+.psi-dashboard-visual{margin:3px 0 18px;max-width:850px}
+.psi-match-bars{display:flex;gap:clamp(10px,2.6vw,27px);align-items:flex-end;height:174px;padding:8px 13px 0;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent);overflow-x:auto}
+.psi-match-bar{flex:1 0 49px;max-width:94px;min-width:49px;height:100%;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:help;outline-offset:3px}
+.psi-match-value{font-size:13px;font-weight:750;font-variant-numeric:tabular-nums}
+.psi-match-label{font-size:10px;opacity:.58;white-space:nowrap;padding-bottom:5px}
+.psi-match-column{flex:1;min-height:35px;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.psi-match-column i{display:block;width:min(100%,40px);height:var(--viz-height);min-height:2px;border-radius:7px 7px 0 0;background:linear-gradient(0deg,#428d79,#84cabb);transform-origin:bottom;animation:psi-bar-rise .68s cubic-bezier(.2,.8,.2,1) both;transition:filter .2s,transform .2s}
+.psi-match-bar:hover .psi-match-column i,.psi-match-bar:focus-visible .psi-match-column i{filter:brightness(1.25);transform:scaleX(1.08)}
+.psi-production-viz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 25px}
+.psi-vizbar-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;margin-bottom:9px}
+.psi-vizbar-head span{opacity:.65}.psi-vizbar-head b{font-size:16px;font-variant-numeric:tabular-nums}
+.psi-vizbar-track{height:9px;background:color-mix(in srgb,currentColor 9%,transparent);border-radius:20px;overflow:hidden}
+.psi-vizbar-track i{display:block;width:var(--viz-width);height:100%;background:#60ad95;border-radius:inherit;transform-origin:left;animation:psi-grow .75s cubic-bezier(.2,.8,.2,1) both}
+.psi-vizbar[data-kind=assists] .psi-vizbar-track i{background:#8ca9d8}
+.psi-scoreviz{padding:4px 0 19px}
+.psi-scoreviz-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:12px}
+.psi-scoreviz-head span{font-size:11px;opacity:.64}.psi-scoreviz-head span:last-child{text-align:right}
+.psi-scoreviz-head strong{font-size:clamp(26px,4vw,40px);font-weight:780;letter-spacing:-.065em;font-variant-numeric:tabular-nums}
+.psi-scoreviz-track,.psi-recordviz-track{display:flex;height:16px;gap:3px;overflow:hidden;border-radius:999px;background:color-mix(in srgb,currentColor 8%,transparent)}
+.psi-scoreviz-track i,.psi-recordviz-track i{display:block;flex:0 0 var(--viz-width);height:100%;animation:psi-grow .75s cubic-bezier(.2,.8,.2,1) both;transform-origin:left}
+.psi-scoreviz-for{background:#4fae8f}.psi-scoreviz-against{background:#dc887f}
+.psi-scoreviz-scale{display:flex;justify-content:space-between;margin-top:8px;font-size:10px;opacity:.6}
+.psi-recordviz{margin-bottom:20px}.psi-recordviz-track{height:13px}
+.psi-recordviz-track [data-result=v],.psi-recordviz-legend [data-result=v]{background:#4fae8f}
+.psi-recordviz-track [data-result=n],.psi-recordviz-legend [data-result=n]{background:#9aa7af}
+.psi-recordviz-track [data-result=p],.psi-recordviz-legend [data-result=p]{background:#dc887f}
+.psi-recordviz-legend{display:flex;gap:15px;flex-wrap:wrap;margin-top:9px;font-size:11px;opacity:.76}
+.psi-recordviz-legend span{display:flex;align-items:center;gap:6px}
+.psi-recordviz-legend i{display:inline-block;width:8px;height:8px;border-radius:50%}
+@keyframes psi-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes psi-bar-rise{from{transform:scaleY(0);opacity:.4}to{transform:scaleY(1);opacity:1}}
+@media(max-width:700px){.psi-match-bars{height:150px;gap:13px;padding-inline:3px}.psi-production-viz{gap:12px}.psi-scoreviz-head strong{font-size:28px}}
+@media(prefers-reduced-motion:reduce){.psi-match-column i,.psi-vizbar-track i,.psi-scoreviz-track i,.psi-recordviz-track i{animation:none!important}}
