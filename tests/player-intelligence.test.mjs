@@ -187,3 +187,15 @@ test('Luca Peruzzo three conceded goals across three games count in GF/GS on-fie
  assert.equal(r.gaOn,3);
  assert.deepEqual(r.matches.map(x=>x.minutes),[89,45,31]);
 });
+
+test('player impact uses materialized Supabase goals even when local chronology is missing',()=>{
+ const html=renderPlayerIntelligence('p',{
+  ...base,events:[],matchPlayers:[],eventsLoaded:false,playersLoaded:false,
+  stats:{appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',goals:1,assists:0,
+   goals_for_on:2,goals_against_on:1,plus_minus_on:1,impact_coverage:'complete'},
+  calculatedPlayers:[{match_id:'m1',player_id:'p',appeared:true,goals_for_on:2,goals_against_on:1,plus_minus:1,score_coverage:'complete'}]
+ });
+ assert.match(html,/GF in campo<\/span><strong>2/);
+ assert.match(html,/GS in campo<\/span><strong>1/);
+ assert.match(html,/Plus\/minus<\/span><strong>\+1/);
+});
