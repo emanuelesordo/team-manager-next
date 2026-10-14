@@ -65,3 +65,17 @@ test('Score-state context distinguishes Caselle changes, cards and narrow-score 
  assert.match(all,/Rossi avversari/);
  assert.doesNotMatch(all,/standing-table/);
 });
+
+test('Tournament verified opponent fixtures are included in goal progression without a league table',()=>{
+ const fixture={status:'finished',competition_id:'c',home_team:'Justinense',away_team:'Armistizio',home_score:1,away_score:2};
+ const opponent={competition_id:'c',fixture_id:'other',duration:80,nil_minutes:10,draw_minutes:25,
+  home_lead_minutes:16,away_lead_minutes:39,narrow_margin_minutes:40,
+  home_comeback_equalizers:1,away_comeback_equalizers:0,
+  home_go_aheads:1,away_go_aheads:2,substitutions:3,yellows:2,reds:1};
+ const html=renderEventAnalytics([fixture],[],[],{id:'caselle'},[{id:'c',name:'Serie B'}],[],[],[],[],[],[],[],[],[],[],[],[],[opponent]);
+ const area=html.slice(html.indexOf('data-stats-panel="all"'));
+ assert.match(area,/Timeline verificate, Caselle \+ avversarie/);
+ assert.match(area,/Pareggi in rimonta, squadre di casa/);
+ assert.match(area,/Vantaggi presi, ospiti/);
+ assert.doesNotMatch(area,/standing-table/);
+});
