@@ -12,7 +12,7 @@ import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261005callup-lineup-sync1';
 import {projectionContainer,updateProjection} from './projection-ui.js?history=20261012prematch1';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
-import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261014peruzzo1';
+import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261015scopes1';
 import {reconcilePlayerSeasonFacts} from './player-season-facts.js';
 import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,timelinePeriodFromMinute} from './match-minutes.js?live=20261014periodplacement1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
@@ -21,7 +21,7 @@ import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=202610
 import {matchPlayerLabel} from './match-player-label.js';
 import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
-import {renderPlayerIntelligence,initPlayerIntelligence} from './player-intelligence.js?v=20261015clean5';
+import {renderPlayerIntelligence,initPlayerIntelligence} from './player-intelligence.js?v=20261015goals1';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
 import {weightedTeamRating} from './team-rating.js?facts=20261014peruzzo1';
