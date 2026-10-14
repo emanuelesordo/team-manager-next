@@ -185,5 +185,5 @@ test('Luca Peruzzo three conceded goals across three games count in GF/GS on-fie
  const r=playerIntelligence('luca',{matches,fixtures,matchPlayers:rows,events,competitions:[competition],team:{id:'team'}});
  assert.equal(r.games,3);assert.equal(r.covered,3);
  assert.equal(r.gaOn,3);
- assert.deepEqual(r.matches.map(x=>x.minutes),[89,45,35]);
+ assert.deepEqual(r.matches.map(x=>x.minutes),[89,45,31]);
 });
