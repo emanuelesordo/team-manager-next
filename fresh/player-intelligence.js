@@ -163,7 +163,7 @@ export function renderPlayerIntelligence(id,source){
  const mins=value('minutes'),goals=value('goals'),assists=value('assists');
  const effectiveMinutes=sql.minutesCoverage==='unavailable'||sql.minutes_coverage==='unavailable'?null:mins;
  const fullImpact=sql.impact_coverage==='complete';
- const count=k=>fullImpact?value(k):reliable.length?reliable.reduce((n,r)=>n+Number(r[k==='goals_for_on'?'goals_for_on':k==='goals_against_on'?'goals_against_on':'plus_minus']||0),0):null;
+ const count=k=>fullImpact?value(k):null; // Never present a subset as a season total.
  const gf=count('goals_for_on'),ga=count('goals_against_on');
  const pm=gf!=null&&ga!=null?gf-ga:null;
  const unit=v.duration||80;
@@ -178,6 +178,19 @@ export function renderPlayerIntelligence(id,source){
  const minutePoints=ordered.filter(m=>minuteMap.has(K(m.id)));
  const minutesReady=mins!=null&&minutePoints.length===games&&minutePoints.every(m=>minuteMap.get(K(m.id))!=null)&&minutePoints.reduce((n,m)=>n+minuteMap.get(K(m.id)),0)===mins;
  const label=m=>new Date(m.kickoff_at).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'});
+ // Fixture results are final inputs; SQL appearances are the gate, not reconstructed event appearances.
+ const fixtureMap=new Map((source?.fixtures||[]).map(f=>[K(f.id),f]));
+ const matchResults=ordered.flatMap(m=>{
+  const played=rows.find(r=>K(r.match_id)===K(m.id));
+  const f=fixtureMap.get(K(m.fixture_id));
+  if(!played||!f||f.status!=='finished'||!Number.isInteger(f.home_score)||!Number.isInteger(f.away_score))return [];
+  const home=K(f.home_team_id)===K(source?.team?.id),away=K(f.away_team_id)===K(source?.team?.id);
+  if(home===away)return [];
+  const forGoals=home?f.home_score:f.away_score,against=home?f.away_score:f.home_score;
+  return [{match_id:K(m.id),kickoff_at:m.kickoff_at,venue:home?'home':'away',points:forGoals>against?3:forGoals===against?1:0}];
+ });
+ const resultsComplete=games!=null&&matchResults.length===games;
+ const tally={W:matchResults.filter(x=>x.points===3).length,D:matchResults.filter(x=>x.points===1).length,L:matchResults.filter(x=>x.points===0).length};
  const scoreResults=games===v.games&&starts===v.starts&&v.matches.length===games;
  const completeGoals=scoreResults&&goals===v.goals;
  const completeAssists=scoreResults&&assists===v.assists;
@@ -185,9 +198,9 @@ export function renderPlayerIntelligence(id,source){
  const ring=(title,vals,ok)=>line([title,ok?donut(vals):'<p class="psi-note">Distribuzione non verificata</p>']);
  const charts=[
  ['Minuti',lineChart(minutesReady?minutePoints.map(m=>minuteMap.get(K(m.id))):[],minutePoints.map(label),'Minuti per partita')],
- ['Plus/minus',lineChart(rows.length===games&&rows.every(r=>r.score_coverage==='complete')
-   ?ordered.filter(m=>rows.some(r=>K(r.match_id)===K(m.id))).map((m,i,a)=>a.slice(0,i+1).reduce((n,mm)=>n+Number(rows.find(r=>K(r.match_id)===K(mm.id))?.plus_minus||0),0)):[],
-   ordered.map(label),'Plus/minus cumulativo')],
+ ['Plus/minus',lineChart(fullImpact&&rows.length===games&&rows.every(r=>r.score_coverage==='complete'&&r.plus_minus!=null)
+   ?ordered.filter(m=>rows.some(r=>K(r.match_id)===K(m.id))).map((m,i,a)=>a.slice(0,i+1).reduce((n,mm)=>n+Number(rows.find(r=>K(r.match_id)===K(mm.id)).plus_minus),0)):[],
+   ordered.filter(m=>rows.some(r=>K(r.match_id)===K(m.id))).map(label),'Plus/minus cumulativo')],
  ['Gol + assist',lineChart(completeGoals&&completeAssists?v.matches.map(m=>m.goals+m.assists):[],v.matches.map(m=>m.label),'Gol e assist per partita')]
  ];
  const tabs='<div class="psi-chart-tabs" role="tablist" aria-label="Andamento">'+charts.map((x,i)=>'<button type="button" role="tab" aria-selected="'+(i===0)+'" tabindex="'+(i===0?'0':'-1')+'" data-psi-tab="'+i+'">'+E(x[0])+'</button>').join('')+'</div>';
@@ -235,10 +248,10 @@ export function renderPlayerIntelligence(id,source){
    ['Differenza on/off',timelineComplete&&effectiveMinutes>0&&v.offMinutes?number(pm*unit/effectiveMinutes-(v.gfOff-v.gaOff)*unit/v.offMinutes):'—']])+
    ring('Stato del punteggio',[['Vantaggio',v.states.leading],['Parità',v.states.drawing],['Svantaggio',v.states.trailing]],timelineComplete)+'</details>');
  const record=section('Risultati','Esiti delle partite e rendimento per sede',
-   vizRecord(v.results.W,v.results.D,v.results.L,scoreResults)+ribbon([['Vittorie',scoreResults?fmt(v.results.W):'—'],['Pareggi',scoreResults?fmt(v.results.D):'—'],
-    ['Sconfitte',scoreResults?fmt(v.results.L):'—'],
-    ['Win rate',scoreResults&&games?number(v.results.W/games*100)+'%':'—'],
-    ['Punti / gara',scoreResults&&games?number((v.results.W*3+v.results.D)/games):'—']])+
+   vizRecord(tally.W,tally.D,tally.L,resultsComplete)+ribbon([['Vittorie',resultsComplete?fmt(tally.W):'—'],['Pareggi',resultsComplete?fmt(tally.D):'—'],
+    ['Sconfitte',resultsComplete?fmt(tally.L):'—'],
+    ['Win rate',resultsComplete&&games?number(tally.W/games*100)+'%':'—'],
+    ['Punti / gara',resultsComplete&&games?number((tally.W*3+tally.D)/games):'—']])+
    '<details class="psi-expand"><summary>Casa, trasferta e cambi <span>Approfondisci</span></summary>'+
    ribbon([['Gare in casa',scoreResults?fmt(v.home.games):'—'],['Gare in trasferta',scoreResults?fmt(v.away.games):'—'],
    ['Gol casa',completeGoals?fmt(v.home.goals):'—'],['Gol trasferta',completeGoals?fmt(v.away.goals):'—'],
