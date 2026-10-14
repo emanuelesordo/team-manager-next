@@ -158,3 +158,16 @@ test('player profile has graphical minutes, production, score and outcome visual
  assert.match(html,/psi-scoreviz-head/);
  assert.doesNotMatch(html,/psi-carousel/);
 });
+
+test('certified match rows and fixture scores power outcome graphics without client participation',()=>{
+ const html=renderPlayerIntelligence('p',{...base,events:[],matchPlayers:[],stats:{
+  appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',goals:0,assists:0,
+  goals_for_on:2,goals_against_on:0,plus_minus_on:2,impact_coverage:'complete',
+  match_minutes:[{match_id:'m1',minutes:25,valid:true}]
+ },calculatedPlayers:[{player_id:'p',match_id:'m1',appeared:true,minutes:25,
+  goals_for_on:2,goals_against_on:0,plus_minus:2,score_coverage:'complete'}]});
+ assert.match(html,/psi-recordviz-track/);
+ assert.match(html,/Vittorie<\/span><strong>1/);
+ assert.match(html,/GF in campo<\/span><strong>2/);
+ assert.match(html,/psi-match-bars/);
+});
