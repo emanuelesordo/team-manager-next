@@ -188,7 +188,9 @@ export async function saveFixture(id,fields){
 /** RPC server-side: autorizzazioni verificate da Supabase, non dal frontend. */
 export async function publicRpc(functionName,args={}){
  if(!/^[a-z_][a-z0-9_]*$/.test(functionName))throw new Error('Funzione non valida');
- return authorized('/rest/v1/rpc/'+functionName,{method:'POST',body:args});
+ const result=await authorized('/rest/v1/rpc/'+functionName,{method:'POST',body:args});
+ if(/^tm_app_(submit|match_action|confirm|reject|void|save)/.test(functionName))window.dispatchEvent(new CustomEvent('tm-calculated-source-changed'));
+ return result;
 }
 export async function rpc(functionName,args={}){
  if(!hasSession())throw new Error('Effettua l’accesso per modificare i dati');
@@ -204,7 +206,9 @@ export async function adminWrite(table,method,values,where={}){
  const q=new URLSearchParams();
  for(const [k,v] of Object.entries(where))q.set(k,'eq.'+String(v));
  const path='/rest/v1/'+table+(q.size?'?'+q.toString():'');
- return authorized(path,{method,body:values,extraHeaders:{Prefer:'return=representation'}});
+ const result=await authorized(path,{method,body:values,extraHeaders:{Prefer:'return=representation'}});
+ if(['app_match_events','app_match_players','app_matches','app_competition_fixtures'].includes(table))window.dispatchEvent(new CustomEvent('tm-calculated-source-changed'));
+ return result;
 }
 
 /** Edge action: admin auth validated by the deployed server function. */
