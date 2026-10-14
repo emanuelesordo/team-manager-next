@@ -120,6 +120,40 @@ export function playerIntelligence(playerId,{fixtures=[],matches=[],matchPlayers
  total.trend=total.matches.map((x,i)=>({label:x.label,value:total.matches.slice(0,i+1).every(m=>m.pm!==null)?total.matches.slice(0,i+1).reduce((n,m)=>n+m.pm,0):null,verified:x.pm!==null}));
  return total;
 }
+
+function vizBar(label,value,max,kind='a',suffix=''){
+ const valid=value!=null&&Number.isFinite(Number(value))&&max>0;
+ const fraction=valid?Math.max(0,Math.min(100,Number(value)/max*100)):0;
+ return '<div class="psi-vizbar" data-kind="'+kind+'" title="'+E(label)+': '+(valid?E(number(Number(value))+suffix):'N/D')+'"><div class="psi-vizbar-head"><span>'+E(label)+'</span><b>'+ (valid?E(number(Number(value))+suffix):'—')+'</b></div><div class="psi-vizbar-track"><i style="--viz-width:'+fraction.toFixed(2)+'%"></i></div></div>';
+}
+function vizMatchMinutes(ordered,minuteMap,ready,maxPeriod=80){
+ if(!ready)return '<p class="psi-note">Minuti delle singole gare non verificati.</p>';
+ const list=ordered.filter(m=>minuteMap.has(K(m.id)));
+ if(!list.length)return '<p class="psi-note">Nessuna partita disputata.</p>';
+ const top=Math.max(maxPeriod,...list.map(m=>minuteMap.get(K(m.id))||0));
+ return '<div class="psi-match-bars" aria-label="Minuti per partita">'+list.map(m=>{
+  const value=minuteMap.get(K(m.id));
+  const pct=value==null?0:Math.max(0,Math.min(100,value/top*100));
+  const label=new Date(m.kickoff_at).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'});
+  return '<div class="psi-match-bar" tabindex="0" title="'+E(label)+' · '+E(value)+' minuti"><div class="psi-match-value">'+E(value)+'′</div><div class="psi-match-column"><i style="--viz-height:'+pct.toFixed(2)+'%"></i></div><div class="psi-match-label">'+E(label)+'</div></div>';
+ }).join('')+'</div>';
+}
+function vizImpact(gf,ga,pm,valid){
+ if(!valid||gf==null||ga==null)return '<p class="psi-note">Impatto non completamente verificato.</p>';
+ const total=gf+ga,win=total?gf/total*100:50,loss=total?ga/total*100:50;
+ return '<div class="psi-scoreviz" role="img" aria-label="'+E('Gol fatti '+gf+', subiti '+ga+', differenza '+pm)+'"><div class="psi-scoreviz-head"><span>Gol fatti</span><strong>'+E(gf)+' : '+E(ga)+'</strong><span>Gol subiti</span></div>'+
+  '<div class="psi-scoreviz-track"><i class="psi-scoreviz-for" style="--viz-width:'+win+'%"></i><i class="psi-scoreviz-against" style="--viz-width:'+loss+'%"></i></div>'+
+  '<div class="psi-scoreviz-scale"><span>'+E(total?Math.round(win):0)+'% GF</span><span>'+E(total?Math.round(loss):0)+'% GS</span></div></div>';
+}
+function vizRecord(w,d,loss,valid){
+ if(!valid)return '<p class="psi-note">Risultati delle presenze non riconciliati.</p>';
+ const n=w+d+loss;
+ if(!n)return '<p class="psi-note">Nessuna gara disputata.</p>';
+ return '<div class="psi-recordviz" role="img" aria-label="'+E(w+' vittorie, '+d+' pareggi, '+loss+' sconfitte')+'"><div class="psi-recordviz-track">'+
+ [['v',w],['n',d],['p',loss]].map(([k,v])=>'<i data-result="'+k+'" style="--viz-width:'+(v/n*100).toFixed(2)+'%"></i>').join('')+'</div><div class="psi-recordviz-legend">'+
+ '<span><i data-result="v"></i>'+E(w)+' vittorie</span><span><i data-result="n"></i>'+E(d)+' pareggi</span><span><i data-result="p"></i>'+E(loss)+' sconfitte</span></div></div>';
+}
+
 export function renderPlayerIntelligence(id,source){
  const v=playerIntelligence(id,source),sql=source?.stats||{};
  const rows=(source?.calculatedPlayers||[]).filter(r=>K(r.player_id)===K(id)&&r.appeared===true);
@@ -163,7 +197,7 @@ export function renderPlayerIntelligence(id,source){
  const timelineComplete=scoreResults&&v.covered===games;
  const comp='Dati avanzati mostrati solo quando verificati.';
  const usage=section('Impiego','Partecipazione alla stagione',
-   ribbon([['Subentri',fmt(subs)],['Panchina inutilizzata',scoreResults?fmt(v.unused):'—'],['Gare intere',mins!=null&&scoreResults?fmt(v.fullGames):'—'],
+   '<div class="psi-dashboard-visual">'+vizMatchMinutes(ordered,minuteMap,minutesReady,unit)+'</div>'+ribbon([['Subentri',fmt(subs)],['Panchina inutilizzata',scoreResults?fmt(v.unused):'—'],['Gare intere',mins!=null&&scoreResults?fmt(v.fullGames):'—'],
    ['Minuti / presenza',games&&mins!=null?number(mins/games)+'′':'—'],['Titolarità',percent]])+
    '<details class="psi-expand"><summary>Ingressi e uscite <span>Dettagli</span></summary>'+
    ribbon([['Ingresso medio',timelineComplete&&v.entryMinutes.length?number(v.entryMinutes.reduce((a,b)=>a+b,0)/v.entryMinutes.length)+'′':'—'],
@@ -171,7 +205,7 @@ export function renderPlayerIntelligence(id,source){
      ['Ingressi registrati',timelineComplete?fmt(v.entryMinutes.length):'—'],
      ['Uscite registrate',timelineComplete?fmt(v.exitMinutes.length):'—']])+'</details>');
  const attack=section('Produzione','Reti e assist: dettagli senza ripetere i totali iniziali',
-   ribbon([['Gol / '+unit+'′',effectiveMinutes>0&&goals!=null?rate(goals,effectiveMinutes,unit):'—'],
+   '<div class="psi-dashboard-visual psi-production-viz">'+vizBar('Gol per '+unit+'′',goals!=null&&effectiveMinutes>0?goals*unit/effectiveMinutes:null,Math.max(1,(goals||0)+(assists||0)),'goals')+vizBar('Assist per '+unit+'′',assists!=null&&effectiveMinutes>0?assists*unit/effectiveMinutes:null,Math.max(1,(goals||0)+(assists||0)),'assists')+'</div>'+ribbon([['Gol / '+unit+'′',effectiveMinutes>0&&goals!=null?rate(goals,effectiveMinutes,unit):'—'],
    ['Assist / '+unit+'′',effectiveMinutes>0&&assists!=null?rate(assists,effectiveMinutes,unit):'—'],
    ['G+A / '+unit+'′',effectiveMinutes>0&&goals!=null&&assists!=null?rate(goals+assists,effectiveMinutes,unit):'—'],
    ['Gol da subentrato',splitSub?fmt(goals):completeGoals?fmt(v.subGoals):'—'],
@@ -191,7 +225,7 @@ export function renderPlayerIntelligence(id,source){
    '<div class="psi-visual-pair">'+ring('Tempo delle reti',[['1° tempo',v.goalsByPeriod[0]],['2° tempo',v.goalsByPeriod[1]]],timelineComplete&&completeGoals)+
     ring('Stato prima del gol',[['Vantaggio',v.goalsByContext[0]],['Parità',v.goalsByContext[1]],['Svantaggio',v.goalsByContext[2]]],timelineComplete&&completeGoals)+'</div></details>');
  const impact=section('Impatto','Reti segnate e subite durante la presenza',
-   '<div class="psi-impact-main">'+ribbon([['GF in campo',fmt(gf)],['GS in campo',fmt(ga)],['Plus/minus',pm==null?'—':(pm>0?'+':'')+fmt(pm)]])+
+   '<div class="psi-impact-main">'+vizImpact(gf,ga,pm,fullImpact)+ribbon([['GF in campo',fmt(gf)],['GS in campo',fmt(ga)],['Plus/minus',pm==null?'—':(pm>0?'+':'')+fmt(pm)]])+
    '<div class="psi-impact-rates">'+ribbon([['GF / '+unit+'′',per80(gf)],['GS / '+unit+'′',per80(ga)],['+/- / '+unit+'′',per80(pm)]])+'</div></div>'+
    '<p class="psi-footnote">'+E(fullImpact?'Dati completi · '+games+' presenze verificate':reliable.length+' / '+fmt(games)+' presenze con timeline verificata')+'</p>'+
    '<details class="psi-expand"><summary>Analisi dentro e fuori campo <span>Approfondisci</span></summary>'+
@@ -201,7 +235,7 @@ export function renderPlayerIntelligence(id,source){
    ['Differenza on/off',timelineComplete&&effectiveMinutes>0&&v.offMinutes?number(pm*unit/effectiveMinutes-(v.gfOff-v.gaOff)*unit/v.offMinutes):'—']])+
    ring('Stato del punteggio',[['Vantaggio',v.states.leading],['Parità',v.states.drawing],['Svantaggio',v.states.trailing]],timelineComplete)+'</details>');
  const record=section('Risultati','Esiti delle partite e rendimento per sede',
-   ribbon([['Vittorie',scoreResults?fmt(v.results.W):'—'],['Pareggi',scoreResults?fmt(v.results.D):'—'],
+   vizRecord(v.results.W,v.results.D,v.results.L,scoreResults)+ribbon([['Vittorie',scoreResults?fmt(v.results.W):'—'],['Pareggi',scoreResults?fmt(v.results.D):'—'],
     ['Sconfitte',scoreResults?fmt(v.results.L):'—'],
     ['Win rate',scoreResults&&games?number(v.results.W/games*100)+'%':'—'],
     ['Punti / gara',scoreResults&&games?number((v.results.W*3+v.results.D)/games):'—']])+
