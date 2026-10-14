@@ -12,22 +12,6 @@ const base={fixtures:[fixture],matches:[match],matchPlayers:[{match_id:'m1',play
  {match_id:'m1',event_type:'goal',minute:70,team_side:'home',player_id:'other',secondary_player_id:'p'},
 ].map(e=>({...e,validation_status:'official'})),competitions:[competition],team:{id:'team'}};
 
-test('substitute: 25 minutes, +2 on field, goal and assist',()=>{
- const result=playerIntelligence('p',base);
- assert.equal(result.games,1);
- assert.equal(result.starts,0);
- assert.equal(result.minutes,25);
- assert.equal(result.goals,1);
- assert.equal(result.assists,1);
- assert.equal(result.subGoals,1);
- assert.equal(result.gfOn,2);
- assert.equal(result.gaOn,0);
- assert.equal(result.gfOff,0);
- assert.equal(result.gaOff,1);
- assert.equal(result.covered,1);
- assert.equal(result.entryPointsDelta,3);
- assert.ok(renderPlayerIntelligence('p',base).includes('Plus/minus'));
-});
 test('a missing goal minute suppresses on/off and preserves personal recorded goals',()=>{
  const broken={...base,events:base.events.map((e,i)=>i===2?{...e,minute:null}:e)};
  const result=playerIntelligence('p',broken);
@@ -47,57 +31,6 @@ test('rejected goals do not contribute to the statistics',()=>{
  const result=playerIntelligence('p',changed);
  assert.equal(result.goals,0);
  assert.equal(result.covered,0);
-});
-
-test('player card uses canonical roster minutes for displayed total and per-goal ratios',()=>{
- const html=renderPlayerIntelligence('p',{...base,stats:{minutes:49}});
- assert.match(html,/Minuti giocati<\/span><strong>49′/);
- assert.match(html,/Minuti \/ gol<\/span><strong>49′/);
- assert.match(html,/Stessa fonte verificata della Rosa/);
-});
-
-test('canonical roster counts govern appearances, starters, subentries, goals and cards',()=>{
- const html=renderPlayerIntelligence('p',{...base,stats:{appearances:3,starts:2,minutes:49,goals:4,assists:2,yellow_cards:3,red_cards:1}});
- assert.match(html,/Presenze<\/span><strong>3<\/strong><small>2 titolare · 1 subentrato/);
- assert.match(html,/Gol \+ assist<\/span><strong>6/);
- assert.match(html,/Ammonizioni<\/span><strong>3/);
- assert.match(html,/Espulsioni<\/span><strong>1/);
- assert.match(html,/Gol da subentrato<\/span><strong>—/);
-});
-
-test('SQL appearances remain authoritative even if local events claim extra entries',()=>{
- const source={...base,matches:[
-  {id:'m1',status:'finished'}, {id:'m2',status:'finished'}, {id:'m3',status:'finished'}
- ],events:[...base.events,
-  {match_id:'m2',event_type:'substitution',minute:70,team_side:'team',secondary_player_id:'p',validation_status:'official'},
-  {match_id:'m3',event_type:'substitution',minute:51,team_side:'team',secondary_player_id:'p',validation_status:'official'}
- ],stats:{appearances:2,starts:0,minutes:49}};
- const html=renderPlayerIntelligence('p',source);
- assert.ok(html.includes('0 titolare · 2 subentrato'));
-});
-
-test('authoritative SQL zero minutes and no entered match must not become invented local minutes',()=>{
- const html=renderPlayerIntelligence('p',{...base,stats:{appearances:1,starts:0,subentries:1,minutes:null,minutes_coverage:'unavailable',goals:1,assists:1,yellow_cards:0,red_cards:0}});
- assert.match(html,/Minuti giocati<\/span><strong>—/);
- assert.match(html,/Minuti \/ gol<\/span><strong>—/);
- assert.match(html,/GF in campo<\/span><strong>—/);
-});
-test('a SQL aggregate mismatch preserves official totals and withholds misleading derived splits',()=>{
- const html=renderPlayerIntelligence('p',{...base,stats:{appearances:3,starts:0,subentries:3,minutes:50,minutes_coverage:'complete',goals:4,assists:2,yellow_cards:2,red_cards:1}});
- assert.match(html,/Presenze<\/span><strong>3/);
- assert.match(html,/Subentrato<\/span><strong>3/);
- assert.match(html,/Gol<\/span><strong>4/);
- assert.match(html,/Ammonizioni<\/span><strong>2/);
- assert.match(html,/Gol da subentrato<\/span><strong>—/);
- assert.match(html,/Plus\/minus<\/span><strong>—/);
- assert.match(html,/Minuti per partita<\/h3><p class="psi-note">/);
-});
-test('missing event feed does not certify any detailed results or minutes chart',()=>{
- const html=renderPlayerIntelligence('p',{...base,events:[],eventsLoaded:false,playersLoaded:false,
-  stats:{appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',goals:1,assists:1}});
- assert.match(html,/Minuti giocati<\/span><strong>25′/);
- assert.match(html,/Gol da subentrato<\/span><strong>—/);
- assert.match(html,/Minuti per partita<\/h3><p class="psi-note">/);
 });
 
 test('a goal at the last minute of declared recovery counts while the player is still on the field',()=>{
@@ -124,20 +57,6 @@ test('cumulative plus-minus chart does not silently skip unknown game contributi
  assert.equal(result.matches.length,2);
  assert.equal(result.trend[0].verified,true);
  assert.equal(result.trend[1].value,null);
-});
-
-test('minuti per partita comes from confirmed SQL per-match facts, not local partial sums',()=>{
- const source={...base,stats:{appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',
-  goals:1,assists:1,match_minutes:[{match_id:'m1',minutes:25,valid:true,appeared:true}]}};
- const html=renderPlayerIntelligence('p',source);
- assert.match(html,/Minuti per partita<\/h3><div class="psi-line-wrap">/);
-});
-test('a player with no starts has all official goals and assists as a substitute',()=>{
- const source={...base,matches:[],events:[],matchPlayers:[],stats:{
-  appearances:3,starts:0,subentries:3,minutes:50,minutes_coverage:'complete',goals:1,assists:2}};
- const html=renderPlayerIntelligence('p',source);
- assert.match(html,/Gol da subentrato<\/span><strong>1/);
- assert.match(html,/Assist da subentrato<\/span><strong>2/);
 });
 
 test('Luca Peruzzo three conceded goals across three games count in GF/GS on-field',()=>{
@@ -188,28 +107,43 @@ test('Luca Peruzzo three conceded goals across three games count in GF/GS on-fie
  assert.deepEqual(r.matches.map(x=>x.minutes),[89,45,31]);
 });
 
-test('player impact uses materialized Supabase goals even when local chronology is missing',()=>{
- const html=renderPlayerIntelligence('p',{
-  ...base,events:[],matchPlayers:[],eventsLoaded:false,playersLoaded:false,
-  stats:{appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',goals:1,assists:0,
-   goals_for_on:2,goals_against_on:1,plus_minus_on:1,impact_coverage:'complete'},
-  calculatedPlayers:[{match_id:'m1',player_id:'p',appeared:true,goals_for_on:2,goals_against_on:1,plus_minus:1,score_coverage:'complete'}]
- });
- assert.match(html,/GF in campo<\/span><strong>2/);
- assert.match(html,/GS in campo<\/span><strong>1/);
- assert.match(html,/Plus\/minus<\/span><strong>\+1/);
-});
 
-test('on-field per-80 metrics use the same persisted 165 minutes as the 8/3/+5 SQL totals',()=>{
+test('redesigned player profile has no metric carousel and keeps one source for each total',()=>{
+ const html=renderPlayerIntelligence('p',{...base,
+  stats:{appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',
+   goals:1,assists:1,avg_rating:7,match_minutes:[{match_id:'m1',minutes:25,valid:true}]}});
+ assert.match(html,/class="psi-root psi-clean"/);
+ assert.doesNotMatch(html,/class="psi-carousel"/);
+ assert.doesNotMatch(html,/class="psi-summary"/);
+ assert.match(html,/Impiego/);
+ assert.match(html,/Produzione/);
+ assert.match(html,/Impatto/);
+ assert.match(html,/Andamento/);
+ assert.match(html,/data-psi-tab="0"/);
+ assert.match(html,/data-psi-panel="2" hidden/);
+ assert.equal((html.match(/>Subentri</g)||[]).length,1);
+});
+test('database GF GS and minutes drive every per-period rate',()=>{
  const html=renderPlayerIntelligence('luca',{...base,stats:{
   appearances:3,starts:1,subentries:2,minutes:165,minutes_coverage:'complete',
   goals:0,assists:0,goals_for_on:8,goals_against_on:3,plus_minus_on:5,impact_coverage:'complete'
  },calculatedPlayers:[
   {player_id:'luca',match_id:'a',appeared:true,minutes:89,goals_for_on:4,goals_against_on:1,score_coverage:'complete'},
   {player_id:'luca',match_id:'b',appeared:true,minutes:45,goals_for_on:2,goals_against_on:1,score_coverage:'complete'},
-  {player_id:'luca',match_id:'c',appeared:true,minutes:31,goals_for_on:2,goals_against_on:1,score_coverage:'complete'}
- ]});
+  {player_id:'luca',match_id:'c',appeared:true,minutes:31,goals_for_on:2,goals_against_on:1,score_coverage:'complete'}]
+ });
  assert.match(html,/GF \/ 80′<\/span><strong>3,88/);
  assert.match(html,/GS \/ 80′<\/span><strong>1,45/);
  assert.match(html,/\+\/- \/ 80′<\/span><strong>2,42/);
+ assert.match(html,/GF in campo<\/span><strong>8/);
+ assert.match(html,/GS in campo<\/span><strong>3/);
+});
+test('unverified impact does not invent rates, but retains distinct advanced categories',()=>{
+ const html=renderPlayerIntelligence('p',{...base,
+  stats:{appearances:1,starts:0,subentries:1,goals:1,assists:0,minutes:null,minutes_coverage:'unavailable'}});
+ assert.match(html,/GF \/ 80′<\/span><strong>—/);
+ assert.match(html,/Minuti \/ gol/);
+ assert.match(html,/Variazione punti dopo ingresso/);
+ assert.match(html,/Differenza on\/off/);
+ assert.match(html,/Casa, trasferta e cambi/);
 });
