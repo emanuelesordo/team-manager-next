@@ -117,7 +117,7 @@ test('redesigned player profile has no metric carousel and keeps one source for 
  assert.doesNotMatch(html,/class="psi-summary"/);
  assert.match(html,/Impiego/);
  assert.match(html,/Produzione/);
- assert.match(html,/Impatto/);
+ assert.doesNotMatch(html,/Impatto<\/h2>/);
  assert.match(html,/Andamento/);
  assert.match(html,/data-psi-tab="0"/);
  assert.match(html,/data-psi-panel="0"/);
