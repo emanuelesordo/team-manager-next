@@ -1,4 +1,4 @@
-import {matchPlayerIntervals,confirmedMatchEvent} from './player-participation.js';
+import {matchPlayerIntervals,confirmedMatchEvent} from './player-participation.js?v=20261014periodpriority1';
 
 const K=x=>String(x??'');
 const whole=x=>x!=null&&x!==''&&Number.isInteger(Number(x))&&Number(x)>=0;
