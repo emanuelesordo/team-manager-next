@@ -28,6 +28,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Test player profile calculations and presentation
+        run: node --check fresh/player-intelligence.js && node --test tests/player-intelligence.test.mjs
       - name: Generate static site
         run: npm run build
       - name: Verify deploy artifact
