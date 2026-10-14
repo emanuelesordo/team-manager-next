@@ -66,3 +66,15 @@ export function displayEventMinute(event,competition,missing='—'){
  if(liveNow&&Number.isFinite(delta)&&delta>0&&delta<60)shown=n+1;
  return String(shown)+'′';
 }
+
+/** Resolve legacy unknown-period events after a trusted minute was supplied.
+ * A missing minute stays unplaced; a known cumulative minute is placed into its period.
+ * Explicit timeline period overrides are handled by the calling timeline.
+ */
+export function timelinePeriodFromMinute(event,competition){
+ const minute=cumulativeEventMinute(event,competition);
+ if(minute===null)return 0;
+ const length=matchPeriodLength(competition);
+ if(length===null)return 0;
+ return Math.max(1,Math.ceil(Math.max(1,minute)/length));
+}
