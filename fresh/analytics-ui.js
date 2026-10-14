@@ -272,7 +272,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[]){
  return '<div class="stats-player-section"><p class="stats-hint">Confronti stagionali dei giocatori Caselle · dati certificati nella vista SQL unica. Le voci senza dati sono omesse.</p>'+
  tabs+panels+'</div>';
 }
-function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[]){
+function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[],opponentFlows=[]){
  const comp=new Map(competitions.map(c=>[String(c.id),c]));
  const rows=fixtures.filter(f=>f.status==='finished'&&!f.is_test&&Number.isInteger(Number(f.home_score))&&Number.isInteger(Number(f.away_score)));
  const grouped=new Map();
@@ -285,6 +285,8 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
  const phases=new Map(phaseRows.map(x=>[String(x.match_id),x]));
  const eventIndex=new Map();
  for(const item of eventContexts){const key=String(item.competition_id),list=eventIndex.get(key)||[];list.push(item);eventIndex.set(key,list)}
+ const opponents=new Map();
+ for(const r of opponentFlows){const id=String(r.competition_id),list=opponents.get(id)||[];list.push(r);opponents.set(id,list)}
  const flows=new Map();
  for(const r of flowRows){const id=String(r.competition_id);const list=flows.get(id)||[];list.push(r);flows.set(id,list)}
  const formatMinute=v=>Number(v||0).toLocaleString('it-IT',{maximumFractionDigits:1})+'′';
@@ -294,33 +296,39 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
   return '<div class="stats-flow"><h4>'+E(name)+'</h4><div class="stats-flow-bars">'+items.map(([label,value,variant])=>
    '<div class="stats-flow-row"><span>'+E(label)+'</span><div class="stats-flow-track"><i data-flow="'+E(variant)+'" style="width:'+(total?Math.max(0,value/total*100):0).toFixed(2)+'%"></i></div><b>'+E(formatMinute(value))+'</b></div>').join('')+'</div></div>';
  };
- return '<div class="stats-tournament-section"><p class="stats-hint">Andamento delle gare con eventi verificati. I minuti misurano lo stato del punteggio, non il possesso o la pressione tattica. Le gare delle avversarie senza timeline non vengono stimate.</p>'+
+ return '<div class="stats-tournament-section"><p class="stats-hint">Andamento delle gare con eventi verificati. I minuti misurano lo stato del punteggio, non il possesso o la pressione tattica. Le gare tra avversarie sono incluse soltanto se i gol ufficializzati concordano con il risultato e hanno minuti utilizzabili.</p>'+
  [...grouped].map(([id,data])=>{
   const current=(flows.get(id)||[]).filter(x=>x.verified===true);
-  const duration=sum(current,'duration');
+  const opponent=(opponents.get(id)||[]);
+  const duration=sum(current,'duration')+sum(opponent,'duration');
   const applicablePhases=current.map(x=>phases.get(String(x.match_id))).filter(Boolean);
   const events=(eventIndex.get(id)||[]).filter(x=>x.score_state!=null);
   const stateCount=(type,side,state)=>events.filter(x=>(!type||type.includes(x.event_type))&&(!side||x.event_side===side)&&(!state||x.score_state===state)).length;
-  const missing=(flows.get(id)||[]).filter(x=>!x.verified).length;
+  const missing=Math.max(0,data.played-current.length-opponent.length);
+  const verifiedCount=current.length+opponent.length;
   const matchStats='<div class="team-metric-grid">'+
    cell('Gare calendario',data.played)+cell('Gol torneo registrati',data.goals)+
-   cell('Timeline Caselle verificate',current.length)+
+   cell('Timeline verificate, Caselle + avversarie',verifiedCount)+
    cell('Minuti analizzati',formatMinute(duration))+
    cell('Pareggi nel torneo',data.draws)+
    cell('Timeline da completare',missing)+'</div>';
-  const result=current.length?graph('Tempo nello stato di risultato',[
-    ['0-0',sum(current,'nil_minutes'),'nil'],
-    ['Parità dopo i gol',sum(current,'draw_minutes')-sum(current,'nil_minutes'),'draw'],
-    ['In vantaggio',sum(current,'lead_minutes'),'lead'],
-    ['In svantaggio',sum(current,'trail_minutes'),'trail']
+  const result=verifiedCount?graph('Tempo nello stato di risultato (tutte le gare riconciliate)',[
+    ['0-0',sum(current,'nil_minutes')+sum(opponent,'nil_minutes'),'nil'],
+    ['Parità dopo i gol',sum(current,'draw_minutes')-sum(current,'nil_minutes')+sum(opponent,'draw_minutes')-sum(opponent,'nil_minutes'),'draw'],
+    ['Vantaggio Caselle / squadra di casa',sum(current,'lead_minutes')+sum(opponent,'home_lead_minutes'),'lead'],
+    ['Svantaggio Caselle / vantaggio ospiti',sum(current,'trail_minutes')+sum(opponent,'away_lead_minutes'),'trail']
   ]):'<p class="stats-hint">Nessuna timeline riconciliata disponibile per questo torneo.</p>';
-  const dynamics=current.length?'<div class="stats-flow-kpis">'+[
+  const dynamics=verifiedCount?'<div class="stats-flow-kpis">'+[
    ['Vantaggi conquistati',sum(current,'leads_taken')],
    ['Vantaggi persi',sum(current,'leads_lost')],
    ['Svantaggi recuperati',sum(current,'deficits_recovered')],
    ['Ingressi in svantaggio',sum(current,'deficits_entered')],
    ['Pareggi in rimonta',sum(current,'comeback_equalizers')],
-   ['Pareggi subiti',sum(current,'opponent_equalizers')]
+   ['Pareggi subiti',sum(current,'opponent_equalizers')],
+   ['Pareggi in rimonta, squadre di casa',sum(opponent,'home_comeback_equalizers')],
+   ['Pareggi in rimonta, squadre ospiti',sum(opponent,'away_comeback_equalizers')],
+   ['Vantaggi presi, casa',sum(opponent,'home_go_aheads')],
+   ['Vantaggi presi, ospiti',sum(opponent,'away_go_aheads')]
   ].map(([name,value])=>'<div><strong>'+E(value)+'</strong><span>'+E(name)+'</span></div>').join('')+'</div>':'';
   const phaseStats=applicablePhases.length?'<h4>Indicatori di rincorsa e tenuta</h4><div class="stats-flow-kpis">'+[
    ['Minuti in vantaggio di misura',formatMinute(sum(applicablePhases,'narrow_lead_minutes'))],
@@ -338,24 +346,27 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
     ['Rossi Caselle',stateCount(['red_card','second_yellow'],'team',null)],
     ['Rossi avversari',stateCount(['red_card','second_yellow'],'opponent',null)]
   ].map(([name,value])=>'<div><strong>'+E(value)+'</strong><span>'+E(name)+'</span></div>').join('')+'</div>':'';
-  const context=current.length?'<div class="stats-flow-kpis">'+[
+  const context=verifiedCount?'<div class="stats-flow-kpis">'+[
    ['Gol fatti',sum(current,'goals_for')],['Gol subiti',sum(current,'goals_against')],
    ['Cambi registrati, entrambe squadre',sum(current,'substitutions_total')],
    ['Ammonizioni, entrambe squadre',sum(current,'yellows_total')],
-   ['Espulsioni, entrambe squadre',sum(current,'reds_total')]
+   ['Espulsioni, entrambe squadre',sum(current,'reds_total')],
+   ['Cambi nelle altre gare',sum(opponent,'substitutions')],
+   ['Ammonizioni nelle altre gare',sum(opponent,'yellows')],
+   ['Espulsioni nelle altre gare',sum(opponent,'reds')]
   ].map(([name,value])=>'<div><strong>'+E(value)+'</strong><span>'+E(name)+'</span></div>').join('')+'</div>':'';
   return '<section class="stats-tournament-group"><h3>'+E(comp.get(id)?.name||'Competizione')+'</h3>'+
-   matchStats+result+(current.length?'<h4>Vantaggi, svantaggi e rimonte</h4>'+dynamics+phaseStats+
+   matchStats+result+(verifiedCount?'<h4>Vantaggi, svantaggi e rimonte</h4>'+dynamics+phaseStats+
    '<h4>Eventi e disciplina</h4>'+context+eventStates:'')+
    '<p class="stats-hint">Indicatori di pressione/sofferenza: i periodi in svantaggio o in vantaggio minimo possono suggerire un contesto, ma non misurano azioni offensive né pressione reale.</p></section>';
  }).join('')+'</div>';
 }
-export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[],goalImpacts=[],ratingInsights=[],playerComparisons=[],matchFlows=[],flowPhases=[],flowEventContexts=[]){
+export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[],goalImpacts=[],ratingInsights=[],playerComparisons=[],matchFlows=[],flowPhases=[],flowEventContexts=[],opponentFlows=[]){
  const tabs='<nav class="stats-scope-tabs" role="tablist" aria-label="Ambito delle statistiche">'+
  [['team','Squadra · Caselle'],['players','Giocatori · Caselle'],['all','Complessivo · Torneo']].map(([id,label],i)=>
  '<button type="button" role="tab" data-stats-scope="'+id+'" aria-selected="'+(i===0)+'">'+E(label)+'</button>').join('')+'</nav>';
  return tabs+'<div class="stats-scope-panel" data-stats-panel="team">'+
  renderTeamAnalytics(fixtures,matches,events,team,competitions,playerStats,opponents,matchPlayers,venues,predictionSnapshots,history)+
  '</div><div class="stats-scope-panel" data-stats-panel="players" hidden>'+playersNumbers(playerStats,goalImpacts,ratingInsights,playerComparisons)+
- '</div><div class="stats-scope-panel" data-stats-panel="all" hidden>'+tournamentNumbers(fixtures,competitions,matchFlows,flowPhases,flowEventContexts)+'</div>';
+ '</div><div class="stats-scope-panel" data-stats-panel="all" hidden>'+tournamentNumbers(fixtures,competitions,matchFlows,flowPhases,flowEventContexts,opponentFlows)+'</div>';
 }
