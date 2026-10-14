@@ -18,3 +18,15 @@
 @keyframes stats-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media(max-width:800px){.stats-player-section{grid-template-columns:1fr}.stats-rank-row{grid-template-columns:21px minmax(115px,1fr) minmax(45px,.6fr) 45px;gap:6px}}
 @media(prefers-reduced-motion:reduce){.stats-rank-track i{animation:none}}
+
+
+/* Compact ranking navigation inside the player statistics scope. */
+.stats-player-section{display:block}
+.stats-player-section>.stats-hint{margin-bottom:13px}
+.stats-ranking-tabs{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 21px}
+.stats-ranking-tabs button{border:1px solid color-mix(in srgb,currentColor 12%,transparent);background:transparent;color:inherit;border-radius:999px;padding:8px 12px;font:inherit;font-size:11px;cursor:pointer;transition:background .2s,border-color .2s}
+.stats-ranking-tabs button[aria-selected="true"]{background:color-mix(in srgb,currentColor 10%,transparent);border-color:color-mix(in srgb,currentColor 20%,transparent);font-weight:700}
+.stats-ranking-tabs button:focus-visible{outline:2px solid #55af95;outline-offset:2px}
+.stats-player-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:23px 29px}
+.stats-player-grid[hidden]{display:none}
+@media(max-width:800px){.stats-player-grid{grid-template-columns:1fr}.stats-ranking-tabs{gap:5px}.stats-ranking-tabs button{padding:8px 10px}}
