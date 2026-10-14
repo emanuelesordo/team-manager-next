@@ -12,7 +12,7 @@ import {installCalendarImport} from './calendar-import.js';
 import {installLineupPitch,paintLineupPitch,paintCallups} from './lineup-pitch.js?callups=20261005callup-lineup-sync1';
 import {projectionContainer,updateProjection} from './projection-ui.js?history=20261012prematch1';
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
-import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261015matchflow1';
+import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261015matchflow3';
 import {reconcilePlayerSeasonFacts} from './player-season-facts.js';
 import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,timelinePeriodFromMinute} from './match-minutes.js?live=20261014periodplacement1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
