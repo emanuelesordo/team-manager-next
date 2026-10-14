@@ -166,6 +166,10 @@ export function renderPlayerIntelligence(id,source){
  const minutesHistory=matchFacts.length?((source?.matches||[]).filter(m=>perMatchMinutes.has(K(m.id))).sort((a,b)=>Date.parse(a.kickoff_at||0)-Date.parse(b.kickoff_at||0)).map(m=>({minute:perMatchMinutes.get(K(m.id)),label:new Date(m.kickoff_at).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'})}))):[];
  const verifiedImpact=hasCache?cachedComplete&&cachedRows.length===games:allMinutes&&v.covered===v.games;
  const hasOn=finalImpactPM!==null;
+ const impactMinutes=verifiedSqlImpact&&minuteCoverage?minutes:!hasCache&&v.covered>0?v.onMinutes:null;
+ const impactRate=(value)=>hasOn&&impactMinutes>0?rate(value,impactMinutes,base):'—';
+ const localOffComplete=!hasCache&&verifiedImpact;
+ const offRate=value=>localOffComplete&&v.offMinutes>0?rate(value,v.offMinutes,base):'—';
  const impactComplete=verifiedImpact;
  const minuteSource=minuteCoverage?'Stessa fonte verificata della Rosa':'Minuti non verificabili';
  const safeRate=n=>minuteCoverage&&n!=null?rate(n,minutes,base):'—';
@@ -181,9 +185,9 @@ export function renderPlayerIntelligence(id,source){
  ['Gol',n(goals)],['Assist',n(assists)],['Gol da subentrato',goals===0?0:starts===0&&totalsConsistent?goals:!splitGoals||!totalsConsistent?'—':v.subGoals],['Assist da subentrato',assists===0?0:starts===0&&totalsConsistent?assists:!splitAssists||!totalsConsistent?'—':v.subAssists],['Doppiette',goals<=1&&goals!=null?0:!splitGoals?'—':v.braces],['Triplette',goals<=2&&goals!=null?0:!splitGoals?'—':v.hattricks],['% gol squadra',splitGoals&&splitGames&&v.teamGoalsDuringAppearances?number(goals/v.teamGoalsDuringAppearances*100)+'%':'—'],['% coinvolgimento',splitGoals&&splitAssists&&splitGames&&v.teamGoalsDuringAppearances?number((goals+assists)/v.teamGoalsDuringAppearances*100)+'%':'—']])+
  segment('Contesto delle reti',[['Apre le marcature',!splitGoals||!completeScoreTimelines?'—':v.firstGoals],['Gol del pareggio',!splitGoals||!completeScoreTimelines?'—':v.equalizers],['Gol del vantaggio',!splitGoals||!completeScoreTimelines?'—':v.leadGoals],['Gol in rimonta',!splitGoals||!completeScoreTimelines?'—':v.comeFromBehindGoals],['Gol potenzialmente decisivi',!splitGoals||!completeScoreTimelines?'—':v.goalWins]],'Gol decisivi: criterio descrittivo legato al punteggio finale, non una misura causale.'));
  const impact=title('Impatto in campo',segment('Differenza reti con il giocatore',[
- ['GF in campo',hasOn?finalImpactGF:'—'],['GS in campo',hasOn?finalImpactGA:'—'],['Plus/minus',hasOn?(pm>0?'+':'')+pm:'—'],['GF / '+base+"′",hasOn?rate(finalImpactGF,v.onMinutes,base):'—'],['GS / '+base+"′",hasOn?rate(finalImpactGA,v.onMinutes,base):'—'],['+/- / '+base+"′",hasOn?rate(pm,v.onMinutes,base):'—']],coverage)+
+ ['GF in campo',hasOn?finalImpactGF:'—'],['GS in campo',hasOn?finalImpactGA:'—'],['Plus/minus',hasOn?(pm>0?'+':'')+pm:'—'],['GF / '+base+"′",impactRate(finalImpactGF)],['GS / '+base+"′",impactRate(finalImpactGA)],['+/- / '+base+"′",impactRate(pm)]],coverage)+
  segment('Dentro / fuori',[
- ['GF fuori campo',hasOn?v.gfOff:'—'],['GS fuori campo',hasOn?v.gaOff:'—'],['DR / '+base+"′ fuori",hasOn?rate(v.gfOff-v.gaOff,v.offMinutes,base):'—'],['Differenza on/off',hasOn&&v.onMinutes&&v.offMinutes?number(pm*base/v.onMinutes-(v.gfOff-v.gaOff)*base/v.offMinutes):'—'],['Clean sheet individuali',hasOn?v.cleanOn:'—'],['Gare verificate',hasCache?impactRows.length:v.covered]],'Confronto descrittivo: dipende anche da squadra, avversari e contesto.'));
+ ['GF fuori campo',localOffComplete?v.gfOff:'—'],['GS fuori campo',localOffComplete?v.gaOff:'—'],['DR / '+base+"′ fuori",offRate(v.gfOff-v.gaOff)],['Differenza on/off',localOffComplete&&impactMinutes>0&&v.offMinutes>0?number(pm*base/impactMinutes-(v.gfOff-v.gaOff)*base/v.offMinutes):'—'],['Clean sheet individuali',localOffComplete?v.cleanOn:'—'],['Gare verificate',hasCache?impactRows.length:v.covered]],'Confronto descrittivo: dipende anche da squadra, avversari e contesto.'));
  const outcomes=title('Risultati e disciplina',segment('Risultati delle presenze',[
  ['Vittorie',!splitGames?'—':v.results.W],['Pareggi',!splitGames?'—':v.results.D],['Sconfitte',!splitGames?'—':v.results.L],['Win rate',splitGames&&v.games?number(100*v.results.W/v.games)+'%':'—'],['Punti / gara',splitGames&&v.games?number((v.results.W*3+v.results.D)/v.games):'—']])+
  segment('Impatto del cambio e disciplina',[
