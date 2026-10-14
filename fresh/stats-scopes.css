@@ -30,3 +30,22 @@
 .stats-player-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:23px 29px}
 .stats-player-grid[hidden]{display:none}
 @media(max-width:800px){.stats-player-grid{grid-template-columns:1fr}.stats-ranking-tabs{gap:5px}.stats-ranking-tabs button{padding:8px 10px}}
+
+
+.stats-flow{max-width:900px;margin:24px 0}
+.stats-flow h4,.stats-tournament-group h4{font-size:13px;margin:21px 0 12px}
+.stats-flow-bars{display:grid;gap:13px}
+.stats-flow-row{display:grid;grid-template-columns:minmax(100px,165px) minmax(80px,1fr) 68px;align-items:center;gap:12px;font-size:12px}
+.stats-flow-row>b{text-align:right;font-variant-numeric:tabular-nums}
+.stats-flow-track{height:12px;background:color-mix(in srgb,currentColor 7%,transparent);border-radius:10px;overflow:hidden}
+.stats-flow-track i{display:block;height:100%;border-radius:10px;background:#8399b0;transform-origin:left;animation:stats-grow .6s ease both}
+.stats-flow-track i[data-flow=lead]{background:#4ba988}
+.stats-flow-track i[data-flow=trail]{background:#dc887f}
+.stats-flow-track i[data-flow=nil]{background:#9caab3}
+.stats-flow-track i[data-flow=draw]{background:#789bb7}
+.stats-flow-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:18px;margin:12px 0 20px}
+.stats-flow-kpis>div{display:flex;flex-direction:column;gap:5px}
+.stats-flow-kpis strong{font-size:23px;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.stats-flow-kpis span{font-size:11px;opacity:.65}
+@media(max-width:520px){.stats-flow-row{grid-template-columns:105px minmax(40px,1fr) 53px;gap:6px;font-size:11px}}
+@media(prefers-reduced-motion:reduce){.stats-flow-track i{animation:none}}
