@@ -1,4 +1,4 @@
-import {matchPlayerIntervals,matchElapsedMinute,confirmedMatchEvent} from './player-participation.js';
+import {matchPlayerIntervals,matchElapsedMinute,confirmedMatchEvent} from './player-participation.js?v=20261014periodpriority1';
 
 const K=x=>String(x??'');
 const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;', '"':'&quot;',"'":'&#39;'}[c]));
