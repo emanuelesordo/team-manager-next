@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test player profile calculations and presentation
-        run: node --check fresh/player-intelligence.js && node --test tests/player-intelligence.test.mjs
+        run: node --check fresh/player-intelligence.js && node --check fresh/analytics-ui.js && node --test tests/player-intelligence.test.mjs tests/analytics-ui.scopes.test.mjs
       - name: Generate static site
         run: npm run build
       - name: Verify deploy artifact
