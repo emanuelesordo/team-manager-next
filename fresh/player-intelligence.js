@@ -175,7 +175,9 @@ export function renderPlayerIntelligence(id,source){
    ['Assist / '+unit+'′',effectiveMinutes>0&&assists!=null?rate(assists,effectiveMinutes,unit):'—'],
    ['G+A / '+unit+'′',effectiveMinutes>0&&goals!=null&&assists!=null?rate(goals+assists,effectiveMinutes,unit):'—'],
    ['Gol da subentrato',splitSub?fmt(goals):completeGoals?fmt(v.subGoals):'—'],
-   ['Assist da subentrato',splitSub?fmt(assists):completeAssists?fmt(v.subAssists):'—']])+
+   ['Assist da subentrato',splitSub?fmt(assists):completeAssists?fmt(v.subAssists):'—'],
+   ['Minuti / gol',goals&&mins?number(mins/goals)+'′':'—'],
+   ['Minuti / G+A',goals!=null&&assists!=null&&goals+assists>0&&mins?number(mins/(goals+assists))+'′':'—']])+
    '<details class="psi-expand"><summary>Contesto dei gol <span>Approfondisci</span></summary>'+
    ribbon([['Doppiette',goals!=null&&goals<2?'0':completeGoals?fmt(v.braces):'—'],
    ['Triplette',goals!=null&&goals<3?'0':completeGoals?fmt(v.hattricks):'—'],
@@ -183,7 +185,9 @@ export function renderPlayerIntelligence(id,source){
    ['Pareggi',timelineComplete&&completeGoals?fmt(v.equalizers):'—'],
    ['Gol del vantaggio',timelineComplete&&completeGoals?fmt(v.leadGoals):'—'],
    ['Gol in rimonta',timelineComplete&&completeGoals?fmt(v.comeFromBehindGoals):'—'],
-   ['Gol decisivi (stima)',timelineComplete&&completeGoals?fmt(v.goalWins):'—']])+
+   ['Gol decisivi (stima)',timelineComplete&&completeGoals?fmt(v.goalWins):'—'],
+   ['% gol squadra',completeGoals&&v.teamGoalsDuringAppearances?number(goals/v.teamGoalsDuringAppearances*100)+'%':'—'],
+   ['% coinvolgimento',completeGoals&&completeAssists&&v.teamGoalsDuringAppearances?number((goals+assists)/v.teamGoalsDuringAppearances*100)+'%':'—']])+
    '<div class="psi-visual-pair">'+ring('Tempo delle reti',[['1° tempo',v.goalsByPeriod[0]],['2° tempo',v.goalsByPeriod[1]]],timelineComplete&&completeGoals)+
     ring('Stato prima del gol',[['Vantaggio',v.goalsByContext[0]],['Parità',v.goalsByContext[1]],['Svantaggio',v.goalsByContext[2]]],timelineComplete&&completeGoals)+'</div></details>');
  const impact=section('Impatto','Reti segnate e subite durante la presenza',
@@ -192,7 +196,9 @@ export function renderPlayerIntelligence(id,source){
    '<p class="psi-footnote">'+E(fullImpact?'Dati completi · '+games+' presenze verificate':reliable.length+' / '+fmt(games)+' presenze con timeline verificata')+'</p>'+
    '<details class="psi-expand"><summary>Analisi dentro e fuori campo <span>Approfondisci</span></summary>'+
    ribbon([['GF fuori campo',timelineComplete?fmt(v.gfOff):'—'],['GS fuori campo',timelineComplete?fmt(v.gaOff):'—'],
-   ['Clean sheet individuali',timelineComplete?fmt(v.cleanOn):'—']])+
+   ['Clean sheet individuali',timelineComplete?fmt(v.cleanOn):'—'],
+   ['DR / '+unit+'′ fuori',timelineComplete&&v.offMinutes?rate(v.gfOff-v.gaOff,v.offMinutes,unit):'—'],
+   ['Differenza on/off',timelineComplete&&effectiveMinutes>0&&v.offMinutes?number(pm*unit/effectiveMinutes-(v.gfOff-v.gaOff)*unit/v.offMinutes):'—']])+
    ring('Stato del punteggio',[['Vantaggio',v.states.leading],['Parità',v.states.drawing],['Svantaggio',v.states.trailing]],timelineComplete)+'</details>');
  const record=section('Risultati','Esiti delle partite e rendimento per sede',
    ribbon([['Vittorie',scoreResults?fmt(v.results.W):'—'],['Pareggi',scoreResults?fmt(v.results.D):'—'],
@@ -206,7 +212,9 @@ export function renderPlayerIntelligence(id,source){
    ['Punti / gara casa',scoreResults&&v.home.games?number(v.home.points/v.home.games):'—'],
    ['Punti / gara trasferta',scoreResults&&v.away.games?number(v.away.points/v.away.games):'—'],
    ['Punti da subentrato',scoreResults?fmt(v.subPoints):'—'],
-   ['Punti da titolare',scoreResults?fmt(v.starterPoints):'—']])+'</details>');
+   ['Punti da titolare',scoreResults?fmt(v.starterPoints):'—'],
+   ['Variazione punti dopo ingresso',timelineComplete?fmt(v.entryPointsDelta):'—'],
+   ['Variazione punti dopo uscita',timelineComplete?fmt(v.exitPointsDelta):'—']])+'</details>');
  const trend=section('Andamento','Seleziona la metrica; passa sui punti del grafico per i valori',
    tabs+'<div class="psi-chart-stage">'+chartPanels+'</div>');
  return '<div class="psi-root psi-clean" data-player-id="'+E(id)+'">'+usage+attack+impact+record+trend+
