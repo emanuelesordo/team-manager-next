@@ -132,6 +132,12 @@ export function renderPlayerIntelligence(id,source){
  const impactGF=hasCache?(impactRows.length?fieldSum('goals_for_on'):null):v.covered>0?v.gfOn:null;
  const impactGA=hasCache?(impactRows.length?fieldSum('goals_against_on'):null):v.covered>0?v.gaOn:null;
  const impactPM=impactGF==null||impactGA==null?null:impactGF-impactGA;
+ // The season view is the definitive aggregate; match cache only provides the detailed drilldown.
+ const verifiedSqlImpact=canonical.impact_coverage==='complete';
+ const finalImpactGF=verifiedSqlImpact&&canonical.goals_for_on!=null?Number(canonical.goals_for_on):impactGF;
+ const finalImpactGA=verifiedSqlImpact&&canonical.goals_against_on!=null?Number(canonical.goals_against_on):impactGA;
+ const finalImpactPM=verifiedSqlImpact&&canonical.plus_minus_on!=null?Number(canonical.plus_minus_on):
+  finalImpactGF!=null&&finalImpactGA!=null?finalImpactGF-finalImpactGA:null;
  const has=field=>Object.prototype.hasOwnProperty.call(canonical,field);
  const numeric=(field,fallback=null)=>has(field)?(canonical[field]==null||canonical[field]===''?null:Number.isFinite(Number(canonical[field]))?Number(canonical[field]):null):fallback;
  // SQL season view is the only authority for aggregate totals. The event model
@@ -144,7 +150,7 @@ export function renderPlayerIntelligence(id,source){
  const finalCoverage=canonical.minutesCoverage??canonical.minutes_coverage??null;
  const minuteCoverage=finalCoverage==='unavailable'?false:officialMinutes!==null&&officialMinutes>=0;
  const minutes=minuteCoverage?officialMinutes:null;
- const base=v.duration,pm=impactPM;
+ const base=v.duration,pm=finalImpactPM;
  const totalsConsistent=games!=null&&starts!=null&&subentries!=null&&starts+subentries===games;
  const canonicalTotalsKnown=goals!=null&&assists!=null&&games!=null&&starts!=null;
  const timelineLoaded=source?.eventsLoaded!==false&&source?.playersLoaded!==false;
@@ -159,7 +165,7 @@ export function renderPlayerIntelligence(id,source){
  const allMinutes=splitGames&&v.minutesKnown===v.games&&minuteCoverage&&v.minutes===minutes;
  const minutesHistory=matchFacts.length?((source?.matches||[]).filter(m=>perMatchMinutes.has(K(m.id))).sort((a,b)=>Date.parse(a.kickoff_at||0)-Date.parse(b.kickoff_at||0)).map(m=>({minute:perMatchMinutes.get(K(m.id)),label:new Date(m.kickoff_at).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'})}))):[];
  const verifiedImpact=hasCache?cachedComplete&&cachedRows.length===games:allMinutes&&v.covered===v.games;
- const hasOn=impactPM!==null;
+ const hasOn=finalImpactPM!==null;
  const impactComplete=verifiedImpact;
  const minuteSource=minuteCoverage?'Stessa fonte verificata della Rosa':'Minuti non verificabili';
  const safeRate=n=>minuteCoverage&&n!=null?rate(n,minutes,base):'—';
@@ -175,7 +181,7 @@ export function renderPlayerIntelligence(id,source){
  ['Gol',n(goals)],['Assist',n(assists)],['Gol da subentrato',goals===0?0:starts===0&&totalsConsistent?goals:!splitGoals||!totalsConsistent?'—':v.subGoals],['Assist da subentrato',assists===0?0:starts===0&&totalsConsistent?assists:!splitAssists||!totalsConsistent?'—':v.subAssists],['Doppiette',goals<=1&&goals!=null?0:!splitGoals?'—':v.braces],['Triplette',goals<=2&&goals!=null?0:!splitGoals?'—':v.hattricks],['% gol squadra',splitGoals&&splitGames&&v.teamGoalsDuringAppearances?number(goals/v.teamGoalsDuringAppearances*100)+'%':'—'],['% coinvolgimento',splitGoals&&splitAssists&&splitGames&&v.teamGoalsDuringAppearances?number((goals+assists)/v.teamGoalsDuringAppearances*100)+'%':'—']])+
  segment('Contesto delle reti',[['Apre le marcature',!splitGoals||!completeScoreTimelines?'—':v.firstGoals],['Gol del pareggio',!splitGoals||!completeScoreTimelines?'—':v.equalizers],['Gol del vantaggio',!splitGoals||!completeScoreTimelines?'—':v.leadGoals],['Gol in rimonta',!splitGoals||!completeScoreTimelines?'—':v.comeFromBehindGoals],['Gol potenzialmente decisivi',!splitGoals||!completeScoreTimelines?'—':v.goalWins]],'Gol decisivi: criterio descrittivo legato al punteggio finale, non una misura causale.'));
  const impact=title('Impatto in campo',segment('Differenza reti con il giocatore',[
- ['GF in campo',hasOn?impactGF:'—'],['GS in campo',hasOn?impactGA:'—'],['Plus/minus',hasOn?(pm>0?'+':'')+pm:'—'],['GF / '+base+"′",hasOn?rate(impactGF,v.onMinutes,base):'—'],['GS / '+base+"′",hasOn?rate(impactGA,v.onMinutes,base):'—'],['+/- / '+base+"′",hasOn?rate(pm,v.onMinutes,base):'—']],coverage)+
+ ['GF in campo',hasOn?finalImpactGF:'—'],['GS in campo',hasOn?finalImpactGA:'—'],['Plus/minus',hasOn?(pm>0?'+':'')+pm:'—'],['GF / '+base+"′",hasOn?rate(finalImpactGF,v.onMinutes,base):'—'],['GS / '+base+"′",hasOn?rate(finalImpactGA,v.onMinutes,base):'—'],['+/- / '+base+"′",hasOn?rate(pm,v.onMinutes,base):'—']],coverage)+
  segment('Dentro / fuori',[
  ['GF fuori campo',hasOn?v.gfOff:'—'],['GS fuori campo',hasOn?v.gaOff:'—'],['DR / '+base+"′ fuori",hasOn?rate(v.gfOff-v.gaOff,v.offMinutes,base):'—'],['Differenza on/off',hasOn&&v.onMinutes&&v.offMinutes?number(pm*base/v.onMinutes-(v.gfOff-v.gaOff)*base/v.offMinutes):'—'],['Clean sheet individuali',hasOn?v.cleanOn:'—'],['Gare verificate',hasCache?impactRows.length:v.covered]],'Confronto descrittivo: dipende anche da squadra, avversari e contesto.'));
  const outcomes=title('Risultati e disciplina',segment('Risultati delle presenze',[
