@@ -21,7 +21,7 @@ test('Numeri player comparison is sourced from consolidated SQL and includes goa
  assert.match(html,/Vantaggi in rimonta/);
  assert.match(html,/Variabilità/);
 });
-test('Tournament comparison uses both sides of every completed fixture',()=>{
+test('Tournament scope aggregates recorded fixtures without repeating a league ranking',()=>{
  const fixtures=[
   {status:'finished',competition_id:'comp',home_team:'Caselle',away_team:'Ospiti',
    home_score:2,away_score:1},
@@ -30,9 +30,10 @@ test('Tournament comparison uses both sides of every completed fixture',()=>{
  ];
  const html=renderEventAnalytics(fixtures,[],[],{id:'caselle'},[{id:'comp',name:'Serie B'}],[],[],[],[],[],[],[],[],[]);
  assert.match(html,/Caselle/);
- assert.match(html,/Ospiti/);
  assert.match(html,/Serie B/);
- assert.match(html,/Gol complessivi/);
+ assert.match(html,/Gol torneo registrati/);
+ const scope=html.slice(html.indexOf('data-stats-panel="all"'));
+ assert.doesNotMatch(scope,/standing-table/);
 });
 test('Complessivo focuses on verified match progression without repeating standings',()=>{
  const f={status:'finished',competition_id:'c',home_team:'Caselle',away_team:'Avversari',home_score:2,away_score:1};
