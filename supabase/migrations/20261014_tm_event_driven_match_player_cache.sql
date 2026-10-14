@@ -63,12 +63,10 @@ BEGIN
   END LOOP;
  ELSE
   IF TG_OP IN ('UPDATE','DELETE') THEN
-   before_id=OLD.match_id;
-   IF TG_TABLE_NAME='app_matches' THEN before_id=OLD.id; END IF;
+   IF TG_TABLE_NAME='app_matches' THEN before_id=OLD.id; ELSE before_id=OLD.match_id; END IF;
   END IF;
   IF TG_OP IN ('UPDATE','INSERT') THEN
-   after_id=NEW.match_id;
-   IF TG_TABLE_NAME='app_matches' THEN after_id=NEW.id; END IF;
+   IF TG_TABLE_NAME='app_matches' THEN after_id=NEW.id; ELSE after_id=NEW.match_id; END IF;
   END IF;
   IF before_id IS NOT NULL THEN PERFORM private.tm_app_refresh_match_calculated(before_id); END IF;
   IF after_id IS NOT NULL AND after_id IS DISTINCT FROM before_id THEN
