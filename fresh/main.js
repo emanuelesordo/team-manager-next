@@ -14,7 +14,7 @@ import {projectionContainer,updateProjection} from './projection-ui.js?history=2
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261013projectaudit1';
 import {reconcilePlayerSeasonFacts} from './player-season-facts.js';
-import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute} from './match-minutes.js?live=20261013periodaudit1';
+import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,timelinePeriodFromMinute} from './match-minutes.js?live=20261014periodplacement1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
 
 import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=20261012genericgoal1';
@@ -386,7 +386,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const periodNo=e=>{
   const manualPeriod=Number(e.payload?.timeline_period_no);
   if(Number.isInteger(manualPeriod)&&manualPeriod>0)return manualPeriod;
-  if(norm(e.payload?.period)==='unknown')return 0;
+  if(norm(e.payload?.period)==='unknown')return timelinePeriodFromMinute(e,competitionSettings);
   if(norm(e.payload?.period)==='halftime')return 2;
   const explicit=Number(e.payload?.period_no);
   if(Number.isInteger(explicit)&&explicit>0)return explicit;
