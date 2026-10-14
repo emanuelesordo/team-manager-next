@@ -178,7 +178,7 @@ export function eventAnalyticsPlaceholder(){
  return '<div data-event-analysis><section class="glass panel event-analysis"><div class="panel-heading"><h2>Statistiche stagione</h2></div><div class="empty">Caricamento numeri…</div></section></div>';
 }
 
-export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[]){
+function renderTeamAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[]){
  // These are already reconciled seasonal facts; never create a second independent minute total.
  const computedPlayers=playerStats||[];
  const numbers=seasonNumbers(fixtures,matches,events,team,competitions,computedPlayers);
