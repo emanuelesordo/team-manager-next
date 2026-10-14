@@ -1,4 +1,4 @@
-import {matchPlayerIntervals} from './player-participation.js';
+import {matchPlayerIntervals} from './player-participation.js?v=20261014periodpriority1';
 
 /** A completed weighted team rating consumes the same verified match minutes
  * used for the roster. Unverifiable participation never receives invented
