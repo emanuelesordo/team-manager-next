@@ -85,6 +85,8 @@ window.addEventListener('tm-calculated-source-changed',()=>{
    state.data.goalImpacts=goalImpacts.map(r=>({...r,comeback_go_ahead_goals:comebackMap.get(String(r.player_id))??0}));
    state.data.ratingInsights=ratings;
    state.data.matchFlows=await get('app_match_flow_numbers','select=*&season_id=eq.'+id+'&limit=1000').catch(()=>state.data.matchFlows||[]);
+   state.data.flowPhases=await get('app_match_flow_phases','select=*&season_id=eq.'+id+'&limit=1000').catch(()=>state.data.flowPhases||[]);
+   state.data.flowEventContexts=await get('app_match_flow_event_context','select=*&season_id=eq.'+id+'&limit=3000').catch(()=>state.data.flowEventContexts||[]);
    if(state.page==='player'||state.page==='roster'||state.page==='stats')render();
   }catch(error){console.warn('Aggiornamento statistiche in attesa:',error.message)}
   finally{calculatedRefreshBusy=false}
@@ -977,6 +979,8 @@ async function switchSeason(id){
   data.goalImpacts=goalImpacts.map(row=>({...row,comeback_go_ahead_goals:comebackByPlayer.get(String(row.player_id))?.comeback_go_ahead_goals??0}));
   data.playerComparisons=await get('app_player_numeri','select=*&season_id=eq.'+encodeURIComponent(id)+'&limit=1000').catch(()=>[]);
   data.matchFlows=await get('app_match_flow_numbers','select=*&season_id=eq.'+encodeURIComponent(id)+'&limit=1000').catch(()=>[]);
+  data.flowPhases=await get('app_match_flow_phases','select=*&season_id=eq.'+encodeURIComponent(id)+'&limit=1000').catch(()=>[]);
+  data.flowEventContexts=await get('app_match_flow_event_context','select=*&season_id=eq.'+encodeURIComponent(id)+'&limit=3000').catch(()=>[]);
   data.ratingInsights=ratingInsights;
   data.predictionSnapshots=rawPredictions.map(row=>({
    fixture_id:row.fixture_id,generated_at:row.calculated_at,
@@ -1246,7 +1250,7 @@ async function fillAnalytics(){
  const box=document.querySelector('[data-event-analysis]');if(!box||!state.data)return;
  if(verifiedEventCache?.season===state.season){
   const matches=(state.data.matches||[]).filter(m=>!m.is_test);
-  box.innerHTML=renderEventAnalytics(realFixtures(),matches,verifiedEventCache.events.filter(e=>matches.some(m=>m.id===e.match_id)),team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],verifiedEventCache.matchPlayers||[],state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[],state.data?.playerComparisons||[],state.data?.matchFlows||[]);return;
+  box.innerHTML=renderEventAnalytics(realFixtures(),matches,verifiedEventCache.events.filter(e=>matches.some(m=>m.id===e.match_id)),team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],verifiedEventCache.matchPlayers||[],state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[],state.data?.playerComparisons||[],state.data?.matchFlows||[],state.data?.flowPhases||[],state.data?.flowEventContexts||[]);return;
  }
  if(analyticsBusy)return;
  const chosen=state.season,matches=(state.data.matches||[]).filter(m=>!m.is_test),ids=matches.map(m=>m.id).filter(Boolean);
