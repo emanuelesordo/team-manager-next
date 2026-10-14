@@ -47,3 +47,21 @@ test('Complessivo focuses on verified match progression without repeating standi
  assert.match(all,/0-0/);
  assert.doesNotMatch(all,/standing-table/);
 });
+
+test('Score-state context distinguishes Caselle changes, cards and narrow-score phases',()=>{
+ const f={status:'finished',competition_id:'c',home_team:'Caselle',away_team:'Avversari',home_score:2,away_score:1};
+ const flow={match_id:'m',competition_id:'c',verified:true,duration:90,nil_minutes:30,draw_minutes:40,lead_minutes:48,trail_minutes:2,
+  leads_taken:1,leads_lost:0,deficits_recovered:1,deficits_entered:1,comeback_equalizers:1,opponent_equalizers:0,
+  goals_for:2,goals_against:1,substitutions_total:5,yellows_total:3,reds_total:1};
+ const phase={match_id:'m',competition_id:'c',narrow_lead_minutes:24,narrow_deficit_minutes:2,late_narrow_lead_minutes:10,late_trailing_minutes:0};
+ const events=[{competition_id:'c',event_type:'substitution',event_side:'team',score_state:'nil'},
+               {competition_id:'c',event_type:'yellow_card',event_side:'team',score_state:'leading'},
+               {competition_id:'c',event_type:'red_card',event_side:'opponent',score_state:'drawing'}];
+ const html=renderEventAnalytics([f],[],[],{id:'caselle'},[{id:'c',name:'Serie B'}],[],[],[],[],[],[],[],[],[],[flow],[phase],events);
+ const all=html.slice(html.indexOf('data-stats-panel="all"'));
+ assert.match(all,/Minuti in vantaggio di misura/);
+ assert.match(all,/Cambi Caselle sullo 0-0/);
+ assert.match(all,/Gialli Caselle in vantaggio/);
+ assert.match(all,/Rossi avversari/);
+ assert.doesNotMatch(all,/standing-table/);
+});
