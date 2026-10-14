@@ -21,7 +21,7 @@ import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=202610
 import {matchPlayerLabel} from './match-player-label.js';
 import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
-import {renderPlayerIntelligence,initPlayerIntelligence} from './player-intelligence.js?v=20261015dataviz3';
+import {renderPlayerIntelligence,initPlayerIntelligence} from './player-intelligence.js?v=20261015reconciled4';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
 import {weightedTeamRating} from './team-rating.js?facts=20261014peruzzo1';
