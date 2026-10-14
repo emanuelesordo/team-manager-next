@@ -59,6 +59,25 @@ const nav=[['home','home','Home'],['competitions','trophy','Tornei'],['calendar'
 const state={page:'home',base:null,data:null,season:null,comp:null,match:null,matchOrigin:null,matchTab:'overview',scoreEditing:false,matchData:null,timelineEditor:null,player:null,slide:0,homeMonth:null,filter:'all',mineOnly:false,standingsView:'official',role:'all',q:'',rosterSort:'name',rosterDesc:false,theme:localStorage.getItem('tm_next_theme')==='ice'?'ice':'night',fixtureEvents:[],overlay:null,identity:{user:null,role:null,profile:null},loading:true,loadId:0};
 let carouselTimer=null,refreshTimer=null,toastTimer=null,livePollTimer=null,pollBusy=false;
 let verifiedEventCache=null,analyticsBusy=false;
+let calculatedRefreshHandle=null,calculatedRefreshBusy=false;
+window.addEventListener('tm-calculated-source-changed',()=>{
+ clearTimeout(calculatedRefreshHandle);
+ calculatedRefreshHandle=setTimeout(async()=>{
+  if(!state.season||!state.data||calculatedRefreshBusy)return;
+  calculatedRefreshBusy=true;
+  try{
+   const id=encodeURIComponent(state.season);
+   const [stats,details]=await Promise.all([
+    get('app_player_calculated_season','select=*&season_id=eq.'+id+'&limit=1000'),
+    get('app_match_player_calculated','select=match_id,player_id,appeared,started,subentered,minutes,goals_for_on,goals_against_on,plus_minus,score_coverage&season_id=eq.'+id+'&limit=5000')
+   ]);
+   state.data.playerStats=stats;
+   state.data.calculatedPlayers=details;
+   if(state.page==='player'||state.page==='roster'||state.page==='stats')render();
+  }catch(error){console.warn('Aggiornamento statistiche in attesa:',error.message)}
+  finally{calculatedRefreshBusy=false}
+ },350);
+});
 let predictionEventCache=null,predictionBusy=false,pastPredictionBusy=false,projectionBusy=false;
 async function pollLive(){
  if(pollBusy||document.hidden||state.loading||!state.season||state.overlay||state.page==='admin'||state.page==='match'&&state.matchTab==='staff')return;
