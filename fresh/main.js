@@ -73,6 +73,7 @@ window.addEventListener('tm-calculated-source-changed',()=>{
    ]);
    state.data.playerStats=stats;
    state.data.calculatedPlayers=details;
+   state.data.playerComparisons=await get('app_player_numeri','select=*&season_id=eq.'+id+'&limit=1000').catch(()=>state.data.playerComparisons||[]);
    if(state.page==='player'||state.page==='roster'||state.page==='stats')render();
   }catch(error){console.warn('Aggiornamento statistiche in attesa:',error.message)}
   finally{calculatedRefreshBusy=false}
@@ -963,6 +964,7 @@ async function switchSeason(id){
   const comebackLeads=await get('app_player_comeback_leads','select=*&season_id=eq.'+encodeURIComponent(id)+'&limit=1000').catch(()=>[]);
   const comebackByPlayer=new Map(comebackLeads.map(r=>[String(r.player_id),r]));
   data.goalImpacts=goalImpacts.map(row=>({...row,comeback_go_ahead_goals:comebackByPlayer.get(String(row.player_id))?.comeback_go_ahead_goals??0}));
+  data.playerComparisons=await get('app_player_numeri','select=*&season_id=eq.'+encodeURIComponent(id)+'&limit=1000').catch(()=>[]);
   data.ratingInsights=ratingInsights;
   data.predictionSnapshots=rawPredictions.map(row=>({
    fixture_id:row.fixture_id,generated_at:row.calculated_at,
@@ -1224,7 +1226,7 @@ async function fillAnalytics(){
  const box=document.querySelector('[data-event-analysis]');if(!box||!state.data)return;
  if(verifiedEventCache?.season===state.season){
   const matches=(state.data.matches||[]).filter(m=>!m.is_test);
-  box.innerHTML=renderEventAnalytics(realFixtures(),matches,verifiedEventCache.events.filter(e=>matches.some(m=>m.id===e.match_id)),team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],verifiedEventCache.matchPlayers||[],state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[]);return;
+  box.innerHTML=renderEventAnalytics(realFixtures(),matches,verifiedEventCache.events.filter(e=>matches.some(m=>m.id===e.match_id)),team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],verifiedEventCache.matchPlayers||[],state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[],state.data?.playerComparisons||[]);return;
  }
  if(analyticsBusy)return;
  const chosen=state.season,matches=(state.data.matches||[]).filter(m=>!m.is_test),ids=matches.map(m=>m.id).filter(Boolean);
