@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cumulativeEventMinute,storedEventMinute,displayEventMinute,matchPeriodLength,cumulativeMinuteFromPeriod,periodRelativeMinute} from '../fresh/match-minutes.js';
+import {cumulativeEventMinute,storedEventMinute,displayEventMinute,matchPeriodLength,cumulativeMinuteFromPeriod,periodRelativeMinute,timelinePeriodFromMinute} from '../fresh/match-minutes.js';
 import {reviewPanel} from '../fresh/postmatch-review.js';
 import {amendEventForm,revisionHistory} from '../fresh/postmatch-controls.js';
 
@@ -60,4 +60,14 @@ test('second-half editor round trips legacy relative and live cumulative events 
  const savedLive={minute:cumulativeMinuteFromPeriod(11,'second_half',competition),payload:{period:'second_half',minute_relative:false}};
  assert.equal(cumulativeEventMinute(savedLegacy,competition),74);
  assert.equal(cumulativeEventMinute(savedLive,competition),51);
+});
+
+test('imported minutes place events despite legacy unknown period marker',()=>{
+ for(const [minute,period] of [[17,1],[43,2],[55,2],[79,2]]){
+  const event={minute,payload:{period:'unknown',minute_relative:false}};
+  assert.equal(timelinePeriodFromMinute(event,competition),period);
+  assert.equal(cumulativeEventMinute(event,competition),minute);
+ }
+ assert.equal(timelinePeriodFromMinute({minute:null,payload:{period:'unknown'}},competition),0);
+ assert.equal(timelinePeriodFromMinute({minute:55,payload:{period:'unknown'}},null),0);
 });
