@@ -12,17 +12,30 @@ export function matchTiming(match,competition,events=[]){
  const half=Number.isFinite(length)&&length>0?length:40;
  const count=Number.isInteger(periods)&&periods>0?periods:2;
  const recoveryByPeriod=Array.from({length:count},()=>0);
- const last=new Map();
+ const chosen=new Map();
  for(const e of events){
   if(!confirmedMatchEvent(e)||e.event_type!=='period_end')continue;
   const period=e.payload?.period;
-  const index=period==='first_half'?0:period==='second_half'?1:Number.isInteger(Number(e.payload?.period_no))?Number(e.payload.period_no)-1:-1;
+  const pno=Number(e.payload?.period_no);
+  const index=period==='first_half'?0:period==='second_half'?1:Number.isInteger(pno)&&pno>0?pno-1:-1;
   if(index<0||index>=count)continue;
-  const raw=e.payload?.recovery_actual??e.payload?.recovery_minutes??e.stoppage_minute;
-  const value=Number(raw);
-  if(Number.isFinite(value)&&value>=0)last.set(index,value);
+  const actual=Number(e.payload?.recovery_actual);
+  const declared=Number(e.payload?.recovery_minutes);
+  const fallback=Number(e.stoppage_minute);
+  const value=e.payload?.recovery_actual!=null&&Number.isFinite(actual)?actual:
+   e.payload?.recovery_minutes!=null&&Number.isFinite(declared)?declared:fallback;
+  if(!Number.isFinite(value)||value<0)continue;
+  // An actual period clock is more authoritative than a legacy imported estimate;
+  // timestamps break ties regardless of API row order.
+  const quality=(e.payload?.recovery_actual!=null?4:0)+(e.payload?.entered_from==='period_control'?2:0);
+  const stamp=Date.parse(e.created_at||'')||0;
+  const prior=chosen.get(index);
+  if(!prior||quality>prior.quality||
+     quality===prior.quality&&(stamp>prior.stamp||
+      stamp===prior.stamp&&String(e.id||'')>prior.id))
+   chosen.set(index,{value,quality,stamp,id:String(e.id||'')});
  }
- for(const [index,value] of last)recoveryByPeriod[index]=value;
+ for(const [index,row] of chosen)recoveryByPeriod[index]=row.value;
  const duration=half*count+recoveryByPeriod.reduce((n,x)=>n+x,0);
  return {half,periods:count,recoveryByPeriod,duration};
 }
