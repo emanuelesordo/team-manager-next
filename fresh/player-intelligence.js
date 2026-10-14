@@ -171,7 +171,7 @@ export function renderPlayerIntelligence(id,source){
  const fmt=x=>x==null?'—':number(x);
  const card=(name,val,extra='')=>'<div class="psi-stat"><span>'+E(name)+'</span><strong>'+E(val)+'</strong>'+(extra?'<small>'+E(extra)+'</small>':'')+'</div>';
  const section=(name,desc,content)=>'<section class="psi-area"><div class="psi-area-head"><h2>'+E(name)+'</h2>'+(desc?'<p>'+E(desc)+'</p>':'')+'</div>'+content+'</section>';
- const ribbon=(items)=>'<div class="psi-strip">'+items.map(([name,val,extra])=>card(name,val,extra)).join('')+'</div>';
+ const ribbon=(items)=>{const usable=items.filter(([,val])=>val!=null&&String(val)!=='—'&&String(val)!=='N/D');return usable.length?'<div class="psi-strip">'+usable.map(([name,val,extra])=>card(name,val,extra)).join('')+'</div>':''};
  const ordered=[...(source?.matches||[])].sort((a,b)=>Date.parse(a.kickoff_at||0)-Date.parse(b.kickoff_at||0));
  const matchFacts=Array.isArray(sql.match_minutes)?sql.match_minutes:[];
  const minuteMap=new Map(matchFacts.map(x=>[K(x.match_id),x.valid===true&&x.minutes!=null?Number(x.minutes):null]));
@@ -203,12 +203,13 @@ export function renderPlayerIntelligence(id,source){
    ordered.filter(m=>rows.some(r=>K(r.match_id)===K(m.id))).map(label),'Plus/minus cumulativo')],
  ['Gol + assist',lineChart(completeGoals&&completeAssists?v.matches.map(m=>m.goals+m.assists):[],v.matches.map(m=>m.label),'Gol e assist per partita')]
  ];
- const tabs='<div class="psi-chart-tabs" role="tablist" aria-label="Andamento">'+charts.map((x,i)=>'<button type="button" role="tab" aria-selected="'+(i===0)+'" tabindex="'+(i===0?'0':'-1')+'" data-psi-tab="'+i+'">'+E(x[0])+'</button>').join('')+'</div>';
- const chartPanels=charts.map((x,i)=>'<div class="psi-chart-panel" role="tabpanel" data-psi-panel="'+i+'"'+(i?' hidden':'')+'>'+x[1]+'</div>').join('');
+ const availableCharts=charts.filter(x=>!x[1].includes('Dati insufficienti per il grafico.')&&!x[1].includes('Nessuna gara con intervalli affidabili.'));
+ const tabs='<div class="psi-chart-tabs" role="tablist" aria-label="Andamento">'+availableCharts.map((x,i)=>'<button type="button" role="tab" aria-selected="'+(i===0)+'" tabindex="'+(i===0?'0':'-1')+'" data-psi-tab="'+i+'">'+E(x[0])+'</button>').join('')+'</div>';
+ const chartPanels=availableCharts.map((x,i)=>'<div class="psi-chart-panel" role="tabpanel" data-psi-panel="'+i+'"'+(i?' hidden':'')+'>'+x[1]+'</div>').join('');
  const percent=games&&starts!=null?number(starts/games*100)+'%':'—';
  const splitSub=starts===0&&games===subs;
  const timelineComplete=scoreResults&&v.covered===games;
- const comp='Dati avanzati mostrati solo quando verificati.';
+ const comp='Le statistiche non riconciliate vengono omesse e non sostituite con trattini.';
  const usage=section('Impiego','Partecipazione alla stagione',
    '<div class="psi-dashboard-visual">'+vizMatchMinutes(ordered,minuteMap,minutesReady,unit)+'</div>'+ribbon([['Subentri',fmt(subs)],['Panchina inutilizzata',scoreResults?fmt(v.unused):'—'],['Gare intere',mins!=null&&scoreResults?fmt(v.fullGames):'—'],
    ['Minuti / presenza',games&&mins!=null?number(mins/games)+'′':'—'],['Titolarità',percent]])+
@@ -218,9 +219,7 @@ export function renderPlayerIntelligence(id,source){
      ['Ingressi registrati',timelineComplete?fmt(v.entryMinutes.length):'—'],
      ['Uscite registrate',timelineComplete?fmt(v.exitMinutes.length):'—']])+'</details>');
  const attack=section('Produzione','Reti e assist: dettagli senza ripetere i totali iniziali',
-   '<div class="psi-dashboard-visual psi-production-viz">'+vizBar('Gol per '+unit+'′',goals!=null&&effectiveMinutes>0?goals*unit/effectiveMinutes:null,Math.max(1,(goals||0)+(assists||0)),'goals')+vizBar('Assist per '+unit+'′',assists!=null&&effectiveMinutes>0?assists*unit/effectiveMinutes:null,Math.max(1,(goals||0)+(assists||0)),'assists')+'</div>'+ribbon([['Gol / '+unit+'′',effectiveMinutes>0&&goals!=null?rate(goals,effectiveMinutes,unit):'—'],
-   ['Assist / '+unit+'′',effectiveMinutes>0&&assists!=null?rate(assists,effectiveMinutes,unit):'—'],
-   ['G+A / '+unit+'′',effectiveMinutes>0&&goals!=null&&assists!=null?rate(goals+assists,effectiveMinutes,unit):'—'],
+   '<div class="psi-dashboard-visual psi-production-viz">'+vizBar('Gol per '+unit+'′',goals!=null&&effectiveMinutes>0?goals*unit/effectiveMinutes:null,Math.max(1,(goals||0)+(assists||0)),'goals')+vizBar('Assist per '+unit+'′',assists!=null&&effectiveMinutes>0?assists*unit/effectiveMinutes:null,Math.max(1,(goals||0)+(assists||0)),'assists')+'</div>'+ribbon([['G+A / '+unit+'′',effectiveMinutes>0&&goals!=null&&assists!=null?rate(goals+assists,effectiveMinutes,unit):'—'],
    ['Gol da subentrato',splitSub?fmt(goals):completeGoals?fmt(v.subGoals):'—'],
    ['Assist da subentrato',splitSub?fmt(assists):completeAssists?fmt(v.subAssists):'—'],
    ['Minuti / gol',goals&&mins?number(mins/goals)+'′':'—'],
@@ -238,7 +237,7 @@ export function renderPlayerIntelligence(id,source){
    '<div class="psi-visual-pair">'+ring('Tempo delle reti',[['1° tempo',v.goalsByPeriod[0]],['2° tempo',v.goalsByPeriod[1]]],timelineComplete&&completeGoals)+
     ring('Stato prima del gol',[['Vantaggio',v.goalsByContext[0]],['Parità',v.goalsByContext[1]],['Svantaggio',v.goalsByContext[2]]],timelineComplete&&completeGoals)+'</div></details>');
  const impact=section('Impatto','Reti segnate e subite durante la presenza',
-   '<div class="psi-impact-main">'+vizImpact(gf,ga,pm,fullImpact)+ribbon([['GF in campo',fmt(gf)],['GS in campo',fmt(ga)],['Plus/minus',pm==null?'—':(pm>0?'+':'')+fmt(pm)]])+
+   '<div class="psi-impact-main">'+vizImpact(gf,ga,pm,fullImpact)+ribbon([['Plus/minus',pm==null?'—':(pm>0?'+':'')+fmt(pm)]])+
    '<div class="psi-impact-rates">'+ribbon([['GF / '+unit+'′',per80(gf)],['GS / '+unit+'′',per80(ga)],['+/- / '+unit+'′',per80(pm)]])+'</div></div>'+
    '<p class="psi-footnote">'+E(fullImpact?'Dati completi · '+games+' presenze verificate':reliable.length+' / '+fmt(games)+' presenze con timeline verificata')+'</p>'+
    '<details class="psi-expand"><summary>Analisi dentro e fuori campo <span>Approfondisci</span></summary>'+
@@ -248,9 +247,7 @@ export function renderPlayerIntelligence(id,source){
    ['Differenza on/off',timelineComplete&&effectiveMinutes>0&&v.offMinutes?number(pm*unit/effectiveMinutes-(v.gfOff-v.gaOff)*unit/v.offMinutes):'—']])+
    ring('Stato del punteggio',[['Vantaggio',v.states.leading],['Parità',v.states.drawing],['Svantaggio',v.states.trailing]],timelineComplete)+'</details>');
  const record=section('Risultati','Esiti delle partite e rendimento per sede',
-   vizRecord(tally.W,tally.D,tally.L,resultsComplete)+ribbon([['Vittorie',resultsComplete?fmt(tally.W):'—'],['Pareggi',resultsComplete?fmt(tally.D):'—'],
-    ['Sconfitte',resultsComplete?fmt(tally.L):'—'],
-    ['Win rate',resultsComplete&&games?number(tally.W/games*100)+'%':'—'],
+   vizRecord(tally.W,tally.D,tally.L,resultsComplete)+ribbon([['Win rate',resultsComplete&&games?number(tally.W/games*100)+'%':'—'],
     ['Punti / gara',resultsComplete&&games?number((tally.W*3+tally.D)/games):'—']])+
    '<details class="psi-expand"><summary>Casa, trasferta e cambi <span>Approfondisci</span></summary>'+
    ribbon([['Gare in casa',scoreResults?fmt(v.home.games):'—'],['Gare in trasferta',scoreResults?fmt(v.away.games):'—'],
@@ -262,8 +259,8 @@ export function renderPlayerIntelligence(id,source){
    ['Punti da titolare',scoreResults?fmt(v.starterPoints):'—'],
    ['Variazione punti dopo ingresso',timelineComplete?fmt(v.entryPointsDelta):'—'],
    ['Variazione punti dopo uscita',timelineComplete?fmt(v.exitPointsDelta):'—']])+'</details>');
- const trend=section('Andamento','Seleziona la metrica; passa sui punti del grafico per i valori',
-   tabs+'<div class="psi-chart-stage">'+chartPanels+'</div>');
+ const trend=availableCharts.length?section('Andamento','Seleziona la metrica; passa sui punti del grafico per i valori',
+   tabs+'<div class="psi-chart-stage">'+chartPanels+'</div>'):'';
  return '<div class="psi-root psi-clean" data-player-id="'+E(id)+'">'+usage+attack+impact+record+trend+
   '<p class="psi-disclaimer">Fonti: statistiche stagionali e cache partita Supabase. '+E(comp)+'</p></div>';
 }
