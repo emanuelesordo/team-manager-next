@@ -108,7 +108,7 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
   standings:['app_competition_standings','select=*&season_id=eq.'+id],
   roster:['app_roster','select=*&season_id=eq.'+id],
   contracts:['app_roster_periods','select=id,season_id,player_id,start_date,end_date&season_id=eq.'+id+'&order=start_date.asc&limit=1000'],
-  playerStats:['app_player_season_stats','select=*&season_id=eq.'+id],
+  playerStats:['app_player_calculated_season','select=*&season_id=eq.'+id],
   habitual:['tm_player_habitual_shirts','select=player_id,shirt_number,occurrences,last_used&limit=1000'],
   matches:['app_matches','select=*&season_id=eq.'+id],
   // Names used by tabellino/storico must also work for non-staff members and
@@ -131,7 +131,7 @@ export async function loadSeason(id,includePrivate=false,includeAdmin=false){
  const output={errors:{}};
  names.forEach((n,i)=>{const x=arr[i];output[n]=x.status==='fulfilled'?x.value:[];if(x.status==='rejected')output.errors[n]=x.reason.message});
  try{
-  const publicStats=await publicGet('app_player_season_stats','select=season_id,player_id,first_name,last_name,position_group,appearances,starts,minutes,goals,assists,yellow_cards,red_cards,blue_cards,avg_rating,subentries,minutes_coverage,match_minutes&season_id=eq.'+encodeURIComponent(id)+'&limit=1000');
+  const publicStats=await publicGet('app_player_calculated_season','select=season_id,player_id,first_name,last_name,position_group,appearances,starts,minutes,goals,assists,yellow_cards,red_cards,blue_cards,avg_rating,subentries,minutes_coverage,match_minutes,goals_for_on,goals_against_on,plus_minus_on,verified_impact_games,impact_coverage&season_id=eq.'+encodeURIComponent(id)+'&limit=1000');
   if(Array.isArray(publicStats)&&publicStats.length)output.playerStats=publicStats;
  }catch(error){}
 
