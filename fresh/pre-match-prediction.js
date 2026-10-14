@@ -1,5 +1,5 @@
 import {cumulativeEventMinute} from './match-minutes.js';
-import {matchTiming,matchElapsedMinute,confirmedMatchEvent} from './player-participation.js';
+import {matchTiming,matchElapsedMinute,confirmedMatchEvent} from './player-participation.js?v=20261014periodpriority1';
 import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
 import {buildTeamProfile,profileHighlights} from './team-profile.js';
 import {analyseResults} from './result-intelligence.js';
