@@ -196,7 +196,7 @@ export function renderPlayerIntelligence(id,source){
  const scoreResults=games===v.games&&starts===v.starts&&v.matches.length===games;
  const completeGoals=scoreResults&&goals===v.goals;
  const completeAssists=scoreResults&&assists===v.assists;
- const line=([name,html])=>'<div class="psi-visual"><h3>'+E(name)+'</h3>'+html+'</div>;
+ const line=([name,html])=>'<div class="psi-visual"><h3>'+E(name)+'</h3>'+html+'</div>';
  const ring=(title,vals,ok)=>ok?line([title,donut(vals)]):'';
  const charts=[
 ['Plus/minus',lineChart(fullImpact&&rows.length===games&&rows.every(r=>r.score_coverage==='complete'&&r.plus_minus!=null)
