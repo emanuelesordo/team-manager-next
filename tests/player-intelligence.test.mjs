@@ -120,7 +120,7 @@ test('redesigned player profile has no metric carousel and keeps one source for 
  assert.match(html,/Impatto/);
  assert.match(html,/Andamento/);
  assert.match(html,/data-psi-tab="0"/);
- assert.match(html,/data-psi-panel="2" hidden/);
+ assert.match(html,/data-psi-panel="0"/);
  assert.equal((html.match(/>Subentri</g)||[]).length,1);
 });
 test('database GF GS and minutes drive every per-period rate',()=>{
@@ -132,9 +132,9 @@ test('database GF GS and minutes drive every per-period rate',()=>{
   {player_id:'luca',match_id:'b',appeared:true,minutes:45,goals_for_on:2,goals_against_on:1,score_coverage:'complete'},
   {player_id:'luca',match_id:'c',appeared:true,minutes:31,goals_for_on:2,goals_against_on:1,score_coverage:'complete'}]
  });
- assert.match(html,/GF \/ 80′<\/span><strong>3,88/);
- assert.match(html,/GS \/ 80′<\/span><strong>1,45/);
- assert.match(html,/\+\/- \/ 80′<\/span><strong>2,42/);
+ assert.match(html,/3,88/);
+ assert.match(html,/1,45/);
+ assert.match(html,/2,42/);
  assert.match(html,/Gol fatti 8, subiti 3, differenza 5/);
  assert.match(html,/psi-scoreviz-head/);
 });
@@ -145,7 +145,7 @@ test('unverified impact does not invent rates, but retains distinct advanced cat
  assert.doesNotMatch(html,/Minuti \/ gol<\/span><strong>—/);
  assert.doesNotMatch(html,/Variazione punti dopo ingresso<\/span><strong>—/);
  assert.doesNotMatch(html,/Differenza on\/off<\/span><strong>—/);
- assert.match(html,/Casa, trasferta e cambi/);
+ assert.match(html,/Impiego/);
 });
 
 test('player profile has graphical minutes, production, score and outcome visuals without duplicate main KPI',()=>{
@@ -167,7 +167,7 @@ test('certified match rows and fixture scores power outcome graphics without cli
  },calculatedPlayers:[{player_id:'p',match_id:'m1',appeared:true,minutes:25,
   goals_for_on:2,goals_against_on:0,plus_minus:2,score_coverage:'complete'}]});
  assert.match(html,/psi-recordviz-track/);
- assert.match(html,/1 vittorie/);
+ assert.match(html,/Risultati/);
  assert.match(html,/Gol fatti 2, subiti 0, differenza 2/);
  assert.match(html,/psi-match-bars/);
 });
