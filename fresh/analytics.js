@@ -1,5 +1,5 @@
 import {cumulativeEventMinute} from './match-minutes.js';
-import {matchPlayerIntervals,matchTiming,matchElapsedMinute} from './player-participation.js';
+import {matchPlayerIntervals,matchTiming,matchElapsedMinute} from './player-participation.js?v=20261014periodpriority1';
 import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
 
 const key=v=>String(v??'');
