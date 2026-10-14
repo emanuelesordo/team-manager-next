@@ -139,3 +139,51 @@ test('a player with no starts has all official goals and assists as a substitute
  assert.match(html,/Gol da subentrato<\/span><strong>1/);
  assert.match(html,/Assist da subentrato<\/span><strong>2/);
 });
+
+test('Luca Peruzzo three conceded goals across three games count in GF/GS on-field',()=>{
+ const matches=[
+  {id:'sep',fixture_id:'fsep',status:'finished',home_away:'away'},
+  {id:'oct5',fixture_id:'foct5',status:'finished',home_away:'home'},
+  {id:'oct12',fixture_id:'foct12',status:'finished',home_away:'away'}
+ ];
+ const fixtures=[
+  {id:'fsep',status:'finished',away_team_id:'team',home_score:1,away_score:4,competition_id:'c1',kickoff_at:'2026-09-28T20:00:00Z'},
+  {id:'foct5',status:'finished',home_team_id:'team',home_score:2,away_score:1,competition_id:'c1',kickoff_at:'2026-10-05T20:00:00Z'},
+  {id:'foct12',status:'finished',away_team_id:'team',home_score:1,away_score:6,competition_id:'c1',kickoff_at:'2026-10-12T20:00:00Z'}
+ ];
+ const rows=[
+  {match_id:'sep',player_id:'luca',started:true},
+  {match_id:'oct5',player_id:'luca',started:false},
+  {match_id:'oct5',player_id:'out5',started:true},
+  {match_id:'oct12',player_id:'luca',started:false},
+  {match_id:'oct12',player_id:'out12',started:true}
+ ];
+ const ev=(match_id,event_type,minute,side,more={})=>({match_id,event_type,minute,team_side:side,validation_status:'official',...more});
+ const end=(match_id,period,minutes,stamp,legacy=false)=>ev(match_id,'period_end',null,'team',{
+  created_at:stamp,payload:{period,...(legacy?{recovery_minutes:minutes}:{recovery_actual:minutes,entered_from:'period_control'})}
+ });
+ const goals=[
+  ...[[18,'opponent'],[20,'team'],[28,'team'],[43,'team'],[46,'team']].map(([min,side])=>ev('sep','goal',min,side,{payload:{period:'second_half'}})),
+  ...[[44,'team'],[56,'team'],[65,'opponent']].map(([min,side])=>ev('oct5','goal',min,side,{payload:{period:'second_half',entered_from:'tm_app_live'}})),
+  ...[[11,'team'],[19,'team'],[23,'team']].map(([min,side])=>ev('oct12','goal',min,side,{payload:{period:'first_half',entered_from:'tm_app_live'}})),
+  ...[[50,'team'],[58,'team'],[71,'opponent']].map(([min,side])=>ev('oct12','goal',min,side,{payload:{period:'second_half',entered_from:'tm_app_live'}})),
+  ev('oct12','goal',80,'team',{stoppage_minute:4,payload:{period:'second_half',entered_from:'tm_app_live'}})
+ ];
+ const events=[...goals,
+  ev('oct5','substitution',40,'team',{player_id:'out5',secondary_player_id:'luca',payload:{period:'halftime'}}),
+  ev('oct12','substitution',53,'team',{player_id:'out12',secondary_player_id:'luca',payload:{period:'second_half',entered_from:'tm_app_live'}}),
+  end('sep','first_half',2,'2026-09-28T21:00:00Z',true),
+  end('sep','second_half',7,'2026-09-28T22:00:00Z',true),
+  end('oct5','first_half',3,'2026-10-05T21:00:00Z'),
+  end('oct5','second_half',5,'2026-10-05T22:00:00Z'),
+  end('oct12','first_half',6,'2026-10-12T21:00:00Z'),
+  end('oct12','second_half',4,'2026-10-12T22:00:00Z'),
+  // Imported duplicates, intentionally LAST in API response: they must not overwrite actual recoveries.
+  end('oct12','first_half',5,'2026-10-12T20:30:00Z',true),
+  end('oct12','second_half',3,'2026-10-12T21:30:00Z',true)
+ ];
+ const r=playerIntelligence('luca',{matches,fixtures,matchPlayers:rows,events,competitions:[competition],team:{id:'team'}});
+ assert.equal(r.games,3);assert.equal(r.covered,3);
+ assert.equal(r.gaOn,3);
+ assert.deepEqual(r.matches.map(x=>x.minutes),[89,45,35]);
+});
