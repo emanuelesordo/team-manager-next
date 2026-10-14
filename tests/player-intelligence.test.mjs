@@ -147,3 +147,14 @@ test('unverified impact does not invent rates, but retains distinct advanced cat
  assert.match(html,/Differenza on\/off/);
  assert.match(html,/Casa, trasferta e cambi/);
 });
+
+test('player profile has graphical minutes, production, score and outcome visuals without duplicate main KPI',()=>{
+ const html=renderPlayerIntelligence('p',{...base,stats:{appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',
+  goals:1,assists:1,impact_coverage:'complete',goals_for_on:2,goals_against_on:0,
+  match_minutes:[{match_id:'m1',minutes:25,valid:true}]},calculatedPlayers:[
+    {player_id:'p',match_id:'m1',appeared:true,minutes:25,score_coverage:'complete',goals_for_on:2,goals_against_on:0}
+  ]});
+ for(const klass of ['psi-match-bars','psi-production-viz','psi-scoreviz','psi-recordviz'])assert.ok(html.includes(klass),klass);
+ assert.match(html,/psi-scoreviz-head/);
+ assert.doesNotMatch(html,/psi-carousel/);
+});
