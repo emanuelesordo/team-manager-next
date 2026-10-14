@@ -135,16 +135,16 @@ test('database GF GS and minutes drive every per-period rate',()=>{
  assert.match(html,/GF \/ 80′<\/span><strong>3,88/);
  assert.match(html,/GS \/ 80′<\/span><strong>1,45/);
  assert.match(html,/\+\/- \/ 80′<\/span><strong>2,42/);
- assert.match(html,/GF in campo<\/span><strong>8/);
- assert.match(html,/GS in campo<\/span><strong>3/);
+ assert.match(html,/Gol fatti 8, subiti 3, differenza 5/);
+ assert.match(html,/psi-scoreviz-head/);
 });
 test('unverified impact does not invent rates, but retains distinct advanced categories',()=>{
  const html=renderPlayerIntelligence('p',{...base,
   stats:{appearances:1,starts:0,subentries:1,goals:1,assists:0,minutes:null,minutes_coverage:'unavailable'}});
- assert.match(html,/GF \/ 80′<\/span><strong>—/);
- assert.match(html,/Minuti \/ gol/);
- assert.match(html,/Variazione punti dopo ingresso/);
- assert.match(html,/Differenza on\/off/);
+ assert.doesNotMatch(html,/GF \/ 80′<\/span><strong>—/);
+ assert.doesNotMatch(html,/Minuti \/ gol<\/span><strong>—/);
+ assert.doesNotMatch(html,/Variazione punti dopo ingresso<\/span><strong>—/);
+ assert.doesNotMatch(html,/Differenza on\/off<\/span><strong>—/);
  assert.match(html,/Casa, trasferta e cambi/);
 });
 
@@ -167,7 +167,14 @@ test('certified match rows and fixture scores power outcome graphics without cli
  },calculatedPlayers:[{player_id:'p',match_id:'m1',appeared:true,minutes:25,
   goals_for_on:2,goals_against_on:0,plus_minus:2,score_coverage:'complete'}]});
  assert.match(html,/psi-recordviz-track/);
- assert.match(html,/Vittorie<\/span><strong>1/);
- assert.match(html,/GF in campo<\/span><strong>2/);
+ assert.match(html,/1 vittorie/);
+ assert.match(html,/Gol fatti 2, subiti 0, differenza 2/);
  assert.match(html,/psi-match-bars/);
+});
+
+test('no duplicated headline metric labels or placeholder metrics',()=>{
+ const html=renderPlayerIntelligence('p',{...base,stats:{appearances:1,starts:0,subentries:1,minutes:null,minutes_coverage:'unavailable',goals:0,assists:0}});
+ assert.doesNotMatch(html,/<strong>—<\/strong>/);
+ assert.doesNotMatch(html,/class="psi-carousel"/);
+ assert.equal((html.match(/>Gol \/ 80′<\/span>/g)||[]).length,0);
 });
