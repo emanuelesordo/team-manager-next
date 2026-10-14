@@ -169,6 +169,9 @@ export function renderPlayerIntelligence(id,source){
  const unit=v.duration||80;
  const per80=(x)=>fullImpact&&effectiveMinutes>0&&x!=null?rate(x,effectiveMinutes,unit):'—';
  const fmt=x=>x==null?'—':number(x);
+ const goalImpact=source?.goalImpact||null,ratingInsights=source?.ratingInsights||null;
+ const impactMetric=(key)=>goalImpact&&goalImpact[key]!=null?Number(goalImpact[key]):null;
+ const ratingMetric=(key)=>ratingInsights&&ratingInsights[key]!=null?Number(ratingInsights[key]):null;
  const card=(name,val,extra='')=>'<div class="psi-stat"><span>'+E(name)+'</span><strong>'+E(val)+'</strong>'+(extra?'<small>'+E(extra)+'</small>':'')+'</div>';
  const section=(name,desc,content)=>'<section class="psi-area"><div class="psi-area-head"><h2>'+E(name)+'</h2>'+(desc?'<p>'+E(desc)+'</p>':'')+'</div>'+content+'</section>';
  const ribbon=(items)=>{const usable=items.filter(([,val])=>val!=null&&String(val)!=='—'&&String(val)!=='N/D');return usable.length?'<div class="psi-strip">'+usable.map(([name,val,extra])=>card(name,val,extra)).join('')+'</div>':''};
@@ -248,6 +251,30 @@ export function renderPlayerIntelligence(id,source){
    ['DR / '+unit+'′ fuori',timelineComplete&&v.offMinutes?rate(v.gfOff-v.gaOff,v.offMinutes,unit):'—'],
    ['Differenza on/off',timelineComplete&&effectiveMinutes>0&&v.offMinutes?number(pm*unit/effectiveMinutes-(v.gfOff-v.gaOff)*unit/v.offMinutes):'—']])+
    ring('Stato del punteggio',[['Vantaggio',v.states.leading],['Parità',v.states.drawing],['Svantaggio',v.states.trailing]],timelineComplete)+'</details>'):'';
+
+ const goalContext=goals>0&&goalImpact?section('Valore dei gol','Progressione del risultato · solo gol con timeline riconciliata',
+  ribbon([['Gol del pareggio',fmt(impactMetric('equalizers'))],
+   ['Gol del vantaggio',fmt(impactMetric('go_ahead_goals'))],
+   ['Gol con squadra sotto',fmt(impactMetric('trailing_goals'))],
+   ['Riducono lo svantaggio',fmt(impactMetric('deficit_reducers'))],
+   ['Pareggi in rimonta',fmt(impactMetric('comeback_equalizers'))],
+   ['Ampliano il vantaggio',fmt(impactMetric('lead_extenders'))],
+   ['Portano a +1',fmt(impactMetric('goals_to_plus_1'))],
+   ['Portano a +2',fmt(impactMetric('goals_to_plus_2'))],
+   ['Portano a +3 o più',fmt(impactMetric('goals_to_plus_3'))],
+   ['Portano a -1',fmt(impactMetric('goals_to_minus_1'))],
+   ['Portano a -2 o meno',fmt(impactMetric('goals_to_minus_2'))],
+   ['Portano in parità',fmt(impactMetric('goals_to_draw'))]])+
+   '<p class="psi-footnote">Il vantaggio è classificato al momento del gol; una rimonta completata richiede il recupero di uno svantaggio precedente, non solo una rete mentre si è sotto.</p>'):'';
+ const rating=ratingInsights&&ratingMetric('rated_matches')>0?section('Rating','Le valutazioni delle partite, senza duplicare il voto medio iniziale',
+  ribbon([['Gare valutate',fmt(ratingMetric('rated_matches'))],
+  ['Voti ricevuti',fmt(ratingMetric('votes_received'))],
+  ['Voto massimo',fmt(ratingMetric('highest_rating'))],
+  ['Voto minimo',fmt(ratingMetric('lowest_rating'))],
+  ['Variabilità voto',fmt(ratingMetric('rating_volatility'))],
+  ['Prestazioni ≥ 7',fmt(ratingMetric('high_rating_games'))],
+  ['Prestazioni < 6',fmt(ratingMetric('low_rating_games'))]])+
+  '<p class="psi-footnote">Indicatori calcolati sulle medie di partita; SV esclusi dalle medie.</p>'):'';
  const record=section('Risultati','Esiti delle partite e rendimento per sede',
    (resultsComplete?vizRecord(tally.W,tally.D,tally.L,true):'')+ribbon([['Win rate',resultsComplete&&games?number(tally.W/games*100)+'%':'—'],
     ['Punti / gara',resultsComplete&&games?number((tally.W*3+tally.D)/games):'—']])+
@@ -263,7 +290,7 @@ export function renderPlayerIntelligence(id,source){
    ['Variazione punti dopo uscita',timelineComplete?fmt(v.exitPointsDelta):'—']])+'</details>');
  const trend=availableCharts.length?section('Andamento','Seleziona la metrica; passa sui punti del grafico per i valori',
    tabs+'<div class="psi-chart-stage">'+chartPanels+'</div>'):'';
- return '<div class="psi-root psi-clean" data-player-id="'+E(id)+'">'+usage+attack+impact+record+trend+
+ return '<div class="psi-root psi-clean" data-player-id="'+E(id)+'">' +usage+attack+goalContext+impact+rating+record+trend+
   '<p class="psi-disclaimer">Fonti: statistiche stagionali e cache partita Supabase. '+E(comp)+'</p></div>';
 }
 
