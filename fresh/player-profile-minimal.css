@@ -1,0 +1,41 @@
+/* Minimal player profile; no nested cards and no horizontal statistic carousels. */
+.psi-clean{gap:20px;margin-top:14px}
+.psi-clean .psi-area{padding:0 0 18px;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent);min-width:0;animation:psi-enter .38s ease both}
+.psi-clean .psi-area-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 0 13px}
+.psi-clean .psi-area-head h2{font-size:16px;letter-spacing:-.025em;margin:0;font-weight:750}
+.psi-clean .psi-area-head p{font-size:11px;opacity:.6;margin:0;text-align:right;line-height:1.5}
+.psi-clean .psi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:15px 20px}
+.psi-clean .psi-stat{min-width:0;display:flex;flex-direction:column;gap:4px}
+.psi-clean .psi-stat span{font-size:11px;line-height:1.4;opacity:.65}
+.psi-clean .psi-stat strong{font-size:clamp(19px,2.2vw,27px);line-height:1.2;font-weight:750;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.psi-clean .psi-stat small{opacity:.6;font-size:10px}
+.psi-clean .psi-expand{margin-top:17px;padding-top:10px;border-top:1px solid color-mix(in srgb,currentColor 8%,transparent)}
+.psi-clean .psi-expand>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:12px;font-weight:650;padding:5px 0;transition:opacity .2s}
+.psi-clean .psi-expand>summary::-webkit-details-marker{display:none}
+.psi-clean .psi-expand>summary span{opacity:.55;font-weight:450}
+.psi-clean .psi-expand>summary::after{content:'⌄';font-size:16px;transition:transform .25s}
+.psi-clean .psi-expand[open]>summary::after{transform:rotate(180deg)}
+.psi-clean .psi-expand>.psi-strip,.psi-clean .psi-visual-pair,.psi-clean .psi-expand>.psi-visual{padding:17px 0 4px;animation:psi-enter .3s ease both}
+.psi-clean .psi-impact-main{display:grid;gap:13px}
+.psi-clean .psi-impact-rates{border-top:1px dashed color-mix(in srgb,currentColor 12%,transparent);padding-top:13px}
+.psi-clean .psi-footnote{font-size:10px;opacity:.6;margin:9px 0 0}
+.psi-clean .psi-visual-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.psi-clean .psi-visual{min-width:0}
+.psi-clean .psi-visual h3{font-size:12px;margin:0 0 10px;font-weight:650}
+.psi-clean .psi-donut{transition:transform .3s ease}
+.psi-clean .psi-donut:hover{transform:scale(1.045)}
+.psi-clean .psi-chart-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:13px}
+.psi-clean .psi-chart-tabs button{border:0;cursor:pointer;border-radius:999px;background:transparent;color:inherit;opacity:.65;padding:7px 13px;font-size:11px;transition:background .2s,opacity .2s,transform .2s}
+.psi-clean .psi-chart-tabs button[aria-selected="true"]{background:color-mix(in srgb,currentColor 10%,transparent);opacity:1;font-weight:700}
+.psi-clean .psi-chart-tabs button:hover{opacity:1;transform:translateY(-1px)}
+.psi-clean .psi-chart-tabs button:focus-visible,.psi-clean summary:focus-visible{outline:2px solid #55af95;outline-offset:2px}
+.psi-clean .psi-chart-stage{min-height:210px}
+.psi-clean .psi-chart-panel:not([hidden]){animation:psi-enter .3s ease both}
+.psi-clean .psi-chart-panel[hidden]{display:none}
+.psi-clean .psi-line circle{transition:r .2s;cursor:crosshair}
+.psi-clean .psi-line circle:hover{r:7}
+.psi-clean .psi-disclaimer{font-size:10px}
+@keyframes psi-enter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){.psi-clean .psi-area-head{display:block}.psi-clean .psi-area-head p{text-align:left;margin-top:4px}.psi-clean .psi-strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:15px 9px}.psi-clean .psi-stat strong{font-size:20px}.psi-clean .psi-visual-pair{grid-template-columns:1fr}.psi-clean .psi-area{padding-bottom:16px}}
+@media(max-width:390px){.psi-clean .psi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.psi-clean *, .psi-clean .psi-area{animation:none!important;transition:none!important}}
