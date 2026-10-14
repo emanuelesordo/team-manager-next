@@ -199,3 +199,17 @@ test('player impact uses materialized Supabase goals even when local chronology 
  assert.match(html,/GS in campo<\/span><strong>1/);
  assert.match(html,/Plus\/minus<\/span><strong>\+1/);
 });
+
+test('on-field per-80 metrics use the same persisted 165 minutes as the 8/3/+5 SQL totals',()=>{
+ const html=renderPlayerIntelligence('luca',{...base,stats:{
+  appearances:3,starts:1,subentries:2,minutes:165,minutes_coverage:'complete',
+  goals:0,assists:0,goals_for_on:8,goals_against_on:3,plus_minus_on:5,impact_coverage:'complete'
+ },calculatedPlayers:[
+  {player_id:'luca',match_id:'a',appeared:true,minutes:89,goals_for_on:4,goals_against_on:1,score_coverage:'complete'},
+  {player_id:'luca',match_id:'b',appeared:true,minutes:45,goals_for_on:2,goals_against_on:1,score_coverage:'complete'},
+  {player_id:'luca',match_id:'c',appeared:true,minutes:31,goals_for_on:2,goals_against_on:1,score_coverage:'complete'}
+ ]});
+ assert.match(html,/GF \/ 80′<\/span><strong>3\.88/);
+ assert.match(html,/GS \/ 80′<\/span><strong>1\.45/);
+ assert.match(html,/\+\/- \/ 80′<\/span><strong>2\.42/);
+});
