@@ -960,7 +960,10 @@ async function switchSeason(id){
    get('app_player_goal_impact','select=*&season_id=eq.'+encodeURIComponent(id)+'&limit=1000').catch(()=>[]),
    get('app_player_rating_insights','select=*&season_id=eq.'+encodeURIComponent(id)+'&limit=1000').catch(()=>[])
   ]);
-  data.goalImpacts=goalImpacts;data.ratingInsights=ratingInsights;
+  const comebackLeads=await get('app_player_comeback_leads','select=*&season_id=eq.'+encodeURIComponent(id)+'&limit=1000').catch(()=>[]);
+  const comebackByPlayer=new Map(comebackLeads.map(r=>[String(r.player_id),r]));
+  data.goalImpacts=goalImpacts.map(row=>({...row,comeback_go_ahead_goals:comebackByPlayer.get(String(row.player_id))?.comeback_go_ahead_goals??0}));
+  data.ratingInsights=ratingInsights;
   data.predictionSnapshots=rawPredictions.map(row=>({
    fixture_id:row.fixture_id,generated_at:row.calculated_at,
    home_probability:row.model?.probabilities?.home,draw_probability:row.model?.probabilities?.draw,
