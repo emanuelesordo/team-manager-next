@@ -2,7 +2,7 @@ import {formationModules} from './lineup-pitch.js';
 import {shirtSvg} from './kit-editor.js';
 import {availabilityDefault} from './availability.js';
 import {matchPlayerLabel} from './match-player-label.js';
-import {matchPlayerIntervals} from './player-participation.js';
+import {matchPlayerIntervals} from './player-participation.js?v=20261014periodpriority1';
 
 const key=v=>String(v??'');
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
