@@ -16,7 +16,7 @@ import {eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from 
 import {reconcilePlayerSeasonFacts} from './player-season-facts.js';
 import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,timelinePeriodFromMinute} from './match-minutes.js?live=20261014periodplacement1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
-import {eventAdvancedMarkup,readEventAdvanced,mergeEventAdvanced} from './event-details.js';
+import {eventAdvancedMarkup,eventBaseMotivationMarkup,readEventAdvanced,mergeEventAdvanced} from './event-details.js';
 
 import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=20261012genericgoal1';
 import {matchPlayerLabel} from './match-player-label.js';
@@ -685,7 +685,9 @@ function timelineEventEditor(){
    '<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+E(stoppage)+'"></label>'+
    (!fixtureOnly?'<label class="staff-field"><span>Giocatore</span><select name="player_id">'+playerOptions+'</select></label><label class="staff-field"><span>Secondo giocatore</span><select name="secondary_player_id">'+secondaryOptions+'</select></label>':'')+
    goalOrderField+
-   '<label class="staff-field live-notes"><span>Note</span><input name="notes" maxlength="400" value="'+E(ev?.payload?.notes||ev?.notes||'')+'"></label></div>'+
+   '</div>'+
+   (!fixtureOnly?eventBaseMotivationMarkup(ev,ev?.event_type||'goal',sideValue):'')+
+   '<label class="staff-field live-notes" data-event-note'+(['goal','own_goal','penalty_scored','penalty_goal','yellow_card','blue_card','red_card','second_yellow','substitution'].includes(ev?.event_type||'goal')?' hidden':'')+'><span>Note</span><input name="notes" maxlength="400" value="'+E(ev?.payload?.notes||ev?.notes||'')+'"></label>'+
    (!fixtureOnly?eventAdvancedMarkup(ev,ev?.event_type||'goal',sideValue):'')+
    '<div class="live-sheet-actions">'+
     (ev?'<button type="button" class="staff-danger" data-timeline-delete="'+E(ev.id)+'">Elimina</button>':'')+

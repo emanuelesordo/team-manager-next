@@ -8,7 +8,7 @@ import {availabilityDefault,normalizedReason,unavailabilityReasons} from './avai
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js?live=20261015advanced1';
-import {eventAdvancedMarkup,readEventAdvanced,mergeEventAdvanced} from './event-details.js';
+import {eventAdvancedMarkup,eventBaseMotivationMarkup,readEventAdvanced,mergeEventAdvanced} from './event-details.js';
 import {csiReviewPanel} from './csi-review.js?csi=20261011recovery1';
 import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
@@ -666,7 +666,7 @@ function liveDraftSheet(ctx,m,rules,field,bench){
    '<label class="staff-field"><span>Minuto prenotato</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+esc(minute)+'"></label>'+
    (stoppage>0?'<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+esc(stoppage)+'"></label>':'<input type="hidden" name="stoppage_minute" value="0">')+
    playerField+secondary+'</div>'+cardExtra+
-   '<label class="staff-field live-notes"><span>Note (facoltative)</span><input name="notes" maxlength="400" placeholder="Aggiungi solo se serve"></label>'+eventAdvancedMarkup(null,type,side)+
+   eventBaseMotivationMarkup(null,type,side)+eventAdvancedMarkup(null,type,side)+
    '<p class="live-sheet-note">Timestamp bloccato al tap: <strong>'+esc(d.clockLabel||'—')+'</strong>. Puoi completare i dati senza perdere il momento dell’evento.</p>'+
    '<div class="live-sheet-actions"><button type="button" class="staff-soft" data-staff-action="live-close">Annulla</button><button type="submit" class="staff-submit">Salva evento</button></div>'+
   '</form></section></div>';

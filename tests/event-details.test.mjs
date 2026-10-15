@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {goalDistance,legacyChangeReason,eventAdvancedMarkup,mergeEventAdvanced,setEventDetailsScreen} from '../fresh/event-details.js';
+import {goalDistance,legacyChangeReason,eventAdvancedMarkup,eventBaseMotivationMarkup,mergeEventAdvanced,setEventDetailsScreen} from '../fresh/event-details.js';
 test('zone porta e distanze metriche',()=>{
  assert.deepEqual(goalDistance({x:34,y:3}),{meters:3,zone:'goal_area'});
  assert.deepEqual(goalDistance({x:34,y:11}),{meters:11,zone:'penalty_area'});
@@ -30,7 +30,10 @@ test('pannello gol e motiva solo il Caselle',()=>{
  const awayCard=eventAdvancedMarkup(null,'yellow_card','opponent');
  assert.match(awayCard,/data-event-advanced hidden/);
  const ours=eventAdvancedMarkup(null,'yellow_card','team');
- assert.match(ours,/data-event-group="discipline"/);
+ assert.match(ours,/data-event-advanced hidden/);
+ assert.match(eventBaseMotivationMarkup(null,'yellow_card','team'),/name="disciplinary_reason"/);
+ assert.match(eventBaseMotivationMarkup(null,'substitution','team'),/name="substitution_motivation"/);
+ assert.match(eventBaseMotivationMarkup(null,'yellow_card','opponent'),/data-base-motivation="discipline" hidden/);
 });
 
 test('navigazione base e dettagli conserva i dati, cambia titolo e resetta scroll',()=>{

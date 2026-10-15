@@ -27,7 +27,7 @@ function normalizedChange(payload,legacy){
 }
 export function eventAdvancedMarkup(ev=null,eventType='goal',teamSide='team'){
  const p=ev?.payload||{},goal=p.goal_details||{},shot=cleanPoint(goal.shot),assist=cleanPoint(goal.assist),isGoal=GOAL_TYPES.includes(eventType),isCard=CARD_TYPES.includes(eventType)&&teamSide==='team',isChange=eventType==='substitution'&&teamSide==='team';
- const available=isGoal||isCard||isChange;
+ const available=isGoal;
  return '<div class="event-advanced-launch" data-event-advanced-launch'+(available?'':' hidden')+'>'+
  '<button type="button" class="staff-soft" data-event-advanced-open>Dettagli avanzati <span aria-hidden="true">→</span></button>'+
  '<span class="event-advanced-hint">Facoltativi, compilabili anche dopo la partita</span></div>'+
@@ -54,9 +54,13 @@ export function eventAdvancedMarkup(ev=null,eventType='goal',teamSide='team'){
  '<input type="hidden" name="goal_assist_x" value="'+esc(assist?.x??'')+'"><input type="hidden" name="goal_assist_y" value="'+esc(assist?.y??'')+'"></div>'+
  '<div class="event-distance">'+choices('goal_distance_zone','Distanza indicativa',zones,goal.distance_zone||goalDistance(shot)?.zone||'')+
  '<small data-event-distance-label>'+(shot?'Distanza stimata: '+goalDistance(shot)?.meters+' m':'Puoi selezionare manualmente la fascia, anche senza indicare il tiro')+'</small></div></div></div>'+
- '<div data-event-group="discipline"'+(isCard?'':' hidden')+'>'+choices('disciplinary_reason','Motivo del provvedimento (Caselle)',discipline,p.disciplinary_reason||'')+'</div>'+
- '<div data-event-group="substitution"'+(isChange?'':' hidden')+'>'+choices('substitution_motivation','Motivo del cambio (Caselle)',changes,normalizedChange(p,ev?.substitution_reason))+'</div>'+
  '</div></section>';
+}
+export function eventBaseMotivationMarkup(ev=null,eventType='goal',teamSide='team'){
+ const p=ev?.payload||{},card=CARD_TYPES.includes(eventType)&&teamSide==='team',change=eventType==='substitution'&&teamSide==='team';
+ return '<div class="event-base-motivation" data-event-base-motivation'+(card||change?'':' hidden')+'>'+
+ '<div data-base-motivation="discipline"'+(card?'':' hidden')+'>'+choices('disciplinary_reason','Motivo del cartellino',discipline,p.disciplinary_reason||'')+'</div>'+
+ '<div data-base-motivation="substitution"'+(change?'':' hidden')+'>'+choices('substitution_motivation','Motivo del cambio',changes,normalizedChange(p,ev?.substitution_reason))+'</div></div>';
 }
 const numberField=(form,name)=>{const s=String(form.elements.namedItem(name)?.value??'').trim();return s===''?null:Number(s)};
 function readPoint(form,kind){
@@ -93,12 +97,20 @@ export function mergeEventAdvanced(payload,advanced){
 function redraw(wrapper){
  const form=wrapper.closest('form');if(!form)return;
  const type=form.elements.namedItem('event_type')?.value||'goal',side=form.elements.namedItem('team_side')?.value||'team';
- const groups={goal:GOAL_TYPES.includes(type),discipline:CARD_TYPES.includes(type)&&side==='team',substitution:type==='substitution'&&side==='team'};
+ const groups={goal:GOAL_TYPES.includes(type)};
  for(const [key,active] of Object.entries(groups)){const el=wrapper.querySelector('[data-event-group="'+key+'"]');if(el)el.hidden=!active;}
  const available=Object.values(groups).some(Boolean);
  wrapper.hidden=!available||form.dataset.eventMode!=='advanced';
  const launch=form.querySelector('[data-event-advanced-launch]');
  if(launch)launch.hidden=!available||form.dataset.eventMode==='advanced';
+ const base=form.querySelector('[data-event-base-motivation]');
+ if(base){
+  const card=CARD_TYPES.includes(type)&&side==='team',change=type==='substitution'&&side==='team';
+  const c=base.querySelector('[data-base-motivation="discipline"]'),s=base.querySelector('[data-base-motivation="substitution"]');
+  if(c)c.hidden=!card;if(s)s.hidden=!change;base.hidden=!card&&!change;
+ }
+ const note=form.querySelector('[data-event-note]');if(note)note.hidden=GOAL_TYPES.includes(type)||CARD_TYPES.includes(type)||type==='substitution';
+ if(!available&&form.dataset.eventMode==='advanced')setEventDetailsScreen(form,false);
  const selected=form.elements.namedItem('goal_body_part')?.value;
  for(const el of wrapper.querySelectorAll('[data-event-body]'))el.classList.toggle('selected',el.dataset.eventBody===selected);
 }
