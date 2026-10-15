@@ -7,9 +7,16 @@ export function parseCallupMessage(message,players){
  if(current.length)chunks.push(current);
  const roster=(players||[]).map(p=>({id:p.id,first:normalizeCallupName(p.first_name),last:normalizeCallupName(p.last_name),label:[p.last_name,p.first_name].filter(Boolean).join(' ')}));
  const candidate=line=>{
-   const words=normalizeCallupName(line).split(' ').filter(Boolean);
-   if(!words.length||words.length>3||line.length>65)return [];
-   return roster.filter(p=>words.some((w,i)=>w===p.last&&words.every((part,j)=>j===i||part===p.first||part===p.first[0]||part===p.last||part===p.last[0])));
+   const name=normalizeCallupName(line);
+   if(!name||line.length>65||name.split(' ').length>6)return [];
+   const joined=(...parts)=>parts.filter(Boolean).join(' ').trim();
+   return roster.filter(p=>[
+      p.last,
+      joined(p.first,p.last),
+      joined(p.first[0],p.last),
+      joined(p.last,p.first),
+      joined(p.last,p.first[0])
+   ].includes(name));
  };
  const groups=chunks.map((chunk,i)=>({i,items:chunk.map(line=>({line,matches:candidate(line)}))}));
  const sorted=groups.map(g=>({...g,found:g.items.filter(x=>x.matches.length).length,ambiguous:g.items.filter(x=>x.matches.length>1).length}))
