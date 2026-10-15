@@ -1,0 +1,8 @@
+# Dettagli avanzati evento (15/10/2026)
+
+- Unica fonte: app_match_events.payload; le chiavi facoltative sono goal_details, disciplinary_reason, substitution_motivation. Non modificano il punteggio né la validazione.
+- Gol Caselle segnati/subiti: body_part = foot/knee/head; play_type = open_play/corner/penalty/free_kick; dynamics = counterattack/cross/rebound/shot/scramble/tap_in/direct_free_kick.
+- goal_details.shot e .assist hanno coordinate in metri {x,y}, con x 0..68 e y 0..105 rispetto alla porta attaccata posta al centro del lato superiore. Sono posizioni indicative, non GPS. La distanza dal centro della linea di porta è arrotondata al metro. Le fasce considerano prima area piccola e area grande e poi 16–25, 26–35, oltre 35 m.
+- Per cartellini Caselle: disciplinary_reason = protest/foul/violent_conduct/unsporting/other. Per sostituzioni Caselle: substitution_motivation = injury/physical_precaution/disciplinary_precaution/energy/technical_tactical. La colonna storica substitution_reason riceve una mappatura compatibile laddove possibile, mentre energy rimane solo nel payload.
+- I dettagli restano nascosti sotto un pannello richiudibile negli editor Live, Timeline, Rettifica. Assenza di dati significa non noto (mai dedurre automaticamente dal tipo evento).
+- Le rettifiche dei dettagli persistite dalla verifica staff usano la RPC tm_app_set_event_details, che autentica ruolo staff, valida opzioni e registra storico in tm_app_event_revisions senza intervenire sul risultato.

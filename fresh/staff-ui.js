@@ -7,7 +7,8 @@ import {pitchMarkup,formationModules} from './lineup-pitch.js?callups=20261004mo
 import {availabilityDefault,normalizedReason,unavailabilityReasons} from './availability.js';
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
-import {reviewPanel} from './postmatch-review.js?live=20261005merge2';
+import {reviewPanel} from './postmatch-review.js?live=20261015advanced1';
+import {eventAdvancedMarkup,readEventAdvanced,mergeEventAdvanced} from './event-details.js';
 import {csiReviewPanel} from './csi-review.js?csi=20261011recovery1';
 import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
@@ -664,8 +665,8 @@ function liveDraftSheet(ctx,m,rules,field,bench){
    '<div class="live-sheet-grid"><label class="staff-field"><span>Tempo</span><input value="'+esc(livePeriodName(m))+'" disabled></label>'+
    '<label class="staff-field"><span>Minuto prenotato</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+esc(minute)+'"></label>'+
    (stoppage>0?'<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+esc(stoppage)+'"></label>':'<input type="hidden" name="stoppage_minute" value="0">')+
-   playerField+secondary+reason+'</div>'+cardExtra+
-   '<label class="staff-field live-notes"><span>Note / motivazione (facoltative)</span><input name="notes" maxlength="400" placeholder="Aggiungi solo se serve"></label>'+
+   playerField+secondary+'</div>'+cardExtra+
+   '<label class="staff-field live-notes"><span>Note (facoltative)</span><input name="notes" maxlength="400" placeholder="Aggiungi solo se serve"></label>'+eventAdvancedMarkup(null,type,side)+
    '<p class="live-sheet-note">Timestamp bloccato al tap: <strong>'+esc(d.clockLabel||'—')+'</strong>. Puoi completare i dati senza perdere il momento dell’evento.</p>'+
    '<div class="live-sheet-actions"><button type="button" class="staff-soft" data-staff-action="live-close">Annulla</button><button type="submit" class="staff-submit">Salva evento</button></div>'+
   '</form></section></div>';
@@ -1207,13 +1208,18 @@ export async function staffSubmit(e,ctx){
    const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
    const relativeMinute=numberOrNull(d.minute);
    const cumulativeMinute=cumulativeMinuteFromPeriod(relativeMinute,ev.payload?.period_no||ev.payload?.period||m.live_period_no||m.live_period,matchRules(m,competition));
+   const advanced=readEventAdvanced(form);
    const changes={event_type:d.event_type,team_side:d.team_side,
     player_id:d.team_side==='team'?d.player_id||null:null,
     secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
     minute:storedEventMinute(ev,cumulativeMinute,competition),stoppage_minute:numberOrNull(d.stoppage_minute),
-    substitution_reason:d.substitution_reason||null,notes:d.notes||''};
-   await pendingFn(form,()=>rpc('tm_app_amend_event',{p_match_id:m.id,p_event_id:ev.id,
-    p_expected_status:ev.validation_status,p_changes:changes,p_reason:d.reason||''}));
+    substitution_reason:d.event_type==='substitution'?(advanced.substitution_reason||ev.substitution_reason||null):null,notes:d.notes||''};
+   await pendingFn(form,async()=>{
+    await rpc('tm_app_amend_event',{p_match_id:m.id,p_event_id:ev.id,
+     p_expected_status:ev.validation_status,p_changes:changes,p_reason:d.reason||''});
+    await rpc('tm_app_set_event_details',{p_match_id:m.id,p_event_id:ev.id,p_details:{
+     goal_details:advanced.goal_details,disciplinary_reason:advanced.disciplinary_reason,substitution_motivation:advanced.substitution_motivation}});
+   });
    reviewEditEvent=null;reviewHistoryEvent=null;await reloadMatch(ctx);
    ctx.toast(roleOf(ctx)==='admin'?'Rettifica salvata e ufficializzata':'Rettifica salvata nello storico, da verificare');return true;
   }
@@ -1270,7 +1276,7 @@ export async function staffSubmit(e,ctx){
   }
   if(kind==='event'){
    const m=ctx.resolveMatch().operational;if(!m)throw Error('Match da associare');
-   const d=dataForm(form),c=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
+   const d=dataForm(form),advanced=readEventAdvanced(form),c=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
    const rules=matchRules(m,c);
    const period=d.period_key||((m.is_test&&m.live_period_no)?Number(m.live_period_no):m.live_period);
    const configuredMinutes=Number(rules?.minutes_per_period);
@@ -1285,7 +1291,7 @@ export async function staffSubmit(e,ctx){
     player_id:d.team_side==='team'?d.player_id||null:null,
     secondary_player_id:d.team_side==='team'?d.secondary_player_id||null:null,
     minute,stoppage_minute:numberOrNull(d.stoppage_minute),
-    substitution_reason:d.substitution_reason,notes:d.notes,
+    substitution_reason:advanced.substitution_reason,notes:d.notes,payload:mergeEventAdvanced({},advanced),
     count_score:Boolean(d.count_score),captured_at:d.captured_at||new Date().toISOString(),
     minute_mode:d.minute_mode||'now_estimated',minute_origin:minuteOrigin,request_key:crypto.randomUUID()};
    if(payload.team_side==='team'&&['goal','yellow_card','blue_card','red_card'].includes(payload.event_type)&&!payload.player_id)

@@ -1,4 +1,5 @@
 import {cumulativeEventMinute,displayEventMinute,periodRelativeMinute} from './match-minutes.js?live=20261005periods';
+import {eventAdvancedMarkup} from './event-details.js';
 const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const opts=(a,v)=>a.map(([k,n])=>'<option value="'+E(k)+'"'+(k===v?' selected':'')+'>'+E(n)+'</option>').join('');
 const types=['goal','own_goal','penalty_scored','penalty_missed','assist','substitution','yellow_card','blue_card','blue_return','red_card','period_end','other'].map(x=>[x,x]);
@@ -16,10 +17,9 @@ export function amendEventForm(ev,players=[],competition=null){
  sel('player_id','Giocatore / uscente',people,ev.player_id||'')+sel('secondary_player_id','Assist / entrante',people,ev.secondary_player_id||'')+
  inp('minute','Minuto del periodo',periodRelativeMinute(cumulativeEventMinute(ev,competition),ev.payload?.period_no||ev.payload?.period||'first_half',competition)??'','number','min="0" max="300" placeholder="Sconosciuto"')+
  inp('stoppage_minute','Recupero',ev.stoppage_minute??'','number','min="0" max="30"')+
- sel('substitution_reason','Motivo sostituzione',reasons,ev.substitution_reason||'')+
  inp('notes','Note',ev.payload?.notes||'','text','maxlength="400"')+
  inp('reason','Motivo rettifica','','text','required minlength="5" maxlength="500"')+
- '</div><div class="staff-event-buttons"><button class="staff-submit" type="submit">Salva rettifica</button><button class="staff-danger" type="button" data-staff-action="review-void" data-event-id="'+E(ev.id)+'">Annulla evento</button><button class="staff-soft" type="button" data-staff-action="review-cancel-edit">Chiudi</button></div></form>';
+ '</div>'+eventAdvancedMarkup(ev,ev.event_type,ev.team_side)+'<div class="staff-event-buttons"><button class="staff-submit" type="submit">Salva rettifica</button><button class="staff-danger" type="button" data-staff-action="review-void" data-event-id="'+E(ev.id)+'">Annulla evento</button><button class="staff-soft" type="button" data-staff-action="review-cancel-edit">Chiudi</button></div></form>';
 }
 export function revisionHistory(rows=[],competition=null){
  if(!rows.length)return '<p class="staff-help">Nessuna rettifica registrata.</p>';
