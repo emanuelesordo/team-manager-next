@@ -1,4 +1,5 @@
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
+import {aggregateEventDetails,DETAIL_METRICS} from './event-detail-stats.js';
 import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers} from './analytics.js?stats=20261013sourcefacts1';
 import {buildTeamProfile,profileHighlights} from './team-profile.js';
 import {analyseResults} from './result-intelligence.js';
@@ -178,6 +179,17 @@ export function eventAnalyticsPlaceholder(){
  return '<div data-event-analysis><section class="glass panel event-analysis"><div class="panel-heading"><h2>Statistiche stagione</h2></div><div class="empty">Caricamento numeri…</div></section></div>';
 }
 
+export function eventDetailStatisticsPanel(events,{playerId=null,side='team'}={}){
+ const data=aggregateEventDetails(events,{playerId,side});
+ const groups=DETAIL_METRICS.map(([key,title,options])=>{
+  const item=data.groups[key];
+  if(!item.known)return '';
+  return '<div class="event-detail-stat-group"><h3>'+E(title)+' <small>'+item.known+'/'+item.total+' compilati</small></h3>'+
+   '<div class="team-metric-grid">'+options.filter(([code])=>item.counts[code]>0).map(([code,label])=>cell(label,item.counts[code])).join('')+'</div></div>';
+ }).filter(Boolean).join('');
+ if(!groups)return '<p class="subnote">Nessun dettaglio aggiuntivo compilato negli eventi confermati.</p>';
+ return groups+'<p class="subnote">Conteggi riferiti ai soli eventi ufficiali o confermati. I dettagli mancanti non sono considerati osservazioni. I gol restano conteggiati dalle fonti ufficiali.</p>';
+}
 function renderTeamAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[]){
  // These are already reconciled seasonal facts; never create a second independent minute total.
  const computedPlayers=playerStats||[];
@@ -206,7 +218,7 @@ function renderTeamAnalytics(fixtures,matches,events,team,competitions=[],player
   balance(numbers)+venue(numbers)+
   (fullGoalCoverage?goalDistribution(numbers):'<section class="glass panel leaderboard"><div class="panel-heading"><h2>Distribuzione gol</h2></div><p class="subnote">Dati in verifica: la ripartizione non copre tutte le partite concluse.</p></section>')+discipline(numbers,computedPlayers)+'</div>'+
   '<section class="glass panel"><div class="panel-heading"><h2>Ultime partite</h2></div>'+lastResults(numbers.matches,opponents)+'</section>'+
-  teamProfilePanel(profile)+resultProfilePanel(profile)+resultIntelligencePanel(intelligence)+period+gameStatePanels(coverage.gameState)+progressionsPanel(coverage.gameState,coverage.halftime)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
+  '<section class="glass panel event-detail-statistics"><div class="panel-heading"><h2>Dettagli gol, cartellini e cambi</h2></div>'+eventDetailStatisticsPanel(events,{side:'team'})+'<h3>Eventi avversari · gol subiti e provvedimenti</h3>'+eventDetailStatisticsPanel(events,{side:'opponent'})+'</section>'+teamProfilePanel(profile)+resultProfilePanel(profile)+resultIntelligencePanel(intelligence)+period+gameStatePanels(coverage.gameState)+progressionsPanel(coverage.gameState,coverage.halftime)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
 }
 
 export function fixtureEventsPanel(events,competition=null,fixture=null){
@@ -241,7 +253,7 @@ function rankingRows(title,players,key,unit=''){
   '<div class="stats-rank-track"><i style="width:'+Math.round(Math.abs(Number(p[key]))/max*100)+'%"></i></div>'+
   '<b>'+E(key==='plus_minus_on'?plus(Number(p[key])):Number(p[key]).toLocaleString('it-IT',{maximumFractionDigits:2}))+E(unit)+'</b></div>').join('')+'</div></section>';
 }
-function playersNumbers(players,impacts=[],ratings=[],comparisons=[]){
+function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[]){
  const impactMap=new Map(impacts.map(x=>[String(x.player_id),x])),ratingMap=new Map(ratings.map(x=>[String(x.player_id),x]));
  const merged=comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}));
  const groups=[
@@ -269,8 +281,15 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[]){
  const panels=groups.map(([id,title,metrics],i)=>
  '<div class="stats-player-grid" data-stats-ranking-panel="'+id+'"'+(i?' hidden':'')+'>'+
  metrics.map(([metric,key])=>rankingRows(metric,merged,key)).filter(Boolean).join('')+'</div>').join('');
+ const detailGroups=DETAIL_METRICS.map(([key,title,options])=>{
+  const values=merged.map(p=>{
+   const detail=aggregateEventDetails(events,{playerId:p.player_id,side:'team'}).groups[key];
+   return {...p,event_detail_value:detail.known,detail_counts:detail.counts};
+  });
+  return options.map(([code,label])=>rankingRows(title+' · '+label,values.map(v=>({...v,event_detail_value:v.detail_counts[code]})),'event_detail_value')).filter(Boolean).join('');
+ }).filter(Boolean).join('');
  return '<div class="stats-player-section"><p class="stats-hint">Confronti stagionali dei giocatori Caselle · dati certificati nella vista SQL unica. Le voci senza dati sono omesse.</p>'+
- tabs+panels+'</div>';
+ tabs+panels+'<section class="stats-player-detail-block"><h3>Dettagli eventi · confronti giocatori</h3>'+detailGroups+'</section></div>';
 }
 function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[],opponentFlows=[],teamComparisons=[]){
  const groups=[
@@ -316,6 +335,6 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
  '<button type="button" role="tab" data-stats-scope="'+id+'" aria-selected="'+(i===0)+'">'+E(label)+'</button>').join('')+'</nav>';
  return tabs+'<div class="stats-scope-panel" data-stats-panel="team">'+
  renderTeamAnalytics(fixtures,matches,events,team,competitions,playerStats,opponents,matchPlayers,venues,predictionSnapshots,history)+
- '</div><div class="stats-scope-panel" data-stats-panel="players" hidden>'+playersNumbers(playerStats,goalImpacts,ratingInsights,playerComparisons)+
+ '</div><div class="stats-scope-panel" data-stats-panel="players" hidden>'+playersNumbers(playerStats,goalImpacts,ratingInsights,playerComparisons,events)+
  '</div><div class="stats-scope-panel" data-stats-panel="all" hidden>'+tournamentNumbers(fixtures,competitions,matchFlows,flowPhases,flowEventContexts,opponentFlows,teamComparisons)+'</div>';
 }

@@ -32,6 +32,8 @@ jobs:
         run: node --check fresh/player-intelligence.js && node --check fresh/analytics-ui.js && node --check fresh/main.js && node --check fresh/staff-ui.js && node --check fresh/callup-message.js && node --check fresh/callup-import-ui.js && node --test tests/player-intelligence.test.mjs tests/analytics-ui.scopes.test.mjs tests/callup-message.test.mjs
       - name: Test advanced Caselle event details
         run: node --check fresh/event-details.js && node --test tests/event-details.test.mjs
+      - name: Test event detail statistics
+        run: node --check fresh/event-detail-stats.js && node --test tests/event-detail-stats.test.mjs
       - name: Generate static site
         run: npm run build
       - name: Verify deploy artifact
