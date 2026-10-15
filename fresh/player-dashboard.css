@@ -28,7 +28,7 @@
 .psi-infographic .psi-infographic-track::-webkit-scrollbar{display:none}
 .psi-infographic .psi-infographic-slide{flex:0 0 100%;min-width:0;scroll-snap-align:start}
 .psi-infographic .psi-infographic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
-.psi-infographic .psi-infographic-grid>.psi-section{min-width:0}
+.psi-infographic .psi-infographic-grid>.psi-area{min-width:0}
 .psi-infographic .psi-disclaimer{margin:3px 0 0}
 @media(max-width:1200px){.player-infographic .detail-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media(max-width:800px){.player-infographic .player-detail-cover{grid-template-columns:100px minmax(0,1fr);gap:12px;padding:12px;min-height:130px}.player-infographic .big-player-avatar{width:100px;height:118px}.player-infographic .player-cover-identity h1{font-size:23px}.player-infographic .player-cover-number{height:27px;min-width:27px;font-size:16px}.player-infographic .detail-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.player-infographic .detail-kpis>div{min-height:62px;padding:7px 3px;gap:6px}.psi-infographic .psi-infographic-grid{grid-template-columns:1fr}.psi-infographic .psi-carousel-head{padding:10px}.psi-infographic .psi-carousel-head h2{font-size:13px}.psi-infographic .psi-carousel-head p{font-size:10px}}
