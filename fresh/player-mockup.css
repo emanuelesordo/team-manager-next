@@ -172,7 +172,7 @@ body[data-page="player"] .psi-info-row strong{font-size:13px;font-weight:800;col
 body[data-page="player"] .psi-info-row small{grid-column:1 / -1;font-size:9px;color:#7e8da0;text-align:right}
 
 /* Preserve mockup's proportions while avoiding horizontal viewport overflow. */
-@media(max-width:1590px){
+@media(max-width:1290px){
  body[data-page="player"] .player-infographic .detail-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
  body[data-page="player"] .player-infographic .detail-kpis>.player-kpi{min-height:73px;padding:7px 3px;gap:4px}
  body[data-page="player"] .psi-overview-grid .psi-info-record{gap:6px}
