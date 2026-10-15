@@ -292,11 +292,11 @@ export function renderPlayerIntelligence(id,source){
  const trend=availableCharts.length?section('Andamento','Seleziona la metrica; passa sui punti del grafico per i valori',
    tabs+'<div class="psi-chart-stage">'+chartPanels+'</div>'):'';
 
- const groups=[['Impiego e produzione',[usage,attack]],['Gol e impatto',[goalContext,impact]],['Valutazioni e risultati',[rating,record]],['Andamento',[trend]]]
+ const groups=[['Overview',[usage,record]],['Rendimento',[rating,trend]],['Eventi',[attack,goalContext]],['Derivati',[impact]]]
   .map(([name,parts])=>[name,parts.filter(Boolean)]).filter(([,parts])=>parts.length);
  const nav=groups.map(([name],i)=>'<button type="button" class="psi-carousel-dot" data-psi-slide-to="'+i+'" aria-label="'+E(name)+'" aria-current="'+(i===0?'true':'false')+'">'+E(name)+'</button>').join('');
  return '<div class="psi-root psi-clean psi-infographic" data-player-id="'+E(id)+'">'+
-  '<div class="psi-carousel-head"><div><h2>Statistiche del giocatore</h2><p>Scorri tra i gruppi di dati verificati</p></div>'+
+  '<div class="psi-carousel-head"><div><h2>Statistiche e andamento</h2><p>Dati base e indicatori derivati · scorri le categorie</p></div>'+
   '<div class="psi-carousel-controls"><button type="button" data-psi-prev aria-label="Gruppo precedente">‹</button><span data-psi-count>1 / '+groups.length+'</span><button type="button" data-psi-next aria-label="Gruppo successivo">›</button></div></div>'+
   '<div class="psi-carousel-nav" aria-label="Categorie statistiche">'+nav+'</div>'+
   '<div class="psi-infographic-track" data-psi-track tabindex="0" aria-label="Carosello statistiche">'+groups.map(([name,parts],i)=>
