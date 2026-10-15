@@ -108,12 +108,12 @@ test('Luca Peruzzo three conceded goals across three games count in GF/GS on-fie
 });
 
 
-test('redesigned player profile has no metric carousel and keeps one source for each total',()=>{
+test('player profile groups real statistics in a navigable carousel and keeps one source for each total',()=>{
  const html=renderPlayerIntelligence('p',{...base,
   stats:{appearances:1,starts:0,subentries:1,minutes:25,minutes_coverage:'complete',
    goals:1,assists:1,avg_rating:7,match_minutes:[{match_id:'m1',minutes:25,valid:true}]}});
- assert.match(html,/class="psi-root psi-clean"/);
- assert.doesNotMatch(html,/class="psi-carousel"/);
+ assert.match(html,/class="psi-root psi-clean psi-infographic"/);
+ assert.match(html,/data-psi-track/);
  assert.doesNotMatch(html,/class="psi-summary"/);
  assert.match(html,/Impiego/);
  assert.match(html,/Produzione/);
@@ -156,7 +156,7 @@ test('player profile has graphical minutes, production, score and outcome visual
   ]});
  for(const klass of ['psi-match-bars','psi-production-viz','psi-scoreviz','psi-recordviz'])assert.ok(html.includes(klass),klass);
  assert.match(html,/psi-scoreviz-head/);
- assert.doesNotMatch(html,/psi-carousel/);
+ assert.match(html,/data-psi-track/);
 });
 
 test('certified match rows and fixture scores power outcome graphics without client participation',()=>{
@@ -175,6 +175,6 @@ test('certified match rows and fixture scores power outcome graphics without cli
 test('no duplicated headline metric labels or placeholder metrics',()=>{
  const html=renderPlayerIntelligence('p',{...base,stats:{appearances:1,starts:0,subentries:1,minutes:null,minutes_coverage:'unavailable',goals:0,assists:0}});
  assert.doesNotMatch(html,/<strong>—<\/strong>/);
- assert.doesNotMatch(html,/class="psi-carousel"/);
+ assert.match(html,/data-psi-track/);
  assert.equal((html.match(/>Gol \/ 80′<\/span>/g)||[]).length,0);
 });
