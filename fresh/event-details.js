@@ -3,7 +3,7 @@ export const GOAL_TYPES=['goal','own_goal','penalty_scored','penalty_goal'];
 export const CARD_TYPES=['yellow_card','blue_card','red_card','second_yellow'];
 const body=[['foot','Piede'],['knee','Ginocchio'],['head','Testa']];
 const plays=[['open_play','Azione'],['corner','Calcio d’angolo'],['penalty','Rigore'],['free_kick','Punizione']];
-const dynamics=[['counterattack','Contropiede'],['cross','Su cross'],['rebound','Su ribattuta'],['shot','Tiro'],['scramble','In mischia'],['tap_in','Tap-in'],['direct_free_kick','Tiro su punizione']];
+const dynamics=[['counterattack','Contropiede'],['cross','Su cross'],['rebound','Su ribattuta'],['shot','Tiro'],['scramble','In mischia'],['tap_in','Tap-in'],['direct_free_kick','Tiro su punizione'],['personal_action','Azione personale']];
 const discipline=[['protest','Proteste'],['foul','Fallo'],['violent_conduct','Condotta violenta'],['unsporting','Comportamento antisportivo'],['other','Altro']];
 const changes=[['injury','Infortunio'],['physical_precaution','Precauzione fisica'],['disciplinary_precaution','Precauzione disciplinare'],['energy','Energia'],['technical_tactical','Cambio tecnico/tattico']];
 const zones=[['goal_area','Area del portiere'],['penalty_area','Area di rigore'],['16_25','16–25 m'],['26_35','26–35 m'],['over_35','Oltre 35 m']];
@@ -27,8 +27,13 @@ function normalizedChange(payload,legacy){
 }
 export function eventAdvancedMarkup(ev=null,eventType='goal',teamSide='team'){
  const p=ev?.payload||{},goal=p.goal_details||{},shot=cleanPoint(goal.shot),assist=cleanPoint(goal.assist),isGoal=GOAL_TYPES.includes(eventType),isCard=CARD_TYPES.includes(eventType)&&teamSide==='team',isChange=eventType==='substitution'&&teamSide==='team';
- const label='<span class="event-advanced-hint">Facoltativi · non appaiono nell’inserimento rapido</span>';
- return '<details class="event-advanced" data-event-advanced'+(!(isGoal||isCard||isChange)?' hidden':'')+'><summary>Dettagli avanzati '+label+'</summary><div class="event-advanced-inner">'+
+ const available=isGoal||isCard||isChange;
+ return '<div class="event-advanced-launch" data-event-advanced-launch'+(available?'':' hidden')+'>'+
+ '<button type="button" class="staff-soft" data-event-advanced-open>Dettagli avanzati <span aria-hidden="true">→</span></button>'+
+ '<span class="event-advanced-hint">Facoltativi, compilabili anche dopo la partita</span></div>'+
+ '<section class="event-advanced" data-event-advanced hidden><div class="event-advanced-return">'+
+ '<button type="button" class="staff-soft" data-event-advanced-back>← Torna ai dati base</button>'+
+ '<strong>Dettagli avanzati</strong></div><div class="event-advanced-inner">'+
  '<div data-event-group="goal"'+(isGoal?'':' hidden')+'>'+
  '<p class="event-advanced-caption">Come è stato segnato</p>'+
  '<div class="event-goal-layout"><div class="event-body-wrap"><div class="event-body-figure" role="group" aria-label="Seleziona la parte del corpo">'+
@@ -51,7 +56,7 @@ export function eventAdvancedMarkup(ev=null,eventType='goal',teamSide='team'){
  '<small data-event-distance-label>'+(shot?'Distanza stimata: '+goalDistance(shot)?.meters+' m':'Puoi selezionare manualmente la fascia, anche senza indicare il tiro')+'</small></div></div></div>'+
  '<div data-event-group="discipline"'+(isCard?'':' hidden')+'>'+choices('disciplinary_reason','Motivo del provvedimento (Caselle)',discipline,p.disciplinary_reason||'')+'</div>'+
  '<div data-event-group="substitution"'+(isChange?'':' hidden')+'>'+choices('substitution_motivation','Motivo del cambio (Caselle)',changes,normalizedChange(p,ev?.substitution_reason))+'</div>'+
- '</div></details>';
+ '</div></section>';
 }
 const numberField=(form,name)=>{const s=String(form.elements.namedItem(name)?.value??'').trim();return s===''?null:Number(s)};
 function readPoint(form,kind){
@@ -90,9 +95,29 @@ function redraw(wrapper){
  const type=form.elements.namedItem('event_type')?.value||'goal',side=form.elements.namedItem('team_side')?.value||'team';
  const groups={goal:GOAL_TYPES.includes(type),discipline:CARD_TYPES.includes(type)&&side==='team',substitution:type==='substitution'&&side==='team'};
  for(const [key,active] of Object.entries(groups)){const el=wrapper.querySelector('[data-event-group="'+key+'"]');if(el)el.hidden=!active;}
- wrapper.hidden=!Object.values(groups).some(Boolean);
+ const available=Object.values(groups).some(Boolean);
+ wrapper.hidden=!available||form.dataset.eventMode!=='advanced';
+ const launch=form.querySelector('[data-event-advanced-launch]');
+ if(launch)launch.hidden=!available||form.dataset.eventMode==='advanced';
  const selected=form.elements.namedItem('goal_body_part')?.value;
  for(const el of wrapper.querySelectorAll('[data-event-body]'))el.classList.toggle('selected',el.dataset.eventBody===selected);
+}
+export function setEventDetailsScreen(form,showAdvanced){
+ const wrapper=form?.querySelector('[data-event-advanced]');
+ if(!wrapper)return;
+ form.dataset.eventMode=showAdvanced?'advanced':'base';
+ redraw(wrapper);
+ const sheet=form.closest('.live-event-sheet');
+ sheet?.classList.toggle('event-sheet-advanced',showAdvanced);
+ const title=sheet?.querySelector('.live-sheet-head h3');
+ if(title){
+  if(!title.dataset.baseTitle)title.dataset.baseTitle=title.textContent;
+  title.textContent=showAdvanced?'Dettagli avanzati':title.dataset.baseTitle;
+ }
+ if(sheet)sheet.setAttribute('aria-label',showAdvanced?'Dettagli avanzati':(title?.dataset.baseTitle||'Modifica evento'));
+ if('scrollTop' in form)form.scrollTop=0;
+ const focus=showAdvanced?wrapper.querySelector('[data-event-advanced-back]'):form.querySelector('[data-event-advanced-open]');
+ focus?.focus?.({preventScroll:true});
 }
 if(typeof document!=='undefined'){
  document.addEventListener('change',event=>{
@@ -100,7 +125,12 @@ if(typeof document!=='undefined'){
   if(wrapper&&['event_type','team_side','goal_body_part'].includes(event.target.name))redraw(wrapper);
  });
  document.addEventListener('click',event=>{
-  const target=event.target,wrapper=target.closest?.('[data-event-advanced]');if(!wrapper)return;
+  const target=event.target;
+  const open=target.closest?.('[data-event-advanced-open]');
+  if(open){setEventDetailsScreen(open.closest('form'),true);return;}
+  const back=target.closest?.('[data-event-advanced-back]');
+  if(back){setEventDetailsScreen(back.closest('form'),false);return;}
+  const wrapper=target.closest?.('[data-event-advanced]');if(!wrapper)return;
   const form=wrapper.closest('form');
   const bodyButton=target.closest('[data-event-body]');
   if(bodyButton){form.elements.namedItem('goal_body_part').value=bodyButton.dataset.eventBody;redraw(wrapper);return;}

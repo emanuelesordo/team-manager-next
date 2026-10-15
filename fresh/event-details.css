@@ -1,7 +1,19 @@
-.event-advanced{border-top:1px solid var(--border);margin-top:8px;padding-top:12px;min-width:0;color:var(--ink)}
-.event-advanced[hidden],.event-advanced [hidden]{display:none!important}
-.event-advanced summary{cursor:pointer;font-size:12px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap;list-style-position:inside}
+/* Due viste della stessa maschera: non duplicano form né perdono i valori. */
+.event-advanced-launch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;padding:7px 0}
+.event-advanced-launch[hidden],.event-advanced[hidden],.event-advanced [hidden]{display:none!important}
 .event-advanced-hint{font-size:10px;color:var(--muted);font-weight:500}
+.event-advanced-launch [data-event-advanced-open]{font-size:12px;min-height:42px}
+form[data-event-mode="advanced"] > :not([data-event-advanced]){display:none!important}
+.live-event-sheet.event-sheet-advanced > .live-type-strip{display:none!important}
+.event-advanced{min-width:0;color:var(--ink);align-self:stretch;min-height:0}
+.event-advanced-return{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--surface-solid);padding:8px 0 10px;border-bottom:1px solid var(--border)}
+.event-advanced-return button{min-height:42px;font-size:12px}
+.event-advanced-return strong{font-size:12px;color:var(--muted)}
+.live-event-sheet > .live-sheet-form{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;align-content:start;padding:2px 2px 12px}
+.live-event-sheet > .live-sheet-form[data-event-mode="advanced"]{display:block}
+.live-event-sheet > .live-sheet-form[data-event-mode="advanced"] .event-advanced{display:block}
+.staff-amend-form[data-event-mode="advanced"]{align-content:start}
+.event-pitch{touch-action:pan-y}
 .event-advanced-inner{padding:14px 0 4px;display:grid;gap:14px}
 .event-advanced-caption{font-size:12px;font-weight:750;margin:0 0 9px;color:var(--ink)}
 .event-advanced-help{font-size:11px;line-height:1.5;margin:-3px 0 12px;color:var(--muted)}
