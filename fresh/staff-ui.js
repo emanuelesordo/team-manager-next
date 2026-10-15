@@ -51,6 +51,7 @@ function findGeneralSeason(available,app,teamId){
 }
 const roleOf=ctx=>ctx.state.identity?.profile?.is_active===false?null:ctx.state.identity?.role?.role;
 export const isStaff=ctx=>['admin','manager'].includes(roleOf(ctx));
+export const mayEditCallups=ctx=>['admin','manager','coach','player'].includes(roleOf(ctx));
 function selectExisting(kind,records,text){return '<label class="staff-field"><span>Modifica esistente o crea nuovo</span><select data-staff-select="'+kind+'">'+option('','+ Nuovo',memory.selected[kind])+records.map(x=>option(x.id,x[text]||x.name||x.id,memory.selected[kind])).join('')+'</select></label>'}
 function wrapForm(id,heading,form,description){return '<section class="glass panel staff-editor'+(['team','opponents'].includes(id)?' staff-editor-club staff-editor-'+id:'')+'">'+(id==='opponents'?'':title('CONFIGURAZIONE',heading)+(description?help(description):''))+'<form data-staff-form="'+id+'" class="staff-form">'+form+submit('Salva')+'</form></section>'}
 function seasonStartYear(season){
@@ -488,6 +489,7 @@ function matchCallups(ctx,m){
    '</div>';
  }).join('');
  return '<section class="staff-subpanel">'+title('PREPARTITA','Convocazioni')+
+  (mayEditCallups(ctx)?'<details class="callup-message-import"><summary>Importa convocati da messaggio</summary><p class="staff-help">Incolla il messaggio completo. I non citati vengono esclusi dopo aver indicato il motivo.</p><textarea data-callup-message rows="7" placeholder="Incolla il messaggio"></textarea><button type="button" class="staff-soft" data-callup-import-action="preview">Analizza elenco</button><div data-callup-preview role="status"></div></details>':'')+
  help('Ogni scelta viene salvata automaticamente. Tocca un’icona per assegnare o modificare la motivazione; tocca quella selezionata per reintegrare il giocatore.')+
  '<form data-staff-form="callups" data-callup-match="'+esc(m.id)+'"><div class="callup-columns">'+
  '<section class="callup-list"><h3>Disponibili <span data-callup-count="available"></span></h3><div data-callup-list="available"></div></section>'+
@@ -743,7 +745,7 @@ function matchCsiReview(ctx,m){
 
 export function staffMatchSection(ctx,f,m,section){
  const staff=isStaff(ctx),liveContributor=section==='live'&&Boolean(ctx.state.identity?.user);
- if(!staff&&!liveContributor)return '';
+ if(!staff&&!liveContributor&&!(section==='callups'&&mayEditCallups(ctx)))return '';
  if(!['callups','lineup','live','events','tactics','verification'].includes(section))return '';
  if(section!=='verification'&&(!m||!m.fixture_id)&&['finished','live'].includes(f?.status))
   return '<section class="glass panel staff-root"><p class="data-warning">Tabellino operativo non collegato: verifica il collegamento prima di modificare la partita.</p></section>';
