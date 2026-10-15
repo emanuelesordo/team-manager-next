@@ -295,13 +295,15 @@ export function renderPlayerIntelligence(id,source){
 
  const overview=renderPlayerOverview({id,stats:sql,analysis:v,ratings:ratingInsights,impact:goalImpact,games,starts,
   minutes:effectiveMinutes,goals,assists,results:tally,resultsComplete,fullImpact,timelineComplete,completeGoals,completeAssists,scoreResults});
- const groups=[['Overview',[overview]],['Rendimento',[usage,rating,trend,record]],['Eventi',[attack,goalContext]],['Derivati',[impact]]]
+ const eventDetails=source?.eventDetailsHtml?section('Dettagli eventi','Approfondimento per tipo di azione',source.eventDetailsHtml):'';
+ const groups=[['Overview',[overview]],['Rendimento',[usage,rating,trend,record]],['Eventi',[attack,goalContext,eventDetails]],['Derivati',[impact]]]
   .map(([name,parts])=>[name,parts.filter(Boolean).length?parts.filter(Boolean):[section('Nessun dato disponibile','','Le statistiche saranno visibili quando i tabellini saranno completi.')]]);
  const nav=groups.map(([name],i)=>'<button type="button" class="psi-carousel-dot" data-psi-slide-to="'+i+'" aria-label="'+E(name)+'" aria-current="'+(i===0?'true':'false')+'">'+E(name)+'</button>').join('');
+ const dots=groups.map(([name],i)=>'<button type="button" class="psi-page-dot" data-psi-page-to="'+i+'" aria-label="Vai a '+E(name)+'" aria-current="'+(i===0?'true':'false')+'"></button>').join('');
  return '<div class="psi-root psi-clean psi-infographic" data-player-id="'+E(id)+'">'+
   '<div class="psi-carousel-head"><div><h2>Statistiche e andamento</h2><p>Dati base e indicatori derivati · scorri le categorie</p></div>'+
-  '<div class="psi-carousel-controls"><button type="button" data-psi-prev aria-label="Gruppo precedente">‹</button><span data-psi-count>1 / '+groups.length+'</span><button type="button" data-psi-next aria-label="Gruppo successivo">›</button></div></div>'+
   '<div class="psi-carousel-nav" aria-label="Categorie statistiche">'+nav+'</div>'+
+  '<div class="psi-carousel-controls"><button type="button" data-psi-prev aria-label="Gruppo precedente">‹</button><span class="psi-page-dots">'+dots+'</span><span class="psi-carousel-count" data-psi-count>1 / '+groups.length+'</span><button type="button" data-psi-next aria-label="Gruppo successivo">›</button></div></div>'+
   '<div class="psi-infographic-track" data-psi-track tabindex="0" aria-label="Carosello statistiche">'+groups.map(([name,parts],i)=>
    '<div class="psi-infographic-slide" data-psi-slide="'+i+'" aria-label="'+E(name)+'"><div class="psi-infographic-grid">'+parts.join('')+'</div></div>').join('')+'</div>'+
   '<p class="psi-disclaimer">Fonti: statistiche stagionali e cache partita Supabase. '+E(comp)+'</p></div>';
@@ -314,22 +316,25 @@ export function initPlayerIntelligence(root=document){
  const track=host.querySelector('[data-psi-track]');
  const slides=[...host.querySelectorAll('[data-psi-slide]')];
  const nav=[...host.querySelectorAll('[data-psi-slide-to]')];
+ const dots=[...host.querySelectorAll('[data-psi-page-to]')];
  let active=0;
  const show=i=>{
   if(!slides.length)return;
   active=Math.max(0,Math.min(i,slides.length-1));
   track.scrollTo({left:slides[active].offsetLeft-track.offsetLeft,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
   nav.forEach((button,n)=>button.setAttribute('aria-current',String(n===active)));
+  dots.forEach((button,n)=>button.setAttribute('aria-current',String(n===active)));
   const counter=host.querySelector('[data-psi-count]');if(counter)counter.textContent=(active+1)+' / '+slides.length;
  };
  host.querySelector('[data-psi-prev]')?.addEventListener('click',()=>show(active-1));
  host.querySelector('[data-psi-next]')?.addEventListener('click',()=>show(active+1));
  nav.forEach((button,i)=>button.addEventListener('click',()=>show(i)));
+ dots.forEach((button,i)=>button.addEventListener('click',()=>show(i)));
  let raf=0;
  track?.addEventListener('scroll',()=>{
   cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{
    const nearest=slides.reduce((best,s,i)=>Math.abs(s.offsetLeft-track.offsetLeft-track.scrollLeft)<Math.abs(slides[best].offsetLeft-track.offsetLeft-track.scrollLeft)?i:best,0);
-   active=nearest;nav.forEach((b,i)=>b.setAttribute('aria-current',String(i===active)));
+   active=nearest;nav.forEach((b,i)=>b.setAttribute('aria-current',String(i===active)));dots.forEach((b,i)=>b.setAttribute('aria-current',String(i===active)));
    const counter=host.querySelector('[data-psi-count]');if(counter)counter.textContent=(active+1)+' / '+slides.length;
   });
  },{passive:true});
