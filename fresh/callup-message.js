@@ -9,7 +9,7 @@ export function parseCallupMessage(message,players){
  const candidate=line=>{
    const words=normalizeCallupName(line).split(' ').filter(Boolean);
    if(!words.length||words.length>3||line.length>65)return [];
-   return roster.filter(p=>words.some((w,i)=>w===p.last&&words.every((part,j)=>j===i||part===p.first||part===p.first[0]||part===p.last||part===p.last[0]));
+   return roster.filter(p=>words.some((w,i)=>w===p.last&&words.every((part,j)=>j===i||part===p.first||part===p.first[0]||part===p.last||part===p.last[0])));
  };
  const groups=chunks.map((chunk,i)=>({i,items:chunk.map(line=>({line,matches:candidate(line)}))}));
  const sorted=groups.map(g=>({...g,found:g.items.filter(x=>x.matches.length).length,ambiguous:g.items.filter(x=>x.matches.length>1).length}))
