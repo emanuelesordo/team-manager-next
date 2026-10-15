@@ -27,7 +27,8 @@ async function authorized(path,options){
  }
 }
 /** Store a club badge in team-assets. The existing staff-only storage policy checks the team folder. */
-export async function uploadClubBadge(file,teamId){
+export async function uploadClubBadge(file,teamId,folder='club-logos'){
+ if(!['club-logos','players'].includes(folder))throw Error('Cartella immagini non valida');
  if(!hasSession())throw Error('Accedi come membro autorizzato prima di caricare uno stemma');
  if(!['image/png','image/jpeg','image/webp'].includes(file?.type))throw Error('Formato non supportato. Usa PNG, JPG o WebP.');
  if(file.size>8*1024*1024)throw Error('Il file originale non può superare 8 MB.');
@@ -45,7 +46,7 @@ export async function uploadClubBadge(file,teamId){
  const output=await new Promise((resolve,reject)=>
   canvas.toBlob(x=>x?resolve(x):reject(Error('Conversione immagine non riuscita')),'image/png'));
  if(output.size>3*1024*1024)throw Error('L’immagine PNG supera il limite previsto');
- const path=teamId+'/club-logos/'+crypto.randomUUID()+'.png';
+ const path=teamId+'/'+folder+'/'+crypto.randomUUID()+'.png';
  const endpoint='/storage/v1/object/team-assets/'+path;
  const send=()=>fetch(API_URL+endpoint,{method:'POST',headers:{...headers(),'Content-Type':'image/png','x-upsert':'false'},body:output});
  let response=await send();
@@ -56,6 +57,7 @@ export async function uploadClubBadge(file,teamId){
  }
  return API_URL+'/storage/v1/object/public/team-assets/'+path;
 }
+export const uploadPlayerPhoto=(file,teamId)=>uploadClubBadge(file,teamId,'players');
 export const hasSession=()=>Boolean(session?.access_token);
 export const userId=()=>{try{return JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub}catch{return null}};
 export async function get(table,query='',signal){
