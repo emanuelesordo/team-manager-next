@@ -1,11 +1,11 @@
-import {get} from './api.js';
+// Data fetch is intentionally lazy: pure infographic rendering must run without browser storage.
 
 const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const K=value=>String(value??'');
 const validRating=value=>value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value))&&Number(value)>=1&&Number(value)<=10;
 const n=value=>value===null||value===undefined||!Number.isFinite(Number(value))?'—':Number(value).toLocaleString('it-IT',{maximumFractionDigits:2});
 const pct=(a,b)=>b>0?n(100*a/b)+'%':'—';
-const metric=(name,value,extra='')=>'<div class="psi-info-row"><span>'+E(name)+'</span><strong>'+E(value)+'</strong>'+(extra?'<small>'+E(extra)+'</small>':'')+'</div>';
+const metric=(name,value,extra='')=>'<div class="psi-info-row"><span>'+E(name)+'</span><strong>'+E(value==='—'?'N/D':value)+'</strong>'+(extra?'<small>'+E(extra)+'</small>':'')+'</div>';
 const card=(name,content,classes='')=>'<article class="psi-info-card '+classes+'"><h3>'+E(name)+'</h3>'+content+'</article>';
 const empty=message=>'<p class="psi-info-empty">'+E(message)+'</p>';
 const buckets=['0–15','16–30','31–45','46–60','61–75','76+'];
@@ -63,6 +63,7 @@ export async function hydratePlayerOverviewRatings(season,playerId,resolve=()=>(
  try{
   let rows=ratingCache.get(key);
   if(!rows){
+   const {get}=await import('./api.js');
    rows=await get('tm_player_recent_votes','select=season_id,match_id,kickoff_at,player_id,opponent,avg_rating,votes,sv&season_id=eq.'+
     encodeURIComponent(season)+'&player_id=eq.'+encodeURIComponent(playerId)+'&order=kickoff_at.desc&limit=5');
    ratingCache.set(key,rows);if(ratingCache.size>100)ratingCache.delete(ratingCache.keys().next().value);
