@@ -13,7 +13,6 @@ form[data-event-mode="advanced"] > :not([data-event-advanced]){display:none!impo
 .live-event-sheet > .live-sheet-form[data-event-mode="advanced"]{display:block}
 .live-event-sheet > .live-sheet-form[data-event-mode="advanced"] .event-advanced{display:block}
 .staff-amend-form[data-event-mode="advanced"]{align-content:start}
-.event-pitch{touch-action:pan-y}
 .event-advanced-inner{padding:14px 0 4px;display:grid;gap:14px}
 .event-advanced-caption{font-size:12px;font-weight:750;margin:0 0 9px;color:var(--ink)}
 .event-advanced-help{font-size:11px;line-height:1.5;margin:-3px 0 12px;color:var(--muted)}
@@ -27,7 +26,7 @@ form[data-event-mode="advanced"] > :not([data-event-advanced]){display:none!impo
 .event-pitch-wrap{max-width:210px}.event-pitch-tools{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
 .event-pitch-tools button{border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:7px;padding:6px 8px;font-size:10px;cursor:pointer}
 .event-pitch-tools button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.event-pitch{position:relative;width:100%;aspect-ratio:68/105;display:block;cursor:crosshair;border:0;border-radius:3px;background:#2f7654;color:white;overflow:hidden;padding:0;touch-action:manipulation}
+.event-pitch{position:relative;width:100%;aspect-ratio:68/105;display:block;cursor:crosshair;border:0;border-radius:3px;background:#2f7654;color:white;overflow:hidden;padding:0;touch-action:pan-y}
 .event-pitch svg{width:100%;height:100%;stroke:rgba(255,255,255,.65);fill:none;stroke-width:.4;pointer-events:none}
 .event-pitch-goal{position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;background:#ecf4e8;color:#21553d;padding:1px 6px;border-radius:3px;pointer-events:none}
 .event-pitch-marker{position:absolute;transform:translate(-50%,-50%);width:23px;height:23px;border-radius:50%;border:2px solid white;display:grid;place-items:center;font-size:11px;font-weight:800;background:#ffc857;color:#202820;pointer-events:none;box-shadow:0 2px 8px #0005}
