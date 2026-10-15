@@ -225,3 +225,9 @@ body[data-page="player"] .psi-info-row small{grid-column:1 / -1;font-size:9px;co
 @media(prefers-reduced-motion:reduce){
  body[data-page="player"] .psi-infographic .psi-infographic-track{scroll-behavior:auto}
 }
+
+body[data-page="player"] .psi-page-dots{display:flex;align-items:center;gap:5px}
+body[data-page="player"] .psi-page-dot{height:9px;width:9px;min-width:9px;padding:0;border:0;border-radius:50%;background:#c5cedc;cursor:pointer}
+body[data-page="player"] .psi-page-dot[aria-current="true"]{background:#f6c400}
+body[data-page="player"] .psi-page-dot:focus-visible{outline:2px solid #0a2c59;outline-offset:3px}
+@media(max-width:800px){body[data-page="player"] .psi-page-dots{gap:4px}body[data-page="player"] .psi-page-dot{width:7px;height:7px;min-width:7px}}
