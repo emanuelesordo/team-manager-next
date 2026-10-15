@@ -896,3 +896,27 @@
 .callup-message-import>[data-callup-preview] select{width:100%;min-width:0;min-height:34px;border:1px solid var(--border);border-radius:8px;background:var(--surface-solid);color:var(--ink);font-size:11px;padding:4px 7px}
 .callup-message-import [data-callup-import-action]{margin-top:9px;max-width:100%}
 @media(max-width:560px){.callup-message-import>[data-callup-preview] label{grid-template-columns:minmax(0,1fr) minmax(110px,45%)}.callup-message-import textarea{font-size:12px}}
+
+/* Timeline editor: dense, proportional fields; isolated from Live quick entry. */
+.timeline-event-sheet{width:min(700px,calc(100vw - 20px))}
+.timeline-event-sheet [data-timeline-event-form]{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:10px;row-gap:10px;align-content:start}
+.timeline-event-sheet .live-sheet-grid,.timeline-event-sheet .event-base-motivation,.timeline-event-sheet .event-base-motivation>[data-base-motivation]{display:contents}
+.timeline-event-sheet .live-sheet-grid>.staff-field,.timeline-event-sheet .event-base-motivation .staff-field{grid-column:span 6;min-width:0;margin:0}
+.timeline-event-sheet .live-sheet-grid>.staff-field:has([name="period"]){grid-column:span 6}
+.timeline-event-sheet .live-sheet-grid>.staff-field:has([name="minute"]),.timeline-event-sheet .live-sheet-grid>.staff-field:has([name="stoppage_minute"]){grid-column:span 3}
+.timeline-event-sheet .live-sheet-grid>.staff-field:has([name="player_id"]),.timeline-event-sheet .live-sheet-grid>.staff-field:has([name="secondary_player_id"]){grid-column:span 4}
+.timeline-event-sheet .event-base-motivation .staff-field{grid-column:span 4}
+.timeline-event-sheet .event-advanced-launch,.timeline-event-sheet .event-advanced,.timeline-event-sheet [data-event-note],.timeline-event-sheet .live-sheet-actions{grid-column:1/-1;min-width:0}
+.timeline-event-sheet .live-sheet-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:3px}
+.timeline-event-sheet .live-sheet-actions button{width:auto;flex:0 1 auto;min-width:108px;padding-inline:18px}
+.timeline-event-sheet .live-sheet-actions .staff-danger{margin-right:auto}
+.timeline-event-sheet .live-sheet-grid .staff-field select,.timeline-event-sheet .live-sheet-grid .staff-field input,.timeline-event-sheet .event-base-motivation select{width:100%;min-width:0}
+@media(max-width:600px){
+ .timeline-event-sheet{width:100%;max-width:none}
+ .timeline-event-sheet [data-timeline-event-form]{column-gap:7px;row-gap:8px}
+ .timeline-event-sheet .live-sheet-grid>.staff-field:has([name="period"]){grid-column:span 6}
+ .timeline-event-sheet .live-sheet-grid>.staff-field:has([name="minute"]),.timeline-event-sheet .live-sheet-grid>.staff-field:has([name="stoppage_minute"]){grid-column:span 3}
+ .timeline-event-sheet .live-sheet-grid>.staff-field:has([name="player_id"]),.timeline-event-sheet .live-sheet-grid>.staff-field:has([name="secondary_player_id"]){grid-column:span 6}
+ .timeline-event-sheet .event-base-motivation .staff-field{grid-column:span 6}
+ .timeline-event-sheet .live-sheet-actions button{min-width:0;padding-inline:13px}
+}
