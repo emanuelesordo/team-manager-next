@@ -1,0 +1,35 @@
+/* Player infographic layout — scoped to player detail. Real source metrics only. */
+.player-infographic{overflow:hidden;border-radius:18px}
+.player-infographic .player-detail-cover{display:grid;grid-template-columns:154px minmax(0,1fr);gap:22px;padding:18px 22px;min-height:192px;align-items:center;background:linear-gradient(105deg,#122937 0%,#183444 57%,#0a1d2c 100%);color:#f5fafc}
+.player-infographic .big-player-avatar{width:154px;height:160px;border-radius:13px;background:#315069;position:relative;font-size:42px}
+.player-infographic .big-player-avatar img{display:block;width:100%;height:100%;object-fit:cover}
+.player-infographic .player-photo-trigger{position:relative;width:100%;height:100%;padding:0;border:0;background:transparent;color:inherit;display:grid;place-items:center;overflow:hidden}
+.player-infographic .player-photo-trigger:hover img,.player-infographic .player-photo-trigger:focus-visible img{filter:brightness(.70)}
+.player-infographic .player-photo-hint{position:absolute;left:0;right:0;bottom:0;background:#061c29db;color:#fff;padding:8px 5px;text-align:center;font-size:11px;font-weight:650;letter-spacing:.01em}
+.player-infographic .player-cover-identity{min-width:0}
+.player-infographic .player-cover-identity h1{margin:6px 0 9px;font-size:clamp(25px,3vw,42px);letter-spacing:-.035em}
+.player-infographic .player-cover-identity p{margin:0 0 10px;color:#d5e1e8;font-size:13px}
+.player-infographic .player-cover-number{display:inline-grid;place-items:center;vertical-align:middle;min-width:36px;height:36px;padding:0 8px;border:1px solid #efc13a;border-radius:9px;font-size:21px;color:#f5cd4b;letter-spacing:0}
+.player-infographic .player-identity-details{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:11px;color:#dce9f0}.player-infographic .player-identity-details b{color:#fff;margin-left:5px}
+.player-infographic .detail-kpis{padding:10px;gap:6px;grid-template-columns:repeat(9,minmax(0,1fr))}
+.player-infographic .detail-kpis>div{min-width:0;min-height:81px;display:flex;flex-direction:column;justify-content:center;gap:9px;padding:10px 5px;text-align:center;background:color-mix(in srgb,var(--surface-solid) 78%,transparent);border:1px solid var(--border);border-radius:12px}
+.player-infographic .detail-kpis b{font-size:clamp(16px,1.7vw,25px);font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.player-infographic .detail-kpis small{font-size:10px;line-height:1.25;color:var(--muted);font-weight:650}
+.psi-root.psi-infographic{margin:12px 0 22px;gap:9px}
+.psi-infographic .psi-carousel-head{border:1px solid var(--border);border-radius:14px;padding:12px 16px;background:var(--surface);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.psi-infographic .psi-carousel-head h2{font-size:16px;margin:0 0 3px}
+.psi-infographic .psi-carousel-head p{margin:0;color:var(--muted);font-size:11px}
+.psi-infographic .psi-carousel-controls{display:flex;align-items:center;gap:9px;white-space:nowrap}
+.psi-infographic .psi-carousel-controls button{width:30px;height:30px;border:1px solid var(--border);border-radius:9px;background:var(--surface-solid);color:var(--ink);font-size:19px}
+.psi-infographic .psi-carousel-nav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 5px;scrollbar-width:thin}
+.psi-infographic .psi-carousel-dot{white-space:nowrap;padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:12px;font-weight:700}
+.psi-infographic .psi-carousel-dot[aria-current="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.psi-infographic .psi-infographic-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;scrollbar-width:none;scroll-behavior:smooth}
+.psi-infographic .psi-infographic-track::-webkit-scrollbar{display:none}
+.psi-infographic .psi-infographic-slide{flex:0 0 100%;min-width:0;scroll-snap-align:start}
+.psi-infographic .psi-infographic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.psi-infographic .psi-infographic-grid>.psi-section{min-width:0}
+.psi-infographic .psi-disclaimer{margin:3px 0 0}
+@media(max-width:1200px){.player-infographic .detail-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:800px){.player-infographic .player-detail-cover{grid-template-columns:100px minmax(0,1fr);gap:12px;padding:12px;min-height:130px}.player-infographic .big-player-avatar{width:100px;height:118px}.player-infographic .player-cover-identity h1{font-size:23px}.player-infographic .player-cover-number{height:27px;min-width:27px;font-size:16px}.player-infographic .detail-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.player-infographic .detail-kpis>div{min-height:62px;padding:7px 3px;gap:6px}.psi-infographic .psi-infographic-grid{grid-template-columns:1fr}.psi-infographic .psi-carousel-head{padding:10px}.psi-infographic .psi-carousel-head h2{font-size:13px}.psi-infographic .psi-carousel-head p{font-size:10px}}
+@media(max-width:390px){.player-infographic .player-detail-cover{grid-template-columns:82px minmax(0,1fr)}.player-infographic .big-player-avatar{width:82px;height:110px}.player-infographic .player-cover-identity h1{font-size:19px}.player-infographic .player-identity-details{gap:5px 12px}}
