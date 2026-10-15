@@ -14,7 +14,10 @@ export function installCallupMessageImport(getContext){
    const player=(ctx.state.data?.players||[]).find(p=>p.id===row.dataset.callupPlayer)||{};
    return {...player,id:row.dataset.callupPlayer,locked:row.dataset.locked==='true'};
   });
+  const match=ctx.resolveMatch().operational;
+  if(match?.status!=='scheduled'){output.textContent='Importazione consentita solo prima della partita.';return}
   if(button.dataset.callupImportAction==='preview'){
+   if((ctx.state.matchData?.players||[]).some(p=>p.started||['starter','bench'].includes(p.selection_status)||Number(p.minutes_played)>0)){output.textContent='La formazione è già stata inserita. Per evitare di alterarla, modifica le disponibilità manualmente.';return}
    const result=parseCallupMessage(document.querySelector('[data-callup-message]')?.value,roster);
    output.replaceChildren();
    const problem=result.error||[...result.unknown,...result.ambiguous].join(', ');
@@ -40,6 +43,8 @@ export function installCallupMessageImport(getContext){
   if(rows.some(r=>r.selection_status==='absent'&&!r.unavailability_reason))return;
   button.disabled=true;
   try{
+   const existing=await get('app_match_players','select=selection_status,started,minutes_played&match_id=eq.'+encodeURIComponent(matchId)+'&limit=200');
+   if(existing.some(p=>p.started||['starter','bench'].includes(p.selection_status)||Number(p.minutes_played)>0))throw Error('Formazione già inserita: importazione bloccata');
    await rpc('tm_app_save_callups',{p_match_id:matchId,p_rows:rows});
    const saved=await get('app_match_players','select=player_id,selection_status,unavailability_reason&match_id=eq.'+encodeURIComponent(matchId)+'&limit=200');
    if(rows.some(r=>!saved.some(s=>s.player_id===r.player_id&&s.selection_status===r.selection_status&&(s.unavailability_reason||null)===(r.unavailability_reason||null))))throw Error('Verifica dei dati salvati non riuscita');
