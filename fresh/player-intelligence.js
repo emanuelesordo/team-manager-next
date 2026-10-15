@@ -214,7 +214,7 @@ export function renderPlayerIntelligence(id,source){
  const percent=games&&starts!=null?number(starts/games*100)+'%':'—';
  const splitSub=starts===0&&games===subs;
  const timelineComplete=scoreResults&&v.covered===games;
- const comp='Sono visualizzate le statistiche con dati verificati disponibili.';
+ const comp='Le metriche incomplete non vengono stimate: sono visualizzate solo quelle disponibili e verificabili.';
  const usage=section('Impiego','Partecipazione alla stagione',
    (minutesReady?'<div class="psi-dashboard-visual">'+vizMatchMinutes(ordered.map(m=>({...m,kickoff_at:kickoff(m)})),minuteMap,true,unit)+'</div>':'')+ribbon([['Subentri',fmt(subs)],['Panchina inutilizzata',scoreResults?fmt(v.unused):'—'],['Gare intere',mins!=null&&scoreResults?fmt(v.fullGames):'—'],
    ['Minuti / presenza',games&&mins!=null?number(mins/games)+'′':'—'],['Titolarità',percent]])+
