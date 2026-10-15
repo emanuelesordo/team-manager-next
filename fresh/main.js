@@ -2,7 +2,7 @@ import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,g
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
-import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend,renderPlayerRatingTrend} from './home-dashboard.js';
+import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote,deleteVote} from './votes.js?ratings=20261006picker4';
 import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection,loadCsiReview,mayEditCallups} from './staff-ui.js?csi=20261015advanced1';
@@ -21,6 +21,7 @@ import {eventAdvancedMarkup,eventBaseMotivationMarkup,readEventAdvanced,mergeEve
 import {matchScorerRows,renderMatchScorers} from './match-scorers.js?live=20261012genericgoal1';
 import {matchPlayerLabel} from './match-player-label.js';
 import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
+import {ratingTimeline} from './rating-timeline.js';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {renderPlayerIntelligence,initPlayerIntelligence} from './player-intelligence.js?v=20261015scoringFinal2';
 import {tacticalHistory} from './tactics.js';
@@ -310,6 +311,14 @@ function hero(){
 }
 
 const ratingsHomeCache=new Map();
+const teamTimelineCache=new Map();
+function timelineOpponent(row){
+ const fixture=(state.data?.fixtures||[]).find(f=>String(f.id)===String(row.match_id)||String((state.data?.matches||[]).find(m=>String(m.id)===String(row.match_id))?.fixture_id)===String(f.id));
+ const opp=fixture?(fixture.home_team_id===team()?.id?{id:fixture.away_opponent_id,name:fixture.away_team}:{id:fixture.home_opponent_id,name:fixture.home_team}):null;
+ const clubInfo=(state.base?.opponents||[]).find(o=>String(o.id)===String(opp?.id))||
+  (state.base?.opponents||[]).find(o=>String(o.name).toLowerCase()===String(row.opponent||'').toLowerCase());
+ return {opponent:opp?.name||row.opponent,logo:safeUrl(clubInfo?.logo_url)||null};
+}
 function monthOnHome(){return Number.isInteger(state.homeMonth)?state.homeMonth:monthIndex(new Date(),TIME_ZONE)}
 function monthMarkup(){return renderMonthCalendar(ownFixtures(),team().id,monthOnHome(),club,'<button class="home-plain-link month-nav-detail" data-page="calendar">Dettagli '+ico('arrow',14)+'</button>')}
 function homeCompetition(){return competition(next()?.competition_id||previous()?.competition_id)||currentComp()}
@@ -334,7 +343,7 @@ function home(){
  '<h3 class="home-chart-title">Rating delle ultime partite</h3><div class="home-player-rating" data-home-ratings="'+E(playerId)+'">'+
  '<p class="muted small">Caricamento valutazioni…</p></div></section>':'')+
  '<section class="glass panel home-expectation-section"><div class="home-panel-head"><h2>Risultati e aspettative</h2></div>'+
- '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+
+ '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p><div data-home-team-rating-timeline><p class="muted small">Caricamento rating squadra…</p></div>'+
  renderPointsTrend(comparisons)+'</section></div></div>'+ '<aside class="home-side-stack">'+
  '<section class="glass panel home-month-section"><div class="home-right-calendar">'+monthMarkup()+'</div></section>'+
  '<section class="glass panel home-standing-section"><div class="home-panel-head"><h2>Classifica</h2>'+
@@ -342,11 +351,31 @@ function home(){
  '<p class="home-competition-name">'+E(comp?.name||'Competizione')+'</p>'+homeRankings(comp)+'</section></aside></div>';
 
 }
+async function hydrateHomeTeamTimeline(){
+ const el=document.querySelector('[data-home-team-rating-timeline]');
+ if(!el||state.page!=='home')return;
+ const selected=state.season,key=String(selected);
+ if(teamTimelineCache.has(key)){el.innerHTML=ratingTimeline(teamTimelineCache.get(key),{title:'Rating medio squadra'});return}
+ const matches=(state.data?.matches||[]).filter(m=>!m.is_test);
+ const fixtures=(state.data?.fixtures||[]).filter(f=>f.status==='finished'&&!f.is_test&&f.kickoff_at&&matches.some(m=>m.fixture_id===f.id))
+  .sort((a,b)=>Date.parse(b.kickoff_at)-Date.parse(a.kickoff_at)).slice(0,5).reverse();
+ if(!fixtures.length){el.innerHTML='<p class="empty">Nessuna gara conclusa.</p>';return}
+ const rows=await Promise.all(fixtures.map(async f=>{
+  const match=matches.find(m=>m.fixture_id===f.id);
+  let value=null;
+  try{value=await publicWeightedRating(match.id)}catch(_){}
+  return {match_id:match.id,kickoff_at:f.kickoff_at,rating:value,...timelineOpponent({match_id:match.id})};
+ }));
+ if(selected!==state.season)return;
+ teamTimelineCache.set(key,rows);
+ const current=document.querySelector('[data-home-team-rating-timeline]');
+ if(current)current.innerHTML=ratingTimeline(rows,{title:'Rating medio squadra'});
+}
 async function hydrateHomeRatings(){
  const id=state.identity?.role?.player_id,box=document.querySelector('[data-home-ratings]');
  if(!id||!box||state.loading||state.page!=='home')return;
  const key=state.season+'|'+id;
- if(ratingsHomeCache.has(key)){box.innerHTML=renderPlayerRatingTrend(ratingsHomeCache.get(key));return}
+ if(ratingsHomeCache.has(key)){box.innerHTML=ratingTimeline(ratingsHomeCache.get(key).map(r=>({...r,rating:r.avg_rating,...timelineOpponent(r)})),{title:'Rating giocatore'});return}
  if(box.dataset.loading==='true')return;
  box.dataset.loading='true';
  try{
@@ -355,7 +384,7 @@ async function hydrateHomeRatings(){
   const rows=await get('tm_player_recent_votes',q);
   ratingsHomeCache.set(key,rows);
   const el=document.querySelector('[data-home-ratings="'+id+'"]');
-  if(el&&state.season+'|'+state.identity?.role?.player_id===key)el.innerHTML=renderPlayerRatingTrend(rows);
+  if(el&&state.season+'|'+state.identity?.role?.player_id===key)el.innerHTML=ratingTimeline(rows.map(r=>({...r,rating:r.avg_rating,...timelineOpponent(r)})),{title:'Rating giocatore'});
  }catch(err){const el=document.querySelector('[data-home-ratings="'+id+'"]');if(el)el.textContent='Valutazioni non disponibili: '+err.message}
  finally{const el=document.querySelector('[data-home-ratings="'+id+'"]');if(el)el.dataset.loading='false'}
 }
@@ -932,8 +961,8 @@ function render(){
  if(state.page==='competitions'&&!state.loading){const scroller=document.querySelector('[data-rounds-scroll]');const focus=scroller?.querySelector('[data-round-focus]');if(scroller&&focus){const next=scroller.querySelector('[data-round-next]');const bounds=scroller.getBoundingClientRect();const first=focus.getBoundingClientRect();const last=(next||focus).getBoundingClientRect();const top=first.top-bounds.top+scroller.scrollTop;const visibleHeight=last.bottom-first.top+12;scroller.style.height=Math.ceil(visibleHeight)+'px';scroller.scrollTop=Math.max(0,top);}}
  if(state.page==='admin'&&!state.loading)sizeClubEditor();
  if(state.page==='match'&&!state.loading){paintMatchHeaderCompact();requestAnimationFrame(()=>requestAnimationFrame(centerVotePickers))}
- if(state.page==='home'&&!state.loading){void hydrateHomeRatings();void hydrateHomeTeamRatings();}if(state.page==='match'&&!state.loading){void hydrateMatchTeamRating();void hydrateMatchPrediction();void hydratePastPredictionSummary();}
- manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player){initPlayerIntelligence();hydratePlayerTrend(state.season,state.player);}if(state.page==='competitions'&&!state.loading)void hydrateProjection();paintLineupPitch();paintCallups();if(state.page==='match'&&!state.loading)startStaffClock(isStaff(staffContext())?staffContext():null);
+ if(state.page==='home'&&!state.loading){void hydrateHomeRatings();void hydrateHomeTeamRatings();void hydrateHomeTeamTimeline();}if(state.page==='match'&&!state.loading){void hydrateMatchTeamRating();void hydrateMatchPrediction();void hydratePastPredictionSummary();}
+ manageCarousel();manageLivePolling();if(hasSession())syncNotificationBell(staffContext());maybeRequirePasswordChange(state.identity);if(state.page==='stats'&&!state.loading)fillAnalytics();if(state.page==='player'&&!state.loading&&state.player){initPlayerIntelligence();hydratePlayerTrend(state.season,state.player,row=>timelineOpponent(row));}if(state.page==='competitions'&&!state.loading)void hydrateProjection();paintLineupPitch();paintCallups();if(state.page==='match'&&!state.loading)startStaffClock(isStaff(staffContext())?staffContext():null);
 }
 function centerVotePickers(){
  document.querySelectorAll('[data-vote-picker]').forEach(picker=>{
