@@ -489,7 +489,7 @@ function matchCallups(ctx,m){
    '</div>';
  }).join('');
  return '<section class="staff-subpanel">'+title('PREPARTITA','Convocazioni')+
-  (mayEditCallups(ctx)?'<details class="callup-message-import"><summary>Importa convocati da messaggio</summary><p class="staff-help">Incolla il messaggio completo. I non citati vengono esclusi dopo aver indicato il motivo.</p><textarea data-callup-message rows="7" placeholder="Incolla il messaggio"></textarea><button type="button" class="staff-soft" data-callup-import-action="preview">Analizza elenco</button><div data-callup-preview role="status"></div></details>':'')+
+  (mayEditCallups(ctx)&&m.status==='scheduled'?'<details class="callup-message-import"><summary>Importa convocati da messaggio</summary><p class="staff-help">Incolla il messaggio completo. I non citati vengono esclusi dopo aver indicato il motivo.</p><textarea data-callup-message rows="7" placeholder="Incolla il messaggio"></textarea><button type="button" class="staff-soft" data-callup-import-action="preview">Analizza elenco</button><div data-callup-preview role="status"></div></details>':'')+
  help('Ogni scelta viene salvata automaticamente. Tocca un’icona per assegnare o modificare la motivazione; tocca quella selezionata per reintegrare il giocatore.')+
  '<form data-staff-form="callups" data-callup-match="'+esc(m.id)+'"><div class="callup-columns">'+
  '<section class="callup-list"><h3>Disponibili <span data-callup-count="available"></span></h3><div data-callup-list="available"></div></section>'+
