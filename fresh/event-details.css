@@ -1,6 +1,6 @@
 /* Due viste della stessa maschera: non duplicano form né perdono i valori. */
 .event-advanced-launch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;padding:7px 0}
-.event-advanced-launch[hidden],.event-advanced[hidden],.event-advanced [hidden]{display:none!important}
+.event-advanced-launch[hidden],.event-advanced[hidden],.event-advanced [hidden],.event-base-motivation[hidden],.event-base-motivation [hidden],[data-event-note][hidden]{display:none!important}
 .event-advanced-hint{font-size:10px;color:var(--muted);font-weight:500}
 .event-advanced-launch [data-event-advanced-open]{font-size:12px;min-height:42px}
 form[data-event-mode="advanced"] > :not([data-event-advanced]){display:none!important}
