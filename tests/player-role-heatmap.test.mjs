@@ -20,6 +20,7 @@ test('heatmap shows precisely configured roles and labels, with no inferred data
  assert.match(html,/Quinto destro/);
  assert.match(html,/100%/);
  assert.match(html,/75%/);
+ assert.match(renderPlayerRoleHeatmap('one',[{player_id:'one',position_id:'r1',affinity_pct:100,is_natural:true},{player_id:'one',position_id:'r2',affinity_pct:0,is_natural:false}],catalog),/0%/);
  assert.match(html,/psi-role-spot/);
  assert.doesNotMatch(html,/Ala destra/);
  assert.match(renderPlayerRoleHeatmap('missing',affinities,catalog),/non ancora configurati/);
@@ -39,10 +40,11 @@ test('editor stores only manually entered affinities, natural always at 100',()=
  const rows=collectRoleAffinityForm(makeForm({natural_position:'TD',affinity__TD:'20',affinity__QD:'81'}),catalog);
  assert.deepEqual(rows,[{code:'TD',affinity:100,natural:true},{code:'QD',affinity:81,natural:false}]);
  assert.equal(collectRoleAffinityForm(makeForm({}),catalog),null);
+ assert.deepEqual(collectRoleAffinityForm(makeForm({natural_position:'TD',affinity__QD:'0'}),catalog),[{code:'TD',affinity:100,natural:true},{code:'QD',affinity:0,natural:false}]);
  assert.throws(()=>collectRoleAffinityForm(makeForm({natural_position:'none'}),catalog),/valido/);
  assert.throws(()=>collectRoleAffinityForm(makeForm({affinity__QD:'78'}),catalog),/naturale/);
- assert.throws(()=>collectRoleAffinityForm(makeForm({natural_position:'TD',affinity__AD:'105'}),catalog),/1 a 100/);
- assert.throws(()=>collectRoleAffinityForm(makeForm({natural_position:'TD',affinity__AD:'5.5'}),catalog),/1 a 100/);
+ assert.throws(()=>collectRoleAffinityForm(makeForm({natural_position:'TD',affinity__AD:'105'}),catalog),/0 a 100/);
+ assert.throws(()=>collectRoleAffinityForm(makeForm({natural_position:'TD',affinity__AD:'5.5'}),catalog),/0 a 100/);
 });
 test('staff editor includes a single natural position and per-position numeric inputs',()=>{
  const html=renderRoleAffinityEditor('one',affinities,catalog);
