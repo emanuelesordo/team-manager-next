@@ -45,6 +45,9 @@ jobs:
           test -s dist/fresh/main.js
           test -s dist/fresh/style.css
           test -s dist/fresh/flat-surfaces.css
+          test -s dist/fresh/player-role-heatmap.js
+          test -s dist/fresh/player-role-heatmap.css
+          grep -q 'fresh/player-role-heatmap.css?v=' dist/index.html
           grep -q 'fresh/main.js?v=' dist/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
