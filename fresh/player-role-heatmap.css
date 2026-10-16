@@ -1,5 +1,5 @@
 /* Player role affinity: staff-curated estimates only, independent from match statistics. */
-body[data-page="player"] .psi-infographic .psi-infographic-grid>.psi-role-area{grid-column:1 / -1;padding:18px}
+body[data-page="player"] .psi-infographic .psi-infographic-grid>.psi-area.psi-role-area:not(:has(.psi-overview-grid)){grid-column:1 / -1;padding:18px}
 .psi-role-layout{display:grid;grid-template-columns:minmax(220px,310px) minmax(0,1fr);align-items:start;gap:25px}
 .psi-role-field-wrap{max-width:310px;margin:auto;width:100%}
 .psi-role-field{width:100%;aspect-ratio:0.82;position:relative;isolation:isolate;overflow:hidden;border-radius:14px;
