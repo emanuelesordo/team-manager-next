@@ -1,6 +1,5 @@
 /* Player infographic — 16 Oct 2026. Isolated to the player page. Mockup proportions. */
 body[data-page="player"] .content{padding-top:12px}
-body[data-page="player"] .back-link{margin-bottom:9px}
 body[data-page="player"] .player-infographic{background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible}
 body[data-page="player"] .player-infographic .player-detail-cover{
  display:grid;grid-template-columns:minmax(174px,208px) minmax(0,1fr);grid-template-rows:minmax(133px,auto) auto;
@@ -231,3 +230,35 @@ body[data-page="player"] .psi-page-dot{height:9px;width:9px;min-width:9px;paddin
 body[data-page="player"] .psi-page-dot[aria-current="true"]{background:#f6c400}
 body[data-page="player"] .psi-page-dot:focus-visible{outline:2px solid #0a2c59;outline-offset:3px}
 @media(max-width:800px){body[data-page="player"] .psi-page-dots{gap:4px}body[data-page="player"] .psi-page-dot{width:7px;height:7px;min-width:7px}}
+
+/* Player header navigation reuses the Match Center controls, including mobile sizing. */
+body[data-page="player"] .player-topbar-page{flex:1 1 auto;min-width:0}
+@media(max-width:760px){
+ body[data-page="player"] .topbar{height:62px;min-height:62px;padding:0 12px;gap:8px}
+ body[data-page="player"] .player-topbar-page{
+  flex:0 1 auto;flex-direction:row;align-items:center;justify-content:flex-start;
+  gap:6px;margin-right:0;min-width:0
+ }
+ body[data-page="player"] .player-topbar-page .match-topbar-back{
+  width:32px;height:32px;min-height:32px;display:grid;place-items:center;
+  padding:0;border-radius:10px;background:transparent;flex:none
+ }
+ body[data-page="player"] .player-topbar-page .match-topbar-back span{display:none}
+ body[data-page="player"] .player-topbar-page .match-topbar-back svg{width:19px;height:19px}
+ body[data-page="player"] .player-topbar-page .match-topbar-arrows{
+  padding:2px;border-radius:10px;background:#ffffff66;flex:none
+ }
+ body[data-page="player"] .player-topbar-page .match-topbar-step{width:28px;height:28px;border-radius:8px}
+ body[data-page="player"] .player-topbar-page .match-topbar-step:first-child{border-radius:8px 0 0 8px}
+ body[data-page="player"] .player-topbar-page .match-topbar-step+.match-topbar-step{border-radius:0 8px 8px 0}
+ body[data-page="player"] .player-topbar-page .match-topbar-step svg{width:16px;height:16px}
+ body[data-page="player"] .top-actions{gap:4px;margin-left:auto}
+ body[data-page="player"] .top-actions .icon-btn{width:32px;height:32px}
+ body[data-page="player"] .mobile-symbol .crest{width:34px;height:34px}
+}
+@media(max-width:430px){
+ body[data-page="player"] .topbar{padding-inline:9px;gap:6px}
+ body[data-page="player"] .player-topbar-page{gap:4px}
+ body[data-page="player"] .top-actions .icon-btn{width:30px;height:30px}
+ body[data-page="player"] .mobile-symbol .crest{width:32px;height:32px}
+}
