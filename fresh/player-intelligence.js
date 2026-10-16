@@ -1,5 +1,6 @@
 import {matchPlayerIntervals,matchElapsedMinute,confirmedMatchEvent} from './player-participation.js?v=20261014periodpriority1';
 import {renderPlayerOverview} from './player-infographic-overview.js?v=20261016mockup1';
+import {renderPlayerRoleHeatmap} from './player-role-heatmap.js?v=20261016roles1';
 
 const K=x=>String(x??'');
 const E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;', '"':'&quot;',"'":'&#39;'}[c]));
@@ -296,7 +297,8 @@ export function renderPlayerIntelligence(id,source){
  const overview=renderPlayerOverview({id,stats:sql,analysis:v,ratings:ratingInsights,impact:goalImpact,games,starts,
   minutes:effectiveMinutes,goals,assists,results:tally,resultsComplete,fullImpact,timelineComplete,completeGoals,completeAssists,scoreResults});
  const eventDetails=source?.eventDetailsHtml?section('Dettagli eventi','Approfondimento per tipo di azione',source.eventDetailsHtml):'';
- const groups=[['Overview',[overview]],['Rendimento',[usage,rating,trend,record]],['Eventi',[attack,goalContext,eventDetails]],['Derivati',[impact]]]
+ const roles=renderPlayerRoleHeatmap(id,source?.roleAffinities||[],source?.rolePositions||[]);
+ const groups=[['Overview',[overview]],['Rendimento',[usage,rating,trend,record]],['Eventi',[attack,goalContext,eventDetails]],['Derivati',[impact]],['Ruoli',[roles]]]
   .map(([name,parts])=>[name,parts.filter(Boolean).length?parts.filter(Boolean):[section('Nessun dato disponibile','','Le statistiche saranno visibili quando i tabellini saranno completi.')]]);
  const nav=groups.map(([name],i)=>'<button type="button" class="psi-carousel-dot" data-psi-slide-to="'+i+'" aria-label="'+E(name)+'" aria-current="'+(i===0?'true':'false')+'">'+E(name)+'</button>').join('');
  const dots=groups.map(([name],i)=>'<button type="button" class="psi-page-dot" data-psi-page-to="'+i+'" aria-label="Vai a '+E(name)+'" aria-current="'+(i===0?'true':'false')+'"></button>').join('');
