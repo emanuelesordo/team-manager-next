@@ -1,0 +1,64 @@
+/* Player role affinity: staff-curated estimates only, independent from match statistics. */
+body[data-page="player"] .psi-infographic .psi-infographic-grid>.psi-role-area{grid-column:1 / -1;padding:18px}
+.psi-role-layout{display:grid;grid-template-columns:minmax(220px,310px) minmax(0,1fr);align-items:start;gap:25px}
+.psi-role-field-wrap{max-width:310px;margin:auto;width:100%}
+.psi-role-field{width:100%;aspect-ratio:0.82;position:relative;isolation:isolate;overflow:hidden;border-radius:14px;
+ background:linear-gradient(150deg,#256e57,#1c554b);border:3px solid #d8f0e6;
+ box-shadow:0 12px 25px #0f302420,inset 0 0 0 2px #a5d7c324}
+.psi-role-field:before{content:"";position:absolute;inset:1.7%;border:1.5px solid #d7f1e055;border-radius:3px;pointer-events:none}
+.psi-role-pitch-outline{position:absolute;inset:1.8%;border:1px solid #d7f1e04f}
+.psi-role-midline{position:absolute;left:2%;right:2%;top:50%;border-top:1px solid #d7f1e04f}
+.psi-role-circle{position:absolute;width:27%;aspect-ratio:1;border:1px solid #d7f1e056;border-radius:50%;left:36.5%;top:50%;transform:translateY(-50%)}
+.psi-role-box{position:absolute;left:24%;width:52%;height:16%;border:1px solid #d7f1e056}
+.psi-role-box.top{top:2%;border-top:0}.psi-role-box.bottom{bottom:2%;border-bottom:0}
+.psi-role-goal{position:absolute;left:42%;width:16%;height:3%;border:1px solid #d7f1e056}
+.psi-role-goal.top{top:2%;border-top:0}.psi-role-goal.bottom{bottom:2%;border-bottom:0}
+.psi-role-spot{position:absolute;left:var(--role-x);top:var(--role-y);transform:translate(-50%,-50%);
+ display:grid;place-items:center;isolation:isolate;z-index:2;transition:transform .18s}
+.psi-role-spot:hover{z-index:10;transform:translate(-50%,-50%) scale(1.15)}
+.psi-role-glow{position:absolute;width:85px;height:85px;border-radius:50%;z-index:-1;opacity:var(--role-strength);
+ background:radial-gradient(circle,var(--role-color) 0%,color-mix(in srgb,var(--role-color) 48%,transparent) 26%,transparent 69%);filter:blur(5px)}
+.psi-role-pin{width:42px;height:42px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ background:color-mix(in srgb,var(--role-color) 66%,#172b2f);border:1.5px solid #ffffffbb;color:#fff;
+ box-shadow:0 2px 8px #001f1b80;font-size:11px;font-variant-numeric:tabular-nums;line-height:1.1}
+.psi-role-pin b{font-size:11px}.psi-role-pin small{font-size:9px;color:#f4fff5}
+.psi-role-spot.natural .psi-role-pin{border:2px solid #fff5a0;box-shadow:0 0 0 2px #e6c528a8,0 4px 10px #102e1d80}
+.psi-role-spot.excellent,.psi-role-entry.excellent{--role-color:#b9ec5c}
+.psi-role-spot.good,.psi-role-entry.good{--role-color:#50cba1}
+.psi-role-spot.adaptable,.psi-role-entry.adaptable{--role-color:#ffce6a}
+.psi-role-spot.emergency,.psi-role-entry.emergency,.psi-role-spot.low,.psi-role-entry.low{--role-color:#ea9673}
+.psi-role-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:7px 13px;margin:12px 0 2px;font-size:10px;color:var(--muted)}
+.psi-role-legend span{display:flex;align-items:center;gap:5px}.psi-role-legend i{width:8px;height:8px;border-radius:50%;background:#b9ec5c}
+.psi-role-legend i.good{background:#50cba1}.psi-role-legend i.adaptable{background:#ffce6a}.psi-role-legend i.emergency{background:#ea9673}
+.psi-role-info{min-width:0}.psi-role-natural{position:relative;border:1px solid #e9e3bd;border-radius:12px;padding:14px 18px;
+ display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px;background:#fcf9ea;color:#283a31}
+.psi-role-natural small{grid-column:1 / -1;letter-spacing:.1em;font-size:10px;font-weight:750;color:#89711a}
+.psi-role-natural strong{font-size:20px;line-height:1.2}.psi-role-natural b{font-size:24px;color:#7b6204}
+.psi-role-list{list-style:none;padding:0;margin:11px 0 0;max-height:400px;overflow-y:auto}
+.psi-role-entry{display:grid;grid-template-columns:minmax(0,1fr) minmax(92px,30%);align-items:center;gap:14px;padding:8px 6px;
+ border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+.psi-role-entry:last-child{border-bottom:0}
+.psi-role-description{display:flex;align-items:center;gap:12px;min-width:0}
+.psi-role-code{display:grid;place-items:center;flex:0 0 40px;height:34px;border-radius:7px;background:color-mix(in srgb,var(--role-color) 35%,transparent);font-size:11px;font-weight:800}
+.psi-role-description>div{min-width:0;display:grid;gap:3px}
+.psi-role-description strong{font-size:12px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.psi-role-description small{font-size:10px;color:var(--muted)}
+.psi-role-affinity{display:grid;grid-template-columns:1fr;gap:4px;justify-items:end}
+.psi-role-affinity b{font-size:15px;line-height:1.1;font-variant-numeric:tabular-nums}
+.psi-role-meter{height:6px;width:100%;border-radius:99px;background:#dfe7e8;overflow:hidden}
+.psi-role-meter i{display:block;height:100%;border-radius:99px;background:var(--role-color);transition:width .2s}
+.psi-role-empty{padding:45px 16px;text-align:center;font-size:13px;color:var(--muted);border:1px dashed var(--border);border-radius:12px;margin:12px 0 0}
+.staff-role-fieldset{border:1px solid var(--border);border-radius:15px;padding:13px 15px;min-width:0;margin:12px 0}
+.staff-role-fieldset legend{font-weight:800;font-size:14px;padding:0 7px}
+.staff-role-fieldset>.staff-field{max-width:380px;margin:12px 0 18px}
+.staff-role-affinities{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:5px 15px;max-height:275px;overflow-y:auto;padding-right:3px}
+.staff-role-affinity{display:grid;grid-template-columns:minmax(0,1fr) 68px 12px;align-items:center;gap:6px;padding:5px 2px;
+ border-bottom:1px solid var(--border);min-width:0;font-size:11px}
+.staff-role-affinity>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.staff-role-affinity input{width:100%;min-width:0;background:var(--surface);color:var(--ink);border:1px solid var(--border);
+ border-radius:8px;text-align:right;padding:6px;font-size:12px;font-variant-numeric:tabular-nums}
+.staff-role-affinity input:read-only{opacity:.76;font-weight:800}
+.staff-role-affinity small{font-size:10px;color:var(--muted)}
+@media(max-width:850px){.psi-role-layout{grid-template-columns:1fr;gap:16px}.psi-role-field-wrap{max-width:285px}.psi-role-info{width:100%}}
+@media(max-width:520px){.psi-role-natural strong{font-size:17px}.psi-role-list{max-height:none}.staff-role-affinities{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.psi-role-spot,.psi-role-meter i{transition:none}}
