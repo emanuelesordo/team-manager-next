@@ -5,7 +5,7 @@ export const POSITION_SPOTS=Object.freeze({
  MZD:[65,43],MZS:[35,43],TRQ:[50,30],AD:[81,26],AS:[19,26],SP:[38,19],ATT:[53,14]
 });
 const E=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const validPct=value=>Number.isInteger(Number(value))&&Number(value)>=1&&Number(value)<=100;
+const validPct=value=>value!==null&&value!==undefined&&value!==''&&Number.isInteger(Number(value))&&Number(value)>=0&&Number(value)<=100;
 export const groupForPosition=category=>({goalkeeper:'P',defender:'D',midfielder:'C',forward:'A'})[category]||null;
 export function playerRoleProfile(playerId,affinities=[],positions=[]){
  const catalog=new Map((positions||[]).filter(x=>x.active!==false).map(x=>[String(x.id),x]));
@@ -17,7 +17,7 @@ export function playerRoleProfile(playerId,affinities=[],positions=[]){
  return {natural:rows.find(x=>x.natural&&x.affinity===100)||null,roles:rows};
 }
 function level(pct){return pct>=85?'excellent':pct>=70?'good':pct>=50?'adaptable':pct>=25?'emergency':'low'}
-const levelLabel=pct=>pct>=85?'Molto affine':pct>=70?'Buona affinità':pct>=50?'Adattabile':pct>=25?'Emergenza':'Occasionale';
+const levelLabel=pct=>pct>=85?'Molto affine':pct>=70?'Buona affinità':pct>=50?'Adattabile':pct>=25?'Emergenza':'Da evitare';
 /** A visual pitch and a readable ordered list, never extrapolating unknown positions. */
 export function renderPlayerRoleHeatmap(playerId,affinities=[],positions=[]){
  const {natural,roles}=playerRoleProfile(playerId,affinities,positions);
@@ -32,7 +32,7 @@ export function renderPlayerRoleHeatmap(playerId,affinities=[],positions=[]){
  return '<section class="psi-area psi-role-area"><div class="psi-area-head"><h2>Ruoli e affinità</h2><p>Profilo configurato dallo staff · non è una statistica osservata</p></div>'+
  '<div class="psi-role-layout"><div class="psi-role-field-wrap"><div class="psi-role-field" aria-label="Mappa delle posizioni compatibili: portiere in basso, attacco in alto">'+
  '<div class="psi-role-pitch-outline"></div><div class="psi-role-midline"></div><div class="psi-role-circle"></div><div class="psi-role-box top"></div><div class="psi-role-box bottom"></div><div class="psi-role-goal top"></div><div class="psi-role-goal bottom"></div>'+zones+'</div>'+
- '<div class="psi-role-legend"><span><i class="excellent"></i>85–100%</span><span><i class="good"></i>70–84%</span><span><i class="adaptable"></i>50–69%</span><span><i class="emergency"></i>1–49%</span></div></div>'+
+ '<div class="psi-role-legend"><span><i class="excellent"></i>85–100%</span><span><i class="good"></i>70–84%</span><span><i class="adaptable"></i>50–69%</span><span><i class="emergency"></i>25–49%</span><span><i class="low"></i>0–24%</span></div></div>'+
  '<div class="psi-role-info"><div class="psi-role-natural"><small>RUOLO NATURALE</small><strong>'+E(natural.label)+'</strong><b>100%</b></div><ol class="psi-role-list">'+items+'</ol></div></div></section>';
 }
 /** Editor integrated in the existing staff player form. Unset percentages are genuinely unset. */
@@ -42,7 +42,7 @@ export function renderRoleAffinityEditor(playerId,affinities=[],positions=[]){
  const {natural,roles}=playerRoleProfile(playerId,affinities,positions);
  const map=new Map(roles.map(x=>[x.code,x]));
  const options='<option value="">Da configurare</option>'+catalog.map(x=>'<option value="'+E(x.code)+'"'+(x.code===natural?.code?' selected':'')+'>'+E(x.label)+' ('+E(x.code)+')</option>').join('');
- const values=catalog.map(p=>'<label class="staff-role-affinity"><span title="'+E(p.label)+'"><b>'+E(p.code)+'</b> '+E(p.label)+'</span><input type="number" min="1" max="100" step="1" inputmode="numeric" name="affinity__'+E(p.code)+'" data-role-affinity-code="'+E(p.code)+'" value="'+(p.code===natural?.code?100:map.get(p.code)?.affinity??'')+'" placeholder="—" aria-label="Affinità '+E(p.label)+' in percentuale"'+(p.code===natural?.code?' readonly':'')+'><small>%</small></label>').join('');
+ const values=catalog.map(p=>'<label class="staff-role-affinity"><span title="'+E(p.label)+'"><b>'+E(p.code)+'</b> '+E(p.label)+'</span><input type="number" min="0" max="100" step="1" inputmode="numeric" name="affinity__'+E(p.code)+'" data-role-affinity-code="'+E(p.code)+'" value="'+(p.code===natural?.code?100:map.get(p.code)?.affinity??'')+'" placeholder="—" aria-label="Affinità '+E(p.label)+' in percentuale"'+(p.code===natural?.code?' readonly':'')+'><small>%</small></label>').join('');
  return '<fieldset class="staff-role-fieldset" data-role-editor><legend>Ruoli e affinità</legend><p class="staff-help">Definisci il ruolo naturale (sempre 100%) e le altre posizioni ricopribili. Lascia vuota una percentuale per escludere quel ruolo. Dati manuali, non derivati dai voti.</p>'+
   '<label class="staff-field"><span>Ruolo naturale</span><select name="natural_position" data-natural-position>'+options+'</select></label>'+
   '<div class="staff-role-affinities">'+values+'</div></fieldset>';
@@ -61,7 +61,7 @@ export function collectRoleAffinityForm(form,positions=[]){
   const raw=String(input?.value??'').trim();
   if(position.code===natural){rows.push({code:natural,affinity:100,natural:true});continue}
   if(!raw)continue;
-  if(!/^\d{1,3}$/.test(raw)||!validPct(raw))throw Error('Affinità non valida per '+position.label+': da 1 a 100');
+  if(!/^\d{1,3}$/.test(raw)||!validPct(raw))throw Error('Affinità non valida per '+position.label+': da 0 a 100');
   rows.push({code:position.code,affinity:Number(raw),natural:false});
  }
  if(!natural){
