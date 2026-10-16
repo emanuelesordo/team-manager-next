@@ -12,6 +12,7 @@ import {eventAdvancedMarkup,eventBaseMotivationMarkup,readEventAdvanced,mergeEve
 import {csiReviewPanel} from './csi-review.js?csi=20261011recovery1';
 import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
+import {renderRoleAffinityEditor,collectRoleAffinityForm,groupForPosition} from './player-role-heatmap.js?v=20261016roles1';
 
 export const staffLogoEvent=handleLogoEditorEvent;
 export function openNewPlayer(){memory.area='players';memory.selected.players='';}
@@ -348,7 +349,7 @@ export function adminPage(ctx){
    selection('active','Nella rosa della stagione',[['true','Sì'],['false','No']],r?.active===false?'false':'true')+
    input('contract_start','In rosa dal',starting,'date','required')+
    input('contract_end','In rosa fino al',ending,'date','required')+
-   selection('contract_mode','Periodo',[['edit','Modifica ultimo periodo'],['new','Aggiungi nuovo periodo']],p?'edit':'new')+'</div>'+periodHistory,
+   selection('contract_mode','Periodo',[['edit','Modifica ultimo periodo'],['new','Aggiungi nuovo periodo']],p?'edit':'new')+'</div>'+renderRoleAffinityEditor(p?.id,data.roleAffinities||[],data.rolePositions||[])+periodHistory,
    'Le date delimitano le gare in cui il giocatore è convocabile. Fuori da questo periodo non compare fra disponibili o indisponibili. La modifica non cancella lo storico.');
  }
  if(memory.area==='users'){
@@ -1417,14 +1418,23 @@ export async function staffSubmit(e,ctx){
    return true;
   }
   if(kind==='players'){
-   const d=dataForm(form),{contract_start,contract_end,contract_mode,...raw}=d;
+   const positions=ctx.state.data?.rolePositions||[];
+   const roleProfile=collectRoleAffinityForm(form,positions);
+   const d=dataForm(form),{contract_start,contract_end,contract_mode,natural_position,...raw}=d;
+   for(const key of Object.keys(raw))if(key.startsWith('affinity__'))delete raw[key];
    if(!contract_start||!contract_end||contract_start>contract_end)throw Error('Periodo di appartenenza non valido');
+   const selectedPosition=positions.find(x=>x.code===natural_position&&x.active!==false);
+   if(roleProfile&&selectedPosition){
+    const mapped=groupForPosition(selectedPosition.category);
+    if(mapped)raw.generic_role_manual=mapped;
+   }
    const payload={...raw,id:memory.selected.players||null,
     active:d.active==='true',height_cm:d.height_cm===''?null:Number(d.height_cm)};
    const playerId=await pendingFn(form,()=>rpc('tm_app_save_player',{p_season_id:ctx.state.season,p_data:payload}));
    await pendingFn(form,()=>rpc('tm_app_set_player_period',{p_season_id:ctx.state.season,p_player_id:playerId,p_start_date:contract_start,p_end_date:contract_end,p_period_id:contract_mode==='edit'?(ctx.state.data?.contracts||[]).filter(x=>x.player_id===playerId&&x.season_id===ctx.state.season).sort((a,b)=>String(b.start_date).localeCompare(String(a.start_date)))[0]?.id||null:null}));
+   if(roleProfile)await pendingFn(form,()=>rpc('tm_app_save_player_roles',{p_season_id:ctx.state.season,p_player_id:playerId,p_roles:roleProfile}));
    memory.selected.players=playerId;
-   await ctx.reloadAll();ctx.toast('Giocatore e periodo di rosa aggiornati');return true;
+   await ctx.reloadAll();ctx.toast('Giocatore, periodo e ruoli aggiornati');return true;
   }
   const obj=adminPayload(form,ctx);
   if(!obj.table)throw Error('Modulo sconosciuto');
