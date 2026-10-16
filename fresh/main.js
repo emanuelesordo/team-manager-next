@@ -24,6 +24,7 @@ import {fixtureVenueDetails} from './venue-format.js?revision=20261003stadium';
 import {ratingTimeline} from './rating-timeline.js';
 import {playerTrendPanel,hydratePlayerTrend} from './player-trend.js';
 import {renderPlayerIntelligence,initPlayerIntelligence} from './player-intelligence.js?v=20261016mockup1';
+import {playerNavigation} from './player-navigation.js?v=20261016playernav1';
 import {hydratePlayerOverviewRatings} from './player-infographic-overview.js?v=20261016mockup1';
 import {tacticalHistory} from './tactics.js';
 import {installNotifications,syncNotificationBell,resetNotifications} from './notifications.js';
@@ -204,8 +205,17 @@ function matchTopbarNavigation(){
    '<button type="button" class="match-topbar-step" data-match-nav="1" aria-label="Partita successiva" '+(nav.next?'':'disabled')+'>'+ico('chevron',18)+'</button>'+
   '</div></div>';
 }
+function playerTopbarNavigation(){
+ const nav=playerNavigation(state.data?.players||[],state.data?.roster||[],state.player);
+ return '<div class="topbar-page match-topbar-page player-topbar-page">'+
+  '<button type="button" class="match-topbar-back" data-player-back aria-label="Torna alla rosa">'+ico('back',18)+'<span>Torna alla rosa</span></button>'+
+  '<div class="match-topbar-arrows" role="group" aria-label="Scorri i giocatori">'+
+   '<button type="button" class="match-topbar-step" data-player-nav="-1" aria-label="Giocatore precedente" '+(nav.previous?'':'disabled')+'>'+ico('back',18)+'</button>'+
+   '<button type="button" class="match-topbar-step" data-player-nav="1" aria-label="Giocatore successivo" '+(nav.next?'':'disabled')+'>'+ico('chevron',18)+'</button>'+
+  '</div></div>';
+}
 function header(){
- const pageBlock=state.page==='match'?matchTopbarNavigation():
+ const pageBlock=state.page==='match'?matchTopbarNavigation():state.page==='player'&&state.player?playerTopbarNavigation():
   '<div class="topbar-page"><span class="topbar-kicker">'+E(topbarPage()[0])+'</span><h1>'+E(topbarPage()[1])+'</h1></div>';
  return `<header class="topbar"><div class="mobile-symbol">${club(team().name,'tiny',{team_id:team().id})}</div>${pageBlock}<div class="top-actions"><span class="connection-pill"><i></i> Dati sincronizzati</span><button type="button" class="icon-btn theme-btn" data-action="theme" aria-label="Cambia aspetto">${ico(state.theme==='night'?'sun':'moon')}</button><button type="button" class="icon-btn" data-action="reload" aria-label="Aggiorna dati">${ico('refresh')}</button>${hasSession()?`<button type="button" class="icon-btn bell-btn" data-notifications-open aria-label="Notifiche">${ico("bell")}<span class="notification-count" hidden data-notification-badge></span></button>`:""}<button type="button" class="icon-btn user-btn" data-action="account" aria-label="Area personale">${ico('user')}</button><button type="button" class="icon-btn mobile-more" data-action="menu" aria-label="Apri menu">${ico('menu')}</button></div></header>`
 }
@@ -438,7 +448,7 @@ function player(){
   return now.getUTCFullYear()-d.getUTCFullYear()-(now.getUTCMonth()<d.getUTCMonth()||now.getUTCMonth()===d.getUTCMonth()&&now.getUTCDate()<d.getUTCDate()?1:0);
  })():null;
  const habitual=state.data?.habitual?.find(x=>x.player_id===p.id);
- return `<button class="back-link" data-page="roster">${ico('back')} Torna alla rosa</button><section class="glass player-detail player-infographic"><div class="player-detail-cover"><div class="big-player-avatar">${isStaff(staffContext())?`<button type="button" class="player-photo-trigger" data-player-photo-open="${E(p.id)}" aria-label="Carica la foto di ${E(name)}" title="Carica o cambia la foto del giocatore">`:''}${safeUrl(p.photo_url)?`<img src="${safeUrl(p.photo_url)}" alt="">`:`<span>${E((p.first_name||'?')[0])}${E((p.last_name||'?')[0])}</span>`}${isStaff(staffContext())?'<span class="player-photo-hint">'+ico('camera',24)+'<strong>Carica foto</strong><small>Clicca per cambiare immagine</small></span></button>':''}</div>${isStaff(staffContext())?`<input type="file" data-player-photo-input="${E(p.id)}" accept="image/png,image/jpeg,image/webp" hidden>`:''}<div class="player-cover-identity"><p class="eyebrow">GIOCATORI · ${E(roleName(p.generic_role_manual||s.position_group))}</p><h1>${E(name)} ${r?.shirt_number!=null?`<span class="player-cover-number">${E(r.shirt_number)}</span>`:''}</h1><p>${E(p.generic_role_manual||s.position_group||'Ruolo non specificato')} · ${habitual?.shirt_number!=null?'Maglia abituale #'+E(habitual.shirt_number):'Numero non disponibile'}</p><div class="player-identity-details"><span>Piede <b>${E(p.preferred_foot||'—')}</b></span><span>Età <b>${age===null?'—':E(age)+' anni'}</b></span><span>Altezza <b>${p.height_cm?E(p.height_cm)+' cm':'—'}</b></span><span>Nazionalità <b>${E(p.nationality_code||'—')}</b></span></div></div><div class="detail-kpis">${[['appearances','Presenze'],['minutes','Minuti'],['goals','Gol'],['assists','Assist'],['starts','Titolare'],['subentries','Subentrato'],['yellow_cards','Ammonizioni'],['red_cards','Espulsioni'],['avg_rating','Rating medio']].map(([k,l])=>`<div class="player-kpi"><small>${ico(({appearances:'users',minutes:'clock',goals:'trophy',assists:'spark',starts:'user',subentries:'refresh',yellow_cards:'bell',red_cards:'bell',avg_rating:'chart'})[k],15)}${l}</small><b>${s[k]!=null?(k==='avg_rating'?Number(s[k]).toFixed(2):E(s[k])):'—'}</b></div>`).join('')}</div></div></section>${renderPlayerIntelligence(p.id,{fixtures:state.data?.fixtures||[],matches:state.data?.matches||[],events:verifiedEventCache?.season===state.season?verifiedEventCache.events:[],matchPlayers:verifiedEventCache?.season===state.season?verifiedEventCache.matchPlayers:[],competitions:state.data?.competitions||[],team:team(),stats:s,goalImpact:state.data?.goalImpacts?.find(x=>x.player_id===p.id)||null,ratingInsights:state.data?.ratingInsights?.find(x=>x.player_id===p.id)||null,calculatedPlayers:state.data?.calculatedPlayers||[],eventsLoaded:verifiedEventCache?.season===state.season&&verifiedEventCache?.complete===true,playersLoaded:verifiedEventCache?.season===state.season&&verifiedEventCache?.complete===true,eventDetailsHtml:eventDetailStatisticsPanel(verifiedEventCache?.season===state.season?verifiedEventCache.events:[],{playerId:p.id,side:'team'})})}`
+ return `<section class="glass player-detail player-infographic"><div class="player-detail-cover"><div class="big-player-avatar">${isStaff(staffContext())?`<button type="button" class="player-photo-trigger" data-player-photo-open="${E(p.id)}" aria-label="Carica la foto di ${E(name)}" title="Carica o cambia la foto del giocatore">`:''}${safeUrl(p.photo_url)?`<img src="${safeUrl(p.photo_url)}" alt="">`:`<span>${E((p.first_name||'?')[0])}${E((p.last_name||'?')[0])}</span>`}${isStaff(staffContext())?'<span class="player-photo-hint">'+ico('camera',24)+'<strong>Carica foto</strong><small>Clicca per cambiare immagine</small></span></button>':''}</div>${isStaff(staffContext())?`<input type="file" data-player-photo-input="${E(p.id)}" accept="image/png,image/jpeg,image/webp" hidden>`:''}<div class="player-cover-identity"><p class="eyebrow">GIOCATORI · ${E(roleName(p.generic_role_manual||s.position_group))}</p><h1>${E(name)} ${r?.shirt_number!=null?`<span class="player-cover-number">${E(r.shirt_number)}</span>`:''}</h1><p>${E(p.generic_role_manual||s.position_group||'Ruolo non specificato')} · ${habitual?.shirt_number!=null?'Maglia abituale #'+E(habitual.shirt_number):'Numero non disponibile'}</p><div class="player-identity-details"><span>Piede <b>${E(p.preferred_foot||'—')}</b></span><span>Età <b>${age===null?'—':E(age)+' anni'}</b></span><span>Altezza <b>${p.height_cm?E(p.height_cm)+' cm':'—'}</b></span><span>Nazionalità <b>${E(p.nationality_code||'—')}</b></span></div></div><div class="detail-kpis">${[['appearances','Presenze'],['minutes','Minuti'],['goals','Gol'],['assists','Assist'],['starts','Titolare'],['subentries','Subentrato'],['yellow_cards','Ammonizioni'],['red_cards','Espulsioni'],['avg_rating','Rating medio']].map(([k,l])=>`<div class="player-kpi"><small>${ico(({appearances:'users',minutes:'clock',goals:'trophy',assists:'spark',starts:'user',subentries:'refresh',yellow_cards:'bell',red_cards:'bell',avg_rating:'chart'})[k],15)}${l}</small><b>${s[k]!=null?(k==='avg_rating'?Number(s[k]).toFixed(2):E(s[k])):'—'}</b></div>`).join('')}</div></div></section>${renderPlayerIntelligence(p.id,{fixtures:state.data?.fixtures||[],matches:state.data?.matches||[],events:verifiedEventCache?.season===state.season?verifiedEventCache.events:[],matchPlayers:verifiedEventCache?.season===state.season?verifiedEventCache.matchPlayers:[],competitions:state.data?.competitions||[],team:team(),stats:s,goalImpact:state.data?.goalImpacts?.find(x=>x.player_id===p.id)||null,ratingInsights:state.data?.ratingInsights?.find(x=>x.player_id===p.id)||null,calculatedPlayers:state.data?.calculatedPlayers||[],eventsLoaded:verifiedEventCache?.season===state.season&&verifiedEventCache?.complete===true,playersLoaded:verifiedEventCache?.season===state.season&&verifiedEventCache?.complete===true,eventDetailsHtml:eventDetailStatisticsPanel(verifiedEventCache?.season===state.season?verifiedEventCache.events:[],{playerId:p.id,side:'team'})})}`
 }
 function stats(){
  return `${heading('DATA & PERFORMANCE','Statistiche','Numeri stagionali ricostruiti da risultati, tabellini ed eventi registrati.')}${eventAnalyticsPlaceholder()}`;
@@ -980,6 +990,14 @@ function centerVotePickers(){
  });
 }
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),3500)}
+function stepPlayer(direction){
+ if(state.page!=='player'||!state.player)return;
+ const nav=playerNavigation(state.data?.players||[],state.data?.roster||[],state.player);
+ const target=direction<0?nav.previous:direction>0?nav.next:null;
+ if(!target)return;
+ state.player=target.id;
+ navigate('player');
+}
 function navigate(page){
  if(page==='admin'&&!isStaff(staffContext()))page='home';
  state.page=page;state.overlay=null;state.slide=0;if(page==='calendar')state.comp=null;
@@ -1510,6 +1528,8 @@ document.addEventListener('click',async e=>{
  if(x.dataset.rosterSort){const k=x.dataset.rosterSort;state.rosterDesc=state.rosterSort===k?!state.rosterDesc:['shirt','age','appearances','goals','avg_rating'].includes(k);state.rosterSort=k;render();return}
  if(x.dataset.matchBack!==undefined){returnFromMatch();return}
  if(x.dataset.matchNav!==undefined){await stepMatch(Number(x.dataset.matchNav));return}
+ if(x.dataset.playerBack!==undefined){navigate('roster');return}
+ if(x.dataset.playerNav!==undefined){stepPlayer(Number(x.dataset.playerNav));return}
  if(x.dataset.page){navigate(x.dataset.page);return}
  if(x.dataset.scoreEdit!==undefined){
   if(state.identity?.role?.role!=='admin')return;
