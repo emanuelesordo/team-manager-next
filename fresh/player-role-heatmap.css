@@ -26,10 +26,11 @@ body[data-page="player"] .psi-infographic .psi-infographic-grid>.psi-area.psi-ro
 .psi-role-spot.excellent,.psi-role-entry.excellent{--role-color:#b9ec5c}
 .psi-role-spot.good,.psi-role-entry.good{--role-color:#50cba1}
 .psi-role-spot.adaptable,.psi-role-entry.adaptable{--role-color:#ffce6a}
-.psi-role-spot.emergency,.psi-role-entry.emergency,.psi-role-spot.low,.psi-role-entry.low{--role-color:#ea9673}
+.psi-role-spot.emergency,.psi-role-entry.emergency{--role-color:#ea9673}
+.psi-role-spot.low,.psi-role-entry.low{--role-color:#c76c71}
 .psi-role-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:7px 13px;margin:12px 0 2px;font-size:10px;color:var(--muted)}
 .psi-role-legend span{display:flex;align-items:center;gap:5px}.psi-role-legend i{width:8px;height:8px;border-radius:50%;background:#b9ec5c}
-.psi-role-legend i.good{background:#50cba1}.psi-role-legend i.adaptable{background:#ffce6a}.psi-role-legend i.emergency{background:#ea9673}
+.psi-role-legend i.good{background:#50cba1}.psi-role-legend i.adaptable{background:#ffce6a}.psi-role-legend i.emergency{background:#ea9673}.psi-role-legend i.low{background:#c76c71}
 .psi-role-info{min-width:0}.psi-role-natural{position:relative;border:1px solid #e9e3bd;border-radius:12px;padding:14px 18px;
  display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px;background:#fcf9ea;color:#283a31}
 .psi-role-natural small{grid-column:1 / -1;letter-spacing:.1em;font-size:10px;font-weight:750;color:#89711a}
