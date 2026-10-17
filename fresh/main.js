@@ -5,7 +5,7 @@ import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
 import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend} from './home-dashboard.js';
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote,deleteVote} from './votes.js?ratings=20261006picker4';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection,loadCsiReview,mayEditCallups} from './staff-ui.js?csi=20261015advanced1';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection,loadCsiReview,mayEditCallups,handleRosterSpreadsheetFile} from './staff-ui.js?csi=20261015advanced1';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
@@ -1609,6 +1609,7 @@ document.addEventListener('change',async e=>{
 });
 document.addEventListener('change',e=>{
  if(staffLogoEvent(e))return;
+ if(e.target.matches('[data-roster-file]')){const file=e.target.files?.[0];e.target.value='';if(file)await handleRosterSpreadsheetFile(file,staffContext());return}
  if(e.target.matches('[data-staff-select]')){staffSelect(e.target,staffContext());return}
  if(e.target.matches('[data-season]'))switchSeason(e.target.value);
  if(e.target.matches('[data-mine]')){state.mineOnly=e.target.checked;render()}
