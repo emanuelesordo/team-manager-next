@@ -13,6 +13,7 @@ import {csiReviewPanel} from './csi-review.js?csi=20261011recovery1';
 import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 import {renderRoleAffinityEditor,collectRoleAffinityForm,groupForPosition} from './player-role-heatmap.js?v=20261016roles1';
+import {exportRoster,importRoster} from './roster-spreadsheet.js?v=20261017bulk1';
 
 export const staffLogoEvent=handleLogoEditorEvent;
 export function openNewPlayer(){memory.area='players';memory.selected.players='';}
@@ -339,7 +340,7 @@ export function adminPage(ctx){
   const ending=contract?.end_date||season?.end_date||'';
   const previousPeriods=(data.contracts||[]).filter(x=>x.player_id===p?.id&&x.season_id===ctx.state.season).sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
   const periodHistory=previousPeriods.length?'<div class="staff-help"><strong>Periodi registrati:</strong> '+previousPeriods.map(x=>esc(x.start_date)+' → '+esc(x.end_date)).join(' · ')+'</div>':'';
-  form=wrapForm('players','Gestione anagrafica e rosa',
+  form='<div class="staff-roster-bulk"><button type="button" class="staff-soft" data-staff-action="roster-export">Scarica XLSX rosa</button><button type="button" class="staff-soft" data-staff-action="roster-import">Importa XLSX modificato</button><input type="file" data-roster-file accept=".xlsx,.xls" hidden><small>Gli ID esistenti identificano i giocatori; lascia vuoto l’ID per aggiungerne uno.</small></div>'+wrapForm('players','Gestione anagrafica e rosa',
    selectExisting('players',list,'last_name')+
    '<div class="staff-form-grid">'+input('first_name','Nome',p?.first_name||'','text','required')+
    input('last_name','Cognome',p?.last_name||'','text','required')+
@@ -921,6 +922,8 @@ export async function staffClick(e,button,ctx){
   ctx.render();return true;
  }
  const action=button.dataset.staffAction;if(!action)return false;
+ if(action==='roster-export'){if(!isStaff(ctx))return true;try{await exportRoster(ctx)}catch(error){ctx.toast('Esportazione: '+error.message)}return true}
+ if(action==='roster-import'){if(!isStaff(ctx))return true;document.querySelector('[data-roster-file]')?.click();return true}
  if(memory.busy)return true;
  memory.busy=true;button.disabled=true;
  try{
@@ -1552,3 +1555,5 @@ document.addEventListener('drop',event=>{const item=event.target.closest('[data-
 document.addEventListener('dragend',()=>{draggedTie=null});
 
 }
+
+export async function handleRosterSpreadsheetFile(file,ctx){if(!isStaff(ctx))return;try{await importRoster(file,ctx)}catch(error){ctx.toast('Importazione: '+error.message);window.alert(error.message)}}
