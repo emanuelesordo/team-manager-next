@@ -1,4 +1,4 @@
-import {rpc} from './api.js';
+import {rpc,adminWrite} from './api.js';
 const CDN='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 let lib;
 async function workbookLib(){
@@ -89,7 +89,7 @@ export async function importRoster(file,ctx){
   const playerId=await rpc('tm_app_save_player',{p_season_id:ctx.state.season,p_data:{id:row.id||null,first_name:row.first,last_name:row.last,preferred_foot:row.foot||null,height_cm:row.height,generic_role_manual:row.role||null,active:row.active}});
   await rpc('tm_app_set_player_period',{p_season_id:ctx.state.season,p_player_id:playerId,p_start_date:row.start,p_end_date:row.end,p_period_id:(ctx.state.data?.contracts||[]).filter(p=>p.player_id===playerId&&p.season_id===ctx.state.season).sort((a,b)=>txt(b.start_date).localeCompare(txt(a.start_date)))[0]?.id||null});
   if(row.roles.length)await rpc('tm_app_save_player_roles',{p_season_id:ctx.state.season,p_player_id:playerId,p_roles:row.roles});
-  // Birth date is intentionally not modified: the existing player RPC does not accept it.
+  if(row.birth)await adminWrite('players','PATCH',{birth_date:row.birth},{id:playerId});
   done++;
  }
  await ctx.reloadAll();
