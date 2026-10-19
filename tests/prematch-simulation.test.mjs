@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {simulatePrematchTimeline,renderSimulatedTimeline,historicalGoalPatterns,chooseGoalMinutes,timelinePresentationEvents} from '../fresh/pre-match-simulation.js';
+import {simulatePrematchTimeline,renderSimulatedTimeline,historicalGoalPatterns,chooseGoalMinutes,timelinePresentationEvents,replacementCompatibility} from '../fresh/pre-match-simulation.js';
 import {drawTimelinePoster} from '../fresh/pre-match-poster.js';
 const fixture={id:'scenario-1',home_team_id:'team',away_team_id:'other'};
 const prediction={probabilities:{mostLikely:{home:2,away:1}},expectedGoals:{home:1.7,away:.9},coverage:52,
@@ -86,7 +86,7 @@ test('for/against distributions use strictly historical and relevant team goals'
  assert.ok(minutes.every((x,i)=>i===0||x.minute>=minutes[i-1].minute));
 });
 test('seven maximum replacements within three in-play sessions plus interval',()=>{
- const large=Array.from({length:28},(_,i)=>({id:'x'+i,player_id:'x'+i,first_name:'Test',last_name:'Player'+i,generic_role_manual:i===0?'P':i<8?'D':i<20?'C':'A'}));
+ const large=Array.from({length:28},(_,i)=>({id:'x'+i,player_id:'x'+i,first_name:'Test',last_name:'Player'+i,generic_role_manual:i===0?'P':i<16?'D':i<25?'C':'A'}));
  const eleven={...lineup,players:large.slice(0,11).map((p,i)=>({player_id:p.id,slot:i+1,name:'Player'+i,targetRole:p.generic_role_manual,expectedRating:6}))};
  for(let variant=0;variant<12;variant++){
   const scenario=simulatePrematchTimeline({fixture:{...fixture,id:'sessions'+variant},prediction,lineup:eleven,players:large,roster:large.map(p=>({player_id:p.id,active:true})),stats:[],competition:{periods:2,minutes_per_period:40}});
@@ -125,7 +125,7 @@ test('exported poster draws every timeline minute in a dedicated visible column'
  assert.ok(labels.filter(t=>t.x===75).every(t=>t.y>467&&t.y<1735));
 });
 test('simulated substitutions never withdraw a previously introduced player',()=>{
- const large=Array.from({length:28},(_,i)=>({id:'z'+i,player_id:'z'+i,first_name:'Test',last_name:'Player'+i,generic_role_manual:i===0?'P':i<7?'D':i<19?'C':'A'}));
+ const large=Array.from({length:28},(_,i)=>({id:'z'+i,player_id:'z'+i,first_name:'Test',last_name:'Player'+i,generic_role_manual:i===0?'P':i<16?'D':i<25?'C':'A'}));
  const eleven={...lineup,players:large.slice(0,11).map((p,i)=>({player_id:p.id,slot:i+1,name:'Player'+i,targetRole:p.generic_role_manual,expectedRating:6}))};
  for(let iteration=0;iteration<60;iteration++){
   const scenario=simulatePrematchTimeline({fixture:{...fixture,id:'fresh-sub'+iteration},prediction,lineup:eleven,
@@ -142,7 +142,7 @@ test('simulated substitutions never withdraw a previously introduced player',()=
 
 test('substitution planning uses all seven for a comfortable lead or demanding comeback',()=>{
  const squad=Array.from({length:26},(_,i)=>({id:'r'+i,player_id:'r'+i,first_name:'Giocatore',last_name:String(i),
-  generic_role_manual:i===0?'P':i<7?'D':i<16?'C':'A'}));
+  generic_role_manual:i===0?'P':i<16?'D':i<25?'C':'A'}));
  const xi={...lineup,players:squad.slice(0,11).map((p,i)=>({player_id:p.id,slot:i+1,name:p.first_name+' '+i,targetRole:p.generic_role_manual,expectedRating:6.4}))};
  const options={fixture:{...fixture,id:'full-use'},lineup:xi,players:squad,roster:squad.map(p=>({player_id:p.id,active:true})),
   stats:[],competition:{periods:2,minutes_per_period:40}};
@@ -153,6 +153,40 @@ test('substitution planning uses all seven for a comfortable lead or demanding c
   assert.ok(new Set(changes.map(e=>e.session).filter(s=>s!=='HT')).size<=3);
   const entered=new Set();
   for(const event of changes){assert.ok(!entered.has(event.off_id));entered.add(event.player_id)}
+ }
+});
+test('replacement must fit the vacated tactical role; never silently switch formation',()=>{
+ assert.equal(replacementCompatibility({player_id:'forward',generic_role_manual:'A'},
+  {player_id:'central',targetRole:'C',slot:7,x:50,y:45}),0);
+ assert.equal(replacementCompatibility({player_id:'mid',generic_role_manual:'C'},
+  {player_id:'central',targetRole:'C',slot:7,x:50,y:45}),.7);
+ assert.equal(replacementCompatibility({player_id:'right',generic_role_manual:'D',role_code:'TD'},
+  {player_id:'left',targetRole:'D',slot:2,x:15,y:68}),0);
+ const positions=[{id:'role1',code:'ATT',category:'forward'},{id:'role2',code:'CC',category:'midfielder'}];
+ const roleData={rolePositions:positions,roleAffinities:[
+  {player_id:'switch',position_id:'role1',affinity_pct:100},
+  {player_id:'switch',position_id:'role2',affinity_pct:80}
+ ]};
+ assert.ok(replacementCompatibility({player_id:'switch',generic_role_manual:'A'},
+  {player_id:'central',targetRole:'C',slot:7,x:50,y:45},roleData)>.53);
+ assert.equal(replacementCompatibility({player_id:'switch',generic_role_manual:'A'},
+  {player_id:'defender',targetRole:'D',slot:3,x:30,y:68},roleData),0);
+});
+test('no tactical slot left unsupported by mid-game substitutions',()=>{
+ const squad=Array.from({length:28},(_,i)=>({id:'a'+i,player_id:'a'+i,
+  first_name:'Squad',last_name:String(i),generic_role_manual:i===0?'P':i<5?'D':i<9?'C':i<11?'A':i<27?'A':'C'}));
+ const xi={...lineup,players:squad.slice(0,11).map((p,i)=>({player_id:p.id,slot:i+1,
+  x:i<=4?20:50,y:i<=4?68:i<=8?44:16,targetRole:p.generic_role_manual,name:'Squad '+i}))};
+ const output=simulatePrematchTimeline({fixture:{...fixture,id:'strict-role'},prediction:{...prediction,probabilities:{mostLikely:{home:3,away:0}}},
+  lineup:xi,players:squad,roster:squad.map(p=>({player_id:p.id,active:true})),stats:[],competition:{periods:2,minutes_per_period:40}});
+ const subs=output.events.filter(e=>e.type==='substitution');
+ assert.ok(subs.length<=3,'Only compatible forward/central-midfield replacements should enter');
+ for(const sub of subs){
+  const outgoing=xi.players.find(p=>p.player_id===sub.off_id);
+  const incoming=squad.find(p=>p.id===sub.player_id);
+  assert.ok(outgoing);
+  assert.ok(replacementCompatibility(incoming,outgoing)>0);
+  assert.equal(sub.slot,outgoing.slot);
  }
 });
 test('limited bench caps changes rather than inventing players',()=>{
