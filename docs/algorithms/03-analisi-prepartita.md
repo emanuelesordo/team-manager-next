@@ -43,3 +43,10 @@ Ripetitività tra partite simili, eccesso di frasi standard, presenza di pattern
 - Sostituzioni: per la squadra di cui si simula la formazione, al massimo **7 ingressi**, con massimo **3 finestre durante il gioco** e una eventuale sessione HT aggiuntiva. Sostituzioni dello stesso minuto e della stessa finestra hanno lo stesso identificatore di sessione; la UI e il PNG le raggruppano.
 - L'immagine 1080×1920 utilizza i colori del tema night del progetto (background #071e27, superfici #102d36, testo #effbf7 e accento #bafa96) e pittogrammi coerenti con le icone dell'app per gol, cambi e fasi di gara. Riutilizza gli eventi già simulati, senza eseguirne una nuova estrazione.
 - Lo storico è limitato dagli eventi validati/disponibili: se mancano minuti o fixture collegate, tali osservazioni non sono inventate e il modello usa il prior. Le sostituzioni avversarie restano senza nomi in mancanza delle convocazioni reali.
+
+## Ottimizzazione dei cambi — sfruttare la panchina
+
+- Obiettivo del simulatore: impiegare fino a tutti i sette cambi quando il risultato **consente turnover** o **richiede una risposta tattica**, anziché limitarsi a tre o quattro entrate per impostazione.
+- Con almeno sette riserve utilizzabili: margine del risultato simulato finale pari o superiore a due reti (vantaggio o svantaggio) → puntare a sette ingressi; scarto di una rete → sei; parità → cinque. Con panchina più corta, massimo quanto effettivamente disponibile. Sono obiettivi euristici e non un obbligo regolamentare.
+- I cambi restano raggruppati in tre sessioni di gioco al massimo, con ulteriore sessione possibile all'intervallo. Se si è in svantaggio la sessione finale non viene annullata: i subentranti offensivi ricevono maggiore peso; se si difende un largo vantaggio si privilegiano rotazione e copertura.
+- I calciatori già subentrati non possono essere sostituiti in un secondo momento nella simulazione standard. Non vengono inventate presenze o giocatori.
