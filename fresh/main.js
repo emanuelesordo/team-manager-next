@@ -1459,7 +1459,7 @@ async function fillAnalytics(){
   if(chosen!==state.season)return;
   verifiedEventCache={season:chosen,events,matchPlayers};
   const current=document.querySelector('[data-event-analysis]');
-  if(current)current.innerHTML=renderEventAnalytics(realFixtures(),matches,events,team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],matchPlayers,state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[]);
+  if(current)current.innerHTML=renderEventAnalytics(realFixtures(),matches,events,team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],matchPlayers,state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[],[],[],[],[],[],[],[],state.data?.mvp?.counts||new Map());
  }catch(error){const current=document.querySelector('[data-event-analysis]');if(current)current.textContent='Eventi non leggibili: '+error.message}
  finally{analyticsBusy=false}
 }
