@@ -1,5 +1,5 @@
 /* Bulk role editor: click order defines the natural position and defaults for additional roles. */
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;':'&quot;',"'":'&#39;'}[c]));
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const defaults=[80,70,50,40,30,20,10,5];
 export function roleSelection(existing=[],clicked){
  const roles=existing.map(x=>({...x}));
