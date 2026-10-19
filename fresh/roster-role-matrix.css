@@ -5,7 +5,7 @@
 .staff-roles-head p{font-size:11px;line-height:1.45;color:var(--muted);margin:0}
 .staff-roles-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 .staff-roles-list{min-width:max-content;width:100%}
-.staff-roles-player{display:grid;grid-template-columns:126px max-content minmax(105px,1fr) 48px;align-items:center;column-gap:8px;min-height:39px;padding:3px 5px;border-bottom:1px solid var(--border)}
+.staff-roles-player{display:grid;grid-template-columns:126px max-content minmax(105px,1fr) 24px;align-items:center;column-gap:8px;min-height:39px;padding:3px 5px;border-bottom:1px solid var(--border)}
 .staff-roles-player>strong{position:sticky;left:0;z-index:2;align-self:stretch;display:flex;align-items:center;width:126px;min-width:0;max-width:126px;padding:4px 6px 4px 0;font-size:11px;font-weight:750;line-height:1.2;white-space:normal;background:var(--bg);box-shadow:6px 0 10px -9px var(--ink)}
 .staff-roles-player:nth-child(even){background:color-mix(in srgb,var(--surface) 42%,transparent)}
 .staff-roles-player:nth-child(even)>strong{background:var(--surface-solid)}
@@ -22,12 +22,18 @@
 .staff-roles-percentages label{display:flex;align-items:center;gap:2px;color:var(--muted);font-size:9px}
 .staff-roles-percentages input{box-sizing:border-box;width:35px;height:25px;padding:2px 1px;text-align:center;border:1px solid var(--border);border-radius:5px;background:transparent;color:var(--ink);font-size:10px;font-variant-numeric:tabular-nums}
 .staff-roles-percentages input:read-only{font-weight:800;opacity:.72}
-.staff-role-save{padding:5px 4px!important;font-size:10px!important;min-height:26px!important;border-radius:6px!important;white-space:nowrap}
-.staff-roles-player[data-dirty="1"] .staff-role-save{background:var(--accent)!important;color:var(--accent-ink)!important;border-color:var(--accent)!important}
+
+.staff-roles-player[data-dirty="1"] 
 @media(max-width:650px){
- .staff-roles-player{grid-template-columns:112px max-content minmax(100px,1fr) 46px;column-gap:5px;padding:3px 4px;min-height:38px}
+ .staff-roles-player{grid-template-columns:112px max-content minmax(100px,1fr) 24px;column-gap:5px;padding:3px 4px;min-height:38px}
  .staff-roles-player>strong{width:112px;max-width:112px;font-size:10px}
  .staff-roles-options{grid-template-columns:repeat(19,25px);gap:2px}
  .staff-role-chip{width:25px;height:25px;font-size:8px}
 }
 @media(prefers-reduced-motion:reduce){.staff-role-chip{transition:none}}
+
+.staff-role-status{display:grid;place-items:center;width:21px;height:21px;padding:0;border:0;border-radius:50%;background:none;color:var(--muted);font-size:14px;font-weight:800;opacity:.6}
+.staff-role-status[data-role-status="pending"]{opacity:1;color:var(--accent)}
+.staff-role-status[data-role-status="saved"]{color:var(--accent);opacity:.8}
+.staff-role-status[data-role-status="error"]{cursor:pointer;background:#cb593821;color:white;opacity:1;border:1px solid #cb5938}
+.staff-role-status:disabled{cursor:default;opacity:.7}
