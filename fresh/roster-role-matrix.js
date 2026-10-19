@@ -20,16 +20,17 @@ export function roleRows(ctx){
 export function renderRosterRoles(ctx){
  const positions=(ctx.state.data?.rolePositions||[]).filter(x=>x.active!==false);
  const players=roleRows(ctx);
- return '<section class="glass panel staff-editor staff-roles-matrix"><div class="staff-roles-head"><h3>Ruoli della rosa</h3><p>Seleziona le etichette in ordine: primo ruolo naturale (100%), poi 80%, 70%, 50%… Clicca ancora per rimuovere. Le percentuali si possono modificare qui.</p></div><div class="staff-roles-scroll"><div class="staff-roles-list">'+players.map(p=>{
+ const headings='<div class="staff-roles-player staff-roles-column-head"><strong>Giocatore</strong><div class="staff-roles-options">'+positions.map(p=>'<span title="'+esc(p.label)+'">'+esc(p.code)+'</span>').join('')+'</div><span>Affinità</span><span></span></div>';
+ return '<section class="staff-roles-matrix"><div class="staff-roles-head"><h3>Ruoli della rosa</h3><p>Come nella tabella della rosa: una riga per giocatore, una colonna per ruolo. Il primo selezionato è naturale (100%), gli altri partono da 80%, 70%, 50%… Scorri orizzontalmente per gli altri ruoli.</p></div><div class="staff-roles-scroll"><div class="staff-roles-list">'+headings+players.map(p=>{
   const selected=new Map(p.roles.map((x,i)=>[x.code,{...x,index:i}]));
   return '<div class="staff-roles-player" data-role-player="'+esc(p.id)+'"><strong>'+esc(p.name)+'</strong><div class="staff-roles-options">'+positions.map(pos=>{
    const item=selected.get(pos.code);
-   return '<button type="button" class="staff-role-chip'+(item?' selected':'')+(item?.natural?' natural':'')+'" data-role-toggle="'+esc(pos.code)+'" data-role-id="'+esc(p.id)+'" title="'+esc(pos.label)+'" aria-pressed="'+Boolean(item)+'">'+esc(pos.code)+(item?'<small>'+item.affinity+'%</small>':'')+'</button>';
-  }).join('')+'</div><div class="staff-roles-percentages">'+p.roles.map((r,i)=>'<label>'+esc(r.code)+' <input type="number" min="'+(i===0?100:0)+'" max="'+(i===0?100:100)+'" step="1" value="'+r.affinity+'" data-role-percent="'+esc(r.code)+'" data-role-id="'+esc(p.id)+'"'+(i===0?' readonly':'')+' aria-label="Affinità '+esc(r.code)+' '+esc(p.name)+'">%</label>').join('')+'</div><button type="button" class="staff-soft staff-role-save" data-role-save="'+esc(p.id)+'">Salva</button></div>';
+   return '<button type="button" class="staff-role-chip'+(item?' selected':'')+(item?.natural?' natural':'')+'" data-role-toggle="'+esc(pos.code)+'" data-role-order="'+(item?item.index:-1)+'" data-role-id="'+esc(p.id)+'" title="'+esc(pos.label)+(item?' · '+item.affinity+'%':'')+'" aria-label="'+esc(pos.label)+' · '+esc(p.name)+'" aria-pressed="'+Boolean(item)+'">'+esc(pos.code)+'</button>';
+  }).join('')+'</div><div class="staff-roles-percentages">'+p.roles.map((r,i)=>'<label>'+esc(r.code)+' <input type="number" min="'+(i===0?100:0)+'" max="100" step="1" value="'+r.affinity+'" data-role-percent="'+esc(r.code)+'" data-role-id="'+esc(p.id)+'"'+(i===0?' readonly':'')+'>%</label>').join('')+'</div><button type="button" class="staff-soft staff-role-save" data-role-save="'+esc(p.id)+'">Salva</button></div>';
  }).join('')+'</div></div></section>';
 }
 export function readRoleRow(element,positions){
- const chips=[...element.querySelectorAll('[data-role-toggle].selected')];
+ const chips=[...element.querySelectorAll('[data-role-toggle].selected')].sort((a,b)=>Number(a.dataset.roleOrder)-Number(b.dataset.roleOrder));
  const codes=new Set(positions.filter(x=>x.active!==false).map(x=>x.code));
  return chips.map((chip,i)=>{
   const code=chip.dataset.roleToggle;
@@ -48,13 +49,14 @@ export function bindRoleMatrix(ctx){
   const chip=event.target.closest('[data-role-toggle]'),save=event.target.closest('[data-role-save]');
   if(chip){
    const row=chip.closest('[data-role-player]');
-   const current=[...row.querySelectorAll('[data-role-toggle].selected')].map(x=>({code:x.dataset.roleToggle,affinity:Number(row.querySelector('[data-role-percent="'+x.dataset.roleToggle+'"]')?.value)||100,natural:x.classList.contains('natural')}));
+   const current=[...row.querySelectorAll('[data-role-toggle].selected')].sort((a,b)=>Number(a.dataset.roleOrder)-Number(b.dataset.roleOrder)).map(x=>({code:x.dataset.roleToggle,affinity:Number(row.querySelector('[data-role-percent="'+x.dataset.roleToggle+'"]')?.value??100),natural:x.classList.contains('natural')}));
    const next=roleSelection(current,chip.dataset.roleToggle);
    row.querySelectorAll('[data-role-toggle]').forEach(c=>{
     const item=next.find(x=>x.code===c.dataset.roleToggle);
     c.classList.toggle('selected',!!item);c.classList.toggle('natural',!!item?.natural);c.setAttribute('aria-pressed',String(!!item));
-    c.innerHTML=esc(c.dataset.roleToggle)+(item?'<small>'+item.affinity+'%</small>':'');
-    c.style.order=item?String(next.indexOf(item)):'';
+    c.textContent=c.dataset.roleToggle;
+    c.dataset.roleOrder=item?String(next.indexOf(item)):'-1';
+    c.title=c.dataset.roleToggle+(item?' · '+item.affinity+'%':'');
    });
    row.querySelector('.staff-roles-percentages').innerHTML=next.map((r,i)=>'<label>'+esc(r.code)+' <input type="number" min="'+(i===0?100:0)+'" max="100" step="1" value="'+r.affinity+'" data-role-percent="'+esc(r.code)+'" data-role-id="'+esc(row.dataset.rolePlayer)+'"'+(i===0?' readonly':'')+'>%</label>').join('');
    row.dataset.dirty='1';return;
@@ -67,5 +69,5 @@ export function bindRoleMatrix(ctx){
    catch(err){ctx.toast('Errore: '+err.message)}finally{save.disabled=false}
   }
  });
- root.addEventListener('change',e=>{const input=e.target.closest('[data-role-percent]');if(!input)return;const row=input.closest('[data-role-player]');row.dataset.dirty='1';const chip=row.querySelector('[data-role-toggle="'+input.dataset.rolePercent+'"] small');if(chip)chip.textContent=input.value+'%'});
+ root.addEventListener('change',e=>{const input=e.target.closest('[data-role-percent]');if(!input)return;const row=input.closest('[data-role-player]');row.dataset.dirty='1';const chip=row.querySelector('[data-role-toggle="'+input.dataset.rolePercent+'"]');if(chip)chip.title=chip.dataset.roleToggle+' · '+input.value+'%'});
 }
