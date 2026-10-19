@@ -1251,7 +1251,7 @@ async function hydrateMatchPrediction(){
      const scenario=simulatePrematchTimeline({fixture:f,prediction:result,
       lineup:{...proposal,teamSide:f.home_team_id===team()?.id?'home':'away',teamId:team()?.id},
       roster:eligibleBench,players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp,
-      fixtures:realFixtures(),matches,historicalEvents:events});
+      fixtures:realFixtures(),matches,historicalEvents:events,roleData:lineupData});
      destination.innerHTML=renderSimulatedTimeline(scenario,E);
      const exportButton=destination.querySelector('[data-simulation-export]');
      exportButton?.addEventListener('click',async()=>{
