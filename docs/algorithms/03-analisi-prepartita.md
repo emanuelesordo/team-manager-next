@@ -16,3 +16,13 @@ Ogni affermazione quantitativa deve avere un dato effettivo a supporto; distingu
 
 ## DA VALIDARE
 Ripetitività tra partite simili, eccesso di frasi standard, presenza di pattern non rappresentativi, prevalenza di eventi incompleti. Per testi veramente distinti va rivista la composizione, non semplicemente aumentata la casualità.
+
+## Aggiornamento 19/10/2026 — Overview a cinque viste e scenario simulato
+
+- Overview prepartita a carosello orizzontale con wrap circolare tramite frecce: **Pronostico → Numeri delle squadre → Focus → Formazione ipotetica → Simulazione**.
+- La pagina conserva confronti e focus elaborati dal modello, spostando i rispettivi blocchi nelle slide senza inventare statistiche.
+- La simulazione è deterministica per fixture e formazione selezionata (fresh/pre-match-simulation.js), usa il risultato esatto modale, i gol attesi e le fasce storiche dei gol se presenti.
+- I cambi sono **eventi ipotetici**, mai reali: impiegano giocatori disponibili e non già in campo, considerando ruoli, minutaggio storico e stato del punteggio. Non vengono scritti eventi nel database.
+- Cambiando una delle nove formazioni, la timeline si aggiorna per l'undici selezionato.
+- Carosello esterno e scorrimento interno delle nove formazioni sono indipendenti.
+- **Da validare**: disponibilità completa dei minutaggi delle avversarie, vincoli regolamentari sulle sostituzioni e capacità predittiva attraverso test retrospettivi. La timeline è illustrativa, non probabilisticamente calibrata per ogni evento.
