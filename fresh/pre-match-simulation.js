@@ -111,7 +111,7 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
  events.sort((a,b)=>a.minute-b.minute||(a.type==='phase'?-1:1));
  return {events,duration,score:goals.home+'–'+goals.away,coverage:num(prediction.coverage)??0,
   formation:lineup?.formation||null,feasibility:lineup?.feasibility??null,
-  homeName:fixture.home_team||'Casa',awayName:fixture.away_team||'Trasferta',
+  homeName:prediction.home?.name||fixture.home_team||'Casa',awayName:prediction.away?.name||fixture.away_team||'Trasferta',
   label:'Timeline elaborata con dati pre-gara'};
 }
 export function renderSimulatedTimeline(model,escape=x=>String(x??'')){
