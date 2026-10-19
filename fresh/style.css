@@ -1591,3 +1591,11 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 .prematch-simulation-event small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
 .prematch-simulation-disclaimer{font-size:10px;color:var(--muted);margin-top:16px}
 @media(max-width:650px){.prematch-story-content{padding:12px}.prematch-simulation-event{grid-template-columns:36px 66px minmax(0,1fr);gap:7px}.prematch-story-dots button{font-size:9px;padding:4px 7px}}
+
+/* Prematch scenario: one sharing control, stronger hierarchy for event details. */
+.prematch-export-btn{border:1px solid #3cdba8;background:#0b473f;color:#dcfff3;font:inherit;font-size:12px;font-weight:750;padding:10px 15px;border-radius:10px;cursor:pointer;white-space:nowrap}
+.prematch-export-btn:hover{background:#125c4b}
+.prematch-export-btn:disabled{opacity:.6;cursor:progress}
+.prematch-simulation-partial{font-size:14px;color:var(--ink);white-space:nowrap;align-self:center;font-variant-numeric:tabular-nums}
+.prematch-simulation-event{grid-template-columns:42px 70px minmax(0,1fr) auto}
+@media(max-width:650px){.prematch-simulation-head{align-items:flex-start}.prematch-export-btn{width:100%}.prematch-simulation-event{grid-template-columns:36px 42px minmax(0,1fr) auto}.prematch-simulation-partial{font-size:11px}}
