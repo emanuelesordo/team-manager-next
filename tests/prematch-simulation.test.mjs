@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {simulatePrematchTimeline,renderSimulatedTimeline} from '../fresh/pre-match-simulation.js';
+import {simulatePrematchTimeline,renderSimulatedTimeline,historicalGoalPatterns,chooseGoalMinutes,timelinePresentationEvents} from '../fresh/pre-match-simulation.js';
 import {drawTimelinePoster} from '../fresh/pre-match-poster.js';
 const fixture={id:'scenario-1',home_team_id:'team',away_team_id:'other'};
 const prediction={probabilities:{mostLikely:{home:2,away:1}},expectedGoals:{home:1.7,away:.9},coverage:52,
@@ -53,7 +53,7 @@ test('late goals are attributed only to players in the field at their minute',()
 test('shareable poster is 1080×1920 and uses exactly the selected scenario events',()=>{
  const model=simulatePrematchTimeline({fixture,prediction,lineup,players,roster:players.map(p=>({player_id:p.id,active:true})),stats:[],competition:{periods:2,minutes_per_period:40}});
  const painted=[];
- const ctx={createLinearGradient:()=>({addColorStop(){}}),beginPath(){},roundRect(){},fill(){},stroke(){},moveTo(){},lineTo(){},arc(){},fillRect(){},measureText:s=>({width:String(s).length*13}),fillText:(text)=>painted.push(String(text))};
+ const ctx={createLinearGradient:()=>({addColorStop(){}}),beginPath(){},roundRect(){},fill(){},stroke(){},moveTo(){},lineTo(){},arc(){},fillRect(){},save(){},restore(){},translate(){},scale(){},closePath(){},measureText:s=>({width:String(s).length*13}),fillText:(text)=>painted.push(String(text))};
  const canvas={getContext:()=>ctx,width:0,height:0};
  drawTimelinePoster(canvas,model);
  assert.equal(canvas.width,1080);
@@ -61,4 +61,51 @@ test('shareable poster is 1080×1920 and uses exactly the selected scenario even
  assert.ok(painted.includes(model.score));
  assert.ok(painted.some(x=>x.includes('SIMULAZIONE GARA')));
  assert.ok(model.events.filter(e=>e.type==='goal').every(e=>painted.some(t=>t.includes(e.label)||e.label.includes(t.replace('…','')))));
+});
+
+test('for/against distributions use strictly historical and relevant team goals',()=>{
+ const now={...fixture,kickoff_at:'2026-10-20T21:00:00'};
+ const fixtures=[
+ {id:'old1',home_team_id:'team',away_team_id:'other',status:'finished',kickoff_at:'2026-10-10T21:00:00'},
+ {id:'old2',home_team_id:'third',away_team_id:'other',status:'finished',kickoff_at:'2026-10-12T21:00:00'},
+ {id:'future',home_team_id:'team',away_team_id:'other',status:'finished',kickoff_at:'2026-10-23T21:00:00'}];
+ const history=[
+ {id:'g1',fixture_id:'old1',event_type:'goal',team_side:'home',minute:22},
+ {id:'g2',fixture_id:'old1',event_type:'goal',team_side:'away',minute:61},
+ {id:'g3',fixture_id:'old2',event_type:'goal',team_side:'away',minute:24},
+ {id:'g4',fixture_id:'future',event_type:'goal',team_side:'home',minute:3}
+ ];
+ const stats=historicalGoalPatterns({fixture:now,fixtures,events:history,duration:80});
+ assert.deepEqual(stats.buckets.home.for,[22]);
+ assert.deepEqual(stats.buckets.away.against,[22]);
+ assert.deepEqual(stats.buckets.away.for,[61,24]);
+ assert.equal(stats.sample,2);
+ const minutes=chooseGoalMinutes({home:3,away:2},{fixture:now,fixtures,events:history,duration:80});
+ assert.equal(minutes.length,5);
+ assert.ok(minutes.every(x=>x.minute>0&&x.minute<80));
+ assert.ok(minutes.every((x,i)=>i===0||x.minute>=minutes[i-1].minute));
+});
+test('seven maximum replacements within three in-play sessions plus interval',()=>{
+ const large=Array.from({length:28},(_,i)=>({id:'x'+i,player_id:'x'+i,first_name:'Test',last_name:'Player'+i,generic_role_manual:i===0?'P':i<8?'D':i<20?'C':'A'}));
+ const eleven={...lineup,players:large.slice(0,11).map((p,i)=>({player_id:p.id,slot:i+1,name:'Player'+i,targetRole:p.generic_role_manual,expectedRating:6}))};
+ for(let variant=0;variant<12;variant++){
+  const scenario=simulatePrematchTimeline({fixture:{...fixture,id:'sessions'+variant},prediction,lineup:eleven,players:large,roster:large.map(p=>({player_id:p.id,active:true})),stats:[],competition:{periods:2,minutes_per_period:40}});
+  const changes=scenario.events.filter(e=>e.type==='substitution');
+  const sessions=new Set(changes.map(e=>e.session));
+  assert.ok(changes.length<=7);
+  assert.ok([...sessions].filter(id=>id!=='HT').length<=3);
+  assert.ok(sessions.size<=4);
+  assert.ok(changes.every(e=>e.session==='HT'?e.minute===40:e.minute>40));
+  assert.equal(new Set(changes.map(e=>e.player_id)).size,changes.length);
+  assert.equal(new Set(changes.map(e=>e.off_id)).size,changes.length);
+  assert.equal(timelinePresentationEvents(changes).length,sessions.size);
+ }
+});
+test('historical close-goal patterns do not force repeated simultaneous goals',()=>{
+ const history=Array.from({length:9},(_,i)=>({id:'h'+i,fixture_id:'old',event_type:'goal',team_side:i%2?'away':'home',minute:10+i*7}));
+ const old={id:'old',home_team_id:'team',away_team_id:'other',status:'finished',kickoff_at:'2026-10-10T21:00:00'};
+ const options={fixture:{...fixture,kickoff_at:'2026-10-20T21:00:00'},fixtures:[old],events:history,duration:80};
+ const output=chooseGoalMinutes({home:3,away:2},options);
+ assert.equal(output.length,5);
+ assert.equal(new Set(output.map(x=>x.minute)).size,5);
 });
