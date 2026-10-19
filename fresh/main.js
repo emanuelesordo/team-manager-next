@@ -1250,7 +1250,8 @@ async function hydrateMatchPrediction(){
      if(!destination||!proposal||proposal.duplicate){if(destination)destination.textContent='Nessuna formazione distinta disponibile da simulare.';return}
      const scenario=simulatePrematchTimeline({fixture:f,prediction:result,
       lineup:{...proposal,teamSide:f.home_team_id===team()?.id?'home':'away',teamId:team()?.id},
-      roster:eligibleBench,players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp});
+      roster:eligibleBench,players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp,
+      fixtures:realFixtures(),matches,historicalEvents:events});
      destination.innerHTML=renderSimulatedTimeline(scenario,E);
      const exportButton=destination.querySelector('[data-simulation-export]');
      exportButton?.addEventListener('click',async()=>{
