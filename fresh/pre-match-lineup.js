@@ -298,12 +298,12 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
 }
 function expectedRatingFor(playerId,xiIds,scores,coPlay){
  const m=scores.metrics.get(key(playerId))||{},mean=finite(m.meanRating)?Number(m.meanRating):null,context=finite(m.contextRating)?Number(m.contextRating):mean;
- if(mean==null&&context==null)return {mean:null,expected:null,matches:0};
+ if(mean==null&&context==null)return {meanRating:null,expectedRating:null,matches:0};
  const others=new Set([...xiIds].filter(id=>id!==key(playerId))),synergy=synergyWithUsed(playerId,others,coPlay);
  let expected=context??mean;
  if(mean!=null&&context!=null)expected=.55*mean+.45*context;
  expected+=clamp((synergy-.5)*.55,-.28,.28)+clamp((Number(m.resultQuality||.5)-.5)*.22,-.11,.11);
- return {mean,expected:clamp(expected,1,10),matches:m.ratingMatches||0,synergy};
+ return {meanRating:mean,expectedRating:clamp(expected,1,10),matches:m.ratingMatches||0,synergy};
 }
 export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team,competition,competitions=[],prediction,kit,events=[]}={}){
  if(!fixture||!team?.id||!data)return null;
