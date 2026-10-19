@@ -1547,3 +1547,13 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
  .match-timeline .mt-divider-recovery{margin:8px 0 3px;font-size:9px}
  .match-timeline .mt-divider-recovery>span{min-height:21px;padding:3px 10px}
 }
+
+/* Pre-match hypothetical XI — three compact, native-swipe alternatives. */
+.prematch-lineup-carousel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 9px;color:var(--muted);font-size:10px;font-weight:700}
+.prematch-lineup-carousel-head span:first-child{color:var(--ink);font-size:12px}
+.prematch-lineup-carousel{display:flex;width:100%;min-width:0;gap:0;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.prematch-lineup-carousel::-webkit-scrollbar{display:none}
+.prematch-lineup-slide{display:block;flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always;outline-offset:-3px}
+.prematch-lineup-carousel-nav{display:flex;align-items:center;justify-content:center;gap:13px;margin-top:10px;font-size:10px;font-weight:700;color:var(--muted)}
+.prematch-lineup-carousel-nav button{display:grid;place-items:center;width:27px;height:27px;padding:0;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--ink);font-size:21px;line-height:1}
+.prematch-lineup-carousel-nav button:disabled{opacity:.22;cursor:default}
