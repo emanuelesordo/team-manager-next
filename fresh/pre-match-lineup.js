@@ -49,6 +49,18 @@ function modalFormation(matches,fixtureWeights,data,team){
  }
  return [...weights].sort((a,b)=>b[1]-a[1])[0]?.[0]||'4-4-2';
 }
+/** Historical tactical preference, with opponent relevance and observed result. */
+function formationHistory(matches,fixtureWeights,data,team){
+ const recency=recencyMap(matches),rows=new Map();
+ for(const m of matches){
+  if(!formationModules.includes(m.formation))continue;
+  const weight=(recency.get(key(m.id))||1)*(.65+.8*matchRelevance(m,fixtureWeights,data))*(.85+.3*resultQuality(m,data,team));
+  const old=rows.get(m.formation)||{weight:0,observations:0};
+  old.weight+=weight;old.observations++;rows.set(m.formation,old);
+ }
+ const peak=Math.max(1,...[...rows.values()].map(x=>x.weight));
+ return new Map([...rows].map(([formation,row])=>[formation,{...row,preference:row.weight/peak}]));
+}
 function roleTargets(formation){
  const nums=String(formation||'4-4-2').split('-').map(Number);
  const out=['P'];
@@ -294,7 +306,7 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
   const value=slotFit+general+roleFit+rating+result+coach+synergy-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
   if(value>bestScore){best=c;bestScore=value}
  }
- return best;
+ return best?{...best,selectionScore:bestScore}:null;
 }
 function expectedRatingFor(playerId,xiIds,scores,coPlay){
  const m=scores.metrics.get(key(playerId))||{},mean=finite(m.meanRating)?Number(m.meanRating):null,context=finite(m.contextRating)?Number(m.contextRating):mean;
@@ -316,61 +328,95 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const fixtureWeights=prediction?.lineupFixtureWeights?.[teamSide]||{};
  let sample=ownPrior.filter(m=>comparableIds.has(key(m.fixture_id)));
  if(!sample.length)sample=ownPrior.slice(-4);
- const formation=modalFormation(sample.length?sample:ownPrior,fixtureWeights,data,team);
+ const preferredFormation=modalFormation(sample.length?sample:ownPrior,fixtureWeights,data,team);
+ const history=formationHistory(sample.length?sample:ownPrior,fixtureWeights,data,team);
  const teamProbability=teamSide==='home'?Number(prediction?.probabilities?.home||0):Number(prediction?.probabilities?.away||0);
  const ourPotential=teamSide==='home'?Number(prediction?.home?.potential||.5):Number(prediction?.away?.potential||.5);
  const oppPotential=teamSide==='home'?Number(prediction?.away?.potential||.5):Number(prediction?.home?.potential||.5);
  const potentialEdge=ourPotential-oppPotential;
- // Only clearly favorable matches create turnover pressure. The effect is
- // progressive and capped so the hypothetical XI remains competitive.
- const rotationOpportunity=clamp(
-  Math.max(0,(teamProbability-.55)/.22)*.65+
-  Math.max(0,(potentialEdge-.05)/.22)*.35,
-  0,1
- );
+ const rotationOpportunity=clamp(Math.max(0,(teamProbability-.55)/.22)*.65+Math.max(0,(potentialEdge-.05)/.22)*.35,0,1);
  const roster=eligibleRoster(data,fixture.kickoff_at).map(r=>({...r,person:(data.players||[]).find(p=>p.id===r.player_id)})).filter(x=>x.person);
  const available=roster.filter(x=>availabilityFor(x.player_id,{targetMatch,data,matchData,competition}).status!=='absent');
  const ratings=ratingAverages(data,ownPrior,fixtureWeights,team);
- const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
  const coPlay=coPlayMap(ownPrior,data,events,competitions.length?competitions:[competition],fixtureWeights,team);
- const targets=roleTargets(formation),positions=prematchPositions(formation),used=new Set(),players=[];
- for(let i=0;i<positions.length;i++){
-  const slot=positions[i].slot,targetRole=targets[i]||'C';
-  const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay,rotationOpportunity,positions[i],data);if(!picked)continue;
-  used.add(key(picked.player_id));
-  const habitual=(data.habitual||[]).find(h=>h.player_id===picked.player_id)?.shirt_number;
-  players.push({
-   player_id:picked.player_id,slot,role:roleFitForSlot(picked.player_id,positions[i],targetRole,data)?.roleCode||roleOf(picked.person)||targetRole,
-   name:matchPlayerLabel(picked.person),shirt_number:scores.shirts.get(key(picked.player_id))||habitual||'',
-   x:clamp(positions[i].x,10,90),y:clamp(positions[i].y,14,86)
+ const candidates=[];
+ for(const formation of formationModules){
+  const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
+  const targets=roleTargets(formation),positions=prematchPositions(formation),used=new Set(),players=[];
+  let totalChoice=0,fitSum=0,configuredCount=0,unfilled=0,uncovered=0;
+  for(let i=0;i<positions.length;i++){
+   const slotPosition=positions[i],slot=slotPosition.slot,targetRole=targets[i]||'C';
+   const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay,rotationOpportunity,slotPosition,data);
+   if(!picked){unfilled++;continue}
+   used.add(key(picked.player_id));totalChoice+=picked.selectionScore;
+   const affinity=roleFitForSlot(picked.player_id,slotPosition,targetRole,data);
+   if(affinity){
+    configuredCount++;fitSum+=affinity.fit;
+    if(affinity.fit===0)uncovered++;
+   }else fitSum+=roleOf(picked.person)===targetRole?.68:.1;
+   const habitual=(data.habitual||[]).find(h=>h.player_id===picked.player_id)?.shirt_number;
+   players.push({
+    player_id:picked.player_id,slot,role:affinity?.roleCode||roleOf(picked.person)||targetRole,
+    name:matchPlayerLabel(picked.person),shirt_number:scores.shirts.get(key(picked.player_id))||habitual||'',
+    x:clamp(slotPosition.x,10,90),y:clamp(slotPosition.y,14,86)
+   });
+  }
+  const xiIds=new Set(players.map(p=>key(p.player_id)));
+  for(const player of players)Object.assign(player,expectedRatingFor(player.player_id,xiIds,scores,coPlay));
+  const rated=players.filter(p=>finite(p.expectedRating));
+  const xiExpectedRating=rated.length?rated.reduce((sum,p)=>sum+Number(p.expectedRating),0)/rated.length:null;
+  const tacticalHistory=history.get(formation);
+  // A complete, role-compatible XI takes precedence over habitual modules when
+  // injuries/absences make the latter unsuitable. Prior coach preference is a
+  // bounded bonus, not an unconditional formation lock.
+  const score=(players.length?totalChoice/players.length:0)
+   +(tacticalHistory?.preference||0)*1.8
+   +(fitSum/11)*2.3
+   -unfilled*5-uncovered*3
+   -(formation===preferredFormation?0:.2);
+  candidates.push({
+   formation,players,xiExpectedRating,availableCount:available.length,sampleSize:sample.length,rotationOpportunity,
+   comparableUsed:Boolean(comparableIds.size&&sample.some(m=>comparableIds.has(key(m.fixture_id)))),
+   kit:kit||{},confidence:clamp((sample.length/3)*.55+(players.length/11)*.3+(rated.length/11)*.15),
+   tacticalScore:score,roleCoverage:players.length?fitSum/players.length:0,
+   configuredCount,uncovered,unfilled,formationObserved:tacticalHistory?.observations||0,
+   changedForAvailability:formation!==preferredFormation,
+   reason:formation===preferredFormation?'Modulo storico prevalente':'Modulo alternativo in base a ruoli e disponibilità'
   });
  }
- const xiIds=new Set(players.map(p=>key(p.player_id)));
- for(const player of players)Object.assign(player,expectedRatingFor(player.player_id,xiIds,scores,coPlay));
- const rated=players.filter(p=>finite(p.expectedRating));
- const xiExpectedRating=rated.length?rated.reduce((s,p)=>s+Number(p.expectedRating),0)/rated.length:null;
- return {
-  formation,players,availableCount:available.length,sampleSize:sample.length,rotationOpportunity,
-  comparableUsed:Boolean(comparableIds.size&&sample.some(m=>comparableIds.has(key(m.fixture_id)))),
-  kit:kit||{},confidence:clamp((sample.length/3)*.55+(players.length/11)*.3+(rated.length/11)*.15),
-  xiExpectedRating
- };
+ candidates.sort((a,b)=>b.tacticalScore-a.tacticalScore||b.roleCoverage-a.roleCoverage||a.formation.localeCompare(b.formation));
+ // Avoid duplicating the same XI in three nearly identical arrangements where
+ // possible, but always preserve the three best distinct modules if available.
+ const shortlist=candidates.filter(c=>c.players.length>=Math.min(11,available.length));
+ const chosen=(shortlist.length>=3?shortlist:candidates).slice(0,3);
+ const main=chosen[0];if(!main)return null;
+ return {...main,proposals:chosen.map((p,i)=>({...p,rank:i+1,reason:i===0?'Proposta principale: equilibrio tra disponibilità, precedenti e affinità':p.reason})),
+  historicalFormation:preferredFormation,modulesEvaluated:candidates.length};
+
 }
 
 const rating=v=>finite(v)?Number(v).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1}):'—';
-export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
- if(!model)return '<div class="prematch-lineup-empty">Formazione ipotetica non disponibile.</div>';
+function proposalMarkup(model,escape){
  const nodes=model.players.map((p,i)=>
   '<div class="prematch-lineup-player" style="left:'+p.x+'%;top:'+p.y+'%" title="'+escape(p.name)+' · atteso '+rating(p.expectedRating)+' · media '+rating(p.meanRating)+'">'+
    '<span class="prematch-lineup-shirt">'+shirtSvg(model.kit,'prematch-'+i,false,p.shirt_number||null)+'</span>'+
    '<strong>'+escape(p.name)+'</strong>'+
    '<span class="prematch-player-rating"><b>'+rating(p.expectedRating)+'</b><small>att</small><i>·</i><b>'+rating(p.meanRating)+'</b><small>med</small></span></div>').join('');
- return '<div class="prematch-lineup-head"><div><span class="eyebrow">FORMAZIONE IPOTETICA</span><h3>'+escape(model.formation)+'</h3></div>'+
+ return '<article class="prematch-lineup-slide" data-prematch-slide="'+model.rank+'" tabindex="0" aria-label="Proposta '+model.rank+': modulo '+escape(model.formation)+'">'+
+  '<div class="prematch-lineup-head"><div><span class="eyebrow">'+(model.rank===1?'PROPOSTA PRINCIPALE':'ALTERNATIVA '+(model.rank-1))+'</span><h3>'+escape(model.formation)+'</h3></div>'+
   '<span class="prematch-lineup-confidence">'+Math.round(model.confidence*100)+'% base dati</span></div>'+
   (finite(model.xiExpectedRating)?'<div class="prematch-xi-rating"><span>Voto XI atteso</span><strong>'+rating(model.xiExpectedRating)+'</strong></div>':'')+
   '<div class="prematch-lineup-field visual-field"><span class="field-circle"></span><span class="field-midline"></span>'+nodes+'</div>'+
-  '<p class="prematch-lineup-note">'+
-   (model.comparableUsed?'Ponderate soprattutto '+model.sampleSize+' formazion'+(model.sampleSize===1?'e':'i')+' contro avversarie di potenziale comparabile.':'Campione comparabile ridotto: integrate le formazioni recenti.')+
-   (model.rotationOpportunity>=.35?' Partita valutata relativamente abbordabile: applicato anche un correttivo turnover ('+Math.round(model.rotationOpportunity*100)+'%), premiando alternative affidabili meno utilizzate senza stravolgere l’XI.':'')+
-   ' La scelta combina ruoli e affinità configurati in Rosa, preferenze del mister nelle formazioni precedenti a parità di disponibilità, voti, risultati e rango avversario, carico recente e rendimento delle coppie realmente contemporanee in campo. Sotto ogni giocatore: voto atteso e media storica. Considerati '+model.availableCount+' disponibili.</p>';
+  '<p class="prematch-lineup-note">'+escape(model.reason||'')+'. '+(model.changedForAvailability?'Modulo diverso dal riferimento storico ('+escape(model.historicalFormation||'')+'). ':'')+
+  'Affinità ruoli, scelte precedenti e rendimento contro avversarie di rango comparabile. '+model.availableCount+' disponibili.</p></article>';
+}
+export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
+ if(!model)return '<div class="prematch-lineup-empty">Formazione ipotetica non disponibile.</div>';
+ const proposals=(model.proposals?.length?model.proposals:[model]).map((p,i)=>({...p,rank:i+1,historicalFormation:model.historicalFormation}));
+ return '<div class="prematch-lineup-carousel-head"><span>Tre proposte di formazione</span><span>Scorri per confrontarle</span></div>'+
+  '<div class="prematch-lineup-carousel" data-prematch-lineup-carousel aria-label="Proposte di formazione, scorrimento orizzontale">'+
+  proposals.map(p=>proposalMarkup(p,escape)).join('')+'</div>'+
+  '<div class="prematch-lineup-carousel-nav"><button type="button" data-prematch-slide-step="-1" aria-label="Formazione precedente" disabled>‹</button>'+
+  '<span data-prematch-slide-index>1 / '+proposals.length+'</span>'+
+  '<button type="button" data-prematch-slide-step="1" aria-label="Formazione successiva"'+(proposals.length<=1?' disabled':'')+'>›</button></div>';
 }
