@@ -30,6 +30,8 @@ jobs:
           node-version: '22'
       - name: Test player profile calculations and presentation
         run: node --check fresh/roster-role-matrix.js && node --check fresh/roster-spreadsheet.js && node --check fresh/player-role-heatmap.js && node --check fresh/player-navigation.js && node --check fresh/player-infographic-overview.js && node --check fresh/player-intelligence.js && node --check fresh/analytics-ui.js && node --check fresh/main.js && node --check fresh/staff-ui.js && node --check fresh/callup-message.js && node --check fresh/callup-import-ui.js && node --test tests/roster-role-matrix.test.mjs tests/player-role-heatmap.test.mjs tests/player-navigation.test.mjs tests/player-infographic.test.mjs tests/player-intelligence.test.mjs tests/analytics-ui.scopes.test.mjs tests/callup-message.test.mjs
+      - name: Test hypothetical lineup, affinities and ratings
+        run: node --check fresh/pre-match-lineup.js && node --test tests/prematch-lineup.test.mjs
       - name: Test advanced Caselle event details
         run: node --check fresh/event-details.js && node --test tests/event-details.test.mjs
       - name: Test event detail statistics
