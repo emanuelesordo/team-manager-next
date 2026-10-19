@@ -1242,13 +1242,18 @@ async function hydrateMatchPrediction(){
      }
     }
     lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
-    setupPrematchLineupCarousel(lineupTarget);
-    const scenario=simulatePrematchTimeline({fixture:f,prediction:result,
-     lineup:{...model,teamSide:f.home_team_id===team()?.id?'home':'away',teamId:team()?.id},
-     roster:(lineupData.roster||[]).filter(r=>!((state.matchData?.players||[]).some(p=>p.player_id===r.player_id&&p.selection_status==='absent'))),
-     players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp});
     const destination=document.querySelector('[data-story-simulation]');
-    if(destination)destination.innerHTML=renderSimulatedTimeline(scenario,E);
+    const eligibleBench=(lineupData.roster||[]).filter(r=>
+     !((state.matchData?.players||[]).some(p=>p.player_id===r.player_id&&p.selection_status==='absent')));
+    const updateSimulation=(proposal)=>{
+     if(!destination||!proposal||proposal.duplicate){if(destination)destination.textContent='Nessuna formazione distinta disponibile da simulare.';return}
+     const scenario=simulatePrematchTimeline({fixture:f,prediction:result,
+      lineup:{...proposal,teamSide:f.home_team_id===team()?.id?'home':'away',teamId:team()?.id},
+      roster:eligibleBench,players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp});
+     destination.innerHTML=renderSimulatedTimeline(scenario,E);
+    };
+    setupPrematchLineupCarousel(lineupTarget,index=>updateSimulation(model.proposals?.[index]||model));
+    updateSimulation(model.proposals?.[0]||model);
    }
   }
   if(lineupTarget&&!isStaff(staffContext())){
@@ -1284,7 +1289,7 @@ function arrangePrematchStory(root){
  if(comparison)numbers.replaceChildren(comparison);else numbers.textContent='Confronto non disponibile.';
  if(attention){focus.replaceChildren(attention);if(narrative)focus.append(narrative)}else focus.textContent='Focus non disponibile.';
 }
-function setupPrematchLineupCarousel(root){
+function setupPrematchLineupCarousel(root,onSelection=()=>{}){
  const carousel=root.querySelector('[data-prematch-lineup-carousel]');
  if(!carousel)return;
  const slides=[...carousel.querySelectorAll('[data-prematch-slide]')];
@@ -1297,8 +1302,10 @@ function setupPrematchLineupCarousel(root){
   const target=slides[Math.max(0,Math.min(slides.length-1,index))];
   target?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'start'});
  };
+ let lastSelected=-1;
  const update=()=>{
   const index=current();
+  if(lastSelected!==index){lastSelected=index;onSelection(index)}
   if(label)label.textContent=(index+1)+' / '+slides.length;
   buttons.forEach(b=>{b.disabled=Number(b.dataset.prematchSlideStep)<0?index===0:index===slides.length-1});
   const module=Math.floor(index/3)+1,variant=index%3+1;
