@@ -14,7 +14,7 @@ import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displa
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 import {renderRoleAffinityEditor,collectRoleAffinityForm,groupForPosition} from './player-role-heatmap.js?v=20261016roles1';
 import {exportRoster,importRoster} from './roster-spreadsheet.js?v=20261017bulk1';
-import {renderRosterRoles,bindRoleMatrix} from './roster-role-matrix.js?v=20261019matrix1';
+import {renderRosterRoles,bindRoleMatrix} from './roster-role-matrix.js?v=20261019autosave1';
 
 export const staffLogoEvent=handleLogoEditorEvent;
 export function openNewPlayer(){memory.area='players';memory.selected.players='';}
