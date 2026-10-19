@@ -451,7 +451,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
    -unfilled*5-uncovered*3-movementSum*.95
    -(formation===preferredFormation?0:.2);
   return {
-   formation,players,xiExpectedRating,availableCount:available.length,sampleSize:sample.length,rotationOpportunity,
+   formation,players,xiExpectedRating,availableCount:available.length,availablePlayerIds:available.map(p=>p.player_id),sampleSize:sample.length,rotationOpportunity,
    comparableUsed:Boolean(comparableIds.size&&sample.some(m=>comparableIds.has(key(m.fixture_id)))),
    kit:kit||{},confidence:clamp((sample.length/3)*.55+(players.length/11)*.3+(rated.length/11)*.15),
    tacticalScore:score,roleCoverage:players.length?fitSum/players.length:0,
