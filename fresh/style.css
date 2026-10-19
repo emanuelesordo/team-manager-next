@@ -1557,3 +1557,12 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 .prematch-lineup-carousel-nav{display:flex;align-items:center;justify-content:center;gap:13px;margin-top:10px;font-size:10px;font-weight:700;color:var(--muted)}
 .prematch-lineup-carousel-nav button{display:grid;place-items:center;width:27px;height:27px;padding:0;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--ink);font-size:21px;line-height:1}
 .prematch-lineup-carousel-nav button:disabled{opacity:.22;cursor:default}
+
+/* Nine pre-match choices: three tactical modules and three XI variants each. */
+.prematch-module-tabs,.prematch-variant-tabs{display:flex;align-items:center;gap:5px;margin:0 0 8px;max-width:100%;min-width:0}
+.prematch-module-tabs button,.prematch-variant-tabs button{min-width:0;flex:1;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--muted);padding:7px 4px;font:inherit;font-size:11px;font-weight:750;white-space:nowrap}
+.prematch-variant-tabs button{padding:5px 4px;font-size:10px}
+.prematch-module-tabs button[aria-pressed="true"],.prematch-variant-tabs button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent-ink);background:var(--accent)}
+.prematch-feasibility{display:flex;flex-direction:column;gap:1px;text-align:right;border:1px solid var(--border);padding:4px 7px;border-radius:8px;font-variant-numeric:tabular-nums}
+.prematch-feasibility strong{font-size:16px;line-height:1.1;color:var(--ink)}
+.prematch-feasibility small{font-size:9px;color:var(--muted)}
