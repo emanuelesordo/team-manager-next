@@ -342,7 +342,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   players.push({
    player_id:picked.player_id,slot,role:roleFitForSlot(picked.player_id,positions[i],targetRole,data)?.roleCode||roleOf(picked.person)||targetRole,
    name:matchPlayerLabel(picked.person),shirt_number:scores.shirts.get(key(picked.player_id))||habitual||'',
-   x:clamp(positions[i].x,10,90),y:clamp(positions[i].y,14,84)
+   x:clamp(positions[i].x,10,90),y:clamp(positions[i].y,14,86)
   });
  }
  const xiIds=new Set(players.map(p=>key(p.player_id)));
