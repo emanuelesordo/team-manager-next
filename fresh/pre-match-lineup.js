@@ -100,6 +100,36 @@ function availabilityFor(playerId,{targetMatch,data,matchData,competition}){
   competitionRules:competition?.discipline_rules||{},competitionLinks:data.competitionLinks||[]
  });
 }
+/** Recent form is a small, evidence-weighted deviation from the observed season
+ * mean. Opponent relevance comes from the prediction model, not invented ranks. */
+export function recentOpponentForm(playerId,data,matches,fixtureWeights,baseline){
+ if(!finite(baseline))return {delta:0,samples:0};
+ const matchById=new Map(matches.map(m=>[key(m.id),m]));
+ const entries=(data.seasonRatings||[]).filter(x=>key(x.player_id)===key(playerId)&&matchById.has(key(x.match_id))&&finite(x.rating)&&Number(x.rating)>=1&&Number(x.rating)<=10);
+ const grouped=new Map();
+ for(const row of entries){const id=key(row.match_id),g=grouped.get(id)||{sum:0,n:0};g.sum+=Number(row.rating);g.n++;grouped.set(id,g)}
+ const recent=[...grouped].map(([id,row])=>({m:matchById.get(id),value:row.sum/row.n})).sort((a,b)=>Date.parse(b.m.kickoff_at)-Date.parse(a.m.kickoff_at)).slice(0,5);
+ let total=0,weight=0;
+ recent.forEach(({m,value},index)=>{
+  const w=(1-index*.13)*(.4+.6*matchRelevance(m,fixtureWeights,data));
+  total+=(value-Number(baseline))*w;weight+=w;
+ });
+ return {delta:recent.length?clamp(total/Math.max(weight,1)*clamp(recent.length/4),-.65,.65):0,samples:recent.length};
+}
+/** Penalize moving away from the natural area; a secondary role can still
+ * work, but the projected output must reflect the transition. */
+export function positionalAdjustment(playerId,slotPosition,targetRole,data){
+ const fit=roleFitForSlot(playerId,slotPosition,targetRole,data);
+ if(!fit)return {ratingPenalty:0,movement:0,fit:null};
+ const natural=(data.roleAffinities||[]).find(x=>key(x.player_id)===key(playerId)&&x.is_natural);
+ const naturalCode=(data.rolePositions||[]).find(x=>key(x.id)===key(natural?.position_id))?.code;
+ const point=POSITION_SPOTS[naturalCode];
+ const distance=point?Math.hypot((slotPosition.x-point[0])/100,(slotPosition.y-point[1])/100):0;
+ const movement=clamp(distance/.8);
+ const loss=clamp(1-fit.fit,0,1);
+ return {ratingPenalty:clamp(.75*loss+.35*movement*loss,0,1.05),movement,fit};
+}
+
 function ratingAverages(data,matches,fixtureWeights,team){
  const allowed=new Set(matches.map(m=>key(m.id))),matchById=new Map(matches.map(m=>[key(m.id),m]));
  const grouped=new Map();
@@ -308,13 +338,15 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
  }
  return best?{...best,selectionScore:bestScore}:null;
 }
-function expectedRatingFor(playerId,xiIds,scores,coPlay){
+function expectedRatingFor(playerId,xiIds,scores,coPlay,positionAdjustment={ratingPenalty:0},recentForm={delta:0}){
  const m=scores.metrics.get(key(playerId))||{},mean=finite(m.meanRating)?Number(m.meanRating):null,context=finite(m.contextRating)?Number(m.contextRating):mean;
  if(mean==null&&context==null)return {meanRating:null,expectedRating:null,matches:0};
  const others=new Set([...xiIds].filter(id=>id!==key(playerId))),synergy=synergyWithUsed(playerId,others,coPlay);
  let expected=context??mean;
  if(mean!=null&&context!=null)expected=.55*mean+.45*context;
  expected+=clamp((synergy-.5)*.55,-.28,.28)+clamp((Number(m.resultQuality||.5)-.5)*.22,-.11,.11);
+ expected+=recentForm.delta||0;
+ expected-=positionAdjustment.ratingPenalty||0;
  return {meanRating:mean,expectedRating:clamp(expected,1,10),matches:m.ratingMatches||0,synergy};
 }
 export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team,competition,competitions=[],prediction,kit,events=[]}={}){
@@ -343,12 +375,14 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  for(const formation of formationModules){
   const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
   const targets=roleTargets(formation),positions=prematchPositions(formation),used=new Set(),players=[];
-  let totalChoice=0,fitSum=0,configuredCount=0,unfilled=0,uncovered=0;
+  let totalChoice=0,fitSum=0,configuredCount=0,unfilled=0,uncovered=0,movementSum=0;
   for(let i=0;i<positions.length;i++){
    const slotPosition=positions[i],slot=slotPosition.slot,targetRole=targets[i]||'C';
    const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay,rotationOpportunity,slotPosition,data);
    if(!picked){unfilled++;continue}
    used.add(key(picked.player_id));totalChoice+=picked.selectionScore;
+   const positionAdjustment=positionalAdjustment(picked.player_id,slotPosition,targetRole,data);
+   movementSum+=positionAdjustment.movement;
    const affinity=roleFitForSlot(picked.player_id,slotPosition,targetRole,data);
    if(affinity){
     configuredCount++;fitSum+=affinity.fit;
@@ -358,11 +392,16 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
    players.push({
     player_id:picked.player_id,slot,role:affinity?.roleCode||roleOf(picked.person)||targetRole,
     name:matchPlayerLabel(picked.person),shirt_number:scores.shirts.get(key(picked.player_id))||habitual||'',
-    x:clamp(slotPosition.x,10,90),y:clamp(slotPosition.y,14,86)
+    x:clamp(slotPosition.x,10,90),y:clamp(slotPosition.y,14,86),
+    targetRole,positionAdjustment
    });
   }
   const xiIds=new Set(players.map(p=>key(p.player_id)));
-  for(const player of players)Object.assign(player,expectedRatingFor(player.player_id,xiIds,scores,coPlay));
+  for(const player of players){
+   const mean=scores.metrics.get(key(player.player_id))?.meanRating;
+   const form=recentOpponentForm(player.player_id,data,ownPrior,fixtureWeights,mean);
+   Object.assign(player,expectedRatingFor(player.player_id,xiIds,scores,coPlay,player.positionAdjustment,form),{recentFormDelta:form.delta,formSamples:form.samples});
+  }
   const rated=players.filter(p=>finite(p.expectedRating));
   const xiExpectedRating=rated.length?rated.reduce((sum,p)=>sum+Number(p.expectedRating),0)/rated.length:null;
   const tacticalHistory=history.get(formation);
@@ -372,14 +411,14 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   const score=(players.length?totalChoice/players.length:0)
    +(tacticalHistory?.preference||0)*1.8
    +(fitSum/11)*2.3
-   -unfilled*5-uncovered*3
+   -unfilled*5-uncovered*3-movementSum*.95
    -(formation===preferredFormation?0:.2);
   candidates.push({
    formation,players,xiExpectedRating,availableCount:available.length,sampleSize:sample.length,rotationOpportunity,
    comparableUsed:Boolean(comparableIds.size&&sample.some(m=>comparableIds.has(key(m.fixture_id)))),
    kit:kit||{},confidence:clamp((sample.length/3)*.55+(players.length/11)*.3+(rated.length/11)*.15),
    tacticalScore:score,roleCoverage:players.length?fitSum/players.length:0,
-   configuredCount,uncovered,unfilled,formationObserved:tacticalHistory?.observations||0,
+   configuredCount,uncovered,unfilled,movementSum,formationObserved:tacticalHistory?.observations||0,
    changedForAvailability:formation!==preferredFormation,
    reason:formation===preferredFormation?'Modulo storico prevalente':'Modulo alternativo in base a ruoli e disponibilità'
   });
@@ -408,7 +447,7 @@ function proposalMarkup(model,escape){
   (finite(model.xiExpectedRating)?'<div class="prematch-xi-rating"><span>Voto XI atteso</span><strong>'+rating(model.xiExpectedRating)+'</strong></div>':'')+
   '<div class="prematch-lineup-field visual-field"><span class="field-circle"></span><span class="field-midline"></span>'+nodes+'</div>'+
   '<p class="prematch-lineup-note">'+escape(model.reason||'')+'. '+(model.changedForAvailability?'Modulo diverso dal riferimento storico ('+escape(model.historicalFormation||'')+'). ':'')+
-  'Affinità ruoli, scelte precedenti e rendimento contro avversarie di rango comparabile. '+model.availableCount+' disponibili.</p></article>';
+  'Ridotti gli spostamenti rispetto ai ruoli naturali; le valutazioni attese includono forma recente ponderata per avversaria e penalità fuori ruolo. '+model.availableCount+' disponibili.</p></article>';
 }
 export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
  if(!model)return '<div class="prematch-lineup-empty">Formazione ipotetica non disponibile.</div>';
