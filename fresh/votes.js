@@ -1,6 +1,7 @@
 import {matchPlayerLabel} from './match-player-label.js';
 import {rpc} from './api.js';
 import {votablePlayerIds,ratingSummary,parseVote} from './vote-domain.js';
+import {matchMvpAwards} from './player-mvp.js';
 import {playerMatchEvents} from './match-overview.js';
 import {shirtSvg} from './kit-editor.js';
 
@@ -76,7 +77,9 @@ export function votesPanel({match,data,people,userId,loggedIn,escape:e,competiti
  });
  const finished=match.status==='finished';
  const enteredCount=roster.filter(x=>x.entered).length;
- const intro='<div class="votes-intro"><div><span class="eyebrow">VALUTAZIONI</span><h3>Pagelle della partita</h3><p>Scorri orizzontalmente e scegli il voto · × = SV.</p></div><span class="votes-pill">'+enteredCount+' valutabili</span></div>';
+ const mvp=matchMvpAwards([match],ratings).awards;
+ const mvpText=mvp.length?'MVP '+mvp.map(x=>{const person=people.find(p=>String(p.id)===x.player_id);return (person?matchPlayerLabel(person):'Giocatore')+' ('+x.average.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+')'}).join(' · '):'MVP non assegnato: nessun voto valido';
+ const intro='<div class="votes-intro"><div><span class="eyebrow">VALUTAZIONI</span><h3>Pagelle della partita</h3><p>Scorri orizzontalmente e scegli il voto · × = SV.</p><p class="votes-mvp" aria-live="polite">'+e(mvpText)+'</p></div><span class="votes-pill">'+enteredCount+' valutabili</span></div>';
  if(!roster.length)return intro+'<div class="empty padded">Nessun giocatore nella formazione registrata.</div>';
  const banner=!finished?'<p class="vote-notice">I voti saranno disponibili al termine ufficiale della partita.</p>':
   !loggedIn?'<div class="vote-notice">Accedi per esprimere il tuo voto.<button data-action="account" type="button" class="soft-btn">Accedi</button></div>':'';
