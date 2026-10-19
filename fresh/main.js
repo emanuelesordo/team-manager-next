@@ -508,7 +508,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   const minute=absoluteMinute(e);
   const manualTimelineOrder=Number(e.payload?.timeline_order);
   if(minute===null&&Number.isFinite(manualTimelineOrder))return manualTimelineOrder;
-  if(minute!==null)return minute+recovery(e)/100;
+  // Interval changes precede all second-half events, even when both use the period boundary minute.
+  if(minute!==null)return minute+recovery(e)/100+(norm(e.payload?.period)==='halftime'?-0.001:0);
   if(goal(e)){
    const ordinal=goalOrdinal.get(e)||Number(e.payload?.sequence_order)||1;
    let prev=null,next=null,prevPeriod=null,nextPeriod=null;
@@ -632,7 +633,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const sameMoment=(a,b)=>{
   const am=absoluteMinute(a.event),bm=absoluteMinute(b.event);
   if(am===null||bm===null)return false;
-  return periodNo(a.event)===periodNo(b.event)&&am===bm&&recovery(a.event)===recovery(b.event);
+  return periodNo(a.event)===periodNo(b.event)&&am===bm&&recovery(a.event)===recovery(b.event)&&
+   (norm(a.event.payload?.period)==='halftime')===(norm(b.event.payload?.period)==='halftime');
  };
  const groupedRows=items=>{
   let output='';
