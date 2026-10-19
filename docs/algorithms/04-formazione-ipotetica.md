@@ -26,3 +26,11 @@ Nessun ID doppio; nessun non tesserato alla data; nessun indisponibile; rispetto
 - Il modulo continua a dipendere dalle formazioni effettive, dai risultati e dall'attinenza rispetto al rango. Il turnover rimane un **correttivo limitato** quando l'avversario risulta abbordabile in termini di probabilità/potenziale; non si inventano presenze o minuti non osservati.
 - Attenzione: l'analisi delle intenzioni del mister è un segnale statistico e non una previsione certa; l'affinità dichiarata dallo staff è distinta dalle performance realmente osservate.
 - DA VALIDARE con gare reali: cambi di modulo determinati dalle assenze, alternative ad alto/minor minutaggio contro diversi ranghi, e confronto dell'XI ipotetico con le scelte ufficiali.
+
+## Aggiornamento 19/10/2026 — tre soluzioni tattiche
+
+- Il generatore valuta tutti i moduli supportati considerando gli **undici ruoli da coprire**, la compatibilità individuale dei disponibili, la frequenza delle scelte precedenti del mister e i risultati ponderati per rango avversario.
+- Anche il modulo storico più frequente può essere superato se la rosa disponibile permette una copertura migliore con un altro schieramento. I moduli storicamente preferiti ricevono un bonus limitato.
+- Seleziona tre moduli distinti ordinati per punteggio tattico composito: proposta principale e due alternative. Le tre formazioni hanno titolari e voti attesi calcolati separatamente; la stessa persona non può occupare due posizioni nella medesima proposta.
+- Il carosello nell'Overview si scorre orizzontalmente su mobile e tramite frecce da desktop, conservando il formato del campo e la gerarchia visiva del progetto.
+- **Da validare:** il punteggio non è una probabilità calibrata; non stimare certezze e non utilizzare dati futuri rispetto al calcio d'inizio.
