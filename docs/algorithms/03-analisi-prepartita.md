@@ -50,3 +50,9 @@ Ripetitività tra partite simili, eccesso di frasi standard, presenza di pattern
 - Con almeno sette riserve utilizzabili: margine del risultato simulato finale pari o superiore a due reti (vantaggio o svantaggio) → puntare a sette ingressi; scarto di una rete → sei; parità → cinque. Con panchina più corta, massimo quanto effettivamente disponibile. Sono obiettivi euristici e non un obbligo regolamentare.
 - I cambi restano raggruppati in tre sessioni di gioco al massimo, con ulteriore sessione possibile all'intervallo. Se si è in svantaggio la sessione finale non viene annullata: i subentranti offensivi ricevono maggiore peso; se si difende un largo vantaggio si privilegiano rotazione e copertura.
 - I calciatori già subentrati non possono essere sostituiti in un secondo momento nella simulazione standard. Non vengono inventate presenze o giocatori.
+
+## Coerenza tattica dei cambi
+
+Ogni sostituzione usa **lo slot esatto liberato dall'uscente**, senza cambiare automaticamente il modulo o spostare i compagni. La compatibilità in ingresso è verificata con le affinità specifiche CC/MED/ATT ecc. se configurate dallo staff (soglia minima per simulazione standard: fit 0,53). Se non esiste un profilo di affinità, si accetta soltanto lo **stesso reparto** (D/C/A), evitando inversioni palesi delle fasce quando il ruolo dettagliato è noto.
+
+L'ottimizzazione combina insieme il candidato uscente e quello entrante, invece di scegliere prima chi esce e poi assegnare a forza il sostituto. Se mancano giocatori compatibili, vengono effettuati **meno dei 5–7 cambi obiettivo**; la priorità è mantenere sensato l'assetto 11 contro 11, non raggiungere un conteggio artificiale. Eventuali passaggi a un modulo differente richiederanno in futuro una transizione tattica esplicita e mostrata nella timeline.
