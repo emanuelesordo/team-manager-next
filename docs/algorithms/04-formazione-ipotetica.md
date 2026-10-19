@@ -42,3 +42,11 @@ Nessun ID doppio; nessun non tesserato alla data; nessun indisponibile; rispetto
 - **Spostamenti ridotti:** penalizzare la distanza fra ruolo naturale e slot sia nella scelta titolare sia nel confronto fra moduli. Se un adattamento è necessario, scegliere la minore perdita attesa fra i giocatori compatibili.
 - Dati mancanti: affinità non compilata e assenza di voti non diventano valori osservati fittizi; la correzione forma è nulla senza valutazioni reali.
 - DA VALIDARE: il peso delle penalità è un'euristica, non una regressione ricavata da prestazioni misurate nello stesso ruolo.
+
+## Aggiornamento — ricerca globale delle combinazioni
+
+- Sostituito l'algoritmo *greedy* (assegnazione slot per slot) con un assegnatore globale esatto a programmazione dinamica su maschere di 11 slot. Per ogni modulo considera tutte le associazioni ammissibili senza duplicati e massimizza la somma dei punteggi individuali (affinità, rendimento atteso, disponibilità, esperienza, rango avversario, forma, turnover e penalità fuori ruolo).
+- La procedura visita soltanto gli stati necessari (massimo 2^11 maschere, per ciascun giocatore), non materializza il fattoriale delle permutazioni. La formazione è calcolabile in browser mobile.
+- Dopo l'ottimo globale del punteggio individuale, brevi raffinamenti con scambi tra titolari e sostituzioni dalla panchina valutano la sinergia osservata fra coppie di compagni. **La ricerca è esatta per la parte additiva, ma non garantisce l'ottimo globale quando si considerano tutte le sinergie fra coppie.**
+- Conservati i tre moduli migliori già previsti dalla UI. Evitare la scelta anticipata di un esterno quando potrebbe produrre maggiore valore complessivo da attaccante.
+- Test regressione specifico: comparazione di Grisolia punta + Zanetti esterno vs disposizione inversa usando una matrice di punteggi esemplificativa (non un risultato reale predetto).
