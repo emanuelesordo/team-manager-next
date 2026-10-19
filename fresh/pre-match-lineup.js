@@ -1,3 +1,4 @@
+import {optimizeLineupAssignments} from './lineup-optimizer.js';
 import {formationModules} from './lineup-pitch.js';
 import {shirtSvg} from './kit-editor.js';
 import {availabilityDefault} from './availability.js';
@@ -314,11 +315,9 @@ function synergyWithUsed(playerId,used,coPlay){
  }
  return n?total/n:.5;
 }
-function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOpportunity=0,slotPosition=null,data={}){
- let best=null,bestScore=-Infinity;
- for(const c of candidates){
-  if(used.has(key(c.player_id)))continue;
-  const id=key(c.player_id),role=roleOf(c.person),specific=slotPosition?roleFitForSlot(id,slotPosition,targetRole,data):null;
+function assignmentScore(c,slotPosition,targetRole,scores,rotationOpportunity=0,data={}){
+  const slot=slotPosition.slot;
+  const id=key(c.player_id),role=roleOf(c.person),specific=roleFitForSlot(id,slotPosition,targetRole,data);
   const roleFit=specific?(-2+specific.fit*7.2):(role===targetRole?3.2:((targetRole==='C'&&['D','A'].includes(role))?.35:0));
   const slotFit=scores.slotScore.get(id+'|'+slot)||0,general=scores.score.get(id)||0,m=scores.metrics.get(id)||{};
   const rating=finite(m.contextRating)?(Number(m.contextRating)-6)*1.15:0;
@@ -326,7 +325,6 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
   const adaptation=slotPosition?positionalAdjustment(id,slotPosition,targetRole,data):{ratingPenalty:0,movement:0};
   const result=(Number(m.resultQuality||.5)-.5)*1.6;
   const coach=m.coachChoice?.opportunities>=1.5?(m.coachChoice.rate-.5)*1.8:0;
-  const synergy=(synergyWithUsed(id,used,coPlay)-.5)*2.2;
   const recentLoad=(m.recentMatchCount?m.recentStarts/Math.max(1,m.recentMatchCount):0)*.65+
    (m.recentMinutes==null ? .18 : clamp(m.recentMinutes/(Math.max(1,m.recentMatchCount||1)*80),0,1)*.35);
   const ratingTrust=finite(m.contextRating)?clamp((Number(m.contextRating)-5.8)/1.8,0,1):.45;
@@ -335,10 +333,7 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
   // become more competitive. Goalkeepers are deliberately almost unaffected.
   const turnoverPenalty=rotationOpportunity*(role==='P'?.12:1.15)*recentLoad*(.75+.25*ratingTrust);
   const rotationBonus=rotationOpportunity*(role==='P'?0:.42)*(1-recentLoad)*(.55+.45*ratingTrust);
-  const value=slotFit+general+roleFit+rating+result+coach+synergy+recent.delta*.85-adaptation.ratingPenalty*1.25-adaptation.movement*.35-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
-  if(value>bestScore){best=c;bestScore=value}
- }
- return best?{...best,selectionScore:bestScore}:null;
+  return slotFit+general+roleFit+rating+result+coach+recent.delta*.85-adaptation.ratingPenalty*1.25-adaptation.movement*.35-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
 }
 function expectedRatingFor(playerId,xiIds,scores,coPlay,positionAdjustment={ratingPenalty:0},recentForm={delta:0}){
  const m=scores.metrics.get(key(playerId))||{},mean=finite(m.meanRating)?Number(m.meanRating):null,context=finite(m.contextRating)?Number(m.contextRating):mean;
@@ -377,13 +372,21 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const candidates=[];
  for(const formation of formationModules){
   const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
-  const targets=roleTargets(formation),positions=prematchPositions(formation),used=new Set(),players=[];
-  let totalChoice=0,fitSum=0,configuredCount=0,unfilled=0,uncovered=0,movementSum=0;
-  for(let i=0;i<positions.length;i++){
-   const slotPosition=positions[i],slot=slotPosition.slot,targetRole=targets[i]||'C';
-   const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay,rotationOpportunity,slotPosition,scoringData);
-   if(!picked){unfilled++;continue}
-   used.add(key(picked.player_id));totalChoice+=picked.selectionScore;
+  const targets=roleTargets(formation),positions=prematchPositions(formation),players=[];
+  const slots=positions.map((position,i)=>({...position,targetRole:targets[i]||'C'}));
+  // Exact global search assigns ALL positions together. No early reservation of
+  // a winger who may be more valuable as striker in the final XI.
+  const solution=optimizeLineupAssignments(available,slots,
+   (candidate,slot)=>assignmentScore(candidate,slot,slot.targetRole,scores,rotationOpportunity,scoringData),
+   {pairScore:(a,b)=>{
+    const row=coPlay.get(pairKey(a.player_id,b.player_id));
+    if(!row)return 0;
+    return (row.score-.5)*.08*clamp(row.minutes/120);
+   }});
+  let totalChoice=0,fitSum=0,configuredCount=0,unfilled=positions.length-solution.assignments.length,uncovered=0,movementSum=0;
+  for(const assignment of solution.assignments){
+   const picked=assignment.player,slotPosition=assignment.slot,slot=slotPosition.slot,targetRole=slotPosition.targetRole;
+   totalChoice+=assignment.weight;
    const positionAdjustment=positionalAdjustment(picked.player_id,slotPosition,targetRole,data);
    movementSum+=positionAdjustment.movement;
    const affinity=roleFitForSlot(picked.player_id,slotPosition,targetRole,data);
@@ -421,7 +424,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
    comparableUsed:Boolean(comparableIds.size&&sample.some(m=>comparableIds.has(key(m.fixture_id)))),
    kit:kit||{},confidence:clamp((sample.length/3)*.55+(players.length/11)*.3+(rated.length/11)*.15),
    tacticalScore:score,roleCoverage:players.length?fitSum/players.length:0,
-   configuredCount,uncovered,unfilled,movementSum,formationObserved:tacticalHistory?.observations||0,
+   configuredCount,uncovered,unfilled,movementSum,combinationsEvaluated:solution.explored,formationObserved:tacticalHistory?.observations||0,
    changedForAvailability:formation!==preferredFormation,
    reason:formation===preferredFormation?'Modulo storico prevalente':'Modulo alternativo in base a ruoli e disponibilità'
   });
