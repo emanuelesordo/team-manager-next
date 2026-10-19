@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {simulatePrematchTimeline,renderSimulatedTimeline} from '../fresh/pre-match-simulation.js';
+import {drawTimelinePoster} from '../fresh/pre-match-poster.js';
 const fixture={id:'scenario-1',home_team_id:'team',away_team_id:'other'};
 const prediction={probabilities:{mostLikely:{home:2,away:1}},expectedGoals:{home:1.7,away:.9},coverage:52,
  situational:{home:{strongestFor:{label:'21–40'}},away:{strongestFor:{label:'41–60'}}}};
@@ -47,4 +48,17 @@ test('late goals are attributed only to players in the field at their minute',()
   if(event.type==='goal'&&event.side==='home')assert.ok(ids.has(event.player_id),'A scorer must have been on the field when scoring');
   if(event.type==='substitution'){ids.delete(event.off_id);ids.add(event.player_id)}
  }
+});
+
+test('shareable poster is 1080×1920 and uses exactly the selected scenario events',()=>{
+ const model=simulatePrematchTimeline({fixture,prediction,lineup,players,roster:players.map(p=>({player_id:p.id,active:true})),stats:[],competition:{periods:2,minutes_per_period:40}});
+ const painted=[];
+ const ctx={createLinearGradient:()=>({addColorStop(){}}),beginPath(){},roundRect(){},fill(){},stroke(){},moveTo(){},lineTo(){},arc(){},fillRect(){},measureText:s=>({width:String(s).length*13}),fillText:(text)=>painted.push(String(text))};
+ const canvas={getContext:()=>ctx,width:0,height:0};
+ drawTimelinePoster(canvas,model);
+ assert.equal(canvas.width,1080);
+ assert.equal(canvas.height,1920);
+ assert.ok(painted.includes(model.score));
+ assert.ok(painted.some(x=>x.includes('SIMULAZIONE GARA')));
+ assert.ok(model.events.filter(e=>e.type==='goal').every(e=>painted.some(t=>t.includes(e.label)||e.label.includes(t.replace('…','')))));
 });
