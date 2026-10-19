@@ -33,6 +33,7 @@ import {installCallupMessageImport} from './callup-import-ui.js';
 import {weightedTeamRating} from './team-rating.js?facts=20261014peruzzo1';
 import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261014peruzzo1';
 import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261013intelligence1';
+import {simulatePrematchTimeline,renderSimulatedTimeline} from './pre-match-simulation.js?v=20261019timeline1';
 import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261019meaningfulxi1';
 
 const $=s=>document.querySelector(s);
@@ -866,8 +867,14 @@ function match(){
  else {
   const prediction=preMatchPredictionContainer(f,E);
   const preMatch=['scheduled','postponed'].includes(String(f.status||''))&&!extraMatch;
-  if(preMatch)body='<div class="prematch-overview-grid"><div class="prematch-overview-left">'+prediction+'</div>'+
-   '<aside class="glass prematch-lineup-panel" data-prematch-lineup="'+E(f.id)+'"><div class="prematch-loading"><span class="loader"></span><span>Calcolo formazione ipotetica…</span></div></aside></div>';
+  if(preMatch)body='<div class="prematch-story" data-prematch-story><nav class="prematch-story-nav" aria-label="Sezioni prepartita"><button type="button" data-story-prev aria-label="Precedente">‹</button><span data-story-counter>1 / 5</span><button type="button" data-story-next aria-label="Successiva">›</button></nav>'+
+   '<div class="prematch-story-track" data-story-track>'+
+   '<section class="prematch-story-slide" data-story-slide="0" aria-label="Pronostico">'+prediction+'</section>'+
+   '<section class="prematch-story-slide" data-story-slide="1" aria-label="Numeri delle squadre"><div data-story-numbers class="glass prematch-story-content"><div class="prematch-loading">Numeri delle squadre…</div></div></section>'+
+   '<section class="prematch-story-slide" data-story-slide="2" aria-label="Focus"><div data-story-focus class="glass prematch-story-content"><div class="prematch-loading">Focus della gara…</div></div></section>'+
+   '<section class="prematch-story-slide" data-story-slide="3" aria-label="Formazione"><aside class="glass prematch-lineup-panel" data-prematch-lineup="'+E(f.id)+'"><div class="prematch-loading">Calcolo formazione ipotetica…</div></aside></section>'+
+   '<section class="prematch-story-slide" data-story-slide="4" aria-label="Simulazione"><div class="glass prematch-story-content" data-story-simulation><div class="prematch-loading">Simulazione della gara…</div></div></section></div>'+
+   '<div class="prematch-story-dots" role="group" aria-label="Sezioni">'+['Pronostico','Numeri','Focus','Formazione','Simulazione'].map((label,i)=>'<button type="button" data-story-to="'+i+'" aria-label="'+label+'" aria-current="'+(i===0?'true':'false')+'">'+label+'</button>').join('')+'</div></div>';
   else body=prediction+(extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
    '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>');
  }
@@ -1186,6 +1193,7 @@ async function hydrateMatchPrediction(){
    current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">DATI · NON QUOTE</span></div>'+
     renderPreMatchPrediction(result,E);
    current.dataset.ready=signature;
+   const story=current.closest('[data-prematch-story]');arrangePrematchStory(story);setupPrematchStory(story);
   }
   const lineupTarget=document.querySelector('[data-prematch-lineup="'+CSS.escape(f.id)+'"]');
   if(lineupTarget){
@@ -1235,14 +1243,46 @@ async function hydrateMatchPrediction(){
     }
     lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
     setupPrematchLineupCarousel(lineupTarget);
+    const scenario=simulatePrematchTimeline({fixture:f,prediction:result,
+     lineup:{...model,teamSide:f.home_team_id===team()?.id?'home':'away',teamId:team()?.id},
+     roster:(lineupData.roster||[]).filter(r=>!((state.matchData?.players||[]).some(p=>p.player_id===r.player_id&&p.selection_status==='absent'))),
+     players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp});
+    const destination=document.querySelector('[data-story-simulation]');
+    if(destination)destination.innerHTML=renderSimulatedTimeline(scenario,E);
    }
+  }
+  if(lineupTarget&&!isStaff(staffContext())){
+   const destination=document.querySelector('[data-story-simulation]');
+   if(destination)destination.innerHTML=renderSimulatedTimeline(simulatePrematchTimeline({fixture:f,prediction:result,competition:comp}),E);
   }
  }catch(error){
   const current=document.querySelector('[data-prematch-prediction]');
   if(current)current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div></div><p class="empty">Pronostico non disponibile: '+E(error.message)+'</p>';
   const lineupTarget=document.querySelector('[data-prematch-lineup]');
   if(lineupTarget)lineupTarget.innerHTML='<div class="prematch-lineup-empty">Formazione ipotetica non disponibile.</div>';
+  const destination=document.querySelector('[data-story-simulation]');
+  if(destination)destination.textContent='Simulazione non disponibile: '+error.message;
  }finally{predictionBusy=false}
+}
+function setupPrematchStory(root){
+ const track=root?.querySelector('[data-story-track]');
+ if(!track||root.dataset.storyReady==='true')return;
+ root.dataset.storyReady='true';
+ const slides=[...track.querySelectorAll('[data-story-slide]')],dots=[...root.querySelectorAll('[data-story-to]')],counter=root.querySelector('[data-story-counter]');
+ const current=()=>Math.max(0,Math.min(slides.length-1,Math.round(track.scrollLeft/Math.max(1,track.clientWidth))));
+ const go=n=>{const i=(n+slides.length)%slides.length;track.scrollTo({left:slides[i].offsetLeft-slides[0].offsetLeft,behavior:'smooth'})};
+ const update=()=>{const i=current();if(counter)counter.textContent=(i+1)+' / '+slides.length;dots.forEach((b,j)=>b.setAttribute('aria-current',String(i===j)))};
+ root.querySelector('[data-story-prev]')?.addEventListener('click',()=>go(current()-1));
+ root.querySelector('[data-story-next]')?.addEventListener('click',()=>go(current()+1));
+ dots.forEach((b,i)=>b.addEventListener('click',()=>go(i)));
+ track.addEventListener('scroll',update,{passive:true});update();
+}
+function arrangePrematchStory(root){
+ const forecast=root?.querySelector('[data-prematch-prediction]'),numbers=root?.querySelector('[data-story-numbers]'),focus=root?.querySelector('[data-story-focus]');
+ if(!forecast||!numbers||!focus)return;
+ const comparison=forecast.querySelector('.prematch-compare'),attention=forecast.querySelector('.prematch-attention'),narrative=forecast.querySelector('.prematch-narrative');
+ if(comparison)numbers.replaceChildren(comparison);else numbers.textContent='Confronto non disponibile.';
+ if(attention){focus.replaceChildren(attention);if(narrative)focus.append(narrative)}else focus.textContent='Focus non disponibile.';
 }
 function setupPrematchLineupCarousel(root){
  const carousel=root.querySelector('[data-prematch-lineup-carousel]');
