@@ -26,7 +26,7 @@ export function renderRosterRoles(ctx){
   return '<div class="staff-roles-player" data-role-player="'+esc(p.id)+'"><strong>'+esc(p.name)+'</strong><div class="staff-roles-options">'+positions.map(pos=>{
    const item=selected.get(pos.code);
    return '<button type="button" class="staff-role-chip'+(item?' selected':'')+(item?.natural?' natural':'')+'" data-role-toggle="'+esc(pos.code)+'" data-role-order="'+(item?item.index:-1)+'" data-role-id="'+esc(p.id)+'" title="'+esc(pos.label)+(item?' · '+item.affinity+'%':'')+'" aria-label="'+esc(pos.label)+' · '+esc(p.name)+'" aria-pressed="'+Boolean(item)+'">'+esc(pos.code)+'</button>';
-  }).join('')+'</div><div class="staff-roles-percentages">'+p.roles.map((r,i)=>'<label>'+esc(r.code)+' <input type="number" min="'+(i===0?100:0)+'" max="100" step="1" value="'+r.affinity+'" data-role-percent="'+esc(r.code)+'" data-role-id="'+esc(p.id)+'"'+(i===0?' readonly':'')+'>%</label>').join('')+'</div><button type="button" class="staff-soft staff-role-save" data-role-save="'+esc(p.id)+'">Salva</button></div>';
+  }).join('')+'</div><div class="staff-roles-percentages">'+p.roles.map((r,i)=>'<label>'+esc(r.code)+' <input type="number" min="'+(i===0?100:0)+'" max="100" step="1" value="'+r.affinity+'" data-role-percent="'+esc(r.code)+'" data-role-id="'+esc(p.id)+'"'+(i===0?' readonly':'')+'>%</label>').join('')+'</div><button type="button" class="staff-role-status" data-role-status="saved" aria-label="Salvataggio automatico" title="Salvataggio automatico" disabled>✓</button></div>';
  }).join('')+'</div></div></section>';
 }
 export function readRoleRow(element,positions){
@@ -41,33 +41,113 @@ export function readRoleRow(element,positions){
   return {code,affinity,natural:i===0};
  });
 }
+/** Serial writes per player and retain failed changes for explicit retry. */
+export function createRoleAutosaver(save,notify=()=>{}){
+ const jobs=new Map();
+ async function flush(id,job){
+  job.busy=true;
+  while(job.pending){
+   const roles=job.pending;
+   job.pending=null;
+   try{
+    await save(id,roles);
+    if(!job.pending)notify(id,'saved',roles);
+   }catch(error){
+    job.pending=job.pending||roles;
+    notify(id,'error',error);
+    break;
+   }
+  }
+  job.busy=false;
+ }
+ return {
+  enqueue(id,roles){
+   let job=jobs.get(id);
+   if(!job){job={busy:false,pending:null};jobs.set(id,job)}
+   job.pending=roles.map(role=>({...role}));
+   notify(id,'pending');
+   if(!job.busy)void flush(id,job);
+  },
+  retry(id){
+   const job=jobs.get(id);
+   if(job?.pending&&!job.busy){notify(id,'pending');void flush(id,job)}
+  }
+ };
+}
 export function bindRoleMatrix(ctx){
  const root=document.querySelector('.staff-roles-matrix');
  if(!root||root.dataset.bound)return;
  root.dataset.bound='1';
- root.addEventListener('click',async event=>{
-  const chip=event.target.closest('[data-role-toggle]'),save=event.target.closest('[data-role-save]');
-  if(chip){
-   const row=chip.closest('[data-role-player]');
-   const current=[...row.querySelectorAll('[data-role-toggle].selected')].sort((a,b)=>Number(a.dataset.roleOrder)-Number(b.dataset.roleOrder)).map(x=>({code:x.dataset.roleToggle,affinity:Number(row.querySelector('[data-role-percent="'+x.dataset.roleToggle+'"]')?.value??100),natural:x.classList.contains('natural')}));
-   const next=roleSelection(current,chip.dataset.roleToggle);
-   row.querySelectorAll('[data-role-toggle]').forEach(c=>{
-    const item=next.find(x=>x.code===c.dataset.roleToggle);
-    c.classList.toggle('selected',!!item);c.classList.toggle('natural',!!item?.natural);c.setAttribute('aria-pressed',String(!!item));
-    c.textContent=c.dataset.roleToggle;
-    c.dataset.roleOrder=item?String(next.indexOf(item)):'-1';
-    c.title=c.dataset.roleToggle+(item?' · '+item.affinity+'%':'');
-   });
-   row.querySelector('.staff-roles-percentages').innerHTML=next.map((r,i)=>'<label>'+esc(r.code)+' <input type="number" min="'+(i===0?100:0)+'" max="100" step="1" value="'+r.affinity+'" data-role-percent="'+esc(r.code)+'" data-role-id="'+esc(row.dataset.rolePlayer)+'"'+(i===0?' readonly':'')+'>%</label>').join('');
-   row.dataset.dirty='1';return;
-  }
-  if(save){
-   const row=save.closest('[data-role-player]'),roles=readRoleRow(row,ctx.state.data?.rolePositions||[]);
-   if(!roles.length){ctx.toast('Seleziona almeno un ruolo naturale');return}
-   save.disabled=true;
-   try{await ctx.rpcSaveRoles(row.dataset.rolePlayer,roles);row.dataset.dirty='';ctx.toast('Ruoli salvati');}
-   catch(err){ctx.toast('Errore: '+err.message)}finally{save.disabled=false}
-  }
+ const positions=ctx.state.data?.rolePositions||[];
+ const timers=new Map();
+ function rowById(id){return [...root.querySelectorAll('[data-role-player]')].find(row=>row.dataset.rolePlayer===id)}
+ function show(id,status){
+  const row=rowById(id),indicator=row?.querySelector('[data-role-status]');
+  if(!indicator)return;
+  indicator.dataset.roleStatus=status;
+  indicator.textContent=status==='pending'?'…':status==='saved'?'✓':'!';
+  indicator.title=status==='pending'?'Salvataggio in corso':status==='saved'?'Modifiche salvate':'Salvataggio fallito: tocca ! per riprovare';
+  indicator.setAttribute('aria-label',indicator.title);
+  indicator.disabled=status!=='error';
+  row.dataset.dirty=status!=='saved'?'1':'';
+ }
+ const autosaver=createRoleAutosaver(async(id,roles)=>{
+  await ctx.rpcSaveRoles(id,roles);
+  const ids=new Map(positions.map(p=>[p.code,p.id]));
+  const previous=ctx.state.data?.roleAffinities||[];
+  ctx.state.data.roleAffinities=[
+   ...previous.filter(r=>r.player_id!==id),
+   ...roles.filter(r=>ids.has(r.code)).map(r=>({player_id:id,position_id:ids.get(r.code),affinity_pct:r.affinity,is_natural:r.natural}))
+  ];
+ },(id,status)=>show(id,status));
+ function persist(row){
+  if(!row)return;
+  const id=row.dataset.rolePlayer;
+  clearTimeout(timers.get(id));timers.delete(id);
+  try{
+   const roles=readRoleRow(row,positions);
+   if(!roles.length){ctx.toast('È necessario un ruolo naturale');return}
+   autosaver.enqueue(id,roles);
+  }catch(error){show(id,'error');ctx.toast('Affinità: '+error.message)}
+ }
+ root.addEventListener('click',event=>{
+  const retry=event.target.closest('[data-role-status="error"]');
+  if(retry){autosaver.retry(retry.closest('[data-role-player]').dataset.rolePlayer);return}
+  const chip=event.target.closest('[data-role-toggle]');if(!chip)return;
+  const row=chip.closest('[data-role-player]');
+  const current=[...row.querySelectorAll('[data-role-toggle].selected')]
+   .sort((a,b)=>Number(a.dataset.roleOrder)-Number(b.dataset.roleOrder))
+   .map(x=>({code:x.dataset.roleToggle,affinity:Number(row.querySelector('[data-role-percent="'+x.dataset.roleToggle+'"]')?.value??100),natural:x.classList.contains('natural')}));
+  const next=roleSelection(current,chip.dataset.roleToggle);
+  if(!next.length){ctx.toast('È necessario un ruolo naturale');return}
+  row.querySelectorAll('[data-role-toggle]').forEach(c=>{
+   const item=next.find(x=>x.code===c.dataset.roleToggle);
+   c.classList.toggle('selected',!!item);c.classList.toggle('natural',!!item?.natural);
+   c.setAttribute('aria-pressed',String(!!item));
+   c.textContent=c.dataset.roleToggle;
+   c.dataset.roleOrder=item?String(next.indexOf(item)):'-1';
+   c.title=c.dataset.roleToggle+(item?' · '+item.affinity+'%':'');
+  });
+  row.querySelector('.staff-roles-percentages').innerHTML=next.map((r,i)=>
+   '<label>'+esc(r.code)+' <input type="number" min="'+(i===0?100:0)+'" max="100" step="1" value="'+r.affinity+
+   '" data-role-percent="'+esc(r.code)+'" data-role-id="'+esc(row.dataset.rolePlayer)+'"'+(i===0?' readonly':'')+'>%</label>'
+  ).join('');
+  persist(row);
  });
- root.addEventListener('change',e=>{const input=e.target.closest('[data-role-percent]');if(!input)return;const row=input.closest('[data-role-player]');row.dataset.dirty='1';const chip=row.querySelector('[data-role-toggle="'+input.dataset.rolePercent+'"]');if(chip)chip.title=chip.dataset.roleToggle+' · '+input.value+'%'});
+ root.addEventListener('input',event=>{
+  const input=event.target.closest('[data-role-percent]');if(!input)return;
+  const row=input.closest('[data-role-player]'),id=row.dataset.rolePlayer;
+  const chip=row.querySelector('[data-role-toggle="'+input.dataset.rolePercent+'"]');
+  if(chip)chip.title=chip.dataset.roleToggle+' · '+input.value+'%';
+  clearTimeout(timers.get(id));
+  show(id,'pending');
+  timers.set(id,setTimeout(()=>persist(row),450));
+ });
+ root.addEventListener('change',event=>{
+  const input=event.target.closest('[data-role-percent]');if(input)persist(input.closest('[data-role-player]'));
+ });
+ root.addEventListener('focusout',event=>{
+  const input=event.target.closest('[data-role-percent]');
+  if(input&&timers.has(input.dataset.roleId))persist(input.closest('[data-role-player]'));
+ });
 }
