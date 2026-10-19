@@ -47,9 +47,25 @@ export function drawTimelinePoster(canvas,scenario){
   ctx.fillStyle='#f1f7fe';
   ctx.fillText(fit(e.changes?.length>1?e.changes.length+' CAMBI · '+(e.session==='HT'?'INTERVALLO':e.session):e.label,670,rowHeight<76?19:25),315,y+Math.min(36,size*.4));
   const detail=e.changes?.length>1?e.changes.map(c=>c.label).join(' · '):e.type==='goal'?[e.assistman?'Assist: '+e.assistman:null,e.dynamics].filter(Boolean).join(' · '):e.basis;
-  if(size>=73){ctx.fillStyle='#a9c4d1';ctx.font=(size<97?17:21)+'px system-ui,sans-serif';
-   const max=780;let output=String(detail||'');while(output&&ctx.measureText(output).width>max)output=output.slice(0,-2);
-   ctx.fillText(output.length<String(detail||'').length?output+'…':output,162,y+Math.min(size-16,76))}
+  if(e.changes?.length>1){
+   // Show EVERY incoming/outgoing pair even in a crowded grouped session.
+   // Reduce type size before dropping lines; share art must match the actual
+   // timeline, including all changes in one stoppage.
+   const list=e.changes.map(c=>c.label);
+   const font=Math.max(13,Math.min(20,(size-39)/Math.max(1,list.length)-2));
+   ctx.fillStyle='#acc6c6';ctx.font=Math.round(font)+'px system-ui,sans-serif';
+   list.forEach((line,k)=>{
+    const lineY=y+42+(k+1)*font;
+    const wrapped=fit(line,e.partial?705:830,Math.round(font));
+    ctx.font=Math.round(font)+'px system-ui,sans-serif';
+    ctx.fillText(wrapped,162,lineY);
+   });
+  }else if(size>=73){
+   ctx.fillStyle='#acc6c6';ctx.font=(size<97?17:21)+'px system-ui,sans-serif';
+   const max=e.partial?705:800;let output=String(detail||'');
+   while(output&&ctx.measureText(output).width>max)output=output.slice(0,-2);
+   ctx.fillText(output.length<String(detail||'').length?output+'…':output,162,y+Math.min(size-16,76));
+  }
   if(e.partial){ctx.font='bold 24px system-ui,sans-serif';ctx.fillStyle=bold;ctx.textAlign='right';ctx.fillText(e.partial,998,y+Math.min(size-15,77));ctx.textAlign='left'}
  });
  panel(52,1792,976,80,'#0c2431');
