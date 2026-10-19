@@ -12,7 +12,8 @@ test('scenario is reproducible and non-persistent',()=>{
  assert.deepEqual(a,b);
  assert.equal(a.duration,80);
  assert.equal(a.events.filter(e=>e.type==='goal').length,3);
- assert.ok(a.events.every(e=>e.minute>=1&&e.minute<=80));
+ assert.ok(a.events.every(e=>e.minute>=0&&e.minute<=80));
+ assert.equal(a.events.filter(e=>e.type==='phase').length,3);
  assert.ok(a.events.every(e=>e.type!=='substitution'||!lineup.players.some(p=>p.player_id===e.player_id)));
  const html=renderSimulatedTimeline(a);
  assert.match(html,/SIMULAZIONE/);
