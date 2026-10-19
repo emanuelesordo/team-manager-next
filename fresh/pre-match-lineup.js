@@ -322,6 +322,8 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
   const roleFit=specific?(-2+specific.fit*7.2):(role===targetRole?3.2:((targetRole==='C'&&['D','A'].includes(role))?.35:0));
   const slotFit=scores.slotScore.get(id+'|'+slot)||0,general=scores.score.get(id)||0,m=scores.metrics.get(id)||{};
   const rating=finite(m.contextRating)?(Number(m.contextRating)-6)*1.15:0;
+  const recent=recentOpponentForm(id,data,data._recentMatches||[],data._prematchFixtureWeights||{},m.meanRating);
+  const adaptation=slotPosition?positionalAdjustment(id,slotPosition,targetRole,data):{ratingPenalty:0,movement:0};
   const result=(Number(m.resultQuality||.5)-.5)*1.6;
   const coach=m.coachChoice?.opportunities>=1.5?(m.coachChoice.rate-.5)*1.8:0;
   const synergy=(synergyWithUsed(id,used,coPlay)-.5)*2.2;
@@ -333,7 +335,7 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
   // become more competitive. Goalkeepers are deliberately almost unaffected.
   const turnoverPenalty=rotationOpportunity*(role==='P'?.12:1.15)*recentLoad*(.75+.25*ratingTrust);
   const rotationBonus=rotationOpportunity*(role==='P'?0:.42)*(1-recentLoad)*(.55+.45*ratingTrust);
-  const value=slotFit+general+roleFit+rating+result+coach+synergy-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
+  const value=slotFit+general+roleFit+rating+result+coach+synergy+recent.delta*.85-adaptation.ratingPenalty*1.25-adaptation.movement*.35-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
   if(value>bestScore){best=c;bestScore=value}
  }
  return best?{...best,selectionScore:bestScore}:null;
@@ -371,6 +373,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const available=roster.filter(x=>availabilityFor(x.player_id,{targetMatch,data,matchData,competition}).status!=='absent');
  const ratings=ratingAverages(data,ownPrior,fixtureWeights,team);
  const coPlay=coPlayMap(ownPrior,data,events,competitions.length?competitions:[competition],fixtureWeights,team);
+ const scoringData={...data,_prematchKickoff:fixture.kickoff_at,_prematchFixtureWeights:fixtureWeights,_recentMatches:ownPrior};
  const candidates=[];
  for(const formation of formationModules){
   const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
@@ -378,7 +381,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   let totalChoice=0,fitSum=0,configuredCount=0,unfilled=0,uncovered=0,movementSum=0;
   for(let i=0;i<positions.length;i++){
    const slotPosition=positions[i],slot=slotPosition.slot,targetRole=targets[i]||'C';
-   const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay,rotationOpportunity,slotPosition,data);
+   const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay,rotationOpportunity,slotPosition,scoringData);
    if(!picked){unfilled++;continue}
    used.add(key(picked.player_id));totalChoice+=picked.selectionScore;
    const positionAdjustment=positionalAdjustment(picked.player_id,slotPosition,targetRole,data);
