@@ -121,7 +121,12 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
  // Up to three in play, plus one free interval session; max seven players.
  const benchCount=Math.min(7,bench.length);
  const half=Math.round(duration/2);
- const changeCount=starter.length?Math.min(benchCount,Math.max(0,Math.round(benchCount*(.52+.24*rng())))):0;
+ // Aim to use the available substitutions when the predicted match state
+ // supports rotation (comfortable lead) or requires tactical intervention
+ // (significant deficit). Tight games preserve some flexibility.
+ const expectedMargin=goals[ownSide]-goals[ownSide==='home'?'away':'home'];
+ const desiredChanges=Math.abs(expectedMargin)>=2?7:Math.abs(expectedMargin)===1?6:5;
+ const changeCount=starter.length?Math.min(benchCount,desiredChanges):0;
  const intervalChanges=changeCount>=4&&rng()<.48?Math.min(2,changeCount-2):0;
  const remaining=changeCount-intervalChanges;
  const playSessions=remaining?Math.min(3,remaining):0;
@@ -136,7 +141,8 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
  for(const item of happenings){
   if(item.type==='changeCandidate'){
    const margin=partial[ownSide]-partial[ownSide==='home'?'away':'home'];
-   if(margin<0&&item.session==='S3')continue;
+   // A disadvantage is a reason to use a late session, not to cancel it.
+   // Distinguish tactical chasing from low-usage rotation after taking a lead.
    for(let changeIndex=0;changeIndex<item.count;changeIndex++){
    const rotation=margin>=2?1:margin===1?.7:margin===0?.4:.15;
    const outgoing=pick([...active.values()].filter(p=>p.slot!==1&&!usedOut.has(String(p.player_id))&&!usedBench.has(String(p.player_id))),
@@ -147,7 +153,9 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
     p=>{const g=group(p),fit=g===group(outgoing)?2.5:.3;
      const m=recentMinutes(p,byStats),apps=num(byStats.get(String(p.player_id))?.appearances)??0;
      const usage=apps?m/apps:0;
-     return .3+fit+rotation*2.4/(1+usage/duration)+(num(p.avg_rating)??6)*.07},rng);
+     const attackNeed=margin<0&&(g==='A'?2.2:g==='C'?.65:-.1);
+     const protectingLead=margin>=2&&g==='D'?.7:0;
+     return .3+fit+rotation*2.4/(1+usage/duration)+attackNeed+protectingLead+(num(p.avg_rating)??6)*.07},rng);
    if(!incoming)continue;
    const outId=String(outgoing.player_id),inId=String(incoming.player_id);
    active.delete(outId);active.set(inId,{...incoming,targetRole:outgoing.targetRole,slot:outgoing.slot});
