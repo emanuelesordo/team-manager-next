@@ -374,10 +374,15 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
   const targets=roleTargets(formation),positions=prematchPositions(formation),players=[];
   const slots=positions.map((position,i)=>({...position,targetRole:targets[i]||'C'}));
-  // Exact global search assigns ALL positions together. No early reservation of
-  // a winger who may be more valuable as striker in the final XI.
-  const solution=optimizeLineupAssignments(available,slots,
-   (candidate,slot)=>assignmentScore(candidate,slot,slot.targetRole,scores,rotationOpportunity,scoringData),
+  // Cache every player/slot score exactly once: the global optimizer visits
+  // thousands of states, and recalculating ratings/roles at each visit stalls UI.
+  const scoreMatrix=new Map(available.map(candidate=>[
+   key(candidate.player_id),new Map(slots.map(slot=>[
+    slot.slot,assignmentScore(candidate,slot,slot.targetRole,scores,rotationOpportunity,scoringData)
+   ]))
+  ]));
+  const cachedScore=(candidate,slot)=>scoreMatrix.get(key(candidate.player_id))?.get(slot.slot)??-Infinity;
+  const solution=optimizeLineupAssignments(available,slots,cachedScore,
    {pairScore:(a,b)=>{
     const row=coPlay.get(pairKey(a.player_id,b.player_id));
     if(!row)return 0;
