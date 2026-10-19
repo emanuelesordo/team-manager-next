@@ -17,7 +17,8 @@ test('scenario is reproducible and non-persistent',()=>{
  assert.ok(a.events.every(e=>e.type!=='substitution'||!lineup.players.some(p=>p.player_id===e.player_id)));
  const html=renderSimulatedTimeline(a);
  assert.match(html,/SIMULAZIONE/);
- assert.match(html,/Gol ipotetico/);
+ assert.match(html,/GOL/);
+ assert.match(html,/Genera immagine 9:16/);
 });
 test('no lineup means no speculative named substitutions',()=>{
  const scenario=simulatePrematchTimeline({fixture,prediction});
@@ -25,4 +26,25 @@ test('no lineup means no speculative named substitutions',()=>{
 });
 test('missing prediction remains explicitly unavailable',()=>{
  assert.equal(simulatePrematchTimeline({fixture}).events.length,0);
+});
+
+test('named goals carry a plausible assist or individual dynamic and retain the score',()=>{
+ const prediction={probabilities:{mostLikely:{home:3,away:1}},expectedGoals:{home:2.4,away:1},coverage:60};
+ const rich=simulatePrematchTimeline({fixture,prediction,lineup,players,roster:players.map(x=>({player_id:x.id,active:true})),
+  stats:players.map(x=>({player_id:x.id,appearances:6,goals:0,assists:0,minutes:250})),competition:{periods:2,minutes_per_period:40}});
+ const ourGoals=rich.events.filter(e=>e.type==='goal'&&e.side==='home');
+ assert.equal(ourGoals.length,3);
+ assert.ok(ourGoals.every(e=>e.scorer&&e.dynamics&&e.method));
+ assert.ok(ourGoals.every(e=>!e.assist_id||e.assist_id!==e.player_id));
+ assert.equal(rich.score,'3–1');
+ assert.ok(new Set(ourGoals.map(e=>e.scorer)).size>=2,'Penalty for repeated scorers should discourage mechanical hat tricks');
+});
+test('late goals are attributed only to players in the field at their minute',()=>{
+ const r=simulatePrematchTimeline({fixture,prediction,lineup,players,roster:players.map(x=>({player_id:x.id,active:true})),
+ stats:players.map(x=>({player_id:x.id,minutes:250,appearances:6})),competition:{periods:2,minutes_per_period:40}});
+ const ids=new Set(lineup.players.map(p=>p.player_id));
+ for(const event of r.events){
+  if(event.type==='goal'&&event.side==='home')assert.ok(ids.has(event.player_id),'A scorer must have been on the field when scoring');
+  if(event.type==='substitution'){ids.delete(event.off_id);ids.add(event.player_id)}
+ }
 });
