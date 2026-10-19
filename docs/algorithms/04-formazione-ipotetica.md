@@ -50,3 +50,11 @@ Nessun ID doppio; nessun non tesserato alla data; nessun indisponibile; rispetto
 - Dopo l'ottimo globale del punteggio individuale, brevi raffinamenti con scambi tra titolari e sostituzioni dalla panchina valutano la sinergia osservata fra coppie di compagni. **La ricerca è esatta per la parte additiva, ma non garantisce l'ottimo globale quando si considerano tutte le sinergie fra coppie.**
 - Conservati i tre moduli migliori già previsti dalla UI. Evitare la scelta anticipata di un esterno quando potrebbe produrre maggiore valore complessivo da attaccante.
 - Test regressione specifico: comparazione di Grisolia punta + Zanetti esterno vs disposizione inversa usando una matrice di punteggi esemplificativa (non un risultato reale predetto).
+
+## Aggiornamento 19/10/2026 — nove proposte (3 moduli × 3 XI)
+
+- Scegliere i tre moduli migliori, poi calcolare **tre assegnazioni distinte** per ciascuno. La prima è l'ottimo additivo globale; le altre vengono simulate escludendo progressivamente un singolo abbinamento giocatore/slot dalla prima proposta, limitando i tentativi per contenere il tempo in browser.
+- Presentare nove proposte navigabili per modulo e variante, oltre al precedente scorrimento orizzontale e alle frecce.
+- L'indice di **fattibilità** è una valutazione euristica 0–100 ottenuta da copertura dei ruoli, completezza dell'XI, copertura dei dati e differenza rispetto al miglior punteggio del gruppo. Non è la probabilità che il mister adotti lo schieramento, né la probabilità di vincere; i valori non devono sommare 100%.
+- Se mancano giocatori sufficienti a realizzare varianti distinte, segnalarlo esplicitamente e non inventare titolari.
+- Verificare anche le prestazioni con rosa ampia, vista la precedente regressione di blocco dell'Overview.
