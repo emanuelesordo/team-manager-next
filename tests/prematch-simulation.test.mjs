@@ -139,3 +139,26 @@ test('simulated substitutions never withdraw a previously introduced player',()=
   }
  }
 });
+
+test('substitution planning uses all seven for a comfortable lead or demanding comeback',()=>{
+ const squad=Array.from({length:26},(_,i)=>({id:'r'+i,player_id:'r'+i,first_name:'Giocatore',last_name:String(i),
+  generic_role_manual:i===0?'P':i<7?'D':i<16?'C':'A'}));
+ const xi={...lineup,players:squad.slice(0,11).map((p,i)=>({player_id:p.id,slot:i+1,name:p.first_name+' '+i,targetRole:p.generic_role_manual,expectedRating:6.4}))};
+ const options={fixture:{...fixture,id:'full-use'},lineup:xi,players:squad,roster:squad.map(p=>({player_id:p.id,active:true})),
+  stats:[],competition:{periods:2,minutes_per_period:40}};
+ for(const [home,away,expected] of [[3,0,7],[0,3,7],[2,1,6],[1,1,5]]){
+  const result=simulatePrematchTimeline({...options,prediction:{...prediction,probabilities:{mostLikely:{home,away}}}});
+  const changes=result.events.filter(e=>e.type==='substitution');
+  assert.equal(changes.length,expected,'Expected '+expected+' changes for '+home+'-'+away);
+  assert.ok(new Set(changes.map(e=>e.session).filter(s=>s!=='HT')).size<=3);
+  const entered=new Set();
+  for(const event of changes){assert.ok(!entered.has(event.off_id));entered.add(event.player_id)}
+ }
+});
+test('limited bench caps changes rather than inventing players',()=>{
+ const extra=Array.from({length:4},(_,i)=>({id:'limited'+i,player_id:'limited'+i,first_name:'Limited',last_name:String(i),generic_role_manual:'C'}));
+ const result=simulatePrematchTimeline({fixture:{...fixture,id:'bench-cap'},prediction:{...prediction,probabilities:{mostLikely:{home:3,away:0}}},
+  lineup,players:[...players,...extra],roster:extra.map(p=>({player_id:p.id,active:true})),
+  stats:[],competition:{periods:2,minutes_per_period:40}});
+ assert.equal(result.events.filter(e=>e.type==='substitution').length,4);
+});
