@@ -166,3 +166,15 @@ test('recent form weighs opponent relevance and excludes future matches',()=>{
  assert.equal(high.samples,3);
  assert.equal(recentOpponentForm('p2',recent,[],{},6).samples,0);
 });
+
+test('global lineup simulation remains responsive with a full 28-player squad',()=>{
+ const fullPlayers=Array.from({length:28},(_,i)=>({...players[i%players.length],id:'stress-'+i,first_name:'Test',last_name:'Stress'+i}));
+ const stress={...data,players:fullPlayers,roster:fullPlayers.map(p=>({player_id:p.id,active:true})),
+  priorSelections:[],seasonRatings:[],playerStats:[],roleAffinities:[]};
+ const start=performance.now();
+ const model=buildHypotheticalLineup({fixture,targetMatch,data:stress,matchData:{players:[]},
+  team,competition,competitions:[competition],prediction,kit:{},events:[]});
+ assert.equal(model.proposals.length,3);
+ assert.equal(model.players.length,11);
+ assert.ok(performance.now()-start<5000,'Global lineup must finish in under 5 seconds in CI');
+});
