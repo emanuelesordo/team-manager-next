@@ -117,3 +117,28 @@ test('saved specific affinities constrain a player to the appropriate field zone
  assert.ok(result.players.some(x=>x.player_id==='p2'));
  assert.equal(result.players.find(x=>x.player_id==='p2').role,'TD');
 });
+
+test('three proposals use distinct modules with unique available players and swipe navigation',()=>{
+ const model=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[{player_id:'p3',selection_status:'absent',unavailability_reason:'injury'}]},team,competition,competitions:[competition],prediction,kit:{},events:[]});
+ assert.equal(model.proposals.length,3);
+ assert.equal(model.formation,model.proposals[0].formation);
+ assert.equal(new Set(model.proposals.map(p=>p.formation)).size,3);
+ for(const proposal of model.proposals){
+  assert.equal(new Set(proposal.players.map(p=>p.player_id)).size,proposal.players.length);
+  assert.ok(proposal.players.every(p=>p.player_id!=='p3'));
+  assert.equal(proposal.players.length,11);
+ }
+ const html=renderHypotheticalLineup(model);
+ assert.equal((html.match(/class="prematch-lineup-slide"/g)||[]).length,3);
+ assert.match(html,/data-prematch-slide-step="1"/);
+ assert.match(html,/data-prematch-lineup-carousel/);
+ assert.ok(model.proposals[0].tacticalScore>=model.proposals[1].tacticalScore);
+ assert.ok(model.proposals[1].tacticalScore>=model.proposals[2].tacticalScore);
+});
+test('missing eligible players reduce completeness without inventing a full XI',()=>{
+ const fewer={...data,roster:data.roster.slice(0,8)};
+ const model=buildHypotheticalLineup({fixture,targetMatch,data:fewer,matchData:{players:[]},team,competition,competitions:[competition],prediction,kit:{},events:[]});
+ assert.ok(model.proposals.length===3);
+ assert.ok(model.proposals.every(p=>p.players.length<=8));
+ assert.ok(model.proposals.every(p=>p.availableCount===8));
+});
