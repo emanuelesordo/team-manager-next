@@ -99,9 +99,10 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
    return .18+(group(p)==='C'?1.2:group(p)==='A'?1.15:.5)+Math.min(2,history*2)+(num(p.expectedRating)??6)*.08;
   },rng):null;
   const method=goalMethod(scorer,assistant,rng);
+ const creditedAssist=method.needsAssist?assistant:null;
   partial[side]++;
-  events.push({minute,type:'goal',side,player_id:scorer?.player_id||null,assist_id:assistant?.player_id||null,
-   scorer:scorer?fullName(scorer):null,assistman:assistant?fullName(assistant):null,
+  events.push({minute,type:'goal',side,player_id:scorer?.player_id||null,assist_id:creditedAssist?.player_id||null,
+   scorer:scorer?fullName(scorer):null,assistman:creditedAssist?fullName(creditedAssist):null,
    method:method.type,dynamics:method.description,
    label:ourGoal?(scorer?'GOL '+fullName(scorer):'GOL squadra'):'GOL avversario',
    basis:method.description,partial:partial.home+'–'+partial.away});
