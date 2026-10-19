@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildHypotheticalLineup,renderHypotheticalLineup,roleFitForSlot,positionalAdjustment,recentOpponentForm} from '../fresh/pre-match-lineup.js';
+import {buildHypotheticalLineup,renderHypotheticalLineup,roleFitForSlot,positionalAdjustment,recentOpponentForm,tacticalSlotPosition,lineupIdentity} from '../fresh/pre-match-lineup.js';
 
 const team={id:'team-1',name:'Caselle'};
 const fixture={id:'fx-target',competition_id:'c1',status:'scheduled',kickoff_at:'2026-10-12T19:00:00Z',
@@ -185,4 +185,29 @@ test('global lineup simulation remains responsive with a full 28-player squad',(
  assert.equal(model.proposals.length,9);
  assert.equal(model.players.length,11);
  assert.ok(performance.now()-start<5000,'Global lineup must finish in under 5 seconds in CI');
+});
+
+test('4-4-2 treats either forward side as the same striker / second-striker zone',()=>{
+ const left=tacticalSlotPosition('4-4-2',{slot:10,x:32,y:16});
+ const right=tacticalSlotPosition('4-4-2',{slot:11,x:68,y:16});
+ assert.equal(left.x,50);
+ assert.equal(right.x,50);
+ const central=tacticalSlotPosition('4-4-2',{slot:7,x:38.33,y:42});
+ const other=tacticalSlotPosition('4-4-2',{slot:8,x:61.67,y:42});
+ assert.equal(central.x,50);
+ assert.equal(other.x,50);
+ assert.equal(tacticalSlotPosition('4-4-2',{slot:6,x:15,y:42}).x,15);
+});
+test('forward left/right swap is not a distinct XI variation',()=>{
+ const a={players:[{player_id:'Grisolia',slot:10},{player_id:'Zanetti',slot:11},{player_id:'Fornale',slot:7}]};
+ const b={players:[{player_id:'Zanetti',slot:10},{player_id:'Grisolia',slot:11},{player_id:'Fornale',slot:7}]};
+ assert.equal(lineupIdentity(a),lineupIdentity(b));
+});
+test('each real variant changes at least one starting player rather than only swapping roles',()=>{
+ const model=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[]},
+  team,competition,competitions:[competition],prediction,kit:{},events:[]});
+ for(let i=0;i<3;i++){
+  const variants=model.proposals.slice(i*3,i*3+3).filter(p=>!p.duplicate);
+  assert.equal(new Set(variants.map(lineupIdentity)).size,variants.length);
+ }
 });
