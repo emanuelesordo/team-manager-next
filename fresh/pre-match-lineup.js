@@ -490,8 +490,8 @@ function proposalMarkup(model,escape){
    '<strong>'+escape(p.name)+'</strong>'+
    '<span class="prematch-player-rating"><b>'+rating(p.expectedRating)+'</b><small>att</small><i>·</i><b>'+rating(p.meanRating)+'</b><small>med</small></span></div>').join('');
  return '<article class="prematch-lineup-slide" data-prematch-slide="'+model.rank+'" tabindex="0" aria-label="Proposta '+model.rank+': modulo '+escape(model.formation)+'">'+
-  '<div class="prematch-lineup-head"><div><span class="eyebrow">'+(model.rank===1?'PROPOSTA PRINCIPALE':'ALTERNATIVA '+(model.rank-1))+'</span><h3>'+escape(model.formation)+'</h3></div>'+
-  '<span class="prematch-lineup-confidence">'+Math.round(model.confidence*100)+'% base dati</span></div>'+
+  '<div class="prematch-lineup-head"><div><span class="eyebrow">MODULO '+model.moduleIndex+' / 3 · VARIANTE '+model.variantIndex+' / 3</span><h3>'+escape(model.formation)+'</h3></div>'+
+  '<div class="prematch-feasibility" title="Indice euristico di fattibilità della formazione, non probabilità di vincere"><strong>'+Math.round(model.feasibility??0)+'%</strong><small>fattibilità</small></div></div>'+
   (finite(model.xiExpectedRating)?'<div class="prematch-xi-rating"><span>Voto XI atteso</span><strong>'+rating(model.xiExpectedRating)+'</strong></div>':'')+
   '<div class="prematch-lineup-field visual-field"><span class="field-circle"></span><span class="field-midline"></span>'+nodes+'</div>'+
   '<p class="prematch-lineup-note">'+escape(model.reason||'')+'. '+(model.changedForAvailability?'Modulo diverso dal riferimento storico ('+escape(model.historicalFormation||'')+'). ':'')+
@@ -499,8 +499,11 @@ function proposalMarkup(model,escape){
 }
 export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
  if(!model)return '<div class="prematch-lineup-empty">Formazione ipotetica non disponibile.</div>';
- const proposals=(model.proposals?.length?model.proposals:[model]).map((p,i)=>({...p,rank:i+1,historicalFormation:model.historicalFormation}));
- return '<div class="prematch-lineup-carousel-head"><span>Tre proposte di formazione</span><span>Scorri per confrontarle</span></div>'+
+ const proposals=(model.proposals?.length?model.proposals:[model]).map((p,i)=>({...p,rank:i+1,moduleIndex:p.moduleIndex||1,variantIndex:p.variantIndex||1,historicalFormation:model.historicalFormation}));
+ const modules=[...new Set(proposals.map(p=>p.formation))];
+ return '<div class="prematch-lineup-carousel-head"><span>3 moduli × 3 formazioni</span><span>Indice di fattibilità · non probabilità</span></div>'+ 
+  '<div class="prematch-module-tabs" role="group" aria-label="Scegli modulo">'+modules.map((formation,i)=>'<button type="button" data-prematch-module="'+(i+1)+'" aria-pressed="'+(i===0)+'">'+escape(formation)+'</button>').join('')+'</div>'+ 
+  '<div class="prematch-variant-tabs" role="group" aria-label="Scegli variante">'+[1,2,3].map(i=>'<button type="button" data-prematch-variant="'+i+'" aria-pressed="'+(i===1)+'">'+i+'</button>').join('')+'</div>'+
   '<div class="prematch-lineup-carousel" data-prematch-lineup-carousel aria-label="Proposte di formazione, scorrimento orizzontale">'+
   proposals.map(p=>proposalMarkup(p,escape)).join('')+'</div>'+
   '<div class="prematch-lineup-carousel-nav"><button type="button" data-prematch-slide-step="-1" aria-label="Formazione precedente" disabled>‹</button>'+
