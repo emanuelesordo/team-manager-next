@@ -33,7 +33,7 @@ import {installCallupMessageImport} from './callup-import-ui.js';
 import {weightedTeamRating} from './team-rating.js?facts=20261014peruzzo1';
 import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261014peruzzo1';
 import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261013intelligence1';
-import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261019formfit1';
+import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261019globalxi1';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
