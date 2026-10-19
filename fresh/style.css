@@ -1607,3 +1607,17 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 .prematch-simulation-event:has(.prematch-simulation-partial) .prematch-simulation-type{color:var(--accent)}
 .prematch-simulation-event{min-height:62px}
 .prematch-simulation-event>div small{line-height:1.45}
+
+/* Mobile match scoreboard: keep the live result prominent even when editable. */
+@media (max-width:650px){
+ .match-detail-head .match-big-score > b,
+ .match-detail-head .match-big-score > b > .match-score-edit-toggle,
+ .match-detail-head .match-big-score > b > .match-score-edit-toggle > .match-score-trigger{
+  font-size:clamp(36px,10vw,48px);
+  line-height:1.08;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+ }
+ .match-detail-head .match-big-score > b > .match-score-edit-toggle{display:inline-flex;align-items:center;justify-content:center;min-width:0}
+}
