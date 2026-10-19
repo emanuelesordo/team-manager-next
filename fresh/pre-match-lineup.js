@@ -369,10 +369,10 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const ratings=ratingAverages(data,ownPrior,fixtureWeights,team);
  const coPlay=coPlayMap(ownPrior,data,events,competitions.length?competitions:[competition],fixtureWeights,team);
  const scoringData={...data,_prematchKickoff:fixture.kickoff_at,_prematchFixtureWeights:fixtureWeights,_recentMatches:ownPrior};
- const candidates=[];
+ const candidates=[],contexts=new Map();
  for(const formation of formationModules){
   const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
-  const targets=roleTargets(formation),positions=prematchPositions(formation),players=[];
+  const targets=roleTargets(formation),positions=prematchPositions(formation);
   const slots=positions.map((position,i)=>({...position,targetRole:targets[i]||'C'}));
   // Cache every player/slot score exactly once: the global optimizer visits
   // thousands of states, and recalculating ratings/roles at each visit stalls UI.
@@ -388,6 +388,8 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
     if(!row)return 0;
     return (row.score-.5)*.08*clamp(row.minutes/120);
    }});
+  const makeProposal=solution=>{
+  const players=[];
   let totalChoice=0,fitSum=0,configuredCount=0,unfilled=positions.length-solution.assignments.length,uncovered=0,movementSum=0;
   for(const assignment of solution.assignments){
    const picked=assignment.player,slotPosition=assignment.slot,slot=slotPosition.slot,targetRole=slotPosition.targetRole;
@@ -424,7 +426,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
    +(fitSum/11)*2.3
    -unfilled*5-uncovered*3-movementSum*.95
    -(formation===preferredFormation?0:.2);
-  candidates.push({
+  return {
    formation,players,xiExpectedRating,availableCount:available.length,sampleSize:sample.length,rotationOpportunity,
    comparableUsed:Boolean(comparableIds.size&&sample.some(m=>comparableIds.has(key(m.fixture_id)))),
    kit:kit||{},confidence:clamp((sample.length/3)*.55+(players.length/11)*.3+(rated.length/11)*.15),
@@ -432,16 +434,51 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
    configuredCount,uncovered,unfilled,movementSum,combinationsEvaluated:solution.explored,formationObserved:tacticalHistory?.observations||0,
    changedForAvailability:formation!==preferredFormation,
    reason:formation===preferredFormation?'Modulo storico prevalente':'Modulo alternativo in base a ruoli e disponibilità'
-  });
+  };
+  };
+  candidates.push(makeProposal(solution));
+  contexts.set(formation,{slots,cachedScore,makeProposal});
  }
  candidates.sort((a,b)=>b.tacticalScore-a.tacticalScore||b.roleCoverage-a.roleCoverage||a.formation.localeCompare(b.formation));
- // Avoid duplicating the same XI in three nearly identical arrangements where
- // possible, but always preserve the three best distinct modules if available.
  const shortlist=candidates.filter(c=>c.players.length>=Math.min(11,available.length));
  const chosen=(shortlist.length>=3?shortlist:candidates).slice(0,3);
- const main=chosen[0];if(!main)return null;
- return {...main,proposals:chosen.map((p,i)=>({...p,rank:i+1,reason:i===0?'Proposta principale: equilibrio tra disponibilità, precedenti e affinità':p.reason})),
-  historicalFormation:preferredFormation,modulesEvaluated:candidates.length};
+ const all=[];
+ for(const [moduleIndex,base] of chosen.entries()){
+  const context=contexts.get(base.formation),variants=[base];
+  const fingerprints=new Set([base.players.map(p=>p.slot+':'+p.player_id).join('|')]);
+  // Choose alternatives by forbidding a different starting assignment in each
+  // run. This forces real XI/position variation, not a cosmetic duplication.
+  // Bounded to four attempts per module to protect mobile performance.
+  const anchors=[6,9,3,1,7,4,10,2,8,5,0];
+  for(const anchor of anchors.slice(0,4)){
+   if(variants.length===3)break;
+   const original=base.players[anchor%base.players.length];if(!original)continue;
+   const altered=(candidate,slot)=>key(candidate.player_id)===key(original.player_id)&&slot.slot===original.slot
+    ?-Infinity:context.cachedScore(candidate,slot);
+   const alternative=optimizeLineupAssignments(available,context.slots,altered);
+   const variant=context.makeProposal(alternative);
+   // Recalculate the forbidden edge-free objective on the original score scale.
+   variant.tacticalScore+=(variant.players.length?0:0);
+   const fingerprint=variant.players.map(p=>p.slot+':'+p.player_id).join('|');
+   if(fingerprints.has(fingerprint))continue;
+   fingerprints.add(fingerprint);variants.push(variant);
+  }
+  while(variants.length<3)variants.push({...base,reason:'Alternative insufficientemente distinte con le disponibilità attuali',duplicate:true});
+  variants.forEach((proposal,i)=>all.push({...proposal,moduleIndex:moduleIndex+1,variantIndex:i+1,rank:all.length+1,
+   reason:i===0?'Migliore combinazione per il modulo':i===1?'Seconda combinazione per il modulo':'Terza combinazione per il modulo'}));
+ }
+ const best=all[0];if(!best)return null;
+ // A transparent bounded feasibility index (not likelihood of victory or
+ // probability of the coach picking this XI). Scores are comparable only among
+ // the nine proposals computed for the same match.
+ const bestScore=Math.max(...all.map(p=>p.tacticalScore));
+ const feasibility=p=>{
+  const relative=clamp(.5+(p.tacticalScore-bestScore)/Math.max(8,Math.abs(bestScore))*.65);
+  const coverage=clamp(p.roleCoverage),complete=clamp(p.players.length/11);
+  return Math.round(clamp(.42*coverage+.27*complete+.11*p.confidence+.20*relative-p.uncovered*.025,0,1)*100);
+ };
+ const proposals=all.map(p=>({...p,feasibility:feasibility(p)}));
+ return {...proposals[0],proposals,historicalFormation:preferredFormation,modulesEvaluated:candidates.length};
 
 }
 
