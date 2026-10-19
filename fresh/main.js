@@ -33,7 +33,8 @@ import {installCallupMessageImport} from './callup-import-ui.js';
 import {weightedTeamRating} from './team-rating.js?facts=20261014peruzzo1';
 import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261014peruzzo1';
 import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261013intelligence1';
-import {simulatePrematchTimeline,renderSimulatedTimeline} from './pre-match-simulation.js?v=20261019timeline2';
+import {simulatePrematchTimeline,renderSimulatedTimeline} from './pre-match-simulation.js?v=20261019goals1';
+import {saveTimelinePoster} from './pre-match-poster.js?v=20261019share1';
 import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261019story1';
 
 const $=s=>document.querySelector(s);
@@ -1251,6 +1252,13 @@ async function hydrateMatchPrediction(){
       lineup:{...proposal,teamSide:f.home_team_id===team()?.id?'home':'away',teamId:team()?.id},
       roster:eligibleBench,players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp});
      destination.innerHTML=renderSimulatedTimeline(scenario,E);
+     const exportButton=destination.querySelector('[data-simulation-export]');
+     exportButton?.addEventListener('click',async()=>{
+      exportButton.disabled=true;exportButton.textContent='Generazione…';
+      try{await saveTimelinePoster(scenario,'simulazione-'+String(f.id).slice(0,16)+'.png')}
+      catch(error){toast('Immagine non disponibile: '+error.message)}
+      finally{exportButton.disabled=false;exportButton.textContent='Genera immagine 9:16'}
+     });
     };
     setupPrematchLineupCarousel(lineupTarget,index=>updateSimulation(model.proposals?.[index]||model));
     updateSimulation(model.proposals?.[0]||model);
