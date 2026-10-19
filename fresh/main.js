@@ -1280,6 +1280,20 @@ function setupPrematchStory(root){
  root.querySelector('[data-story-prev]')?.addEventListener('click',()=>go(current()-1));
  root.querySelector('[data-story-next]')?.addEventListener('click',()=>go(current()+1));
  dots.forEach((b,i)=>b.addEventListener('click',()=>go(i)));
+ // A swipe beyond either end returns to the opposite end, matching arrow loop.
+ let startX=null,startIndex=0;
+ track.addEventListener('touchstart',event=>{
+  if(event.target.closest('[data-prematch-lineup-carousel]')){startX=null;return}
+  startX=event.changedTouches?.[0]?.clientX??null;startIndex=current();
+ },{passive:true});
+ track.addEventListener('touchend',event=>{
+  if(startX===null)return;
+  const delta=(event.changedTouches?.[0]?.clientX??startX)-startX;
+  startX=null;
+  if(Math.abs(delta)<35)return;
+  if(startIndex===0&&delta>0)go(slides.length-1);
+  else if(startIndex===slides.length-1&&delta<0)go(0);
+ },{passive:true});
  track.addEventListener('scroll',update,{passive:true});update();
 }
 function arrangePrematchStory(root){
