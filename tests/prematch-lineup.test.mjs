@@ -118,27 +118,35 @@ test('saved specific affinities constrain a player to the appropriate field zone
  assert.equal(result.players.find(x=>x.player_id==='p2').role,'TD');
 });
 
-test('three proposals use distinct modules with unique available players and swipe navigation',()=>{
+test('nine proposals in a 3x3 matrix have valid feasible lineups and navigation',()=>{
  const model=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[{player_id:'p3',selection_status:'absent',unavailability_reason:'injury'}]},team,competition,competitions:[competition],prediction,kit:{},events:[]});
- assert.equal(model.proposals.length,3);
+ assert.equal(model.proposals.length,9);
  assert.equal(model.formation,model.proposals[0].formation);
  assert.equal(new Set(model.proposals.map(p=>p.formation)).size,3);
+ for(let group=0;group<3;group++){
+  assert.equal(new Set(model.proposals.slice(group*3,group*3+3).map(p=>p.formation)).size,1);
+  assert.deepEqual(model.proposals.slice(group*3,group*3+3).map(p=>p.variantIndex),[1,2,3]);
+ }
  for(const proposal of model.proposals){
   assert.equal(new Set(proposal.players.map(p=>p.player_id)).size,proposal.players.length);
   assert.ok(proposal.players.every(p=>p.player_id!=='p3'));
   assert.equal(proposal.players.length,11);
+  assert.ok(Number.isInteger(proposal.feasibility)&&proposal.feasibility>=0&&proposal.feasibility<=100);
  }
  const html=renderHypotheticalLineup(model);
- assert.equal((html.match(/class="prematch-lineup-slide"/g)||[]).length,3);
+ assert.equal((html.match(/class="prematch-lineup-slide"/g)||[]).length,9);
+ assert.match(html,/data-prematch-module="3"/);
+ assert.match(html,/data-prematch-variant="3"/);
+ assert.match(html,/fattibilità/);
  assert.match(html,/data-prematch-slide-step="1"/);
  assert.match(html,/data-prematch-lineup-carousel/);
- assert.ok(model.proposals[0].tacticalScore>=model.proposals[1].tacticalScore);
- assert.ok(model.proposals[1].tacticalScore>=model.proposals[2].tacticalScore);
+ assert.ok(model.proposals[0].tacticalScore>=model.proposals[3].tacticalScore);
+ assert.ok(model.proposals[3].tacticalScore>=model.proposals[6].tacticalScore);
 });
 test('missing eligible players reduce completeness without inventing a full XI',()=>{
  const fewer={...data,roster:data.roster.slice(0,8)};
  const model=buildHypotheticalLineup({fixture,targetMatch,data:fewer,matchData:{players:[]},team,competition,competitions:[competition],prediction,kit:{},events:[]});
- assert.ok(model.proposals.length===3);
+ assert.equal(model.proposals.length,9);
  assert.ok(model.proposals.every(p=>p.players.length<=8));
  assert.ok(model.proposals.every(p=>p.availableCount===8));
 });
@@ -174,7 +182,7 @@ test('global lineup simulation remains responsive with a full 28-player squad',(
  const start=performance.now();
  const model=buildHypotheticalLineup({fixture,targetMatch,data:stress,matchData:{players:[]},
   team,competition,competitions:[competition],prediction,kit:{},events:[]});
- assert.equal(model.proposals.length,3);
+ assert.equal(model.proposals.length,9);
  assert.equal(model.players.length,11);
  assert.ok(performance.now()-start<5000,'Global lineup must finish in under 5 seconds in CI');
 });
