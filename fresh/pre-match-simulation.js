@@ -139,7 +139,7 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
    if(margin<0&&item.session==='S3')continue;
    for(let changeIndex=0;changeIndex<item.count;changeIndex++){
    const rotation=margin>=2?1:margin===1?.7:margin===0?.4:.15;
-   const outgoing=pick([...active.values()].filter(p=>p.slot!==1&&!usedOut.has(String(p.player_id))),
+   const outgoing=pick([...active.values()].filter(p=>p.slot!==1&&!usedOut.has(String(p.player_id))&&!usedBench.has(String(p.player_id))),
     p=>.5+(recentMinutes(p,byStats)/Math.max(1,num(byStats.get(String(p.player_id))?.appearances)??1)/duration)*.6+
     (8-(num(p.expectedRating)??6))*.16,rng);
    if(!outgoing)continue;
