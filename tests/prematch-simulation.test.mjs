@@ -142,7 +142,7 @@ test('simulated substitutions never withdraw a previously introduced player',()=
 
 test('substitution planning uses all seven for a comfortable lead or demanding comeback',()=>{
  const squad=Array.from({length:26},(_,i)=>({id:'r'+i,player_id:'r'+i,first_name:'Giocatore',last_name:String(i),
-  generic_role_manual:i===0?'P':i<14?'D':i<25?'C':'A'}));
+  generic_role_manual:i===0?'P':i<5?'D':i<9?'C':i<11?'A':i<16?'D':i<21?'C':'A'}));
  const xi={...lineup,players:squad.slice(0,11).map((p,i)=>({player_id:p.id,slot:i+1,name:p.first_name+' '+i,targetRole:p.generic_role_manual,expectedRating:6.4}))};
  const options={fixture:{...fixture,id:'full-use'},lineup:xi,players:squad,roster:squad.map(p=>({player_id:p.id,active:true})),
   stats:[],competition:{periods:2,minutes_per_period:40}};
