@@ -34,3 +34,11 @@ Nessun ID doppio; nessun non tesserato alla data; nessun indisponibile; rispetto
 - Seleziona tre moduli distinti ordinati per punteggio tattico composito: proposta principale e due alternative. Le tre formazioni hanno titolari e voti attesi calcolati separatamente; la stessa persona non può occupare due posizioni nella medesima proposta.
 - Il carosello nell'Overview si scorre orizzontalmente su mobile e tramite frecce da desktop, conservando il formato del campo e la gerarchia visiva del progetto.
 - **Da validare:** il punteggio non è una probabilità calibrata; non stimare certezze e non utilizzare dati futuri rispetto al calcio d'inizio.
+
+## Aggiornamento 19/10/2026 — rendimento relativo al ruolo e forma ponderata
+
+- **Fuori ruolo:** il coefficiente di affinità impostato dallo staff e la distanza dal ruolo naturale generano una penalità di rendimento atteso limitata a 1,05 punti. Non modificare mai la **media storica osservata**: la penalità agisce solo sulla previsione.
+- **Forma recente:** usare fino a cinque partite precedenti al kickoff con voti disponibili; pesare la deviazione dalla media personale per recenza e pertinenza del rango avversario nel pronostico, con shrinkage quando il campione è scarso (correzione massima ±0,65).
+- **Spostamenti ridotti:** penalizzare la distanza fra ruolo naturale e slot sia nella scelta titolare sia nel confronto fra moduli. Se un adattamento è necessario, scegliere la minore perdita attesa fra i giocatori compatibili.
+- Dati mancanti: affinità non compilata e assenza di voti non diventano valori osservati fittizi; la correzione forma è nulla senza valutazioni reali.
+- DA VALIDARE: il peso delle penalità è un'euristica, non una regressione ricavata da prestazioni misurate nello stesso ruolo.
