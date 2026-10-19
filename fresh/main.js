@@ -1610,7 +1610,7 @@ document.addEventListener('change',async e=>{
 });
 document.addEventListener('change',e=>{
  if(staffLogoEvent(e))return;
- if(e.target.matches('[data-roster-file]')){const file=e.target.files?.[0];e.target.value='';if(file)await handleRosterSpreadsheetFile(file,staffContext());return}
+ if(e.target.matches('[data-roster-file]')){const file=e.target.files?.[0];e.target.value='';if(file)void handleRosterSpreadsheetFile(file,staffContext());return}
  if(e.target.matches('[data-staff-select]')){staffSelect(e.target,staffContext());return}
  if(e.target.matches('[data-season]'))switchSeason(e.target.value);
  if(e.target.matches('[data-mine]')){state.mineOnly=e.target.checked;render()}
