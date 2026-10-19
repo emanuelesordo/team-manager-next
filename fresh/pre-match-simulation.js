@@ -8,13 +8,81 @@ const fullName=p=>[p?.first_name,p?.last_name].filter(Boolean).join(' ')||p?.nam
 const group=p=>String(p?.targetRole||p?.generic_role_manual||p?.role||'').toUpperCase();
 const offensive=p=>group(p)==='A'?3.2:group(p)==='C'?1.25:group(p)==='D'?.42:.025;
 const recentMinutes=(p,byStats)=>{const s=byStats.get(String(p.player_id))||{};return num(s.minutes)??0};
-const matchGoalMinutes=(profile,duration,rng)=>{
- const text=profile?.strongestFor?.label||'';
- const m=String(text).match(/(\d+)\D+(\d+)/);
- if(!m)return Math.round(7+(duration-13)*rng());
- const low=clamp(Number(m[1]),1,duration-1),high=clamp(Number(m[2]),low,duration-1);
- return Math.round(low+(high-low)*rng());
-};
+const goalTypes=new Set(['goal','penalty_goal','penalty_scored','own_goal']);
+export function historicalGoalPatterns({fixture,fixtures=[],matches=[],events=[],duration=80}={}){
+ const kick=Date.parse(fixture?.kickoff_at||'');
+ const fixtureById=new Map(fixtures.map(f=>[String(f.id),f]));
+ const fixtureOfMatch=new Map(matches.map(m=>[String(m.id),String(m.fixture_id)]));
+ const timelines=new Map();
+ for(const e of events){
+  if(!goalTypes.has(String(e.event_type))||e.validation_status==='rejected')continue;
+  const fixtureId=String(e.fixture_id||fixtureOfMatch.get(String(e.match_id))||'');
+  const past=fixtureById.get(fixtureId);
+  if(!past||past.status!=='finished'||!(Date.parse(past.kickoff_at)<kick))continue;
+  const side=String(e.team_side||'').toLowerCase();
+  if(!['home','away'].includes(side))continue;
+  const raw=num(e.minute);
+  if(raw===null)continue;
+  let minute=raw;
+  const period=String(e.period||e.payload?.period||e.payload?.period_key||'').toLowerCase();
+  if((period==='2'||period==='2t'||period==='second'||period==='second_half')&&raw<=duration/2)minute+=duration/2;
+  if(minute<1||minute>duration+10)continue;
+  const array=timelines.get(fixtureId)||[];
+  array.push({minute:clamp(minute,1,duration),side});timelines.set(fixtureId,array);
+ }
+ const buckets={home:{for:[],against:[]},away:{for:[],against:[]}},gaps=[];
+ const ownId=String(fixture?.home_team_id||'');
+ const awayId=String(fixture?.away_team_id||'');
+ for(const [id,timeline] of timelines){
+  const past=fixtureById.get(id);
+  timeline.sort((a,b)=>a.minute-b.minute);
+  for(let i=1;i<timeline.length;i++)gaps.push(timeline[i].minute-timeline[i-1].minute);
+  for(const g of timeline){
+   for(const side of ['home','away']){
+    const clubId=side==='home'?ownId:awayId;
+    const participating=String(past.home_team_id)===clubId||String(past.away_team_id)===clubId;
+    if(!participating)continue;
+    const historicalSide=String(past.home_team_id)===clubId?'home':'away';
+    buckets[side][g.side===historicalSide?'for':'against'].push(g.minute);
+   }
+  }
+ }
+ // The observed <4-minute frequency is shrunk toward a conservative prior.
+ const fast=gaps.filter(g=>g<4).length;
+ return {buckets,gaps,fastRate:(fast+1)/(gaps.length+20),sample:timelines.size};
+}
+export function chooseGoalMinutes(goals,{fixture,fixtures=[],matches=[],events=[],duration=80,rng=random('fallback'),patterns=null}={}){
+ const records=patterns||historicalGoalPatterns({fixture,fixtures,matches,events,duration});
+ const own=(side,kind)=>records.buckets?.[side]?.[kind]||[];
+ const sampleMinute=(side,placed)=>{
+  const other=side==='home'?'away':'home';
+  const peaks=[...own(side,'for'),...own(other,'against')];
+  const winnerSide=placed.at(-1)?.side;
+  const options=[];
+  for(let minute=2;minute<duration;minute++){
+   let weight=1;
+   // Smoothed Gaussian kernel; sparse observations cannot monopolize a minute.
+   for(const m of peaks)weight+=Math.exp(-Math.pow((minute-m)/7,2)/2)*1.4/Math.sqrt(Math.max(1,peaks.length));
+   for(const past of placed){
+    const gap=Math.abs(minute-past.minute);
+    const empirical=clamp(records.fastRate??.05,.01,.22);
+    if(gap===0)weight*=.002;
+    else if(gap===1)weight*=empirical*.22;
+    else if(gap===2)weight*=empirical*.9;
+    else if(gap===3)weight*=empirical*2.1;
+    else if(gap<6)weight*=.6;
+    if(past.side===side&&gap<5)weight*=.55;
+   }
+   options.push({minute,weight});
+  }
+  return pick(options,x=>x.weight,rng)?.minute??Math.round(duration/2);
+ };
+ const schedule=[];
+ for(const side of ['home','away'])for(let i=0;i<(goals[side]||0);i++){
+  schedule.push({type:'goal',side,minute:sampleMinute(side,schedule),seq:i});
+ }
+ return schedule.sort((a,b)=>a.minute-b.minute||a.side.localeCompare(b.side));
+}
 function goalMethod(scorer,assistant,rng){
  const role=group(scorer),assistRole=group(assistant);
  const methods=[
@@ -29,7 +97,7 @@ function goalMethod(scorer,assistant,rng){
  ];
  return pick(methods,m=>m.weight,rng);
 }
-export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],players=[],stats=[],competition}={}){
+export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],players=[],stats=[],competition,fixtures=[],matches=[],historicalEvents=[]}={}){
  if(!fixture||!prediction)return {events:[],label:'Dati insufficienti'};
  const duration=clamp(Number(competition?.minutes_per_period||40)*Number(competition?.periods||2),40,120);
  const seed=fixture.id+'|'+(lineup?.formation||'')+'|'+(lineup?.players||[]).map(x=>x.player_id).join('|');
@@ -45,21 +113,31 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
   p.selection_status!=='absent'&&p.availability_status!=='absent')
   .map(p=>({...byPlayer.get(String(p.player_id)),...p}));
  const usedBench=new Set(),usedOut=new Set(),scored=new Map();
- const schedule=[];
- for(const side of ['home','away'])for(let i=0;i<goals[side];i++)
-  schedule.push({type:'goal',side,minute:matchGoalMinutes(prediction.situational?.[side],duration,rng),seq:i});
- schedule.sort((a,b)=>a.minute-b.minute||a.side.localeCompare(b.side));
+ const patterns=historicalGoalPatterns({fixture,fixtures,matches,events:historicalEvents,duration});
+ const schedule=chooseGoalMinutes(goals,{fixture,fixtures,matches,events:historicalEvents,duration,rng,patterns});
  const events=[{minute:0,type:'phase',label:'Calcio d’inizio',basis:'Assetto iniziale della formazione'},
   {minute:Math.round(duration/2),type:'phase',label:'Intervallo',basis:'Valutazione del parziale'}];
- const changes=starter.length&&bench.length?[.64,.77,.88].slice(0,Math.min(3,bench.length)).map((ratio,i)=>({
-  minute:Math.max(1,Math.min(duration-1,Math.round(duration*ratio))),type:'changeCandidate',seq:i
- })):[];
+ // Each session is one stoppage, with one or more substitutions.
+ // Up to three in play, plus one free interval session; max seven players.
+ const benchCount=Math.min(7,bench.length);
+ const half=Math.round(duration/2);
+ const changeCount=starter.length?Math.min(benchCount,Math.max(0,Math.round(benchCount*(.52+.24*rng())))):0;
+ const intervalChanges=changeCount>=4&&rng()<.48?Math.min(2,changeCount-2):0;
+ const remaining=changeCount-intervalChanges;
+ const playSessions=remaining?Math.min(3,remaining):0;
+ const sizes=Array(playSessions).fill(1);
+ for(let i=playSessions;i<remaining;i++)sizes[Math.floor(rng()*playSessions)]++;
+ const changes=[];
+ if(intervalChanges)changes.push({minute:half,type:'changeCandidate',count:intervalChanges,session:'HT'});
+ const windows=[.63,.76,.88];
+ for(let i=0;i<playSessions;i++)changes.push({minute:clamp(Math.round(duration*windows[i]+(rng()-.5)*6),half+1,duration-1),type:'changeCandidate',count:sizes[i],session:'S'+(i+1)});
  const happenings=[...schedule,...changes].sort((a,b)=>a.minute-b.minute||(a.type==='goal'?-1:1));
  const partial={home:0,away:0};
  for(const item of happenings){
   if(item.type==='changeCandidate'){
    const margin=partial[ownSide]-partial[ownSide==='home'?'away':'home'];
-   if(margin<0&&item.seq===2)continue;
+   if(margin<0&&item.session==='S3')continue;
+   for(let changeIndex=0;changeIndex<item.count;changeIndex++){
    const rotation=margin>=2?1:margin===1?.7:margin===0?.4:.15;
    const outgoing=pick([...active.values()].filter(p=>p.slot!==1&&!usedOut.has(String(p.player_id))),
     p=>.5+(recentMinutes(p,byStats)/Math.max(1,num(byStats.get(String(p.player_id))?.appearances)??1)/duration)*.6+
@@ -75,8 +153,9 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
    active.delete(outId);active.set(inId,{...incoming,targetRole:outgoing.targetRole,slot:outgoing.slot});
    usedOut.add(outId);usedBench.add(inId);
    events.push({minute:item.minute,type:'substitution',side:ownSide,player_id:incoming.player_id,off_id:outgoing.player_id,
-    label:fullName(incoming)+' per '+fullName(outgoing),
+    session:item.session,label:fullName(incoming)+' per '+fullName(outgoing),
     basis:margin>=2?'Gestione vantaggio e minutaggio':margin<0?'Ricerca della rimonta':'Ricambio e gestione delle energie'});
+   }
    continue;
   }
   const {side,minute}=item,ourGoal=side===ownSide;
