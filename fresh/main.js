@@ -1221,17 +1221,20 @@ async function hydrateMatchPrediction(){
       const agg=grouped.get(id)||{sum:0,n:0};agg.sum+=value;agg.n++;grouped.set(id,agg);
      }
      for(const [id,agg] of grouped)if(agg.n&&!ratingFallback.has(id))ratingFallback.set(id,agg.sum/agg.n);
-     for(const player of model.players){
+     for(const proposal of (model.proposals?.length?model.proposals:[model]))for(const player of proposal.players){
       const fallback=ratingFallback.get(String(player.player_id));
       const missingMean=player.meanRating===null||player.meanRating===undefined||player.meanRating===''||!Number.isFinite(Number(player.meanRating));
       const missingExpected=player.expectedRating===null||player.expectedRating===undefined||player.expectedRating===''||!Number.isFinite(Number(player.expectedRating));
       if(missingMean&&Number.isFinite(fallback))player.meanRating=fallback;
       if(missingExpected&&Number.isFinite(fallback))player.expectedRating=fallback;
      }
-     const rated=model.players.filter(p=>Number.isFinite(Number(p.expectedRating)));
-     model.xiExpectedRating=rated.length?rated.reduce((sum,p)=>sum+Number(p.expectedRating),0)/rated.length:null;
+     for(const proposal of (model.proposals?.length?model.proposals:[model])){
+      const rated=proposal.players.filter(p=>Number.isFinite(Number(p.expectedRating)));
+      proposal.xiExpectedRating=rated.length?rated.reduce((sum,p)=>sum+Number(p.expectedRating),0)/rated.length:null;
+     }
     }
     lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
+    setupPrematchLineupCarousel(lineupTarget);
    }
   }
  }catch(error){
@@ -1240,6 +1243,25 @@ async function hydrateMatchPrediction(){
   const lineupTarget=document.querySelector('[data-prematch-lineup]');
   if(lineupTarget)lineupTarget.innerHTML='<div class="prematch-lineup-empty">Formazione ipotetica non disponibile.</div>';
  }finally{predictionBusy=false}
+}
+function setupPrematchLineupCarousel(root){
+ const carousel=root.querySelector('[data-prematch-lineup-carousel]');
+ if(!carousel)return;
+ const slides=[...carousel.querySelectorAll('[data-prematch-slide]')];
+ const buttons=[...root.querySelectorAll('[data-prematch-slide-step]')];
+ const label=root.querySelector('[data-prematch-slide-index]');
+ const update=()=>{
+  const index=Math.max(0,Math.min(slides.length-1,Math.round(carousel.scrollLeft/Math.max(1,carousel.clientWidth))));
+  if(label)label.textContent=(index+1)+' / '+slides.length;
+  buttons.forEach(b=>{b.disabled=Number(b.dataset.prematchSlideStep)<0?index===0:index===slides.length-1});
+ };
+ buttons.forEach(button=>button.addEventListener('click',()=>{
+  const step=Number(button.dataset.prematchSlideStep)||0;
+  const index=Math.max(0,Math.min(slides.length-1,Math.round(carousel.scrollLeft/Math.max(1,carousel.clientWidth))+step));
+  slides[index]?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'start'});
+ }));
+ carousel.addEventListener('scroll',update,{passive:true});
+ update();
 }
 function pastPredictionSummaryMarkup(model,fixture,source='live'){
  if(!model||!fixture)return '<div class="empty">Pronostico pre-partita non disponibile.</div>';
