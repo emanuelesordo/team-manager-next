@@ -1621,3 +1621,8 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
  }
  .match-detail-head .match-big-score > b > .match-score-edit-toggle{display:inline-flex;align-items:center;justify-content:center;min-width:0}
 }
+
+/* Player profile: factual, personalized seasonal synopsis. */
+.player-season-summary{margin:0;padding:14px 18px 18px;max-width:920px;font-size:clamp(13px,1.25vw,15px);line-height:1.65;color:var(--ink)}
+.votes-mvp{margin:7px 0 0;font-weight:750;color:var(--accent);font-size:13px;line-height:1.45}
+@media(max-width:650px){.player-season-summary{padding:12px 13px 16px;font-size:13px}.votes-mvp{font-size:12px}}
