@@ -253,9 +253,9 @@ function rankingRows(title,players,key,unit=''){
   '<div class="stats-rank-track"><i style="width:'+Math.round(Math.abs(Number(p[key]))/max*100)+'%"></i></div>'+
   '<b>'+E(key==='plus_minus_on'?plus(Number(p[key])):Number(p[key]).toLocaleString('it-IT',{maximumFractionDigits:2}))+E(unit)+'</b></div>').join('')+'</div></section>';
 }
-function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[]){
+function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],mvpCounts=new Map()){
  const impactMap=new Map(impacts.map(x=>[String(x.player_id),x])),ratingMap=new Map(ratings.map(x=>[String(x.player_id),x]));
- const merged=comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}));
+ const merged=(comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}))).map(p=>({...p,mvp_awards:mvpCounts.get(String(p.player_id))||0}));
  const groups=[
  ['usage','Impiego',[['Presenze','appearances'],['Minuti','minutes'],['Subentri','subentries'],
   ['Minuti per presenza','minutes_per_appearance'],['Titolarità %','start_rate']]],
@@ -269,7 +269,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[]){
  ['impact','Impatto',[['GF in campo','goals_for_on'],['GS in campo','goals_against_on'],
   ['Plus/minus','plus_minus_on'],['GF / 80′','gf_on_per_80'],
   ['GS / 80′','ga_on_per_80'],['+/- / 80′','plus_minus_per_80']]],
- ['rating','Rating',[['Media voto','avg_rating'],['Gare valutate','rated_matches'],
+ ['rating','Rating',[['MVP','mvp_awards'],['Media voto','avg_rating'],['Gare valutate','rated_matches'],
   ['Voti ricevuti','votes_received'],['Gare ≥7','high_rating_games'],
   ['Gare <6','low_rating_games'],['Voto massimo','highest_rating'],
   ['Voto minimo','lowest_rating'],['Variabilità','rating_volatility']]],
@@ -329,12 +329,12 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
   (scopes||'<p class="stats-hint">Dati verificati non ancora disponibili.</p>')+
   '<p class="stats-hint">“Pressione” e “sofferenza” indicano solamente condizioni del punteggio; non misurano azioni o possesso.</p></div>';
 }
-export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[],goalImpacts=[],ratingInsights=[],playerComparisons=[],matchFlows=[],flowPhases=[],flowEventContexts=[],opponentFlows=[],teamComparisons=[]){
+export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[],goalImpacts=[],ratingInsights=[],playerComparisons=[],matchFlows=[],flowPhases=[],flowEventContexts=[],opponentFlows=[],teamComparisons=[],mvpCounts=new Map()){
  const tabs='<nav class="stats-scope-tabs" role="tablist" aria-label="Ambito delle statistiche">'+
  [['team','Squadra · Caselle'],['players','Giocatori · Caselle'],['all','Complessivo · Torneo']].map(([id,label],i)=>
  '<button type="button" role="tab" data-stats-scope="'+id+'" aria-selected="'+(i===0)+'">'+E(label)+'</button>').join('')+'</nav>';
  return tabs+'<div class="stats-scope-panel" data-stats-panel="team">'+
  renderTeamAnalytics(fixtures,matches,events,team,competitions,playerStats,opponents,matchPlayers,venues,predictionSnapshots,history)+
- '</div><div class="stats-scope-panel" data-stats-panel="players" hidden>'+playersNumbers(playerStats,goalImpacts,ratingInsights,playerComparisons,events)+
+ '</div><div class="stats-scope-panel" data-stats-panel="players" hidden>'+playersNumbers(playerStats,goalImpacts,ratingInsights,playerComparisons,events,mvpCounts)+
  '</div><div class="stats-scope-panel" data-stats-panel="all" hidden>'+tournamentNumbers(fixtures,competitions,matchFlows,flowPhases,flowEventContexts,opponentFlows,teamComparisons)+'</div>';
 }
