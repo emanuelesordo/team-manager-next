@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {roleRows,roleSelection,renderRosterRoles} from '../fresh/roster-role-matrix.js';
+import {roleRows,roleSelection,renderRosterRoles,createRoleAutosaver} from '../fresh/roster-role-matrix.js';
 
 const state={season:'season1',data:{
  players:[{id:'p2',first_name:'Giulio',last_name:'Grisolia'},{id:'p1',first_name:'Andrea',last_name:'Boschetto'}],
@@ -23,4 +23,36 @@ test('selection defaults natural 100 then 80 and 70',()=>{
  roles=roleSelection(roles,'CC');
  assert.deepEqual(roles.map(r=>r.affinity),[100,80,70]);
  assert.deepEqual(roles.map(r=>r.natural),[true,false,false]);
+});
+
+test('matrix no longer renders manual Save buttons; existing values are kept',()=>{
+ const html=renderRosterRoles({state});
+ assert.doesNotMatch(html,/data-role-save/);
+ assert.match(html,/data-role-status="saved"/);
+ assert.match(html,/data-role-order="0"/);
+});
+test('serial autosave retains final rapid click without stale overwrite',async()=>{
+ const pending=[],sent=[],states=[];
+ const writer=createRoleAutosaver((id,roles)=>new Promise(resolve=>{sent.push(roles.map(x=>x.code).join(','));pending.push(resolve)}),(id,status)=>states.push(status));
+ writer.enqueue('p1',[{code:'TD',affinity:100,natural:true}]);
+ writer.enqueue('p1',[{code:'TD',affinity:100,natural:true},{code:'DC',affinity:80,natural:false}]);
+ assert.deepEqual(sent,['TD']);
+ pending.shift()();
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(sent,['TD','TD,DC']);
+ pending.shift()();
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(states.at(-1),'saved');
+});
+test('failed save retains last input and offers retry',async()=>{
+ let calls=0;
+ const states=[];
+ const writer=createRoleAutosaver(async()=>{calls++;if(calls===1)throw Error('offline')},(id,status)=>states.push(status));
+ writer.enqueue('p1',[{code:'DC',affinity:100,natural:true}]);
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(states.at(-1),'error');
+ writer.retry('p1');
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(states.at(-1),'saved');
+ assert.equal(calls,2);
 });
