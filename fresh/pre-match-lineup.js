@@ -517,6 +517,9 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
 
 const rating=v=>finite(v)?Number(v).toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1}):'—';
 function proposalMarkup(model,escape){
+ if(model.duplicate)return '<article class="prematch-lineup-slide" data-prematch-slide="'+model.rank+'" tabindex="0">'+
+  '<div class="prematch-lineup-head"><div><span class="eyebrow">MODULO '+model.moduleIndex+' / 3 · VARIANTE '+model.variantIndex+' / 3</span><h3>'+escape(model.formation)+'</h3></div></div>'+
+  '<div class="prematch-lineup-empty">Non ci sono altri undici realmente differenti con i giocatori disponibili. Lo scambio di lato tra due punte o tra centrocampisti centrali non costituisce una nuova variante.</div></article>';
  const nodes=model.players.map((p,i)=>
   '<div class="prematch-lineup-player" style="left:'+p.x+'%;top:'+p.y+'%" title="'+escape(p.name)+' · atteso '+rating(p.expectedRating)+' · media '+rating(p.meanRating)+'">'+
    '<span class="prematch-lineup-shirt">'+shirtSvg(model.kit,'prematch-'+i,false,p.shirt_number||null)+'</span>'+
