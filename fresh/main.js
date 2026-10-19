@@ -1249,17 +1249,25 @@ function setupPrematchLineupCarousel(root){
  if(!carousel)return;
  const slides=[...carousel.querySelectorAll('[data-prematch-slide]')];
  const buttons=[...root.querySelectorAll('[data-prematch-slide-step]')];
+ const modules=[...root.querySelectorAll('[data-prematch-module]')];
+ const variants=[...root.querySelectorAll('[data-prematch-variant]')];
  const label=root.querySelector('[data-prematch-slide-index]');
+ const current=()=>Math.max(0,Math.min(slides.length-1,Math.round(carousel.scrollLeft/Math.max(1,carousel.clientWidth))));
+ const go=index=>{
+  const target=slides[Math.max(0,Math.min(slides.length-1,index))];
+  target?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'start'});
+ };
  const update=()=>{
-  const index=Math.max(0,Math.min(slides.length-1,Math.round(carousel.scrollLeft/Math.max(1,carousel.clientWidth))));
+  const index=current();
   if(label)label.textContent=(index+1)+' / '+slides.length;
   buttons.forEach(b=>{b.disabled=Number(b.dataset.prematchSlideStep)<0?index===0:index===slides.length-1});
+  const module=Math.floor(index/3)+1,variant=index%3+1;
+  modules.forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.prematchModule)===module)));
+  variants.forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.prematchVariant)===variant)));
  };
- buttons.forEach(button=>button.addEventListener('click',()=>{
-  const step=Number(button.dataset.prematchSlideStep)||0;
-  const index=Math.max(0,Math.min(slides.length-1,Math.round(carousel.scrollLeft/Math.max(1,carousel.clientWidth))+step));
-  slides[index]?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'start'});
- }));
+ buttons.forEach(b=>b.addEventListener('click',()=>go(current()+(Number(b.dataset.prematchSlideStep)||0))));
+ modules.forEach(b=>b.addEventListener('click',()=>go((Number(b.dataset.prematchModule)-1)*3)));
+ variants.forEach(b=>b.addEventListener('click',()=>go(Math.floor(current()/3)*3+Number(b.dataset.prematchVariant)-1)));
  carousel.addEventListener('scroll',update,{passive:true});
  update();
 }
