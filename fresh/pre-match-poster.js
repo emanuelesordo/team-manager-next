@@ -26,13 +26,13 @@ export function drawTimelinePoster(canvas,scenario){
  const top=467,bottom=1730,space=bottom-top;
  const rowHeight=Math.min(130,Math.max(48,space/Math.max(1,events.length)));
  const size=rowHeight;
- ctx.strokeStyle='#35677b';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(94,top+size/2);ctx.lineTo(94,top+size*(events.length-.5));ctx.stroke();
+ ctx.strokeStyle='#35677b';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(148,top+size/2);ctx.lineTo(148,top+size*(events.length-.5));ctx.stroke();
  events.forEach((e,i)=>{
   const y=top+i*size,bold=e.type==='goal'?'#46e7a9':e.type==='substitution'?'#69beff':'#a8bbd0';
-  panel(142,y+3,886,Math.max(44,size-8),e.type==='goal'?'#183f36':'#102d36');
-  ctx.fillStyle=bold;ctx.beginPath();ctx.arc(94,y+size/2,21,0,Math.PI*2);ctx.fill();
+  panel(194,y+3,834,Math.max(44,size-8),e.type==='goal'?'#183f36':'#102d36');
+  ctx.fillStyle=bold;ctx.beginPath();ctx.arc(148,y+size/2,21,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#133929';ctx.fillStyle='#133929';ctx.lineWidth=2.6;
-  ctx.save();ctx.translate(94,y+size/2);ctx.scale(.92,.92);
+  ctx.save();ctx.translate(148,y+size/2);ctx.scale(.92,.92);
   ctx.beginPath();
   if(e.type==='goal'){
    ctx.arc(0,0,12,0,Math.PI*2);ctx.stroke();
@@ -42,10 +42,15 @@ export function drawTimelinePoster(canvas,scenario){
    ctx.moveTo(13,6);ctx.lineTo(-12,6);ctx.moveTo(-7,1);ctx.lineTo(-12,6);ctx.lineTo(-7,11);ctx.stroke();
   }else{ctx.arc(0,0,12,0,Math.PI*2);ctx.moveTo(0,-7);ctx.lineTo(0,0);ctx.lineTo(5,4);ctx.stroke()}
   ctx.restore();
-  ctx.font='bold 23px system-ui,sans-serif';ctx.textAlign='left';ctx.fillText(e.minute+'′',46,y+size/2-21);
-  ctx.font='bold 25px system-ui,sans-serif';ctx.fillText(e.type==='goal'?'GOL':e.type==='substitution'?'CAMBIO':'FASE',161,y+Math.min(36,size*.4));
+  // Reserve a separate, vertically centered minute column, outside the icon and card.
+  // Draw this AFTER the icon so it cannot be hidden by any event graphics.
+  ctx.textAlign='center';ctx.fillStyle='#effbf7';
+  ctx.font='bold 29px Manrope,system-ui,sans-serif';
+  ctx.fillText(e.minute+'′',75,y+size/2+10);
+  ctx.textAlign='left';
+  ctx.font='bold 25px system-ui,sans-serif';ctx.fillText(e.type==='goal'?'GOL':e.type==='substitution'?'CAMBIO':'FASE',214,y+Math.min(36,size*.4));
   ctx.fillStyle='#f1f7fe';
-  ctx.fillText(fit(e.changes?.length>1?e.changes.length+' CAMBI · '+(e.session==='HT'?'INTERVALLO':e.session):e.label,670,rowHeight<76?19:25),315,y+Math.min(36,size*.4));
+  ctx.fillText(fit(e.changes?.length>1?e.changes.length+' CAMBI · '+(e.session==='HT'?'INTERVALLO':e.session):e.label,670,rowHeight<76?19:25),371,y+Math.min(36,size*.4));
   const detail=e.changes?.length>1?e.changes.map(c=>c.label).join(' · '):e.type==='goal'?[e.assistman?'Assist: '+e.assistman:null,e.dynamics].filter(Boolean).join(' · '):e.basis;
   if(e.changes?.length>1){
    // Show EVERY incoming/outgoing pair even in a crowded grouped session.
@@ -56,15 +61,15 @@ export function drawTimelinePoster(canvas,scenario){
    ctx.fillStyle='#acc6c6';ctx.font=Math.round(font)+'px system-ui,sans-serif';
    list.forEach((line,k)=>{
     const lineY=y+42+(k+1)*font;
-    const wrapped=fit(line,e.partial?705:830,Math.round(font));
+    const wrapped=fit(line,e.partial?640:780,Math.round(font));
     ctx.font=Math.round(font)+'px system-ui,sans-serif';
-    ctx.fillText(wrapped,162,lineY);
+    ctx.fillText(wrapped,214,lineY);
    });
   }else if(size>=73){
    ctx.fillStyle='#acc6c6';ctx.font=(size<97?17:21)+'px system-ui,sans-serif';
-   const max=e.partial?705:800;let output=String(detail||'');
+   const max=e.partial?660:760;let output=String(detail||'');
    while(output&&ctx.measureText(output).width>max)output=output.slice(0,-2);
-   ctx.fillText(output.length<String(detail||'').length?output+'…':output,162,y+Math.min(size-16,76));
+   ctx.fillText(output.length<String(detail||'').length?output+'…':output,214,y+Math.min(size-16,76));
   }
   if(e.partial){ctx.font='bold 24px system-ui,sans-serif';ctx.fillStyle=bold;ctx.textAlign='right';ctx.fillText(e.partial,998,y+Math.min(size-15,77));ctx.textAlign='left'}
  });
