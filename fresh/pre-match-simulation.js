@@ -193,16 +193,35 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
   homeName:prediction.home?.name||fixture.home_team||'Casa',awayName:prediction.away?.name||fixture.away_team||'Trasferta',
   label:'Timeline elaborata con dati pre-gara'};
 }
+export function timelinePresentationEvents(events=[]){
+ const out=[],grouped=new Map();
+ for(const event of events){
+  if(event.type!=='substitution'||!event.session){out.push({...event});continue}
+  const id=event.session+'|'+event.minute;
+  if(!grouped.has(id)){const entry={...event,changes:[event]};grouped.set(id,entry);out.push(entry)}
+  else grouped.get(id).changes.push(event);
+ }
+ return out;
+}
+export function simulationEventIcon(type){
+ const paths=type==='goal'
+  ?'<circle cx="12" cy="12" r="9"/><path d="m12 6 4 3-1.5 5h-5L8 9zm-4 3-4 1m5 4-2 5m7-5 3 5m-1-10 4 1"/>'
+  :type==='substitution'
+   ?'<path d="M4 7h16m-5-4 5 4-5 4M20 17H4m5-4-5 4 5 4"/>'
+   :'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/>';
+ return '<svg class="prematch-event-icon" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths+'</svg>';
+}
 export function renderSimulatedTimeline(model,escape=x=>String(x??'')){
  if(!model)return '<p>Simulazione non disponibile.</p>';
  const head='<div class="prematch-simulation-head"><div><strong>'+escape(model.homeName)+' '+escape(model.score)+' '+escape(model.awayName)+'</strong>'+
   '<small>'+escape(model.label)+'</small></div><button type="button" data-simulation-export class="prematch-export-btn">Genera immagine 9:16</button></div>';
- const rows=model.events.map(e=>'<li class="prematch-simulation-event">'+
+ const rows=timelinePresentationEvents(model.events).map(e=>'<li class="prematch-simulation-event">'+
   '<span class="prematch-simulation-minute">'+e.minute+'′</span>'+
-  '<span class="prematch-simulation-type">'+(e.type==='goal'?'GOL':e.type==='substitution'?'CAMBIO':'FASE')+'</span>'+
-  '<div><strong>'+escape(e.label)+'</strong>'+
+  '<span class="prematch-simulation-type">'+simulationEventIcon(e.type)+'<small>'+(e.type==='goal'?'GOL':e.type==='substitution'?'CAMBIO':'FASE')+'</small></span>'+
+  '<div><strong>'+escape(e.changes?.length>1?e.changes.length+' cambi · '+(e.session==='HT'?'Intervallo':'Sessione '+e.session):e.label)+'</strong>'+
+  (e.changes?.length>1?e.changes.map(c=>'<small>'+escape(c.label)+'</small>').join(''):'')+
   (e.type==='goal'&&e.assistman?'<small>Assist: '+escape(e.assistman)+'</small>':'')+
-  (e.type==='goal'?'<small>'+escape(e.method)+' · '+escape(e.dynamics)+'</small>':'<small>'+escape(e.basis)+'</small>')+
+  (e.type==='goal'?'<small>'+escape(e.method)+' · '+escape(e.dynamics)+'</small>':e.changes?.length>1?'':'<small>'+escape(e.basis)+'</small>')+
   '</div>'+(e.partial?'<b class="prematch-simulation-partial">'+escape(e.partial)+'</b>':'')+'</li>').join('');
  return head+'<ol class="prematch-simulation-events">'+rows+'</ol>'+
   '<p class="prematch-simulation-disclaimer">SIMULAZIONE · Timeline generata da dati disponibili prima della gara. Non modifica i tabellini.</p>';
