@@ -1243,8 +1243,8 @@ async function hydrateMatchPrediction(){
     }
     lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
     const destination=document.querySelector('[data-story-simulation]');
-    const eligibleBench=(lineupData.roster||[]).filter(r=>
-     !((state.matchData?.players||[]).some(p=>p.player_id===r.player_id&&p.selection_status==='absent')));
+    const eligibleIds=new Set(model?.availablePlayerIds||[]);
+    const eligibleBench=(lineupData.roster||[]).filter(r=>eligibleIds.has(r.player_id));
     const updateSimulation=(proposal)=>{
      if(!destination||!proposal||proposal.duplicate){if(destination)destination.textContent='Nessuna formazione distinta disponibile da simulare.';return}
      const scenario=simulatePrematchTimeline({fixture:f,prediction:result,
