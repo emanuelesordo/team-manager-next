@@ -18,3 +18,11 @@ In precedenti verifiche dell'interfaccia i voti attesi/medi non risultavano visi
 
 ## Test richiesti
 Nessun ID doppio; nessun non tesserato alla data; nessun indisponibile; rispetto del ruolo portiere; null rating mostrato come trattino; nessun evento/post-match futuro; comportamento con meno di 11 disponibili.
+
+## Aggiornamento 19/10/2026 — affinità e intenzioni del mister
+
+- Per ogni slot, il modello consulta `app_player_role_affinities` e `football_positions` caricati in `loadSeason`. Considera la percentuale esplicita e la distanza della zona del ruolo rispetto allo slot: **0% non è un ruolo adatto**, mentre un profilo non ancora compilato usa la categoria generica come prior di ripiego. Il 100% naturale ha più influenza.
+- La propensione dell'allenatore alla titolarità è stimata dalle distinte storiche quando contengono almeno dieci voci e distinguono i presenti dagli assenti. Si pesano il rango comparabile dell'avversario e il risultato, senza dedurre che un giocatore fosse disponibile in gare prive di registrazioni.
+- Il modulo continua a dipendere dalle formazioni effettive, dai risultati e dall'attinenza rispetto al rango. Il turnover rimane un **correttivo limitato** quando l'avversario risulta abbordabile in termini di probabilità/potenziale; non si inventano presenze o minuti non osservati.
+- Attenzione: l'analisi delle intenzioni del mister è un segnale statistico e non una previsione certa; l'affinità dichiarata dallo staff è distinta dalle performance realmente osservate.
+- DA VALIDARE con gare reali: cambi di modulo determinati dalle assenze, alternative ad alto/minor minutaggio contro diversi ranghi, e confronto dell'XI ipotetico con le scelte ufficiali.
