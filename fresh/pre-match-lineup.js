@@ -3,6 +3,7 @@ import {shirtSvg} from './kit-editor.js';
 import {availabilityDefault} from './availability.js';
 import {matchPlayerLabel} from './match-player-label.js';
 import {matchPlayerIntervals} from './player-participation.js?v=20261014periodpriority1';
+import {POSITION_SPOTS} from './player-role-heatmap.js';
 
 const key=v=>String(v??'');
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
@@ -161,6 +162,65 @@ function coPlayMap(matches,data,events,competitions,fixtureWeights,team){
  }
  return score;
 }
+
+// Fit uses the staff-configured specific position profile, not just P/D/C/A.
+// Unknown profiles retain the original category prior, whereas a configured
+// 0% is an explicit signal of incompatibility. The pitch geometry is shared
+// with the player role heatmap and uses the same orientation.
+export function roleFitForSlot(playerId,slotPosition,targetRole,data){
+ const catalog=new Map((data.rolePositions||[]).map(p=>[key(p.id),p]));
+ const roles=(data.roleAffinities||[]).filter(x=>key(x.player_id)===key(playerId))
+  .map(x=>({position:catalog.get(key(x.position_id)),affinity:Number(x.affinity_pct)}))
+  .filter(x=>x.position&&Number.isFinite(x.affinity)&&POSITION_SPOTS[x.position.code]);
+ if(!roles.length)return null;
+ const targetGroup=targetRole;
+ const groupOf=p=>({goalkeeper:'P',defender:'D',midfielder:'C',forward:'A'})[p?.category];
+ let best=0,matched=null;
+ for(const {position,affinity} of roles){
+  const group=groupOf(position);
+  if(group!==targetGroup||affinity<=0)continue;
+  const [x,y]=POSITION_SPOTS[position.code];
+  const dx=(Number(slotPosition.x)-x)/100,dy=(Number(slotPosition.y)-y)/100;
+  const distance=Math.hypot(dx*1.1,dy*1.2);
+  const proximity=clamp(1-distance/.76,.12,1);
+  const fit=(affinity/100)*(0.65+0.35*proximity);
+  if(fit>best){best=fit;matched=position.code}
+ }
+ // For configured profiles an out-of-category position must be exceptional:
+ // give a tiny fallback only when no candidate covers a slot.
+ return {fit:best,roleCode:matched,configured:true};
+}
+function coachOpportunityMap(matches,selections,fixtureWeights,data,team){
+ const byMatch=new Map(matches.map(m=>[key(m.id),m]));
+ const selected=new Map();
+ for(const row of selections){
+  if(!byMatch.has(key(row.match_id)))continue;
+  const id=key(row.player_id),m=byMatch.get(key(row.match_id));
+  const group=selected.get(key(m.id))||[];
+  group.push(row);selected.set(key(m.id),group);
+ }
+ const eligibleByPlayer=new Map(),choicesByPlayer=new Map();
+ for(const m of matches){
+  const entries=selected.get(key(m.id))||[];
+  // Only complete-enough historical sheets demonstrate the coach's choice.
+  if(entries.length<10)continue;
+  const relevance=matchRelevance(m,fixtureWeights,data);
+  const w=(.55+.85*relevance)*(.85+.25*resultQuality(m,data,team));
+  for(const row of entries){
+   if(row.selection_status==='absent'||row.unavailability_reason)continue;
+   const id=key(row.player_id);
+   eligibleByPlayer.set(id,(eligibleByPlayer.get(id)||0)+w);
+   if(row.started||row.selection_status==='starter')
+    choicesByPlayer.set(id,(choicesByPlayer.get(id)||0)+w);
+  }
+ }
+ const ratios=new Map();
+ for(const [id,opportunities] of eligibleByPlayer){
+  ratios.set(id,{rate:(choicesByPlayer.get(id)||0)/opportunities,opportunities});
+ }
+ return ratios;
+}
+
 function playerScores(players,allPriorMatches,sampleMatches,selections,formation,fixtureWeights,data,team,ratings){
  const allIds=new Set(allPriorMatches.map(m=>key(m.id))),sampleIds=new Set(sampleMatches.map(m=>key(m.id)));
  const formIds=new Set(sampleMatches.filter(m=>m.formation===formation).map(m=>key(m.id)));
@@ -180,6 +240,7 @@ function playerScores(players,allPriorMatches,sampleMatches,selections,formation
   }
   if(s.shirt_number)shirts.set(key(s.player_id),s.shirt_number);
  }
+ const coachChoices=coachOpportunityMap(allPriorMatches,selections,fixtureWeights,data,team);
  const metrics=new Map();
  for(const p of players){
   const r=ratings.get(key(p.player_id))||{},rs=resultScore.get(key(p.player_id));
@@ -195,6 +256,7 @@ function playerScores(players,allPriorMatches,sampleMatches,selections,formation
    general:score.get(key(p.player_id))||0,
    meanRating:r.mean??null,contextRating:r.context??r.mean??null,ratingMatches:r.votes||0,
    resultQuality:rs?.w?rs.sum/rs.w:.5,
+   coachChoice:coachChoices.get(key(p.player_id))||null,
    recentStarts,recentMinutes,recentMatchCount:recentMatches.length
   });
  }
@@ -210,14 +272,16 @@ function synergyWithUsed(playerId,used,coPlay){
  }
  return n?total/n:.5;
 }
-function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOpportunity=0){
+function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOpportunity=0,slotPosition=null,data={}){
  let best=null,bestScore=-Infinity;
  for(const c of candidates){
   if(used.has(key(c.player_id)))continue;
-  const id=key(c.player_id),role=roleOf(c.person),roleFit=role===targetRole?3.2:((targetRole==='C'&&['D','A'].includes(role)) ? .35 : 0);
+  const id=key(c.player_id),role=roleOf(c.person),specific=slotPosition?roleFitForSlot(id,slotPosition,targetRole,data):null;
+  const roleFit=specific?(-2+specific.fit*7.2):(role===targetRole?3.2:((targetRole==='C'&&['D','A'].includes(role))?.35:0));
   const slotFit=scores.slotScore.get(id+'|'+slot)||0,general=scores.score.get(id)||0,m=scores.metrics.get(id)||{};
   const rating=finite(m.contextRating)?(Number(m.contextRating)-6)*1.15:0;
   const result=(Number(m.resultQuality||.5)-.5)*1.6;
+  const coach=m.coachChoice?.opportunities>=1.5?(m.coachChoice.rate-.5)*1.8:0;
   const synergy=(synergyWithUsed(id,used,coPlay)-.5)*2.2;
   const recentLoad=(m.recentMatchCount?m.recentStarts/Math.max(1,m.recentMatchCount):0)*.65+
    (m.recentMinutes==null ? .18 : clamp(m.recentMinutes/(Math.max(1,m.recentMatchCount||1)*80),0,1)*.35);
@@ -227,7 +291,7 @@ function bestForSlot(candidates,used,slot,targetRole,scores,coPlay,rotationOppor
   // become more competitive. Goalkeepers are deliberately almost unaffected.
   const turnoverPenalty=rotationOpportunity*(role==='P'?.12:1.15)*recentLoad*(.75+.25*ratingTrust);
   const rotationBonus=rotationOpportunity*(role==='P'?0:.42)*(1-recentLoad)*(.55+.45*ratingTrust);
-  const value=slotFit+general+roleFit+rating+result+synergy-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
+  const value=slotFit+general+roleFit+rating+result+coach+synergy-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
   if(value>bestScore){best=c;bestScore=value}
  }
  return best;
@@ -272,11 +336,11 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const targets=roleTargets(formation),positions=prematchPositions(formation),used=new Set(),players=[];
  for(let i=0;i<positions.length;i++){
   const slot=positions[i].slot,targetRole=targets[i]||'C';
-  const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay,rotationOpportunity);if(!picked)continue;
+  const picked=bestForSlot(available,used,slot,targetRole,scores,coPlay,rotationOpportunity,positions[i],data);if(!picked)continue;
   used.add(key(picked.player_id));
   const habitual=(data.habitual||[]).find(h=>h.player_id===picked.player_id)?.shirt_number;
   players.push({
-   player_id:picked.player_id,slot,role:roleOf(picked.person)||targetRole,
+   player_id:picked.player_id,slot,role:roleFitForSlot(picked.player_id,positions[i],targetRole,data)?.roleCode||roleOf(picked.person)||targetRole,
    name:matchPlayerLabel(picked.person),shirt_number:scores.shirts.get(key(picked.player_id))||habitual||'',
    x:clamp(positions[i].x,10,90),y:clamp(positions[i].y,14,84)
   });
@@ -308,5 +372,5 @@ export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
   '<p class="prematch-lineup-note">'+
    (model.comparableUsed?'Ponderate soprattutto '+model.sampleSize+' formazion'+(model.sampleSize===1?'e':'i')+' contro avversarie di potenziale comparabile.':'Campione comparabile ridotto: integrate le formazioni recenti.')+
    (model.rotationOpportunity>=.35?' Partita valutata relativamente abbordabile: applicato anche un correttivo turnover ('+Math.round(model.rotationOpportunity*100)+'%), premiando alternative affidabili meno utilizzate senza stravolgere l’XI.':'')+
-   ' La scelta combina disponibilità, ruolo/slot, voti, risultati, tipo di avversaria, carico recente e rendimento delle coppie di giocatori realmente contemporanee in campo. Sotto ogni giocatore: voto atteso e media storica. Considerati '+model.availableCount+' disponibili.</p>';
+   ' La scelta combina ruoli e affinità configurati in Rosa, preferenze del mister nelle formazioni precedenti a parità di disponibilità, voti, risultati e rango avversario, carico recente e rendimento delle coppie realmente contemporanee in campo. Sotto ogni giocatore: voto atteso e media storica. Considerati '+model.availableCount+' disponibili.</p>';
 }
