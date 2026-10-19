@@ -1077,6 +1077,12 @@ async function switchSeason(id){
  }
  catch(e){state.loading=false;render();toast('Dati non disponibili: '+e.message)}
 }
+async function refreshMvpRatings(matchId){
+ if(!state.data||!state.season||!matchId)return;
+ const rows=await get('app_match_ratings','select=match_id,player_id,rating&match_id=eq.'+encodeURIComponent(matchId)+'&limit=10000');
+ state.data.seasonRatings=[...(state.data.seasonRatings||[]).filter(x=>String(x.match_id)!==String(matchId)),...rows];
+ state.data.mvp=matchMvpAwards((state.data.matches||[]).filter(m=>!m.is_test&&m.status==='finished'),state.data.seasonRatings);
+}
 async function openMatch(id,origin){
  if(!fixtures().some(x=>x.id===id))return;
  if(origin!==undefined)state.matchOrigin=origin;
@@ -1603,6 +1609,7 @@ document.addEventListener('click',async e=>{
   try{
    await saveVote(m.id,votePick.dataset.votePlayer,value);
    state.matchData=await loadMatchInfo(m.id);
+   try{await refreshMvpRatings(m.id)}catch(err){console.warn('Aggiornamento MVP non disponibile:',err)}
    render();toast('Valutazione '+String(value).replace('.',',')+' salvata');
   }catch(error){votePick.disabled=false;toast('Voto non salvato: '+(error.message||error))}
   return;
@@ -1616,6 +1623,7 @@ document.addEventListener('click',async e=>{
   try{
    await saveVote(m.id,voteClear.dataset.votePlayer,'');
    state.matchData=await loadMatchInfo(m.id);
+   try{await refreshMvpRatings(m.id)}catch(err){console.warn('Aggiornamento MVP non disponibile:',err)}
    render();toast('Voto impostato su SV');
   }catch(error){voteClear.disabled=false;toast('SV non salvato: '+(error.message||error))}
   return;
