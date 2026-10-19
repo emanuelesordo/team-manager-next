@@ -40,6 +40,8 @@ jobs:
         run: node --check fresh/event-detail-stats.js && node --test tests/event-detail-stats.test.mjs
       - name: Test rating timeline
         run: node --check fresh/rating-timeline.js && node --test tests/rating-timeline.test.mjs
+      - name: Run full regression suite
+        run: npm run check
       - name: Generate static site
         run: npm run build
       - name: Verify deploy artifact
