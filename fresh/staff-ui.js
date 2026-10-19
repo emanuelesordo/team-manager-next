@@ -14,6 +14,7 @@ import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displa
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 import {renderRoleAffinityEditor,collectRoleAffinityForm,groupForPosition} from './player-role-heatmap.js?v=20261016roles1';
 import {exportRoster,importRoster} from './roster-spreadsheet.js?v=20261017bulk1';
+import {renderRosterRoles,bindRoleMatrix} from './roster-role-matrix.js?v=20261019matrix1';
 
 export const staffLogoEvent=handleLogoEditorEvent;
 export function openNewPlayer(){memory.area='players';memory.selected.players='';}
@@ -340,7 +341,7 @@ export function adminPage(ctx){
   const ending=contract?.end_date||season?.end_date||'';
   const previousPeriods=(data.contracts||[]).filter(x=>x.player_id===p?.id&&x.season_id===ctx.state.season).sort((a,b)=>String(a.start_date).localeCompare(String(b.start_date)));
   const periodHistory=previousPeriods.length?'<div class="staff-help"><strong>Periodi registrati:</strong> '+previousPeriods.map(x=>esc(x.start_date)+' → '+esc(x.end_date)).join(' · ')+'</div>':'';
-  form='<div class="staff-roster-bulk"><button type="button" class="staff-soft" data-staff-action="roster-export">Scarica XLSX rosa</button><button type="button" class="staff-soft" data-staff-action="roster-import">Importa XLSX modificato</button><input type="file" data-roster-file accept=".xlsx,.xls" hidden><small>Gli ID esistenti identificano i giocatori; lascia vuoto l’ID per aggiungerne uno.</small></div>'+wrapForm('players','Gestione anagrafica e rosa',
+  form=renderRosterRoles(ctx)+'<div class="staff-roster-bulk"><button type="button" class="staff-soft" data-staff-action="roster-export">Scarica XLSX rosa</button><button type="button" class="staff-soft" data-staff-action="roster-import">Importa XLSX modificato</button><input type="file" data-roster-file accept=".xlsx,.xls" hidden><small>Gli ID esistenti identificano i giocatori; lascia vuoto l’ID per aggiungerne uno.</small></div>'+wrapForm('players','Gestione anagrafica e rosa',
    selectExisting('players',list,'last_name')+
    '<div class="staff-form-grid">'+input('first_name','Nome',p?.first_name||'','text','required')+
    input('last_name','Cognome',p?.last_name||'','text','required')+
@@ -1557,3 +1558,5 @@ document.addEventListener('dragend',()=>{draggedTie=null});
 }
 
 export async function handleRosterSpreadsheetFile(file,ctx){if(!isStaff(ctx))return;try{await importRoster(file,ctx)}catch(error){ctx.toast('Importazione: '+error.message);window.alert(error.message)}}
+
+export function mountRosterRoleMatrix(ctx){if(!isStaff(ctx))return;bindRoleMatrix({...ctx,rpcSaveRoles:(playerId,roles)=>rpc('tm_app_save_player_roles',{p_season_id:ctx.state.season,p_player_id:playerId,p_roles:roles})})}
