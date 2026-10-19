@@ -1,3 +1,4 @@
+import {roleFitForSlot} from './pre-match-lineup.js';
 /* Scenario-only match timeline. Every event is a sampled narrative, never persisted. */
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const num=v=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))?null:Number(v);
@@ -7,6 +8,37 @@ const pick=(entries,weight,rng)=>{if(!entries.length)return null;const weighted=
 const fullName=p=>[p?.first_name,p?.last_name].filter(Boolean).join(' ')||p?.name||'Giocatore';
 const group=p=>String(p?.targetRole||p?.generic_role_manual||p?.role||'').toUpperCase();
 const offensive=p=>group(p)==='A'?3.2:group(p)==='C'?1.25:group(p)==='D'?.42:.025;
+// A substitution occupies the vacated tactical slot. Never silently move
+// other players or reinterpret the formation during an in-game exchange.
+const explicitGroup=p=>{
+ const direct=String(p?.generic_role_manual||p?.position_group||p?.position||'').toUpperCase();
+ if(['P','D','C','A'].includes(direct))return direct;
+ return ({goalkeeper:'P',defender:'D',midfielder:'C',forward:'A'})[direct.toLowerCase()]||null;
+};
+const slotGroup=p=>String(p?.targetRole||'').toUpperCase()||explicitGroup(p);
+export function replacementCompatibility(incoming,outgoing,roleData={}){
+ const required=slotGroup(outgoing),actual=explicitGroup(incoming);
+ if(!required||!['P','D','C','A'].includes(required)||required==='P')return 0;
+ // Explicit affinity profiles override the broad traditional group. Use
+ // the exact pitch coordinates of the outgoing starter's tactical slot.
+ const configured=roleFitForSlot(incoming.player_id,
+  {x:num(outgoing.x)??50,y:num(outgoing.y)??50},
+  required,roleData);
+ if(configured){
+  return configured.fit>=.53?configured.fit:0;
+ }
+ // Without a staff-edited heatmap, accept a same-department replacement.
+ // Do not speculate that a defender can suddenly be the winger/striker.
+ if(actual!==required)return 0;
+ // If a detailed role code is known, prevent obvious flank inversions.
+ const code=String(incoming.role_code||incoming.specific_role||'').toUpperCase();
+ const right=new Set(['TD','ED','QD','AD','MZD','BRD']);
+ const left=new Set(['TS','ES','QS','AS','MZS','BRS']);
+ const targetX=num(outgoing.x);
+ if(targetX!==null&&targetX<32&&right.has(code))return 0;
+ if(targetX!==null&&targetX>68&&left.has(code))return 0;
+ return .7;
+}
 const recentMinutes=(p,byStats)=>{const s=byStats.get(String(p.player_id))||{};return num(s.minutes)??0};
 const goalTypes=new Set(['goal','penalty_goal','penalty_scored','own_goal']);
 export function historicalGoalPatterns({fixture,fixtures=[],matches=[],events=[],duration=80}={}){
@@ -97,7 +129,7 @@ function goalMethod(scorer,assistant,rng){
  ];
  return pick(methods,m=>m.weight,rng);
 }
-export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],players=[],stats=[],competition,fixtures=[],matches=[],historicalEvents=[]}={}){
+export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],players=[],stats=[],competition,fixtures=[],matches=[],historicalEvents=[],roleData={}}={}){
  if(!fixture||!prediction)return {events:[],label:'Dati insufficienti'};
  const duration=clamp(Number(competition?.minutes_per_period||40)*Number(competition?.periods||2),40,120);
  const seed=fixture.id+'|'+(lineup?.formation||'')+'|'+(lineup?.players||[]).map(x=>x.player_id).join('|');
@@ -145,23 +177,30 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
    // Distinguish tactical chasing from low-usage rotation after taking a lead.
    for(let changeIndex=0;changeIndex<item.count;changeIndex++){
    const rotation=margin>=2?1:margin===1?.7:margin===0?.4:.15;
-   const outgoing=pick([...active.values()].filter(p=>p.slot!==1&&!usedOut.has(String(p.player_id))&&!usedBench.has(String(p.player_id))),
-    p=>.5+(recentMinutes(p,byStats)/Math.max(1,num(byStats.get(String(p.player_id))?.appearances)??1)/duration)*.6+
-    (8-(num(p.expectedRating)??6))*.16,rng);
-   if(!outgoing)continue;
-   const incoming=pick(bench.filter(p=>!usedBench.has(String(p.player_id))),
-    p=>{const g=group(p),fit=g===group(outgoing)?2.5:.3;
-     const m=recentMinutes(p,byStats),apps=num(byStats.get(String(p.player_id))?.appearances)??0;
-     const usage=apps?m/apps:0;
-     const attackNeed=margin<0&&(g==='A'?2.2:g==='C'?.65:-.1);
-     const protectingLead=margin>=2&&g==='D'?.7:0;
-     return .3+fit+rotation*2.4/(1+usage/duration)+attackNeed+protectingLead+(num(p.avg_rating)??6)*.07},rng);
-   if(!incoming)continue;
+   const outgoingOptions=[...active.values()].filter(p=>p.slot!==1&&!usedOut.has(String(p.player_id))&&!usedBench.has(String(p.player_id)));
+   const incomingOptions=bench.filter(p=>!usedBench.has(String(p.player_id)));
+   const combinations=[];
+   for(const outgoing of outgoingOptions)for(const incoming of incomingOptions){
+    const fit=replacementCompatibility(incoming,outgoing,roleData);
+    if(fit<=0)continue;
+    const st=byStats.get(String(incoming.player_id))||{};
+    const apps=num(st.appearances)??0,usage=apps?recentMinutes(incoming,byStats)/apps:0;
+    const outgoingLoad=recentMinutes(outgoing,byStats)/Math.max(1,num(byStats.get(String(outgoing.player_id))?.appearances)??1);
+    const score=fit*8+rotation*2.1/(1+usage/duration)+Math.min(1,outgoingLoad/duration)*.6+
+     (8-(num(outgoing.expectedRating)??6))*.13+(num(incoming.avg_rating)??6)*.06;
+    combinations.push({incoming,outgoing,fit,score});
+   }
+   if(!combinations.length)break; // Keep the shape rather than invent a tactical switch.
+   // Prefer the best compatible pair with only small seeded variation.
+   const chosen=pick(combinations,p=>Math.exp(Math.min(15,p.score*2)),rng);
+   const {incoming,outgoing,fit}=chosen;
    const outId=String(outgoing.player_id),inId=String(incoming.player_id);
-   active.delete(outId);active.set(inId,{...incoming,targetRole:outgoing.targetRole,slot:outgoing.slot});
+   active.delete(outId);
+   active.set(inId,{...incoming,targetRole:outgoing.targetRole,role:outgoing.targetRole,slot:outgoing.slot,x:outgoing.x,y:outgoing.y});
    usedOut.add(outId);usedBench.add(inId);
    events.push({minute:item.minute,type:'substitution',side:ownSide,player_id:incoming.player_id,off_id:outgoing.player_id,
-    session:item.session,label:fullName(incoming)+' per '+fullName(outgoing),
+    session:item.session,slot:outgoing.slot,targetRole:outgoing.targetRole,roleFit:fit,
+    label:fullName(incoming)+' per '+fullName(outgoing),
     basis:margin>=2?'Gestione vantaggio e minutaggio':margin<0?'Ricerca della rimonta':'Ricambio e gestione delle energie'});
    }
    continue;
