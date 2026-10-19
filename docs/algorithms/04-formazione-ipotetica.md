@@ -58,3 +58,11 @@ Nessun ID doppio; nessun non tesserato alla data; nessun indisponibile; rispetto
 - L'indice di **fattibilità** è una valutazione euristica 0–100 ottenuta da copertura dei ruoli, completezza dell'XI, copertura dei dati e differenza rispetto al miglior punteggio del gruppo. Non è la probabilità che il mister adotti lo schieramento, né la probabilità di vincere; i valori non devono sommare 100%.
 - Se mancano giocatori sufficienti a realizzare varianti distinte, segnalarlo esplicitamente e non inventare titolari.
 - Verificare anche le prestazioni con rosa ampia, vista la precedente regressione di blocco dell'Overview.
+
+## Aggiornamento — varianti tatticamente distinte
+
+- In un modulo con **due punte**, il lato sinistro/destro di punta centrale o seconda punta non determina una formazione differente: sono posizioni interscambiabili per le affinità e per le alternative.
+- Nel centrocampo a quattro in linea, i **due interni** hanno un'area comune utilizzabile da CC e MED; gli esterni restano invece ruoli laterali distinti.
+- Una variante del medesimo modulo deve includere **almeno un titolare differente**. Scambi fra due titolari su slot simmetrici non sono alternative significative.
+- Il simulatore esclude a turno un titolare da *tutto l'undici* e cerca la migliore combinazione con gli altri disponibili; poi conserva le due nuove combinazioni migliori per ogni modulo. Se la rosa non permette varianti reali, segnalarlo anziché spacciare per diversa una semplice inversione di posizione.
+- Restano invariati filtro disponibilità, tre moduli preferiti, dati pre-kickoff e indice euristico di fattibilità (non probabilità statistica).
