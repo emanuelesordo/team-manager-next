@@ -13,7 +13,7 @@ export function roleRows(ctx){
  const catalog=new Map(positions.map(p=>[p.id,p.code]));
  const players=(d.players||[]).filter(p=>roster.some(r=>r.player_id===p.id&&r.season_id===ctx.state.season));
  return players.sort((a,b)=>String(a.last_name||'').localeCompare(String(b.last_name||''),'it')).map(p=>({
-  id:p.id,name:[p.last_name,p.first_name].filter(Boolean).join(' '),
+  id:p.id,name:(String(p.first_name||'').trim()?String(p.first_name).trim().charAt(0).toLocaleUpperCase('it')+'. ':'')+String(p.last_name||'').trim(),
   roles:(d.roleAffinities||[]).filter(a=>a.player_id===p.id&&catalog.has(a.position_id)).map(a=>({code:catalog.get(a.position_id),affinity:a.affinity_pct,natural:a.is_natural})).sort((a,b)=>Number(b.natural)-Number(a.natural)||b.affinity-a.affinity)
  }));
 }
@@ -21,7 +21,7 @@ export function renderRosterRoles(ctx){
  const positions=(ctx.state.data?.rolePositions||[]).filter(x=>x.active!==false);
  const players=roleRows(ctx);
  const headings='<div class="staff-roles-player staff-roles-column-head"><strong>Giocatore</strong><div class="staff-roles-options">'+positions.map(p=>'<span title="'+esc(p.label)+'">'+esc(p.code)+'</span>').join('')+'</div><span>Affinità</span><span></span></div>';
- return '<section class="staff-roles-matrix"><div class="staff-roles-head"><h3>Ruoli della rosa</h3><p>Come nella tabella della rosa: una riga per giocatore, una colonna per ruolo. Il primo selezionato è naturale (100%), gli altri partono da 80%, 70%, 50%… Scorri orizzontalmente per gli altri ruoli.</p></div><div class="staff-roles-scroll"><div class="staff-roles-list">'+headings+players.map(p=>{
+ return '<section class="staff-roles-matrix"><div class="staff-roles-head"><h3>Ruoli della rosa</h3><p>Primo ruolo: naturale (100%). Successivi: 80%, 70%, 50%… Seleziona le sigle e scorri la tabella per vedere tutte le posizioni.</p></div><div class="staff-roles-scroll"><div class="staff-roles-list">'+headings+players.map(p=>{
   const selected=new Map(p.roles.map((x,i)=>[x.code,{...x,index:i}]));
   return '<div class="staff-roles-player" data-role-player="'+esc(p.id)+'"><strong>'+esc(p.name)+'</strong><div class="staff-roles-options">'+positions.map(pos=>{
    const item=selected.get(pos.code);
