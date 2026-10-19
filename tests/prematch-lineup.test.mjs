@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildHypotheticalLineup,renderHypotheticalLineup} from '../fresh/pre-match-lineup.js';
+import {buildHypotheticalLineup,renderHypotheticalLineup,roleFitForSlot} from '../fresh/pre-match-lineup.js';
 
 const team={id:'team-1',name:'Caselle'};
 const fixture={id:'fx-target',competition_id:'c1',status:'scheduled',kickoff_at:'2026-10-12T19:00:00Z',
@@ -95,4 +95,25 @@ test('model fallback rating is never displayed as a factual player average',()=>
  assert.ok(Number.isFinite(keeper.expectedRating));
  const html=renderHypotheticalLineup(model);
  assert.match(html,/prematch-player-rating/);
+});
+
+test('saved specific affinities constrain a player to the appropriate field zone',()=>{
+ const modified={...data,rolePositions:[
+ {id:'position-p',code:'POR',category:'goalkeeper'},
+ {id:'position-d',code:'TD',category:'defender'},
+ {id:'position-a',code:'ATT',category:'forward'}
+ ],roleAffinities:[
+ {player_id:'p1',position_id:'position-p',affinity_pct:100,is_natural:true},
+ {player_id:'p2',position_id:'position-d',affinity_pct:100,is_natural:true},
+ {player_id:'p2',position_id:'position-a',affinity_pct:0,is_natural:false}
+ ]};
+ const defender=roleFitForSlot('p2',{x:80,y:68},'D',modified);
+ const striker=roleFitForSlot('p2',{x:50,y:16},'A',modified);
+ assert.ok(defender.fit>.5);
+ assert.equal(defender.roleCode,'TD');
+ assert.equal(striker.fit,0);
+ assert.equal(roleFitForSlot('p3',{x:80,y:68},'D',modified),null);
+ const result=buildHypotheticalLineup({fixture,targetMatch,data:modified,matchData:{players:[]},team,competition,competitions:[competition],prediction,kit:{},events:[]});
+ assert.ok(result.players.some(x=>x.player_id==='p2'));
+ assert.equal(result.players.find(x=>x.player_id==='p2').role,'TD');
 });
