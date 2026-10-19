@@ -26,3 +26,12 @@ Ripetitività tra partite simili, eccesso di frasi standard, presenza di pattern
 - Cambiando una delle nove formazioni, la timeline si aggiorna per l'undici selezionato.
 - Carosello esterno e scorrimento interno delle nove formazioni sono indipendenti.
 - **Da validare**: disponibilità completa dei minutaggi delle avversarie, vincoli regolamentari sulle sostituzioni e capacità predittiva attraverso test retrospettivi. La timeline è illustrativa, non probabilisticamente calibrata per ogni evento.
+
+## Aggiornamento — marcatori probabilistici ed esportazione 9:16
+
+- La quantità di reti resta ancorata allo **score esatto modale** del modello pre-gara, mentre i marcatori e gli assist sono campionati con pesi dipendenti dal ruolo nello XI, dal rendimento atteso e dai gol/assist per presenza laddove osservati. Tutti i calciatori hanno un peso di base non nullo, anche senza reti storiche. Dopo un gol, il peso dello stesso calciatore diminuisce per evitare triplette meccaniche, senza renderle impossibili.
+- Ogni gol del Caselle mostra marcatore, assistman quando coerente con la dinamica e descrizione dell'azione (cross, imbucata, corner, ripartenza, tiro da fuori, punizione, azione individuale). Le dinamiche non rappresentano eventi osservati, ma narrazione simulata.
+- I cambi sono generati in ordine cronologico rispetto alle reti, aggiornano i giocatori effettivamente in campo e rispondono a punteggio, compatibilità di reparto e minuti per presenza; l'ingresso di un giocatore esclude un secondo ingresso dello stesso calciatore.
+- La sezione **Simulazione** non ripete qualificatori di incertezza per ogni evento: un unico disclaimer identifica la natura sintetica della timeline.
+- Il pulsante **Genera immagine 9:16** esporta un PNG 1080×1920 tramite Canvas nel browser, utilizzando **l'oggetto dello scenario già visualizzato** e non una nuova estrazione casuale. Su browser compatibili propone condivisione nativa; negli altri scarica il file. Nessun evento è scritto a DB.
+- Limiti dichiarati: assenza di storico eventi dettagliato per l'avversario, dinamiche simulate da prior euristici, non da un modello calibrato evento-per-evento. Per migliorare le probabilità servono dati su partecipazioni, tiri, assist e minuti reali per ruolo.
