@@ -109,3 +109,33 @@ test('historical close-goal patterns do not force repeated simultaneous goals',(
  assert.equal(output.length,5);
  assert.equal(new Set(output.map(x=>x.minute)).size,5);
 });
+
+test('exported poster draws every timeline minute in a dedicated visible column',()=>{
+ const scenario=simulatePrematchTimeline({fixture,prediction,lineup,players,roster:players.map(x=>({player_id:x.id,active:true})),stats:[],competition:{periods:2,minutes_per_period:40}});
+ const labels=[];
+ const ctx={
+  createLinearGradient:()=>({addColorStop(){}}),beginPath(){},roundRect(){},fill(){},stroke(){},
+  moveTo(){},lineTo(){},arc(){},fillRect(){},save(){},restore(){},translate(){},scale(){},closePath(){},
+  measureText:t=>({width:String(t).length*13}),
+  fillText:(text,x,y)=>labels.push({text:String(text),x,y})
+ };
+ drawTimelinePoster({getContext:()=>ctx},scenario);
+ const minutes=timelinePresentationEvents(scenario.events).map(e=>e.minute+'′');
+ assert.deepEqual(labels.filter(t=>t.x===75).map(t=>t.text),minutes);
+ assert.ok(labels.filter(t=>t.x===75).every(t=>t.y>467&&t.y<1735));
+});
+test('simulated substitutions never withdraw a previously introduced player',()=>{
+ const large=Array.from({length:28},(_,i)=>({id:'z'+i,player_id:'z'+i,first_name:'Test',last_name:'Player'+i,generic_role_manual:i===0?'P':i<7?'D':i<19?'C':'A'}));
+ const eleven={...lineup,players:large.slice(0,11).map((p,i)=>({player_id:p.id,slot:i+1,name:'Player'+i,targetRole:p.generic_role_manual,expectedRating:6}))};
+ for(let iteration=0;iteration<60;iteration++){
+  const scenario=simulatePrematchTimeline({fixture:{...fixture,id:'fresh-sub'+iteration},prediction,lineup:eleven,
+   players:large,roster:large.map(p=>({player_id:p.id,active:true})),stats:[],
+   competition:{periods:2,minutes_per_period:40}});
+  const entered=new Set();
+  for(const event of scenario.events){
+   if(event.type!=='substitution')continue;
+   assert.ok(!entered.has(String(event.off_id)),'A player previously subbed on must never be removed');
+   entered.add(String(event.player_id));
+  }
+ }
+});
