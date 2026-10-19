@@ -1599,3 +1599,11 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 .prematch-simulation-partial{font-size:14px;color:var(--ink);white-space:nowrap;align-self:center;font-variant-numeric:tabular-nums}
 .prematch-simulation-event{grid-template-columns:42px 70px minmax(0,1fr) auto}
 @media(max-width:650px){.prematch-simulation-head{align-items:flex-start}.prematch-export-btn{width:100%}.prematch-simulation-event{grid-template-columns:36px 42px minmax(0,1fr) auto}.prematch-simulation-partial{font-size:11px}}
+
+/* Event symbols and grouped substitution sessions share the main app's icon language. */
+.prematch-simulation-type{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;min-width:0;color:var(--accent)}
+.prematch-simulation-type small{font-size:9px;font-weight:750;letter-spacing:.04em;color:var(--muted)}
+.prematch-event-icon{flex-shrink:0;stroke:currentColor}
+.prematch-simulation-event:has(.prematch-simulation-partial) .prematch-simulation-type{color:var(--accent)}
+.prematch-simulation-event{min-height:62px}
+.prematch-simulation-event>div small{line-height:1.45}
