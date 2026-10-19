@@ -91,6 +91,30 @@ function prematchPositions(formation){
  });
  return rows;
 }
+
+// A striker pair can exchange left/right during play; the two central
+// midfielders of a flat four can also alternate CC/MED tasks. Treat these
+// positions as a shared tactical zone, retaining different wing roles.
+export function tacticalSlotPosition(formation,slot){
+ const nums=formation.split('-').map(Number),line=slot.slot===1?-1:(()=>{
+  let k=2;
+  for(let i=0;i<nums.length;i++){if(slot.slot<k+nums[i])return i;k+=nums[i]}
+  return -1;
+ })();
+ if(line<0)return slot;
+ const first=2+nums.slice(0,line).reduce((a,b)=>a+b,0);
+ const offset=slot.slot-first,count=nums[line];
+ if(line===nums.length-1&&count===2)return {...slot,x:50,interchangeable:'forward-pair'};
+ if(line>0&&line<nums.length-1&&count===4&&(offset===1||offset===2))
+  return {...slot,x:50,interchangeable:'central-midfield'};
+ return slot;
+}
+/** Tactical identity is the set of starters, not which side of a symmetric
+ * central pair the renderer happens to place them on. */
+export function lineupIdentity(proposal){
+ return (proposal.players||[]).map(p=>key(p.player_id)).sort().join('|');
+}
+
 function availabilityFor(playerId,{targetMatch,data,matchData,competition}){
  const saved=(matchData?.players||[]).find(p=>p.player_id===playerId)||
   (data.priorSelections||[]).find(p=>p.match_id===targetMatch?.id&&p.player_id===playerId);
@@ -373,12 +397,12 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  for(const formation of formationModules){
   const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
   const targets=roleTargets(formation),positions=prematchPositions(formation);
-  const slots=positions.map((position,i)=>({...position,targetRole:targets[i]||'C'}));
+  const slots=positions.map((position,i)=>({...position,targetRole:targets[i]||'C',fitPosition:tacticalSlotPosition(formation,position)}));
   // Cache every player/slot score exactly once: the global optimizer visits
   // thousands of states, and recalculating ratings/roles at each visit stalls UI.
   const scoreMatrix=new Map(available.map(candidate=>[
    key(candidate.player_id),new Map(slots.map(slot=>[
-    slot.slot,assignmentScore(candidate,slot,slot.targetRole,scores,rotationOpportunity,scoringData)
+    slot.slot,assignmentScore(candidate,slot.fitPosition,slot.targetRole,scores,rotationOpportunity,scoringData)
    ]))
   ]));
   const cachedScore=(candidate,slot)=>scoreMatrix.get(key(candidate.player_id))?.get(slot.slot)??-Infinity;
@@ -394,9 +418,9 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   for(const assignment of solution.assignments){
    const picked=assignment.player,slotPosition=assignment.slot,slot=slotPosition.slot,targetRole=slotPosition.targetRole;
    totalChoice+=assignment.weight;
-   const positionAdjustment=positionalAdjustment(picked.player_id,slotPosition,targetRole,data);
+   const positionAdjustment=positionalAdjustment(picked.player_id,slotPosition.fitPosition||slotPosition,targetRole,data);
    movementSum+=positionAdjustment.movement;
-   const affinity=roleFitForSlot(picked.player_id,slotPosition,targetRole,data);
+   const affinity=roleFitForSlot(picked.player_id,slotPosition.fitPosition||slotPosition,targetRole,data);
    if(affinity){
     configuredCount++;fitSum+=affinity.fit;
     if(affinity.fit===0)uncovered++;
@@ -445,27 +469,36 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const all=[];
  for(const [moduleIndex,base] of chosen.entries()){
   const context=contexts.get(base.formation),variants=[base];
-  const fingerprints=new Set([base.players.map(p=>p.slot+':'+p.player_id).join('|')]);
-  // Choose alternatives by forbidding a different starting assignment in each
-  // run. This forces real XI/position variation, not a cosmetic duplication.
-  // Bounded to four attempts per module to protect mobile performance.
-  const anchors=[6,9,3,1,7,4,10,2,8,5,0];
-  for(const anchor of anchors.slice(0,4)){
-   if(variants.length===3)break;
-   const original=base.players[anchor%base.players.length];if(!original)continue;
-   const altered=(candidate,slot)=>key(candidate.player_id)===key(original.player_id)&&slot.slot===original.slot
-    ?-Infinity:context.cachedScore(candidate,slot);
-   const alternative=optimizeLineupAssignments(available,context.slots,altered);
-   const variant=context.makeProposal(alternative);
-   // Recalculate the forbidden edge-free objective on the original score scale.
-   variant.tacticalScore+=(variant.players.length?0:0);
-   const fingerprint=variant.players.map(p=>p.slot+':'+p.player_id).join('|');
-   if(fingerprints.has(fingerprint))continue;
-   fingerprints.add(fingerprint);variants.push(variant);
+  const starterSets=new Set([lineupIdentity(base)]);
+  const possibilities=[];
+  // To produce a tactically meaningful variant, exclude a starter from
+  // the entire XI, not just from one slot. A mere forward L/R exchange is
+  // deliberately not a new proposal.
+  const anchors=[...base.players].sort((a,b)=>
+   (a.slot===1?1:0)-(b.slot===1?1:0) ||
+   (a.targetRole==='A'?0:a.targetRole==='C'?1:2)-
+   (b.targetRole==='A'?0:b.targetRole==='C'?1:2));
+  if(available.length>base.players.length){
+   for(const original of anchors.slice(0,9)){
+    const altered=(candidate,slot)=>key(candidate.player_id)===key(original.player_id)
+     ?-Infinity:context.cachedScore(candidate,slot);
+    const alternative=optimizeLineupAssignments(available,context.slots,altered);
+    const variant=context.makeProposal(alternative);
+    if(variant.players.length!==base.players.length)continue;
+    const identity=lineupIdentity(variant);
+    if(starterSets.has(identity)||possibilities.some(p=>lineupIdentity(p)===identity))continue;
+    possibilities.push(variant);
+   }
   }
-  while(variants.length<3)variants.push({...base,reason:'Alternative insufficientemente distinte con le disponibilità attuali',duplicate:true});
+  possibilities.sort((a,b)=>b.tacticalScore-a.tacticalScore);
+  for(const variant of possibilities){
+   if(variants.length===3)break;
+   const identity=lineupIdentity(variant);if(starterSets.has(identity))continue;
+   starterSets.add(identity);variants.push(variant);
+  }
+  while(variants.length<3)variants.push({...base,reason:'Nessuna ulteriore formazione distinta con i disponibili',duplicate:true});
   variants.forEach((proposal,i)=>all.push({...proposal,moduleIndex:moduleIndex+1,variantIndex:i+1,rank:all.length+1,
-   reason:i===0?'Migliore combinazione per il modulo':i===1?'Seconda combinazione per il modulo':'Terza combinazione per il modulo'}));
+   reason:proposal.duplicate?'Nessuna ulteriore combinazione distinta disponibile':i===0?'Migliore combinazione per il modulo':i===1?'Seconda combinazione per il modulo':'Terza combinazione per il modulo'}));
  }
  const best=all[0];if(!best)return null;
  // A transparent bounded feasibility index (not likelihood of victory or
