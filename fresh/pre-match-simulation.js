@@ -3,7 +3,7 @@
  * Inputs must be snapshots known before kickoff.
  */
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
-const numeric=v=>Number.isFinite(Number(v))?Number(v):null;
+const numeric=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?Number(v):null;
 const hash=v=>{let x=2166136261;for(const c of String(v)){x^=c.charCodeAt(0);x=Math.imul(x,16777619)}return x>>>0};
 const generator=seed=>{let x=hash(seed)||1;return ()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296}};
 const nameOf=p=>[p.first_name,p.last_name].filter(Boolean).join(' ')||p.name||'Giocatore';
@@ -18,19 +18,19 @@ function expectedMinutes(p,stats){const r=stats.find(x=>String(x.player_id)===St
 function selectBench(bench,used,preferredRole,stats,opportunity,rng){
  const candidates=bench.filter(x=>!used.has(String(x.player_id)));
  if(!candidates.length)return null;
- const score=p=>{
+ const ranked=candidates.map(p=>{
   const role=String(p.generic_role_manual||p.role||'').toUpperCase();
   const m=expectedMinutes(p,stats);
-  return (role===preferredRole?3:0)+(m===null?0:2/(1+m/80)*opportunity)+(numeric(p.avg_rating)||6)/10+rng()*.15;
- };
- return candidates.sort((a,b)=>score(b)-score(a))[0];
+  const fit=role===preferredRole?3:role==='A'&&preferredRole==='C'?.4:0;
+  const rotation=m===null?0:2/(1+m/80)*opportunity;
+  return {player:p,score:fit+rotation+(numeric(p.avg_rating)??6)/10+rng()*.15};
+ }).sort((a,b)=>b.score-a.score);
+ return ranked[0]?.player||null;
 }
 export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],players=[],stats=[],competition}={}){
  if(!fixture||!prediction)return {events:[],label:'Simulazione non disponibile'};
  const duration=Math.max(40,Math.min(120,Number(competition?.minutes_per_period||40)*Number(competition?.periods||2)));
  const rng=generator(fixture.id+'|'+(lineup?.formation||'')+'|'+(lineup?.players||[]).map(x=>x.player_id).join('|'));
- const homeTeamId=fixture.home_team_id,ownHome=homeTeamId&&homeTeamId===fixture.home_team_id&&
-  (lineup?.teamSide==='home'||lineup?.teamSide==null&&fixture.home_team_id===lineup?.teamId);
  const homeScoreline=prediction.probabilities?.mostLikely;
  const scoreHome=Math.max(0,Math.min(5,Math.round(numeric(homeScoreline?.home)??numeric(prediction.expectedGoals?.home)??1)));
  const scoreAway=Math.max(0,Math.min(5,Math.round(numeric(homeScoreline?.away)??numeric(prediction.expectedGoals?.away)??1)));
@@ -63,12 +63,15 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
  // do not claim unavailable personnel will play.
  if(initial.length&&bench.length){
   const used=new Set(),usedOff=new Set();
-  const windows=[.64,.76,.87];
+  const windows=[.63,.76,.87];
   for(let i=0;i<Math.min(windows.length,bench.length);i++){
    const minute=Math.min(duration-1,Math.round(duration*windows[i]));
    let gf=0,ga=0;
    events.filter(e=>e.type==='goal'&&e.minute<=minute).forEach(e=>{if(e.side===ownSide)gf++;else ga++});
    const lead=gf-ga,opportunity=lead>=2?1:lead===1?.65:lead===0?.4:.15;
+   // When chasing a result, consider fewer low-minutage rotations; save
+   // a late change primarily for tactical response rather than rest.
+   if(lead<0&&i===2)continue;
    const candidate=initial.filter(p=>p.slot>1&&!usedOff.has(String(p.player_id)))
     .map(p=>({...p,load:expectedMinutes(p,stats),rank:(numeric(p.expectedRating)||6)}))
     .sort((a,b)=>((b.load??0)-(a.load??0))*.005+(b.rank-a.rank)*.1);
@@ -82,7 +85,10 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
     basis:lead>=2?'Vantaggio: possibile turnover e minutaggio ai meno impiegati':lead<0?'Svantaggio: possibile cambio per cercare la rimonta':'Gestione delle energie e compatibilità dei ruoli'});
   }
  }
- events.sort((a,b)=>a.minute-b.minute||(a.type==='goal'?-1:1));
+ events.push({minute:0,type:'phase',label:'Calcio d’inizio ipotetico',basis:'Assetto iniziale della formazione simulata'});
+ events.push({minute:Math.round(duration/2),type:'phase',label:'Intervallo',basis:'Possibile riassetto tattico in base al parziale'});
+ events.push({minute:duration,type:'phase',label:'Fine gara simulata',basis:'Risultato dello scenario, non risultato ufficiale'});
+ events.sort((a,b)=>a.minute-b.minute||(a.type==='goal'?-1:a.type==='substitution'?0:1));
  return {events,duration,score:scoreHome+'–'+scoreAway,coverage:prediction.coverage||0,
   label:'Uno scenario plausibile, non una previsione di eventi certi'};
 }
@@ -92,7 +98,7 @@ export function renderSimulatedTimeline(model,escape=x=>String(x??'')){
   '<ol class="prematch-simulation-events">'+
   (model.events.length?model.events.map(e=>'<li class="prematch-simulation-event">'+
    '<span class="prematch-simulation-minute">'+e.minute+'′</span>'+
-   '<span class="prematch-simulation-type">'+(e.type==='goal'?'Gol ipotetico':'Cambio ipotetico')+'</span>'+
+   '<span class="prematch-simulation-type">'+(e.type==='goal'?'Gol ipotetico':e.type==='substitution'?'Cambio ipotetico':'Fase')+'</span>'+
    '<div><strong>'+escape(e.label)+'</strong><small>'+escape(e.basis)+'</small></div>'+
    '</li>').join(''):'<li>Nessun gol o cambio simulabile con i dati disponibili.</li>')+'</ol>'+
   '<p class="prematch-simulation-disclaimer">SIMULAZIONE · Eventi non reali. Nessun evento viene scritto nel database.</p>';
