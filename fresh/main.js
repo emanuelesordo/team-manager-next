@@ -33,8 +33,8 @@ import {installCallupMessageImport} from './callup-import-ui.js';
 import {weightedTeamRating} from './team-rating.js?facts=20261014peruzzo1';
 import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261014peruzzo1';
 import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261013intelligence1';
-import {simulatePrematchTimeline,renderSimulatedTimeline} from './pre-match-simulation.js?v=20261019history1';
-import {saveTimelinePoster} from './pre-match-poster.js?v=20261019history1';
+import {simulatePrematchTimeline,renderSimulatedTimeline} from './pre-match-simulation.js?v=20261019minutes2';
+import {saveTimelinePoster} from './pre-match-poster.js?v=20261019minutes2';
 import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261019story1';
 
 const $=s=>document.querySelector(s);
