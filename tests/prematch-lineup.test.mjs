@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildHypotheticalLineup,renderHypotheticalLineup,roleFitForSlot} from '../fresh/pre-match-lineup.js';
+import {buildHypotheticalLineup,renderHypotheticalLineup,roleFitForSlot,positionalAdjustment,recentOpponentForm} from '../fresh/pre-match-lineup.js';
 
 const team={id:'team-1',name:'Caselle'};
 const fixture={id:'fx-target',competition_id:'c1',status:'scheduled',kickoff_at:'2026-10-12T19:00:00Z',
@@ -141,4 +141,28 @@ test('missing eligible players reduce completeness without inventing a full XI',
  assert.ok(model.proposals.length===3);
  assert.ok(model.proposals.every(p=>p.players.length<=8));
  assert.ok(model.proposals.every(p=>p.availableCount===8));
+});
+
+test('outside natural zone lowers projected fit, without altering historical mean',()=>{
+ const configured={...data,rolePositions:[{id:'a',code:'TD',category:'defender'},{id:'b',code:'DC',category:'defender'}],
+ roleAffinities:[{player_id:'p2',position_id:'a',affinity_pct:100,is_natural:true},{player_id:'p2',position_id:'b',affinity_pct:60,is_natural:false}]};
+ const natural=positionalAdjustment('p2',{x:86,y:70},'D',configured);
+ const moved=positionalAdjustment('p2',{x:50,y:74},'D',configured);
+ assert.ok(natural.ratingPenalty<moved.ratingPenalty);
+ assert.ok(natural.movement<moved.movement);
+ assert.equal(positionalAdjustment('p3',{x:50,y:74},'D',configured).ratingPenalty,0);
+});
+test('recent form weighs opponent relevance and excludes future matches',()=>{
+ const ratings=[
+ {match_id:'m1',player_id:'p2',rating:8},
+ {match_id:'m2',player_id:'p2',rating:5},
+ {match_id:'m3',player_id:'p2',rating:7},
+ {match_id:'m-target',player_id:'p2',rating:10}
+ ];
+ const recent={...data,seasonRatings:ratings};
+ const high=recentOpponentForm('p2',recent,matches,{fx1:1,fx2:.35,fx3:.35},6);
+ const low=recentOpponentForm('p2',recent,matches,{fx1:.35,fx2:1,fx3:.35},6);
+ assert.ok(high.delta>low.delta);
+ assert.equal(high.samples,3);
+ assert.equal(recentOpponentForm('p2',recent,[],{},6).samples,0);
 });
