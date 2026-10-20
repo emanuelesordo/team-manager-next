@@ -345,6 +345,7 @@ export function adminPage(ctx){
    selectExisting('players',list,'last_name')+
    '<div class="staff-form-grid">'+input('first_name','Nome',p?.first_name||'','text','required')+
    input('last_name','Cognome',p?.last_name||'','text','required')+
+   input('birth_date','Data di nascita',p?.birth_date?.slice(0,10)||'','date')+
    selection('generic_role_manual','Ruolo',[['','Non specificato'],['P','Portiere'],['D','Difensore'],['C','Centrocampista'],['A','Attaccante']],p?.generic_role_manual||'')+
    selection('preferred_foot','Piede',[['','Non indicato'],['right','Destro'],['left','Sinistro'],['both','Ambidestro']],p?.preferred_foot||'')+
    input('height_cm','Altezza (cm)',p?.height_cm??'','number','min="100" max="245"')+
