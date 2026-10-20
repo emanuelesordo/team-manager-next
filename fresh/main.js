@@ -1455,7 +1455,7 @@ async function fillAnalytics(){
  }
  if(analyticsBusy)return;
  const chosen=state.season,matches=(state.data.matches||[]).filter(m=>!m.is_test),ids=matches.map(m=>m.id).filter(Boolean);
- if(!ids.length){verifiedEventCache={season:chosen,events:[],matchPlayers:[]};box.innerHTML=renderEventAnalytics(realFixtures(),matches,[],team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],[],state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[],[],[],[],[],[],[],[],state.data?.mvp?.counts||new Map());return}
+ if(!ids.length){verifiedEventCache={season:chosen,events:[],matchPlayers:[]};box.innerHTML=renderEventAnalytics(realFixtures(),matches,[],team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],[],state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[],state.data?.playerComparisons||[],state.data?.matchFlows||[],state.data?.flowPhases||[],state.data?.flowEventContexts||[],state.data?.opponentFlows||[],state.data?.teamComparisons||[],state.data?.mvp?.counts||new Map());return}
  analyticsBusy=true;
  try{
   const encodedIds=ids.map(encodeURIComponent).join(',');
@@ -1465,7 +1465,7 @@ async function fillAnalytics(){
   if(chosen!==state.season)return;
   verifiedEventCache={season:chosen,events,matchPlayers};
   const current=document.querySelector('[data-event-analysis]');
-  if(current)current.innerHTML=renderEventAnalytics(realFixtures(),matches,events,team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],matchPlayers,state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[],[],[],[],[],[],[],[],state.data?.mvp?.counts||new Map());
+  if(current)current.innerHTML=renderEventAnalytics(realFixtures(),matches,events,team(),state.data.competitions||[],state.data.playerStats||[],state.base?.opponents||[],matchPlayers,state.base?.venues||[],state.data?.predictionSnapshots||[],state.base?.clubHistory||[],state.data?.goalImpacts||[],state.data?.ratingInsights||[],state.data?.playerComparisons||[],state.data?.matchFlows||[],state.data?.flowPhases||[],state.data?.flowEventContexts||[],state.data?.opponentFlows||[],state.data?.teamComparisons||[],state.data?.mvp?.counts||new Map());
  }catch(error){const current=document.querySelector('[data-event-analysis]');if(current)current.textContent='Eventi non leggibili: '+error.message}
  finally{analyticsBusy=false}
 }
