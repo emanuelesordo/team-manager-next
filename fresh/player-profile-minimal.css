@@ -101,3 +101,9 @@
 .player-photo-trigger:focus-visible{outline:2px solid #55af95;outline-offset:2px}
 @media(max-width:850px){.psi-infographic-grid{grid-template-columns:1fr}.psi-infographic-grid>.psi-area{height:auto}}
 @media(max-width:500px){.psi-carousel-head h2{font-size:15px}.psi-carousel-nav button{font-size:10px}.psi-infographic-grid>.psi-area{padding:12px}.player-photo-hint{opacity:1;font-size:10px}}
+
+/* Keep expandable analysis panels interactive and unconstrained by grid card height. */
+.psi-infographic-grid>.psi-area{height:auto;align-self:start;overflow:visible}
+.psi-infographic-grid details.psi-expand{height:auto;overflow:visible}
+.psi-infographic-grid details.psi-expand>summary{position:relative;z-index:1;touch-action:manipulation;pointer-events:auto}
+.psi-infographic-grid details.psi-expand[open]{grid-row:auto}
