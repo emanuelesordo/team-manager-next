@@ -1417,6 +1417,20 @@ document.addEventListener('click',event=>{
   }
   return;
  }
+ const extendedCompetition=event.target.closest('[data-extended-comp]');
+ if(extendedCompetition){
+  const root=extendedCompetition.closest('.stats-insights');if(!root)return;
+  const choice=extendedCompetition.dataset.extendedComp;
+  root.querySelectorAll('[data-extended-comp]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.extendedComp===choice)));
+  root.querySelectorAll('[data-extended-comp-panel]').forEach(x=>{x.hidden=x.dataset.extendedCompPanel!==choice});return;
+ }
+ const extendedMetric=event.target.closest('[data-extended-metric]');
+ if(extendedMetric){
+  const root=extendedMetric.closest('[data-extended-comp-panel]');if(!root)return;
+  const choice=extendedMetric.dataset.extendedMetric;
+  root.querySelectorAll('[data-extended-metric]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.extendedMetric===choice)));
+  root.querySelectorAll('[data-extended-metric-panel]').forEach(x=>{x.hidden=x.dataset.extendedMetricPanel!==choice});return;
+ }
  const teamComp=event.target.closest('[data-team-comp]');
  if(teamComp){
   const wrapper=teamComp.closest('.stats-tournament-section');if(!wrapper)return;
