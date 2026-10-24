@@ -54,3 +54,22 @@ test('Opponent tournament comparison reads ordered score slots without requiring
  assert.match(html,/Rubano/);
  assert.match(html,/Vittorie in trasferta/);
 });
+
+test('Caselle team/opponent cards map to fixture home-away without becoming zero',()=>{
+ const fixtures=[{id:'caselle-match',competition_id:'c',status:'finished',is_test:false,
+  home_team_id:'caselle',away_opponent_id:'rubano',home_score:2,away_score:1}];
+ const cards=[...Array(6)].map((_,i)=>({fixture_id:'caselle-match',event_type:'yellow_card',
+  team_side:'team',validation_status:'official',payload:{},minute:12+i}));
+ cards.push({fixture_id:'caselle-match',event_type:'red_card',
+  team_side:'opponent',validation_status:'official',payload:{},minute:32});
+ const args=Array(21).fill(undefined);
+ args[0]=fixtures;args[1]=[];args[2]=[];args[3]={id:'caselle',name:'Calcio Caselle'};
+ args[4]=[{id:'c',name:'Serie B'}];args[6]=[{id:'rubano',name:'Rubano'}];
+ args[18]=[];args[19]=new Map();args[20]=cards;
+ const html=renderEventAnalytics(...args);
+ assert.match(html,/Calcio Caselle/);
+ assert.match(html,/Rubano/);
+ const gialli=html.match(/<h4>Cartellini gialli<\/h4>([\s\S]*?)<\/article>/)?.[1]||'';
+ assert.match(gialli,/Calcio Caselle/);
+ assert.match(gialli,/>6<\/b>/);
+});
