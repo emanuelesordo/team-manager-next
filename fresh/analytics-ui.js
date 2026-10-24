@@ -339,9 +339,55 @@ function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[]){
  for(const f of finished){if(f.home_team)update(f.competition_id,String(f.home_team),true,Number(f.home_score),Number(f.away_score),f);if(f.away_team)update(f.competition_id,String(f.away_team),false,Number(f.away_score),Number(f.home_score),f)}
  const all=[...rows.values()].sort((a,b)=>a.name.localeCompare(b.name,'it'));
  if(!all.length)return '<p class="stats-hint">Non ci sono risultati ufficiali disponibili.</p>';
- const cellText=(v,d=1)=>v==null?'—':Number(v).toLocaleString('it-IT',{maximumFractionDigits:d});
- const tables=[['Esiti e gol',[['P','played'],['V','wins'],['N','draws'],['S','losses'],['GF','gf'],['GS','ga']]],['Casa / trasferta',[['Casa','home'],['V casa','homeWins'],['N casa','homeDraws'],['S casa','homeLosses'],['Trasferta','away'],['V fuori','awayWins'],['N fuori','awayDraws'],['S fuori','awayLosses']]],['Andamento da gol ordinati',[['Sequenze affidabili','ordered'],['Sotto nel punteggio','fromBehind'],['Punti recuperati (partite)','comebackPoints'],['Sopra nel punteggio','fromAhead'],['Vantaggio non conservato','leadLost']]],['Cartellini e cambi',[['Gialli','yellows'],['Rossi','reds'],['Blu','blues'],['Cambi','changes'],['Cambi/gara con eventi',r=>r.changeGames?r.changes/r.changeGames:null]]],['Copertura eventi',[['Gare con gol verificati','verified'],['Ordine dei gol noto','ordered'],['Minutaggio disponibile','timed']]]];
- return '<section class="stats-tournament-extended"><p class="stats-hint">Risultati e gol: fonte ufficiale. Eventi: solo ufficiali/confermati; gli eventi non registrati non equivalgono a zero. Per le sequenze senza minuto serve un ordine esplicito, non la data di inserimento.</p>'+tables.map(([label,fields])=>'<section class="glass panel"><h3>'+E(label)+'</h3><div style="overflow-x:auto"><table class="table"><thead><tr><th>Squadra</th>'+fields.map(x=>'<th>'+E(x[0])+'</th>').join('')+'</tr></thead><tbody>'+all.map(r=>'<tr><th>'+E(r.name)+'</th>'+fields.map(([_,k])=>'<td>'+E(cellText(typeof k==='function'?k(r):r[k]))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></section>').join('')+'</section>';
+ const fmt=v=>v==null?'—':Number(v).toLocaleString('it-IT',{maximumFractionDigits:2});
+ const blocks=[
+  ['results','Bilancio',[
+   ['Vittorie','wins','',false],['Gol fatti','gf','',false],['Gol subiti','ga','',false],
+   ['Vittorie in casa','homeWins','',false],['Vittorie in trasferta','awayWins','',false]]],
+  ['progress','Andamento',[
+   ['Partite in rimonta con punti','comebackPoints','',true],['Vantaggio non conservato','leadLost','',true],
+   ['Partite sotto nel punteggio','fromBehind','',true],['Partite sopra nel punteggio','fromAhead','',true]]],
+  ['discipline','Disciplina e cambi',[
+   ['Cartellini gialli','yellows','',true],['Cartellini rossi','reds','',true],
+   ['Cartellini blu','blues','',true],['Sostituzioni','changes','',true],
+   ['Cambi per gara documentata',r=>r.changeGames?r.changes/r.changeGames:null,'',true]]],
+  ['coverage','Affidabilità',[['Partite con gol verificati','verified','',false],
+    ['Progressione gol ordinata','ordered','',false],['Timeline con minuti','timed','',false]]]
+ ];
+ const competitions=[...new Set(all.map(x=>String(x.competition_id)))];
+ const panel=(comp,index)=>{
+  const teams=all.filter(x=>String(x.competition_id)===comp);
+  const compName=String(teamComparisons.find(x=>String(x.competition_id)===comp)?.competition_name||
+   comp||'Torneo');
+  const groups=blocks.map(([id,label,metrics],groupIndex)=>
+   '<div class="stats-insights-panel" data-extended-metric-panel="'+id+'"'+(groupIndex?' hidden':'')+'>'+
+   '<div class="stats-insights-grid">'+metrics.map(([name,key,unit,requiresEvents])=>{
+    const eligible=teams.filter(t=>!requiresEvents||t.cardGames>0||['fromBehind','fromAhead','comebackPoints','leadLost'].includes(key)&&t.ordered>0)
+     .map(t=>({...t,metric:typeof key==='function'?key(t):t[key]}))
+     .filter(t=>t.metric!==null&&Number.isFinite(Number(t.metric)))
+     .sort((a,b)=>Number(b.metric)-Number(a.metric)||a.name.localeCompare(b.name,'it'));
+    if(!eligible.length)return '<article class="stats-insight"><h4>'+E(name)+'</h4><p class="stats-insight-empty">Dati insufficienti</p></article>';
+    const max=Math.max(1,...eligible.map(t=>Math.abs(Number(t.metric))));
+    return '<article class="stats-insight"><h4>'+E(name)+'</h4><div class="stats-insight-rows">'+eligible.map((t,i)=>
+     '<div class="stats-insight-row"><span class="stats-insight-pos">'+String(i+1).padStart(2,'0')+'</span>'+
+     '<strong title="'+E(t.name)+'">'+E(t.name)+'</strong><div class="stats-insight-track"><span style="width:'+
+     (Math.abs(Number(t.metric))/max*100).toFixed(1)+'%"></span></div><b>'+E(fmt(t.metric)+unit)+'</b></div>').join('')+
+     '</div></article>';
+   }).join('')+'</div></div>').join('');
+  return '<div data-extended-comp-panel="'+E(comp)+'"'+(index?' hidden':'')+'>'+
+   '<nav class="stats-insights-nav" aria-label="Categoria confronto squadre">'+blocks.map(([key,label],i)=>
+   '<button type="button" data-extended-metric="'+key+'" aria-pressed="'+(i===0)+'">'+E(label)+'</button>').join('')+'</nav>'+
+   groups+'</div>';
+ };
+ return '<section class="stats-insights" aria-label="Analisi squadre avversarie">'+
+  '<div class="stats-insights-header"><div><span class="eyebrow">ANALISI COMPARATA</span><h2>Le squadre, oltre la classifica.</h2>'+
+  '<p>Rendimento, andamento, disciplina e affidabilità dei dati. Un confronto alla volta.</p></div>'+
+  '<div class="stats-insights-summary"><strong>'+all.length+'</strong><small>squadre analizzate</small></div></div>'+
+  (competitions.length>1?'<nav class="stats-insights-competitions" aria-label="Torneo confronto">'+competitions.map((id,i)=>
+    '<button type="button" data-extended-comp="'+E(id)+'" aria-pressed="'+(i===0)+'">'+
+    E(id)+'</button>').join('')+'</nav>':'')+
+  competitions.map(panel).join('')+
+  '<footer class="stats-insights-foot">Esiti: risultati ufficiali. Progressioni: solo gol con ordine univoco; senza minuto non sono attribuite durate. Eventi disciplinari e cambi: dati confermati disponibili, non necessariamente tabellini completi.</footer></section>';
 }
 function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[],opponentFlows=[],teamComparisons=[],fixtureEvents=[]){
  const groups=[
