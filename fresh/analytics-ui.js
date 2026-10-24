@@ -357,8 +357,7 @@ function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[]){
  const competitions=[...new Set(all.map(x=>String(x.competition_id)))];
  const panel=(comp,index)=>{
   const teams=all.filter(x=>String(x.competition_id)===comp);
-  const compName=String(teamComparisons.find(x=>String(x.competition_id)===comp)?.competition_name||
-   comp||'Torneo');
+  // Competition label is displayed through the dedicated tournament selector when required.
   const groups=blocks.map(([id,label,metrics],groupIndex)=>
    '<div class="stats-insights-panel" data-extended-metric-panel="'+id+'"'+(groupIndex?' hidden':'')+'>'+
    '<div class="stats-insights-grid">'+metrics.map(([name,key,unit,requiresEvents])=>{
