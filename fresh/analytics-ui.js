@@ -291,7 +291,40 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  return '<div class="stats-player-section"><p class="stats-hint">Confronti stagionali dei giocatori Caselle · dati certificati nella vista SQL unica. Le voci senza dati sono omesse.</p>'+
  tabs+panels+'<section class="stats-player-detail-block"><h3>Dettagli eventi · confronti giocatori</h3>'+detailGroups+'</section></div>';
 }
-function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[],opponentFlows=[],teamComparisons=[]){
+
+function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[]){
+ const finished=(fixtures||[]).filter(f=>f.status==='finished'&&!f.is_test&&Number.isInteger(Number(f.home_score))&&Number.isInteger(Number(f.away_score)));
+ const ids=new Set(finished.map(f=>String(f.id)));
+ const valid=fixtureEvents.filter(e=>ids.has(String(e.fixture_id))&&['official','community_confirmed'].includes(e.validation_status));
+ const byFixture=new Map();for(const e of valid){const k=String(e.fixture_id);if(!byFixture.has(k))byFixture.set(k,[]);byFixture.get(k).push(e)}
+ const rows=new Map();
+ const update=(competition_id,name,home,gf,ga,f)=>{
+  const key=String(competition_id)+'|'+name.toLocaleLowerCase('it');let r=rows.get(key);
+  if(!r){r={competition_id,name,played:0,wins:0,draws:0,losses:0,gf:0,ga:0,home:0,away:0,verified:0,ordered:0,timed:0,yellows:0,reds:0,blues:0,changes:0,cardGames:0,changeGames:0,goalsFirst:0,goalsLast:0};rows.set(key,r)}
+  r.played++;r.gf+=gf;r.ga+=ga;r[gf>ga?'wins':gf<ga?'losses':'draws']++;r[home?'home':'away']++;
+  const events=byFixture.get(String(f.id))||[];
+  const side=home?'home':'away';
+  const card=events.filter(e=>e.team_side===side&&['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type));
+  const changes=events.filter(e=>e.team_side===side&&e.event_type==='substitution');
+  r.yellows+=card.filter(e=>e.event_type==='yellow_card').length;r.reds+=card.filter(e=>['red_card','second_yellow'].includes(e.event_type)).length;r.blues+=card.filter(e=>e.event_type==='blue_card').length;r.changes+=changes.length;
+  if(events.length){r.cardGames++;r.changeGames++}
+  const goals=events.filter(e=>['goal','own_goal','penalty_goal','penalty_scored'].includes(e.event_type)&&e.payload?.count_score!==false);
+  const scoreSide=e=>e.event_type==='own_goal'?(e.team_side==='home'?'away':'home'):e.team_side;
+  if(goals.length!==Number(f.home_score)+Number(f.away_score)||goals.some(e=>!['home','away'].includes(scoreSide(e)))||goals.filter(e=>scoreSide(e)==='home').length!==Number(f.home_score)||goals.filter(e=>scoreSide(e)==='away').length!==Number(f.away_score))return;
+  r.verified++;
+  const canTime=goals.every(e=>Number.isInteger(e.minute));if(canTime)r.timed++;
+  // No chronological inference from created_at: upload order is not match event order.
+  const ordered=goals.every(e=>Number.isInteger(Number(e.payload?.sequence_order??e.payload?.event_order??e.source_raw?.sequence_order)));
+  if(ordered||canTime)r.ordered++;
+ };
+ for(const f of finished){if(f.home_team)update(f.competition_id,String(f.home_team),true,Number(f.home_score),Number(f.away_score),f);if(f.away_team)update(f.competition_id,String(f.away_team),false,Number(f.away_score),Number(f.home_score),f)}
+ const all=[...rows.values()].sort((a,b)=>a.name.localeCompare(b.name,'it'));
+ if(!all.length)return '<p class="stats-hint">Non ci sono risultati ufficiali disponibili.</p>';
+ const cellText=(v,d=1)=>v==null?'—':Number(v).toLocaleString('it-IT',{maximumFractionDigits:d});
+ const tables=[['Esiti e gol',[['P','played'],['V','wins'],['N','draws'],['S','losses'],['GF','gf'],['GS','ga'],['Casa','home'],['Trasf.','away']]],['Cartellini e cambi',[['Gialli','yellows'],['Rossi','reds'],['Blu','blues'],['Cambi','changes'],['Cambi/gara con eventi',r=>r.changeGames?r.changes/r.changeGames:null]]],['Copertura eventi',[['Gare con gol verificati','verified'],['Ordine dei gol noto','ordered'],['Minutaggio disponibile','timed']]]];
+ return '<section class="stats-tournament-extended"><p class="stats-hint">Risultati e gol: fonte ufficiale. Eventi: solo ufficiali/confermati; gli eventi non registrati non equivalgono a zero. Per le sequenze senza minuto serve un ordine esplicito, non la data di inserimento.</p>'+tables.map(([label,fields])=>'<section class="glass panel"><h3>'+E(label)+'</h3><div style="overflow-x:auto"><table class="table"><thead><tr><th>Squadra</th>'+fields.map(x=>'<th>'+E(x[0])+'</th>').join('')+'</tr></thead><tbody>'+all.map(r=>'<tr><th>'+E(r.name)+'</th>'+fields.map(([_,k])=>'<td>'+E(cellText(typeof k==='function'?k(r):r[k]))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></section>').join('')+'</section>';
+}
+function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[],opponentFlows=[],teamComparisons=[],fixtureEvents=[]){
  const groups=[
   ['states','Stato del risultato',[['% in vantaggio','lead_pct','%'],['% in svantaggio','trail_pct','%'],
     ['% sullo 0-0','nil_pct','%'],['Minuti in vantaggio','leading_minutes','′'],['Minuti in svantaggio','trailing_minutes','′'],
@@ -326,15 +359,15 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
   (comps.length>1?'<div class="stats-ranking-tabs" role="tablist" aria-label="Competizione">'+comps.map((id,i)=>
    '<button data-team-comp="'+E(id)+'" role="tab" type="button" aria-selected="'+(i===0)+'">'+
    E(competitions.find(c=>String(c.id)===id)?.name||'Competizione')+'</button>').join('')+'</div>':'')+
-  (scopes||'<p class="stats-hint">Dati verificati non ancora disponibili.</p>')+
+  (scopes||'<p class="stats-hint">Dati verificati non ancora disponibili.</p>')+extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents)+
   '<p class="stats-hint">“Pressione” e “sofferenza” indicano solamente condizioni del punteggio; non misurano azioni o possesso.</p></div>';
 }
-export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[],goalImpacts=[],ratingInsights=[],playerComparisons=[],matchFlows=[],flowPhases=[],flowEventContexts=[],opponentFlows=[],teamComparisons=[],mvpCounts=new Map()){
+export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[],goalImpacts=[],ratingInsights=[],playerComparisons=[],matchFlows=[],flowPhases=[],flowEventContexts=[],opponentFlows=[],teamComparisons=[],mvpCounts=new Map(),fixtureEvents=[]){
  const tabs='<nav class="stats-scope-tabs" role="tablist" aria-label="Ambito delle statistiche">'+
  [['team','Squadra · Caselle'],['players','Giocatori · Caselle'],['all','Complessivo · Torneo']].map(([id,label],i)=>
  '<button type="button" role="tab" data-stats-scope="'+id+'" aria-selected="'+(i===0)+'">'+E(label)+'</button>').join('')+'</nav>';
  return tabs+'<div class="stats-scope-panel" data-stats-panel="team">'+
  renderTeamAnalytics(fixtures,matches,events,team,competitions,playerStats,opponents,matchPlayers,venues,predictionSnapshots,history)+
  '</div><div class="stats-scope-panel" data-stats-panel="players" hidden>'+playersNumbers(playerStats,goalImpacts,ratingInsights,playerComparisons,events,mvpCounts)+
- '</div><div class="stats-scope-panel" data-stats-panel="all" hidden>'+tournamentNumbers(fixtures,competitions,matchFlows,flowPhases,flowEventContexts,opponentFlows,teamComparisons)+'</div>';
+ '</div><div class="stats-scope-panel" data-stats-panel="all" hidden>'+tournamentNumbers(fixtures,competitions,matchFlows,flowPhases,flowEventContexts,opponentFlows,teamComparisons,fixtureEvents)+'</div>';
 }
