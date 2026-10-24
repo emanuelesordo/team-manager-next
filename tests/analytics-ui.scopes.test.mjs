@@ -37,3 +37,19 @@ test('Team comparison visually ranks sides in each competition without a league 
  assert.match(all,/data-team-metric-panel="changes" hidden/);
  assert.doesNotMatch(all,/standing-table/);
 });
+
+test('Opponent tournament comparison reads ordered score slots without requiring minutes',()=>{
+ const fixtures=[{id:'f',competition_id:'c',status:'finished',is_test:false,home_team:'Justinense',away_team:'Rubano',home_score:2,away_score:1}];
+ const goals=[
+  {fixture_id:'f',event_type:'goal',team_side:'away',minute:null,validation_status:'official',payload:{sequence_order:1,count_score:true}},
+  {fixture_id:'f',event_type:'goal',team_side:'home',minute:null,validation_status:'official',payload:{sequence_order:2,count_score:true}},
+  {fixture_id:'f',event_type:'goal',team_side:'home',minute:null,validation_status:'official',payload:{sequence_order:3,count_score:true}}
+ ];
+ const args=[fixtures,[],[],{id:'caselle'},[{id:'c',name:'Serie B'}]];
+ const html=renderEventAnalytics(...args,[],[],[],[],[],[],[],[],[],[],[],[],[],[],new Map(),goals);
+ assert.match(html,/Andamento da gol ordinati/);
+ assert.match(html,/Punti recuperati \(partite\)/);
+ assert.match(html,/Justinense/);
+ assert.match(html,/Rubano/);
+ assert.match(html,/Casa \/ trasferta/);
+});
