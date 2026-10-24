@@ -48,9 +48,9 @@ test('Opponent tournament comparison reads ordered score slots without requiring
  const args=Array(20).fill(undefined);
  args[0]=fixtures;args[1]=[];args[2]=[];args[3]={id:'caselle'};args[4]=[{id:'c',name:'Serie B'}];args[18]=new Map();args[19]=goals;
  const html=renderEventAnalytics(...args);
- assert.match(html,/Andamento da gol ordinati/);
- assert.match(html,/Punti recuperati \(partite\)/);
+ assert.match(html,/Andamento/);
+ assert.match(html,/Partite in rimonta con punti/);
  assert.match(html,/Justinense/);
  assert.match(html,/Rubano/);
- assert.match(html,/Casa \/ trasferta/);
+ assert.match(html,/Vittorie in trasferta/);
 });
