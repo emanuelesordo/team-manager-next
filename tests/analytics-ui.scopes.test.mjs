@@ -45,8 +45,9 @@ test('Opponent tournament comparison reads ordered score slots without requiring
   {fixture_id:'f',event_type:'goal',team_side:'home',minute:null,validation_status:'official',payload:{sequence_order:2,count_score:true}},
   {fixture_id:'f',event_type:'goal',team_side:'home',minute:null,validation_status:'official',payload:{sequence_order:3,count_score:true}}
  ];
- const args=[fixtures,[],[],{id:'caselle'},[{id:'c',name:'Serie B'}]];
- const html=renderEventAnalytics(...args,[],[],[],[],[],[],[],[],[],[],[],[],[],[],new Map(),goals);
+ const args=Array(20).fill(undefined);
+ args[0]=fixtures;args[1]=[];args[2]=[];args[3]={id:'caselle'};args[4]=[{id:'c',name:'Serie B'}];args[18]=new Map();args[19]=goals;
+ const html=renderEventAnalytics(...args);
  assert.match(html,/Andamento da gol ordinati/);
  assert.match(html,/Punti recuperati \(partite\)/);
  assert.match(html,/Justinense/);
