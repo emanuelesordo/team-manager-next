@@ -300,8 +300,9 @@ function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[]){
  const rows=new Map();
  const update=(competition_id,name,home,gf,ga,f)=>{
   const key=String(competition_id)+'|'+name.toLocaleLowerCase('it');let r=rows.get(key);
-  if(!r){r={competition_id,name,played:0,wins:0,draws:0,losses:0,gf:0,ga:0,home:0,away:0,verified:0,ordered:0,timed:0,yellows:0,reds:0,blues:0,changes:0,cardGames:0,changeGames:0,goalsFirst:0,goalsLast:0};rows.set(key,r)}
+  if(!r){r={competition_id,name,played:0,wins:0,draws:0,losses:0,gf:0,ga:0,home:0,away:0,verified:0,ordered:0,timed:0,yellows:0,reds:0,blues:0,changes:0,cardGames:0,changeGames:0,goalsFirst:0,goalsLast:0,comebackPoints:0,leadLost:0,fromBehind:0,fromAhead:0,homeWins:0,homeDraws:0,homeLosses:0,awayWins:0,awayDraws:0,awayLosses:0};rows.set(key,r)}
   r.played++;r.gf+=gf;r.ga+=ga;r[gf>ga?'wins':gf<ga?'losses':'draws']++;r[home?'home':'away']++;
+  r[(home?'home':'away')+(gf>ga?'Wins':gf===ga?'Draws':'Losses')]++;
   const events=byFixture.get(String(f.id))||[];
   const side=home?'home':'away';
   const card=events.filter(e=>e.team_side===side&&['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type));
@@ -315,13 +316,31 @@ function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[]){
   const canTime=goals.every(e=>Number.isInteger(e.minute));if(canTime)r.timed++;
   // No chronological inference from created_at: upload order is not match event order.
   const ordered=goals.every(e=>Number.isInteger(Number(e.payload?.sequence_order??e.payload?.event_order??e.source_raw?.sequence_order)));
-  if(ordered||canTime)r.ordered++;
+  if(ordered||canTime){
+   // Ordered score slots are suitable for score progression, not minute-based shares.
+   const orderedGoals=[...goals].sort((a,b)=>{
+    const order=e=>Number(e.payload?.sequence_order??e.payload?.event_order??e.source_raw?.sequence_order);
+    if(ordered)return order(a)-order(b);
+    return Number(a.minute)-Number(b.minute)||Number(a.stoppage_minute||0)-Number(b.stoppage_minute||0);
+   });
+   const indexes=orderedGoals.map(e=>ordered?Number(e.payload?.sequence_order??e.payload?.event_order??e.source_raw?.sequence_order):Number(e.minute)*100+Number(e.stoppage_minute||0));
+   if(new Set(indexes).size===indexes.length){
+    r.ordered++;
+    let us=0,them=0,wasAhead=false,wasBehind=false;
+    for(const goal of orderedGoals){
+     if(us>them)wasAhead=true;if(us<them)wasBehind=true;
+     if(scoreSide(goal)===side)us++;else them++;
+    }
+    if(wasBehind){r.fromBehind++;if(gf>=ga)r.comebackPoints++}
+    if(wasAhead){r.fromAhead++;if(gf<=ga)r.leadLost++}
+   }
+  }
  };
  for(const f of finished){if(f.home_team)update(f.competition_id,String(f.home_team),true,Number(f.home_score),Number(f.away_score),f);if(f.away_team)update(f.competition_id,String(f.away_team),false,Number(f.away_score),Number(f.home_score),f)}
  const all=[...rows.values()].sort((a,b)=>a.name.localeCompare(b.name,'it'));
  if(!all.length)return '<p class="stats-hint">Non ci sono risultati ufficiali disponibili.</p>';
  const cellText=(v,d=1)=>v==null?'—':Number(v).toLocaleString('it-IT',{maximumFractionDigits:d});
- const tables=[['Esiti e gol',[['P','played'],['V','wins'],['N','draws'],['S','losses'],['GF','gf'],['GS','ga'],['Casa','home'],['Trasf.','away']]],['Cartellini e cambi',[['Gialli','yellows'],['Rossi','reds'],['Blu','blues'],['Cambi','changes'],['Cambi/gara con eventi',r=>r.changeGames?r.changes/r.changeGames:null]]],['Copertura eventi',[['Gare con gol verificati','verified'],['Ordine dei gol noto','ordered'],['Minutaggio disponibile','timed']]]];
+ const tables=[['Esiti e gol',[['P','played'],['V','wins'],['N','draws'],['S','losses'],['GF','gf'],['GS','ga']]],['Casa / trasferta',[['Casa','home'],['V casa','homeWins'],['N casa','homeDraws'],['S casa','homeLosses'],['Trasferta','away'],['V fuori','awayWins'],['N fuori','awayDraws'],['S fuori','awayLosses']]],['Andamento da gol ordinati',[['Sequenze affidabili','ordered'],['Sotto nel punteggio','fromBehind'],['Punti recuperati (partite)','comebackPoints'],['Sopra nel punteggio','fromAhead'],['Vantaggio non conservato','leadLost']]],['Cartellini e cambi',[['Gialli','yellows'],['Rossi','reds'],['Blu','blues'],['Cambi','changes'],['Cambi/gara con eventi',r=>r.changeGames?r.changes/r.changeGames:null]]],['Copertura eventi',[['Gare con gol verificati','verified'],['Ordine dei gol noto','ordered'],['Minutaggio disponibile','timed']]]];
  return '<section class="stats-tournament-extended"><p class="stats-hint">Risultati e gol: fonte ufficiale. Eventi: solo ufficiali/confermati; gli eventi non registrati non equivalgono a zero. Per le sequenze senza minuto serve un ordine esplicito, non la data di inserimento.</p>'+tables.map(([label,fields])=>'<section class="glass panel"><h3>'+E(label)+'</h3><div style="overflow-x:auto"><table class="table"><thead><tr><th>Squadra</th>'+fields.map(x=>'<th>'+E(x[0])+'</th>').join('')+'</tr></thead><tbody>'+all.map(r=>'<tr><th>'+E(r.name)+'</th>'+fields.map(([_,k])=>'<td>'+E(cellText(typeof k==='function'?k(r):r[k]))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></section>').join('')+'</section>';
 }
 function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[],opponentFlows=[],teamComparisons=[],fixtureEvents=[]){
