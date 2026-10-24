@@ -51,3 +51,31 @@
 @media(prefers-reduced-motion:reduce){.stats-flow-track i{animation:none}}
 
 .stats-team-ranking-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 28px}.stats-tournament-section [data-team-comp-panel][hidden],.stats-tournament-section [data-team-metric-panel][hidden]{display:none}@media(max-width:800px){.stats-team-ranking-grid{grid-template-columns:1fr}}
+
+
+/* Dedicated editorial area for tournament/opponent comparisons. */
+.stats-insights{min-width:0;padding:clamp(20px,3.3vw,42px);border-radius:22px;background:linear-gradient(155deg,color-mix(in srgb,#55af95 7%,transparent),transparent 47%),color-mix(in srgb,currentColor 3%,transparent);border:1px solid color-mix(in srgb,currentColor 12%,transparent);display:grid;gap:24px}
+.stats-insights-header{display:flex;justify-content:space-between;align-items:end;gap:24px;border-bottom:1px solid color-mix(in srgb,currentColor 13%,transparent);padding-bottom:25px}
+.stats-insights-header h2{font-size:clamp(21px,2.7vw,34px);letter-spacing:-.045em;line-height:1.1;margin:7px 0 12px}
+.stats-insights-header p{font-size:13px;line-height:1.6;opacity:.68;max-width:520px;margin:0}
+.stats-insights-summary{text-align:right;display:grid;min-width:85px;gap:2px}
+.stats-insights-summary strong{font-size:44px;font-variant-numeric:tabular-nums;letter-spacing:-.06em;line-height:1}
+.stats-insights-summary small{font-size:10px;opacity:.65}
+.stats-insights-nav,.stats-insights-competitions{display:flex;gap:8px;flex-wrap:wrap}
+.stats-insights-nav button,.stats-insights-competitions button{font:inherit;color:inherit;background:transparent;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:999px;padding:10px 16px;font-size:12px;cursor:pointer}
+.stats-insights-nav button[aria-pressed=true],.stats-insights-competitions button[aria-pressed=true]{color:#071d19;background:#72c9ad;border-color:#72c9ad;font-weight:700}
+.stats-insights-nav button:focus-visible,.stats-insights-competitions button:focus-visible{outline:2px solid #72c9ad;outline-offset:3px}
+.stats-insights-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px 36px}
+.stats-insight{min-width:0;border-top:1px solid color-mix(in srgb,currentColor 13%,transparent);padding-top:18px}
+.stats-insight h4{font-size:13px;font-weight:700;margin:0 0 23px}
+.stats-insight-rows{display:grid;gap:17px}
+.stats-insight-row{display:grid;grid-template-columns:23px minmax(100px,1.2fr) minmax(48px,1fr) 48px;align-items:center;gap:10px;font-size:12px}
+.stats-insight-pos{font-size:10px;opacity:.47;font-variant-numeric:tabular-nums}
+.stats-insight-row strong{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stats-insight-row b{text-align:right;font-variant-numeric:tabular-nums}
+.stats-insight-track{height:6px;background:color-mix(in srgb,currentColor 8%,transparent);border-radius:9px;overflow:hidden}
+.stats-insight-track span{display:block;height:100%;border-radius:9px;background:#72c9ad}
+.stats-insights-foot{font-size:11px;line-height:1.6;opacity:.6;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);padding-top:17px}
+.stats-insight-empty{font-size:12px;opacity:.58;margin:0}
+.stats-insights [hidden]{display:none!important}
+@media(max-width:800px){.stats-insights{padding:20px 16px;border-radius:16px}.stats-insights-grid{grid-template-columns:1fr;gap:28px}.stats-insights-header h2{font-size:25px}.stats-insights-summary strong{font-size:36px}.stats-insight-row{grid-template-columns:20px minmax(100px,1fr) minmax(32px,.6fr) 40px;gap:7px}.stats-insights-nav button{padding:9px 12px;font-size:11px}}
