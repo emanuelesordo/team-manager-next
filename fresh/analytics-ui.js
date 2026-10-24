@@ -292,12 +292,13 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  tabs+panels+'<section class="stats-player-detail-block"><h3>Dettagli eventi · confronti giocatori</h3>'+detailGroups+'</section></div>';
 }
 
-function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[]){
+function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[],team=null,opponents=[]){
  const finished=(fixtures||[]).filter(f=>f.status==='finished'&&!f.is_test&&Number.isInteger(Number(f.home_score))&&Number.isInteger(Number(f.away_score)));
  const ids=new Set(finished.map(f=>String(f.id)));
  const valid=fixtureEvents.filter(e=>ids.has(String(e.fixture_id))&&['official','community_confirmed'].includes(e.validation_status));
  const byFixture=new Map();for(const e of valid){const k=String(e.fixture_id);if(!byFixture.has(k))byFixture.set(k,[]);byFixture.get(k).push(e)}
  const rows=new Map();
+ const label=(id,local)=>local?.id===id?local.name:(opponents||[]).find(o=>o.id===id)?.name||null;
  const update=(competition_id,name,home,gf,ga,f)=>{
   const key=String(competition_id)+'|'+name.toLocaleLowerCase('it');let r=rows.get(key);
   if(!r){r={competition_id,name,played:0,wins:0,draws:0,losses:0,gf:0,ga:0,home:0,away:0,verified:0,ordered:0,timed:0,yellows:0,reds:0,blues:0,changes:0,cardGames:0,changeGames:0,goalsFirst:0,goalsLast:0,comebackPoints:0,leadLost:0,fromBehind:0,fromAhead:0,homeWins:0,homeDraws:0,homeLosses:0,awayWins:0,awayDraws:0,awayLosses:0};rows.set(key,r)}
@@ -305,12 +306,14 @@ function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[]){
   r[(home?'home':'away')+(gf>ga?'Wins':gf===ga?'Draws':'Losses')]++;
   const events=byFixture.get(String(f.id))||[];
   const side=home?'home':'away';
-  const card=events.filter(e=>e.team_side===side&&['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type));
-  const changes=events.filter(e=>e.team_side===side&&e.event_type==='substitution');
+  const teamHome=Boolean(f.home_team_id),teamAway=Boolean(f.away_team_id);
+  const normalizedSide=e=>e.team_side==='team'?(teamHome?'home':teamAway?'away':null):e.team_side==='opponent'?(teamHome?'away':teamAway?'home':null):e.team_side;
+  const card=events.filter(e=>normalizedSide(e)===side&&['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type));
+  const changes=events.filter(e=>normalizedSide(e)===side&&e.event_type==='substitution');
   r.yellows+=card.filter(e=>e.event_type==='yellow_card').length;r.reds+=card.filter(e=>['red_card','second_yellow'].includes(e.event_type)).length;r.blues+=card.filter(e=>e.event_type==='blue_card').length;r.changes+=changes.length;
   if(events.length){r.cardGames++;r.changeGames++}
   const goals=events.filter(e=>['goal','own_goal','penalty_goal','penalty_scored'].includes(e.event_type)&&e.payload?.count_score!==false);
-  const scoreSide=e=>e.event_type==='own_goal'?(e.team_side==='home'?'away':'home'):e.team_side;
+  const scoreSide=e=>e.event_type==='own_goal'?(normalizedSide(e)==='home'?'away':'home'):normalizedSide(e);
   if(goals.length!==Number(f.home_score)+Number(f.away_score)||goals.some(e=>!['home','away'].includes(scoreSide(e)))||goals.filter(e=>scoreSide(e)==='home').length!==Number(f.home_score)||goals.filter(e=>scoreSide(e)==='away').length!==Number(f.away_score))return;
   r.verified++;
   const canTime=goals.every(e=>Number.isInteger(e.minute));if(canTime)r.timed++;
@@ -336,7 +339,7 @@ function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[]){
    }
   }
  };
- for(const f of finished){if(f.home_team)update(f.competition_id,String(f.home_team),true,Number(f.home_score),Number(f.away_score),f);if(f.away_team)update(f.competition_id,String(f.away_team),false,Number(f.away_score),Number(f.home_score),f)}
+ for(const f of finished){const h=label(f.home_team_id,team)||label(f.home_opponent_id,team)||f.home_team;const a=label(f.away_team_id,team)||label(f.away_opponent_id,team)||f.away_team;if(h)update(f.competition_id,String(h),true,Number(f.home_score),Number(f.away_score),f);if(a)update(f.competition_id,String(a),false,Number(f.away_score),Number(f.home_score),f)}
  const all=[...rows.values()].sort((a,b)=>a.name.localeCompare(b.name,'it'));
  if(!all.length)return '<p class="stats-hint">Non ci sono risultati ufficiali disponibili.</p>';
  const fmt=v=>v==null?'—':Number(v).toLocaleString('it-IT',{maximumFractionDigits:2});
@@ -388,7 +391,7 @@ function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[]){
   competitions.map(panel).join('')+
   '<footer class="stats-insights-foot">Esiti: risultati ufficiali. Progressioni: solo gol con ordine univoco; senza minuto non sono attribuite durate. Eventi disciplinari e cambi: dati confermati disponibili, non necessariamente tabellini completi.</footer></section>';
 }
-function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[],opponentFlows=[],teamComparisons=[],fixtureEvents=[]){
+function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[],opponentFlows=[],teamComparisons=[],fixtureEvents=[],team=null,opponents=[]){
  const groups=[
   ['states','Stato del risultato',[['% in vantaggio','lead_pct','%'],['% in svantaggio','trail_pct','%'],
     ['% sullo 0-0','nil_pct','%'],['Minuti in vantaggio','leading_minutes','′'],['Minuti in svantaggio','trailing_minutes','′'],
@@ -423,7 +426,7 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
   (comps.length>1?'<div class="stats-ranking-tabs" role="tablist" aria-label="Competizione">'+comps.map((id,i)=>
    '<button data-team-comp="'+E(id)+'" role="tab" type="button" aria-selected="'+(i===0)+'">'+
    E(competitions.find(c=>String(c.id)===id)?.name||'Competizione')+'</button>').join('')+'</div>':'')+
-  (scopes||'<p class="stats-hint">Dati verificati non ancora disponibili.</p>')+extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents)+
+  (scopes||'<p class="stats-hint">Dati verificati non ancora disponibili.</p>')+extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents,team,opponents)+
   '<p class="stats-hint">“Pressione” e “sofferenza” indicano solamente condizioni del punteggio; non misurano azioni o possesso.</p></div>';
 }
 export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[],goalImpacts=[],ratingInsights=[],playerComparisons=[],matchFlows=[],flowPhases=[],flowEventContexts=[],opponentFlows=[],teamComparisons=[],mvpCounts=new Map(),fixtureEvents=[]){
@@ -433,5 +436,5 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
  return tabs+'<div class="stats-scope-panel" data-stats-panel="team">'+
  renderTeamAnalytics(fixtures,matches,events,team,competitions,playerStats,opponents,matchPlayers,venues,predictionSnapshots,history)+
  '</div><div class="stats-scope-panel" data-stats-panel="players" hidden>'+playersNumbers(playerStats,goalImpacts,ratingInsights,playerComparisons,events,mvpCounts)+
- '</div><div class="stats-scope-panel" data-stats-panel="all" hidden>'+tournamentNumbers(fixtures,competitions,matchFlows,flowPhases,flowEventContexts,opponentFlows,teamComparisons,fixtureEvents)+'</div>';
+ '</div><div class="stats-scope-panel" data-stats-panel="all" hidden>'+tournamentNumbers(fixtures,competitions,matchFlows,flowPhases,flowEventContexts,opponentFlows,teamComparisons,fixtureEvents,team,opponents)+'</div>';
 }
