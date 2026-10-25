@@ -146,7 +146,12 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
   .map(p=>({...byPlayer.get(String(p.player_id)),...p}));
  const usedBench=new Set(),usedOut=new Set(),scored=new Map();
  const patterns=historicalGoalPatterns({fixture,fixtures,matches,events:historicalEvents,duration});
- const schedule=chooseGoalMinutes(goals,{fixture,fixtures,matches,events:historicalEvents,duration,rng,patterns});
+ const simulated=prediction.simulation?.timeline;
+ const schedule=Array.isArray(simulated)
+  ?simulated.filter(e=>e.type==='goal'&&['home','away'].includes(e.side))
+   .map((e,i)=>({type:'goal',side:e.side,minute:clamp(Math.round(e.minute),1,duration),seq:i}))
+   .sort((a,b)=>a.minute-b.minute||a.seq-b.seq)
+  :chooseGoalMinutes(goals,{fixture,fixtures,matches,events:historicalEvents,duration,rng,patterns});
  const events=[{minute:0,type:'phase',label:'Calcio d’inizio',basis:'Assetto iniziale della formazione'},
   {minute:Math.round(duration/2),type:'phase',label:'Intervallo',basis:'Valutazione del parziale'}];
  // Each session is one stoppage, with one or more substitutions.
