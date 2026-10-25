@@ -447,9 +447,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   // thousands of states, and recalculating ratings/roles at each visit stalls UI.
   const scoreMatrix=new Map(starters.map(candidate=>[
    key(candidate.player_id),new Map(slots.map(slot=>[
-    slot.slot,assignmentScore(candidate,slot.fitPosition,slot.targetRole,scores,rotationOpportunity,scoringData)-
-     (1-clamp(Number(availabilityOverrides[key(candidate.player_id)]?.fitness??100)/100))*3-
-     (Number(availabilityOverrides[key(candidate.player_id)]?.maxMinutes)>0&&Number(availabilityOverrides[key(candidate.player_id)]?.maxMinutes)<40?1.25:0)
+    slot.slot,assignmentScore(candidate,slot.fitPosition,slot.targetRole,scores,rotationOpportunity,scoringData)
    ]))
   ]));
   const cachedScore=(candidate,slot)=>scoreMatrix.get(key(candidate.player_id))?.get(slot.slot)??-Infinity;
@@ -487,7 +485,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
    const mean=scores.metrics.get(key(player.player_id))?.meanRating;
    const form=recentOpponentForm(player.player_id,data,ownPrior,fixtureWeights,mean);
    Object.assign(player,expectedRatingFor(player.player_id,xiIds,scores,coPlay,player.positionAdjustment,form),{recentFormDelta:form.delta,formSamples:form.samples});
-   if(finite(player.expectedRating))player.expectedRating=clamp(Number(player.expectedRating)-(1-player.fitness/100)*1.5,1,10);
+
   }
   const rated=players.filter(p=>finite(p.expectedRating));
   const xiExpectedRating=rated.length?rated.reduce((sum,p)=>sum+Number(p.expectedRating),0)/rated.length:null;
