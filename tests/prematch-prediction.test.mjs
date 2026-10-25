@@ -120,3 +120,13 @@ test('pre-match comparison renders event-free profiles with sample counts',()=>{
  assert.match(markup,/Forma corretta per rango/);
  assert.match(markup,/Timeline complete:/);
 });
+
+test('timeline-derived forecast matches its representative goal sequence and is deterministic',()=>{
+ const args={fixture:fixtures[4],competition,fixtures,history,venues,matches:[],events:[],team:null,competitions:[competition]};
+ const result=predictMatch(args);
+ assert.equal(result.simulation.trials,2400);
+ const scored=result.simulation.timeline.reduce((acc,e)=>{acc[e.side]++;return acc},{home:0,away:0});
+ assert.equal(scored.home,result.probabilities.mostLikely.home);
+ assert.equal(scored.away,result.probabilities.mostLikely.away);
+ assert.deepEqual(result.simulation,predictMatch(args).simulation);
+});
