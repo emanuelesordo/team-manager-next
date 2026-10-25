@@ -214,8 +214,8 @@ test('each real variant changes at least one starting player rather than only sw
 
 test('walk-forward learning predicts before learning each actual XI and excludes later fixtures',()=>{
  const learning=coachWalkForward(matches,priorSelections,Date.parse('2026-10-01T00:00:00Z'));
- assert.equal(learning.observations.length,1);
- assert.equal(learning.observations[0].matchId,'m2');
+ assert.equal(learning.observations.length,2);
+ assert.deepEqual(learning.observations.map(o=>o.matchId),['m1','m2']);
  assert.ok(!learning.observations.some(o=>o.matchId==='m3'));
  assert.equal(learning.playerPriors.get('p1').samples,2);
 });
