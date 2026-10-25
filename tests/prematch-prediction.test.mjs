@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {predictMatch,predictionSignature} from '../fresh/pre-match-prediction.js';
-import {renderPreMatchPrediction} from '../fresh/pre-match-prediction-ui.js';
+import {renderPreMatchPrediction,expectedTimelineNarrative} from '../fresh/pre-match-prediction-ui.js';
 
 const competition={id:'c1',kind:'league',win_points:3,draw_points:1,loss_points:0,periods:2,minutes_per_period:40};
 const fixture=(id,status,date,home,away,hs=null,as=null,venue='Campo A')=>({
@@ -129,4 +129,17 @@ test('timeline-derived forecast matches its representative goal sequence and is 
  assert.equal(scored.home,result.probabilities.mostLikely.home);
  assert.equal(scored.away,result.probabilities.mostLikely.away);
  assert.deepEqual(result.simulation,predictMatch(args).simulation);
+});
+
+test('expected narrative follows simulated goals without claiming unsupported empirical patterns',()=>{
+ const result=predictMatch({fixture:fixtures[4],competition,fixtures,history,venues,matches:[],events:[],team:null,competitions:[competition]});
+ const notes=expectedTimelineNarrative(result);
+ const goals=result.simulation.timeline.filter(e=>e.type==='goal');
+ assert.equal(notes.length,goals.length+2);
+ for(let i=0;i<goals.length;i++)assert.match(notes[i+1].text,new RegExp(String(Math.round(goals[i].minute))+'′'));
+ assert.match(notes.at(-1).text,/scenario|sequenze/);
+ assert.ok(!notes.some(note=>/ha recuperato lo svantaggio nel/.test(note.text)));
+ const html=renderPreMatchPrediction(result);
+ assert.match(html,/SCENARIO ATTESO/);
+ assert.match(html,/Intorno al|Non emergono gol/);
 });
