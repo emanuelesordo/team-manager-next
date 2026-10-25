@@ -227,5 +227,7 @@ test('late arrivals cannot be starters and physical fitness adjusts expected rat
  const before=normal.players.find(p=>p.player_id==='p1');
  const after=reduced.players.find(p=>p.player_id==='p1');
  if(before&&after)assert.equal(after.expectedRating,before.expectedRating);
- assert.match(renderHypotheticalLineup(normal),/data-prematch-player-config/);
+ const markup=renderHypotheticalLineup(normal);
+ assert.match(markup,/data-prematch-player-config/);
+ assert.equal((markup.match(/<button type="button" data-prematch-player-config=/g)||[]).length,(markup.match(/<\/button>/g)||[]).length-3-3-2);
 });
