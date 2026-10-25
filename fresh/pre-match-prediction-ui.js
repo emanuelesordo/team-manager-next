@@ -19,11 +19,8 @@ export function expectedTimelineNarrative(result){
  const situ=result.situational||{},clubs={home:result.home.name,away:result.away.name};
  const howMany=side=>Number(situ[side]?.timelineSample||0);
  const clock=m=>Math.max(1,Math.round(Number(m)));
- const period=minute=>minute<=40?'nel primo tempo':'nella ripresa';
  const notes=[];
  let score={home:0,away:0};
- const opening=result.home.name+' e '+result.away.name+' partono da una situazione di parità. Il modello ipotizza lo sviluppo seguente sulla base delle '+result.simulation.trials+' partite simulate.';
- notes.push({minute:0,text:opening});
  for(const event of events){
   const side=event.side,other=side==='home'?'away':'home',minute=clock(event.minute);
   const previous=score[side]-score[other];score[side]++;
@@ -48,13 +45,12 @@ export function expectedTimelineNarrative(result){
    if(vulnerable&&Number(vulnerable.against||0)>0&&Number(vulnerable.against||0)===max)
     evidence.push(clubs[other]+' ha subito frequentemente gol in questa fascia temporale');
   }
-  const explanation=evidence.length?'. Il modello considera che '+evidence.join('; inoltre, ')+'.':
-   '. La collocazione temporale è una simulazione indicativa, non un evento certo.';
+  const explanation=evidence.length?'. '+evidence.join('; ')+'.':'';
   notes.push({minute,text:'Intorno al '+minute+'′ '+clubs[side]+' '+description+' ('+score.home+'–'+score.away+')'+explanation});
  }
  const conclusion=events.length?
-  'Lo scenario termina sul '+score.home+'–'+score.away+'. È una delle sequenze compatibili con il risultato esatto più frequente nelle simulazioni, non una cronaca prevista con certezza.':
-  'Non emergono gol nella timeline rappresentativa: lo 0–0 è uno scenario simulato, non una certezza.';
+  'Finale: '+score.home+'–'+score.away+'.':
+  'Nessun gol previsto: 0–0.';
  notes.push({minute:null,text:conclusion});
  return notes;
 }
