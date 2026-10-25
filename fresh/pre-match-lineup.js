@@ -288,7 +288,49 @@ function coachOpportunityMap(matches,selections,fixtureWeights,data,team){
  return ratios;
 }
 
-function playerScores(players,allPriorMatches,sampleMatches,selections,formation,fixtureWeights,data,team,ratings){
+/** Walk-forward calibration: simulate each previous coach decision using only older matches.
+ * This learns how strongly starts and continuity predict future selection,
+ * without inspecting subsequent lineups or future ratings. */
+export function coachWalkForward(matches,selections,cutoff=Infinity){
+ const history=matches.filter(m=>m.status==='finished'&&Date.parse(m.kickoff_at)<cutoff)
+  .slice().sort((a,b)=>Date.parse(a.kickoff_at)-Date.parse(b.kickoff_at)||key(a.id).localeCompare(key(b.id)));
+ const byMatch=new Map();
+ for(const s of selections){
+  const id=key(s.match_id),group=byMatch.get(id)||[];
+  group.push(s);byMatch.set(id,group);
+ }
+ const observations=[],playerHistory=new Map();
+ let weightedHits=0,weightedTotal=0;
+ for(const m of history){
+  const rows=byMatch.get(key(m.id))||[];
+  const actual=new Set(rows.filter(r=>r.started||r.selection_status==='starter').map(r=>key(r.player_id)));
+  const eligible=rows.filter(r=>r.selection_status!=='absent'&&!r.unavailability_reason).map(r=>key(r.player_id));
+  if(actual.size>=10&&eligible.length>=11){
+   const guess=[...new Set(eligible)].map(id=>{
+    const h=playerHistory.get(id)||{starts:0,eligible:0,streak:0};
+    return {id,score:(h.starts+1)/(h.eligible+2)+.12*Math.min(3,h.streak)};
+   }).sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id)).slice(0,11);
+   const correct=guess.filter(x=>actual.has(x.id)).length;
+   const weight=1+.15*observations.length;
+   weightedHits+=weight*correct;weightedTotal+=weight*11;
+   observations.push({matchId:key(m.id),predicted:guess.map(x=>x.id),actual:[...actual],correct});
+  }
+  // Update only after predicting the current fixture.
+  for(const id of new Set(eligible)){
+   const h=playerHistory.get(id)||{starts:0,eligible:0,streak:0};
+   h.eligible++;if(actual.has(id)){h.starts++;h.streak++;}else h.streak=0;
+   playerHistory.set(id,h);
+  }
+ }
+ const accuracy=weightedTotal?weightedHits/weightedTotal:null;
+ const reliability=clamp(observations.length/8);
+ const playerPriors=new Map([...playerHistory].map(([id,h])=>[id,{
+  startRate:(h.starts+1)/(h.eligible+2),streak:h.streak,samples:h.eligible
+ }]));
+ return {observations,accuracy,reliability,playerPriors};
+}
+
+function playerScores(players,allPriorMatches,sampleMatches,selections,formation,fixtureWeights,data,team,ratings,learning){
  const allIds=new Set(allPriorMatches.map(m=>key(m.id))),sampleIds=new Set(sampleMatches.map(m=>key(m.id)));
  const formIds=new Set(sampleMatches.filter(m=>m.formation===formation).map(m=>key(m.id)));
  const matchById=new Map(allPriorMatches.map(m=>[key(m.id),m])),recency=recencyMap(allPriorMatches);
@@ -324,7 +366,7 @@ function playerScores(players,allPriorMatches,sampleMatches,selections,formation
    meanRating:r.mean??null,contextRating:r.context??r.mean??null,ratingMatches:r.votes||0,
    resultQuality:rs?.w?rs.sum/rs.w:.5,
    coachChoice:coachChoices.get(key(p.player_id))||null,
-   recentStarts,recentMinutes,recentMatchCount:recentMatches.length
+   recentStarts,recentMinutes,recentMatchCount:recentMatches.length,coachLearned:learning?.playerPriors.get(key(p.player_id))||null,learningReliability:learning?.reliability||0
   });
  }
  return {score,slotScore,shirts,metrics};
@@ -349,6 +391,7 @@ function assignmentScore(c,slotPosition,targetRole,scores,rotationOpportunity=0,
   const adaptation=slotPosition?positionalAdjustment(id,slotPosition,targetRole,data):{ratingPenalty:0,movement:0};
   const result=(Number(m.resultQuality||.5)-.5)*1.6;
   const coach=m.coachChoice?.opportunities>=1.5?(m.coachChoice.rate-.5)*1.8:0;
+  const learned=m.coachLearned?.samples>=2?((m.coachLearned.startRate-.5)*2.1+Math.min(3,m.coachLearned.streak)*.16)*m.learningReliability:0;
   const recentLoad=(m.recentMatchCount?m.recentStarts/Math.max(1,m.recentMatchCount):0)*.65+
    (m.recentMinutes==null ? .18 : clamp(m.recentMinutes/(Math.max(1,m.recentMatchCount||1)*80),0,1)*.35);
   const ratingTrust=finite(m.contextRating)?clamp((Number(m.contextRating)-5.8)/1.8,0,1):.45;
@@ -357,7 +400,7 @@ function assignmentScore(c,slotPosition,targetRole,scores,rotationOpportunity=0,
   // become more competitive. Goalkeepers are deliberately almost unaffected.
   const turnoverPenalty=rotationOpportunity*(role==='P'?.12:1.15)*recentLoad*(.75+.25*ratingTrust);
   const rotationBonus=rotationOpportunity*(role==='P'?0:.42)*(1-recentLoad)*(.55+.45*ratingTrust);
-  return slotFit+general+roleFit+rating+result+coach+recent.delta*.85-adaptation.ratingPenalty*1.25-adaptation.movement*.35-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
+  return slotFit+general+roleFit+rating+result+coach+learned+recent.delta*.85-adaptation.ratingPenalty*1.25-adaptation.movement*.35-turnoverPenalty+rotationBonus+(slot===1&&role==='P'?8:0)-(slot===1&&role!=='P'?8:0);
 }
 function expectedRatingFor(playerId,xiIds,scores,coPlay,positionAdjustment={ratingPenalty:0},recentForm={delta:0}){
  const m=scores.metrics.get(key(playerId))||{},mean=finite(m.meanRating)?Number(m.meanRating):null,context=finite(m.contextRating)?Number(m.contextRating):mean;
@@ -388,6 +431,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const oppPotential=teamSide==='home'?Number(prediction?.away?.potential||.5):Number(prediction?.home?.potential||.5);
  const potentialEdge=ourPotential-oppPotential;
  const rotationOpportunity=clamp(Math.max(0,(teamProbability-.55)/.22)*.65+Math.max(0,(potentialEdge-.05)/.22)*.35,0,1);
+ const learning=coachWalkForward(ownPrior,data.priorSelections||[],kickoff);
  const roster=eligibleRoster(data,fixture.kickoff_at).map(r=>({...r,person:(data.players||[]).find(p=>p.id===r.player_id)})).filter(x=>x.person);
  const available=roster.filter(x=>availabilityFor(x.player_id,{targetMatch,data,matchData,competition}).status!=='absent');
  const ratings=ratingAverages(data,ownPrior,fixtureWeights,team);
@@ -395,7 +439,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const scoringData={...data,_prematchKickoff:fixture.kickoff_at,_prematchFixtureWeights:fixtureWeights,_recentMatches:ownPrior};
  const candidates=[],contexts=new Map();
  for(const formation of formationModules){
-  const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings);
+  const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings,learning);
   const targets=roleTargets(formation),positions=prematchPositions(formation);
   const slots=positions.map((position,i)=>({...position,targetRole:targets[i]||'C',fitPosition:tacticalSlotPosition(formation,position)}));
   // Cache every player/slot score exactly once: the global optimizer visits
@@ -511,7 +555,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   return Math.round(clamp(.42*coverage+.27*complete+.11*p.confidence+.20*relative-p.uncovered*.025,0,1)*100);
  };
  const proposals=all.map(p=>({...p,feasibility:feasibility(p)}));
- return {...proposals[0],proposals,historicalFormation:preferredFormation,modulesEvaluated:candidates.length};
+ return {...proposals[0],proposals,historicalFormation:preferredFormation,modulesEvaluated:candidates.length,learning:{observations:learning.observations.length,accuracy:learning.accuracy,reliability:learning.reliability}};
 
 }
 
