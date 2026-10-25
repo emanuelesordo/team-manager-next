@@ -678,7 +678,7 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const probability=timelineForecast.probabilities;
  const attention=attentionPoints(fixture.home_team,fixture.away_team,homeComparison,awayComparison,homeSituational,awaySituational);
  const narrative=matchNarrative({
-  fixture,probability,expectedGoals:{home:homeLambda,away:awayLambda},home,away,
+  fixture,probability,expectedGoals:timelineForecast.expectedGoals,home,away,
   homeComparison,awayComparison,homeSituational,awaySituational,homeIntelligence,awayIntelligence,venue:targetVenue,attention
  });
  const factors=[
@@ -728,7 +728,7 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   fixtureId:fixture.id,
   home:{id:homeClub,name:fixture.home_team,potentialRank:potentialRankOf(homeClub,strengths),potential:home.potential,strength:home.strength,played:home.played},
   away:{id:awayClub,name:fixture.away_team,potentialRank:potentialRankOf(awayClub,strengths),potential:away.potential,strength:away.strength,played:away.played},
-  expectedGoals:{home:homeLambda,away:awayLambda},
+  expectedGoals:timelineForecast.expectedGoals,
   probabilities:probability,
   simulation:{trials:timelineForecast.simulations,timeline:timelineForecast.sampleTimeline,evidence:timelineForecast.evidence},
   coverage,
