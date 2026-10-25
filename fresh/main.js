@@ -1173,6 +1173,49 @@ async function hydrateProjection(){
   if(target)target.textContent='Proiezione non disponibile: '+(error.message||error);
  }finally{projectionBusy=false}
 }
+const prematchAvailabilityKey=fixtureId=>'tm-prematch-availability:'+String(fixtureId);
+function readPrematchAvailability(fixtureId){
+ try{const value=JSON.parse(localStorage.getItem(prematchAvailabilityKey(fixtureId))||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return {}}
+}
+function editPrematchPlayerAvailability(root,fixtureId,model){
+ root.addEventListener('click',event=>{
+  const button=event.target.closest('[data-prematch-player-config]');
+  if(!button||!root.contains(button))return;
+  const id=button.dataset.prematchPlayerConfig;
+  const player=model?.proposals?.flatMap(p=>p.players||[]).find(p=>String(p.player_id)===id);
+  if(!player)return;
+  const overrides=readPrematchAvailability(fixtureId),current=overrides[id]||{};
+  const dialog=document.createElement('dialog');
+  dialog.setAttribute('aria-label','Disponibilità di '+player.name);
+  dialog.style.cssText='max-width:min(420px,92vw);width:100%;border:1px solid #888;border-radius:14px;padding:22px;color:inherit;background:var(--surface,#20252b);';
+  dialog.innerHTML='<form method="dialog" style="display:grid;gap:14px"><h3 style="margin:0">Disponibilità · '+E(player.name)+'</h3>'+
+   '<label>Condizione fisica <output data-fitness-label>'+Number(current.fitness??100)+'%</output><input type="range" name="fitness" min="0" max="100" step="5" value="'+Number(current.fitness??100)+'" style="width:100%"></label>'+
+   '<label>Arrivo previsto<select name="arrival" style="width:100%"><option value="kickoff">Dal calcio d’inizio</option><option value="halftime">Dal secondo tempo</option><option value="late">A gara iniziata</option></select></label>'+
+   '<label>Minuti massimi (vuoto = nessun limite)<input name="maxMinutes" type="number" min="1" max="120" value="'+(Number(current.maxMinutes)||'')+'" style="width:100%"></label>'+
+   '<div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" data-clear>Ripristina</button><button value="cancel">Annulla</button><button value="save">Salva</button></div></form>';
+  document.body.append(dialog);
+  dialog.querySelector('[name="arrival"]').value=current.arrival||'kickoff';
+  dialog.querySelector('[name="fitness"]').addEventListener('input',e=>dialog.querySelector('[data-fitness-label]').textContent=e.target.value+'%');
+  dialog.querySelector('[data-clear]').addEventListener('click',()=>dialog.close('clear'));
+  dialog.addEventListener('close',()=>{
+   const value=dialog.returnValue;
+   if(value==='save'){
+    const form=dialog.querySelector('form'),fitness=Math.max(0,Math.min(100,Number(form.elements.fitness.value)));
+    const arrival=form.elements.arrival.value,maxMinutes=Math.max(0,Number(form.elements.maxMinutes.value)||0);
+    if(fitness===100&&arrival==='kickoff'&&!maxMinutes)delete overrides[id];
+    else overrides[id]={fitness,arrival,maxMinutes:maxMinutes||null};
+   }else if(value==='clear')delete overrides[id];
+   if(value==='save'||value==='clear'){
+    localStorage.setItem(prematchAvailabilityKey(fixtureId),JSON.stringify(overrides));
+    const target=document.querySelector('[data-prematch-prediction="'+CSS.escape(String(fixtureId))+'"]');
+    if(target)target.dataset.ready='';
+    hydrateMatchPrediction();
+   }
+   dialog.remove();
+  },{once:true});
+  dialog.showModal();
+ });
+}
 async function hydrateMatchPrediction(){
  const target=document.querySelector('[data-prematch-prediction]');
  if(!target||predictionBusy||!state.data||!state.match)return;
@@ -1230,7 +1273,8 @@ async function hydrateMatchPrediction(){
     };
     const model=buildHypotheticalLineup({
      fixture:f,targetMatch:operational,data:lineupData,matchData:state.matchData,team:team(),competition:comp,
-     competitions:state.data?.competitions||[],prediction:result,kit,events
+     competitions:state.data?.competitions||[],prediction:result,kit,events,
+     availabilityOverrides:readPrematchAvailability(f.id)
     });
     if(model?.players?.length){
      const ratingFallback=new Map();
@@ -1258,6 +1302,7 @@ async function hydrateMatchPrediction(){
      }
     }
     lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
+    editPrematchPlayerAvailability(lineupTarget,f.id,model);
     const destination=document.querySelector('[data-story-simulation]');
     const eligibleIds=new Set(model?.availablePlayerIds||[]);
     const eligibleBench=(lineupData.roster||[]).filter(r=>eligibleIds.has(r.player_id));
