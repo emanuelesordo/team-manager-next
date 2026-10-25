@@ -178,6 +178,29 @@ export async function loadMatchInfo(matchId){
  return data;
 }
 
+/** Match-specific staff-only overrides; Postgres RLS enforces access. */
+export async function readPrematchAvailability(fixtureId){
+ if(!hasSession())return {};
+ const rows=await get('app_prematch_player_availability','select=player_id,fitness,arrival,max_minutes&fixture_id=eq.'+encodeURIComponent(fixtureId));
+ return Object.fromEntries((rows||[]).map(x=>[String(x.player_id),{fitness:x.fitness,arrival:x.arrival,maxMinutes:x.max_minutes}]));
+}
+export async function savePrematchAvailability(fixtureId,playerId,settings){
+ if(!hasSession())throw Error('Accesso richiesto');
+ const path='/rest/v1/app_prematch_player_availability';
+ const fitness=Number(settings?.fitness??100),arrival=settings?.arrival||'kickoff',maxMinutes=settings?.maxMinutes==null?null:Number(settings.maxMinutes);
+ if(!Number.isInteger(fitness)||fitness<0||fitness>100||!['kickoff','halftime','late'].includes(arrival)||
+   (maxMinutes!==null&&(!Number.isInteger(maxMinutes)||maxMinutes<1||maxMinutes>120)))throw Error('Disponibilità non valida');
+ if(fitness===100&&arrival==='kickoff'&&maxMinutes===null){
+  await authorized(path+'?fixture_id=eq.'+encodeURIComponent(fixtureId)+'&player_id=eq.'+encodeURIComponent(playerId),{method:'DELETE'});
+  return;
+ }
+ const result=await authorized(path+'?on_conflict=fixture_id,player_id',{method:'POST',
+  body:{fixture_id:fixtureId,player_id:playerId,fitness,arrival,max_minutes:maxMinutes},
+  extraHeaders:{Prefer:'resolution=merge-duplicates,return=representation'}});
+ if(!Array.isArray(result)||result.length!==1)throw Error('Salvataggio disponibilità non confermato');
+ return result[0];
+}
+
 /** Scrittura transazionale del record ufficiale, con autorizzazione RLS server-side. */
 export async function saveFixture(id,fields){
  const {home_score,away_score,status}=fields;
