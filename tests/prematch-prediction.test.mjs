@@ -135,9 +135,9 @@ test('expected narrative follows simulated goals without claiming unsupported em
  const result=predictMatch({fixture:fixtures[4],competition,fixtures,history,venues,matches:[],events:[],team:null,competitions:[competition]});
  const notes=expectedTimelineNarrative(result);
  const goals=result.simulation.timeline.filter(e=>e.type==='goal');
- assert.equal(notes.length,goals.length+2);
- for(let i=0;i<goals.length;i++)assert.match(notes[i+1].text,new RegExp(String(Math.round(goals[i].minute))+'′'));
- assert.match(notes.at(-1).text,/scenario|sequenze/);
+ assert.equal(notes.length,goals.length+1);
+ for(let i=0;i<goals.length;i++)assert.match(notes[i].text,new RegExp(String(Math.round(goals[i].minute))+'′'));
+ assert.match(notes.at(-1).text,/Finale:|Nessun gol previsto/);
  assert.ok(!notes.some(note=>/ha recuperato lo svantaggio nel/.test(note.text)));
  const html=renderPreMatchPrediction(result);
  assert.match(html,/SCENARIO ATTESO/);
