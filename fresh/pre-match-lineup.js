@@ -413,7 +413,7 @@ function expectedRatingFor(playerId,xiIds,scores,coPlay,positionAdjustment={rati
  expected-=positionAdjustment.ratingPenalty||0;
  return {meanRating:mean,expectedRating:clamp(expected,1,10),matches:m.ratingMatches||0,synergy};
 }
-export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team,competition,competitions=[],prediction,kit,events=[]}={}){
+export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team,competition,competitions=[],prediction,kit,events=[],availabilityOverrides={}}={}){
  if(!fixture||!team?.id||!data)return null;
  targetMatch=targetMatch||{id:null,kickoff_at:fixture.kickoff_at,competition_id:fixture.competition_id};
  const teamSide=fixture.home_team_id===team.id?'home':fixture.away_team_id===team.id?'away':null;
@@ -434,23 +434,24 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
  const learning=coachWalkForward(ownPrior,data.priorSelections||[],kickoff);
  const roster=eligibleRoster(data,fixture.kickoff_at).map(r=>({...r,person:(data.players||[]).find(p=>p.id===r.player_id)})).filter(x=>x.person);
  const available=roster.filter(x=>availabilityFor(x.player_id,{targetMatch,data,matchData,competition}).status!=='absent');
+ const starters=available.filter(x=>!['halftime','late'].includes(availabilityOverrides[key(x.player_id)]?.arrival)&&Number(availabilityOverrides[key(x.player_id)]?.fitness??100)>0);
  const ratings=ratingAverages(data,ownPrior,fixtureWeights,team);
  const coPlay=coPlayMap(ownPrior,data,events,competitions.length?competitions:[competition],fixtureWeights,team);
  const scoringData={...data,_prematchKickoff:fixture.kickoff_at,_prematchFixtureWeights:fixtureWeights,_recentMatches:ownPrior};
  const candidates=[],contexts=new Map();
  for(const formation of formationModules){
-  const scores=playerScores(available,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings,learning);
+  const scores=playerScores(starters,ownPrior,sample,data.priorSelections||[],formation,fixtureWeights,data,team,ratings,learning);
   const targets=roleTargets(formation),positions=prematchPositions(formation);
   const slots=positions.map((position,i)=>({...position,targetRole:targets[i]||'C',fitPosition:tacticalSlotPosition(formation,position)}));
   // Cache every player/slot score exactly once: the global optimizer visits
   // thousands of states, and recalculating ratings/roles at each visit stalls UI.
-  const scoreMatrix=new Map(available.map(candidate=>[
+  const scoreMatrix=new Map(starters.map(candidate=>[
    key(candidate.player_id),new Map(slots.map(slot=>[
     slot.slot,assignmentScore(candidate,slot.fitPosition,slot.targetRole,scores,rotationOpportunity,scoringData)
    ]))
   ]));
   const cachedScore=(candidate,slot)=>scoreMatrix.get(key(candidate.player_id))?.get(slot.slot)??-Infinity;
-  const solution=optimizeLineupAssignments(available,slots,cachedScore,
+  const solution=optimizeLineupAssignments(starters,slots,cachedScore,
    {pairScore:(a,b)=>{
     const row=coPlay.get(pairKey(a.player_id,b.player_id));
     if(!row)return 0;
@@ -461,7 +462,9 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   let totalChoice=0,fitSum=0,configuredCount=0,unfilled=positions.length-solution.assignments.length,uncovered=0,movementSum=0;
   for(const assignment of solution.assignments){
    const picked=assignment.player,slotPosition=assignment.slot,slot=slotPosition.slot,targetRole=slotPosition.targetRole;
-   totalChoice+=assignment.weight;
+   const restriction=availabilityOverrides[key(picked.player_id)]||{};
+   const fitness=clamp(Number(restriction.fitness??100)/100);
+   totalChoice+=assignment.weight-(1-fitness)*3-(Number(restriction.maxMinutes)>0&&Number(restriction.maxMinutes)<40?1.25:0);
    const positionAdjustment=positionalAdjustment(picked.player_id,slotPosition.fitPosition||slotPosition,targetRole,data);
    movementSum+=positionAdjustment.movement;
    const affinity=roleFitForSlot(picked.player_id,slotPosition.fitPosition||slotPosition,targetRole,data);
@@ -474,7 +477,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
     player_id:picked.player_id,slot,role:affinity?.roleCode||roleOf(picked.person)||targetRole,
     name:matchPlayerLabel(picked.person),shirt_number:scores.shirts.get(key(picked.player_id))||habitual||'',
     x:clamp(slotPosition.x,10,90),y:clamp(slotPosition.y,14,86),
-    targetRole,positionAdjustment
+    targetRole,positionAdjustment,fitness:Math.round(fitness*100),arrival:restriction.arrival||'kickoff',maxMinutes:Number(restriction.maxMinutes)||null
    });
   }
   const xiIds=new Set(players.map(p=>key(p.player_id)));
@@ -482,6 +485,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
    const mean=scores.metrics.get(key(player.player_id))?.meanRating;
    const form=recentOpponentForm(player.player_id,data,ownPrior,fixtureWeights,mean);
    Object.assign(player,expectedRatingFor(player.player_id,xiIds,scores,coPlay,player.positionAdjustment,form),{recentFormDelta:form.delta,formSamples:form.samples});
+   if(finite(player.expectedRating))player.expectedRating=clamp(Number(player.expectedRating)-(1-player.fitness/100)*1.5,1,10);
   }
   const rated=players.filter(p=>finite(p.expectedRating));
   const xiExpectedRating=rated.length?rated.reduce((sum,p)=>sum+Number(p.expectedRating),0)/rated.length:null;
@@ -522,11 +526,11 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
    (a.slot===1?1:0)-(b.slot===1?1:0) ||
    (a.targetRole==='A'?0:a.targetRole==='C'?1:2)-
    (b.targetRole==='A'?0:b.targetRole==='C'?1:2));
-  if(available.length>base.players.length){
+  if(starters.length>base.players.length){
    for(const original of anchors.slice(0,9)){
     const altered=(candidate,slot)=>key(candidate.player_id)===key(original.player_id)
      ?-Infinity:context.cachedScore(candidate,slot);
-    const alternative=optimizeLineupAssignments(available,context.slots,altered);
+    const alternative=optimizeLineupAssignments(starters,context.slots,altered);
     const variant=context.makeProposal(alternative);
     if(variant.players.length!==base.players.length)continue;
     const identity=lineupIdentity(variant);
@@ -565,7 +569,7 @@ function proposalMarkup(model,escape){
   '<div class="prematch-lineup-head"><div><span class="eyebrow">MODULO '+model.moduleIndex+' / 3 · VARIANTE '+model.variantIndex+' / 3</span><h3>'+escape(model.formation)+'</h3></div></div>'+
   '<div class="prematch-lineup-empty">Non ci sono altri undici realmente differenti con i giocatori disponibili. Lo scambio di lato tra due punte o tra centrocampisti centrali non costituisce una nuova variante.</div></article>';
  const nodes=model.players.map((p,i)=>
-  '<div class="prematch-lineup-player" style="left:'+p.x+'%;top:'+p.y+'%" title="'+escape(p.name)+' · atteso '+rating(p.expectedRating)+' · media '+rating(p.meanRating)+'">'+
+  '<button type="button" data-prematch-player-config="'+escape(p.player_id)+'" class="prematch-lineup-player" style="left:'+p.x+'%;top:'+p.y+'%" title="'+escape(p.name)+' · atteso '+rating(p.expectedRating)+' · media '+rating(p.meanRating)+'">'+
    '<span class="prematch-lineup-shirt">'+shirtSvg(model.kit,'prematch-'+i,false,p.shirt_number||null)+'</span>'+
    '<strong>'+escape(p.name)+'</strong>'+
    '<span class="prematch-player-rating"><b>'+rating(p.expectedRating)+'</b><small>att</small><i>·</i><b>'+rating(p.meanRating)+'</b><small>med</small></span></div>').join('');
@@ -575,7 +579,7 @@ function proposalMarkup(model,escape){
   (finite(model.xiExpectedRating)?'<div class="prematch-xi-rating"><span>Voto XI atteso</span><strong>'+rating(model.xiExpectedRating)+'</strong></div>':'')+
   '<div class="prematch-lineup-field visual-field"><span class="field-circle"></span><span class="field-midline"></span>'+nodes+'</div>'+
   '<p class="prematch-lineup-note">'+escape(model.reason||'')+'. '+(model.changedForAvailability?'Modulo diverso dal riferimento storico ('+escape(model.historicalFormation||'')+'). ':'')+
-  'Ridotti gli spostamenti rispetto ai ruoli naturali; le valutazioni attese includono forma recente ponderata per avversaria e penalità fuori ruolo. '+model.availableCount+' disponibili.</p></article>';
+  'Seleziona un giocatore per modificare la disponibilità individuale. Ridotti gli spostamenti rispetto ai ruoli naturali; le valutazioni attese includono forma recente ponderata per avversaria e penalità fuori ruolo. '+model.availableCount+' disponibili.</p></article>';
 }
 export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
  if(!model)return '<div class="prematch-lineup-empty">Formazione ipotetica non disponibile.</div>';
