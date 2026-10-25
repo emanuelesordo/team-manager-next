@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildHypotheticalLineup,renderHypotheticalLineup,roleFitForSlot,positionalAdjustment,recentOpponentForm,tacticalSlotPosition,lineupIdentity} from '../fresh/pre-match-lineup.js';
+import {buildHypotheticalLineup,renderHypotheticalLineup,roleFitForSlot,positionalAdjustment,recentOpponentForm,tacticalSlotPosition,lineupIdentity,coachWalkForward} from '../fresh/pre-match-lineup.js';
 
 const team={id:'team-1',name:'Caselle'};
 const fixture={id:'fx-target',competition_id:'c1',status:'scheduled',kickoff_at:'2026-10-12T19:00:00Z',
@@ -210,4 +210,22 @@ test('each real variant changes at least one starting player rather than only sw
   const variants=model.proposals.slice(i*3,i*3+3).filter(p=>!p.duplicate);
   assert.equal(new Set(variants.map(lineupIdentity)).size,variants.length);
  }
+});
+
+test('walk-forward learning predicts before learning each actual XI and excludes later fixtures',()=>{
+ const learning=coachWalkForward(matches,priorSelections,Date.parse('2026-10-01T00:00:00Z'));
+ assert.equal(learning.observations.length,1);
+ assert.equal(learning.observations[0].matchId,'m2');
+ assert.ok(!learning.observations.some(o=>o.matchId==='m3'));
+ assert.equal(learning.playerPriors.get('p1').samples,2);
+});
+test('late arrivals cannot be starters and physical fitness adjusts expected rating',()=>{
+ const normal=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[]},team,competition,competitions:[competition],prediction,kit:{},events:[]});
+ const late=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[]},team,competition,competitions:[competition],prediction,kit:{},events:[],availabilityOverrides:{p2:{arrival:'halftime'}}});
+ assert.ok(late.proposals.every(p=>p.players.every(x=>x.player_id!=='p2')));
+ const reduced=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[]},team,competition,competitions:[competition],prediction,kit:{},events:[],availabilityOverrides:{p1:{fitness:30}}});
+ const before=normal.players.find(p=>p.player_id==='p1');
+ const after=reduced.players.find(p=>p.player_id==='p1');
+ if(before&&after)assert.ok(after.expectedRating<before.expectedRating);
+ assert.match(renderHypotheticalLineup(normal),/data-prematch-player-config/);
 });
