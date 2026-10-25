@@ -572,7 +572,7 @@ function proposalMarkup(model,escape){
   '<button type="button" data-prematch-player-config="'+escape(p.player_id)+'" class="prematch-lineup-player" style="left:'+p.x+'%;top:'+p.y+'%" title="'+escape(p.name)+' · atteso '+rating(p.expectedRating)+' · media '+rating(p.meanRating)+'">'+
    '<span class="prematch-lineup-shirt">'+shirtSvg(model.kit,'prematch-'+i,false,p.shirt_number||null)+'</span>'+
    '<strong>'+escape(p.name)+'</strong>'+
-   '<span class="prematch-player-rating"><b>'+rating(p.expectedRating)+'</b><small>att</small><i>·</i><b>'+rating(p.meanRating)+'</b><small>med</small></span></div>').join('');
+   '<span class="prematch-player-rating"><b>'+rating(p.expectedRating)+'</b><small>att</small><i>·</i><b>'+rating(p.meanRating)+'</b><small>med</small></span></button>').join('');
  return '<article class="prematch-lineup-slide" data-prematch-slide="'+model.rank+'" tabindex="0" aria-label="Proposta '+model.rank+': modulo '+escape(model.formation)+'">'+
   '<div class="prematch-lineup-head"><div><span class="eyebrow">MODULO '+model.moduleIndex+' / 3 · VARIANTE '+model.variantIndex+' / 3</span><h3>'+escape(model.formation)+'</h3></div>'+
   '<div class="prematch-feasibility" title="Indice euristico di fattibilità della formazione, non probabilità di vincere"><strong>'+Math.round(model.feasibility??0)+'%</strong><small>fattibilità</small></div></div>'+
