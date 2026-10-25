@@ -1,3 +1,4 @@
+import {simulateScoreTimeline} from './prediction-timeline.js';
 import {cumulativeEventMinute} from './match-minutes.js';
 import {matchTiming,matchElapsedMinute,confirmedMatchEvent} from './player-participation.js?v=20261014periodpriority1';
 import {analyseGoalTimeline,mergeGameStateAnalyses} from './game-state.js';
@@ -669,7 +670,12 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  homeLambda*=Math.exp(context);awayLambda*=Math.exp(-context);
  homeLambda=clamp(homeLambda,.15,4.5);awayLambda=clamp(awayLambda,.15,4.5);
 
- const probability=outcomeProbabilities(homeLambda,awayLambda);
+ // Forecast is now the distribution of simulated goal-event timelines, not
+ // independent full-time Poisson scores subsequently decorated with events.
+ const timelineForecast=simulateScoreTimeline({fixtureId:fixture.id,homeLambda,awayLambda,
+  homeSituational,awaySituational,
+  duration:Math.max(40,Number(competition.minutes_per_period||40)*Number(competition.periods||2))});
+ const probability=timelineForecast.probabilities;
  const attention=attentionPoints(fixture.home_team,fixture.away_team,homeComparison,awayComparison,homeSituational,awaySituational);
  const narrative=matchNarrative({
   fixture,probability,expectedGoals:{home:homeLambda,away:awayLambda},home,away,
@@ -724,6 +730,7 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   away:{id:awayClub,name:fixture.away_team,potentialRank:potentialRankOf(awayClub,strengths),potential:away.potential,strength:away.strength,played:away.played},
   expectedGoals:{home:homeLambda,away:awayLambda},
   probabilities:probability,
+  simulation:{trials:timelineForecast.simulations,timeline:timelineForecast.sampleTimeline,evidence:timelineForecast.evidence},
   coverage,
   completedCompetitionMatches:completed.length,
   comparison:{home:homeComparison,away:awayComparison},
