@@ -9,6 +9,56 @@ const venueLabel=v=>{
  return [v.surface_type,v.width_profile,v.length_profile].filter(Boolean).map(x=>labels[x]||x).join(' · ');
 };
 
+/** Narrate only events actually present in the representative forecast path.
+ * Empirical explanations are attached only with sufficient complete timelines. */
+export function expectedTimelineNarrative(result){
+ const events=(result?.simulation?.timeline||[]).filter(e=>e.type==='goal'&&
+  ['home','away'].includes(e.side)&&Number.isFinite(Number(e.minute)))
+  .slice().sort((a,b)=>Number(a.minute)-Number(b.minute));
+ if(!result?.simulation||!result?.home||!result?.away)return [];
+ const situ=result.situational||{},clubs={home:result.home.name,away:result.away.name};
+ const howMany=side=>Number(situ[side]?.timelineSample||0);
+ const clock=m=>Math.max(1,Math.round(Number(m)));
+ const period=minute=>minute<=40?'nel primo tempo':'nella ripresa';
+ const notes=[];
+ let score={home:0,away:0};
+ const opening=result.home.name+' e '+result.away.name+' partono da una situazione di parità. Il modello ipotizza lo sviluppo seguente sulla base delle '+result.simulation.trials+' partite simulate.';
+ notes.push({minute:0,text:opening});
+ for(const event of events){
+  const side=event.side,other=side==='home'?'away':'home',minute=clock(event.minute);
+  const previous=score[side]-score[other];score[side]++;
+  const state=score[side]-score[other];
+  let description=previous<0?(state===0?'trova il pareggio':'accorcia le distanze'):
+   previous===0?'passa in vantaggio':'allunga il vantaggio';
+  const evidence=[];
+  const source=situ[side]||{},opponent=situ[other]||{};
+  if(howMany(side)>=2){
+   const relevant=(source.goalWindows||[]).find(w=>minute>=Number(w.start)&&minute<=Number(w.end));
+   const windows=source.goalWindows||[];
+   const max=Math.max(0,...windows.map(w=>Number(w.for||0)));
+   if(relevant&&Number(relevant.for||0)>0&&Number(relevant.for||0)===max){
+    evidence.push('questa fascia di gara è fra le più produttive nei precedenti con minutaggio verificabile di '+clubs[side]);
+   }
+   if(previous<0&&Number(source.trailed)>=2&&Number.isFinite(Number(source.recoveryRate)))
+    evidence.push(clubs[side]+' ha recuperato lo svantaggio nel '+Math.round(source.recoveryRate*100)+'% dei casi osservati ('+source.trailed+' gare)');
+  }
+  if(howMany(other)>=2){
+   const vulnerable=(opponent.goalWindows||[]).find(w=>minute>=Number(w.start)&&minute<=Number(w.end));
+   const max=Math.max(0,...(opponent.goalWindows||[]).map(w=>Number(w.against||0)));
+   if(vulnerable&&Number(vulnerable.against||0)>0&&Number(vulnerable.against||0)===max)
+    evidence.push(clubs[other]+' ha subito frequentemente gol in questa fascia temporale');
+  }
+  const explanation=evidence.length?'. Il modello considera che '+evidence.join('; inoltre, ')+'.':
+   '. La collocazione temporale è una simulazione indicativa, non un evento certo.';
+  notes.push({minute,text:'Intorno al '+minute+'′ '+clubs[side]+' '+description+' ('+score.home+'–'+score.away+')'+explanation});
+ }
+ const conclusion=events.length?
+  'Lo scenario termina sul '+score.home+'–'+score.away+'. È una delle sequenze compatibili con il risultato esatto più frequente nelle simulazioni, non una cronaca prevista con certezza.':
+  'Non emergono gol nella timeline rappresentativa: lo 0–0 è uno scenario simulato, non una certezza.';
+ notes.push({minute:null,text:conclusion});
+ return notes;
+}
+
 export function preMatchPredictionContainer(fixture,escape=value=>String(value??'')){
  if(!fixture||!['scheduled','postponed'].includes(String(fixture.status||'')))return '';
  return '<section class="glass prematch-prediction" data-prematch-prediction="'+escape(fixture.id)+'" aria-label="Pronostico statistico pre-partita">'+
@@ -72,7 +122,7 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
    '<div class="prematch-probability"><div><b>'+escape(key)+'</b><span>'+escape(label)+'</span><strong>'+pct(value)+'%</strong></div>'+
    '<i><span style="width:'+pct(value)+'%"></span></i></div>').join('')+'</div>'+
   field+comparisonMarkup+attentionMarkup+
-  (result.narrative?'<section class="prematch-narrative"><div class="prematch-section-title"><span class="eyebrow">SCENARIO ATTESO</span><h4>Come può svilupparsi la gara</h4></div><p>'+escape(result.narrative)+'</p></section>':'')+
+  (result.simulation?'<section class="prematch-narrative"><div class="prematch-section-title"><span class="eyebrow">SCENARIO ATTESO</span><h4>Come può svilupparsi la gara</h4></div>'+expectedTimelineNarrative(result).map(item=>'<p>'+escape(item.text)+'</p>').join('')+'</section>':(result.narrative?'<section class="prematch-narrative"><div class="prematch-section-title"><span class="eyebrow">SCENARIO ATTESO</span><h4>Come può svilupparsi la gara</h4></div><p>'+escape(result.narrative)+'</p></section>':''))+
   '<details class="prematch-details"><summary>Dettaglio dei fattori del modello</summary><div class="prematch-factor-grid">'+factorRows+'</div></details>'+
   '<p class="prematch-footnote">Copertura dati: <b>'+escape(result.coverage)+'%</b> · '+escape(result.completedCompetitionMatches)+
   ' gare concluse della competizione disponibili prima di questa partita. Simulazioni evento-per-evento: '+escape(result.simulation?.trials||0)+'. Timeline complete: '+escape(result.profiles?.home?.confidence?.B?.sample||0)+' / '+escape(result.profiles?.away?.confidence?.B?.sample||0)+' (casa / ospiti). Il modello usa solo dati antecedenti al match e non incorpora informazioni successive.</p>';
