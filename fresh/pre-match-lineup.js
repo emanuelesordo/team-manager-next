@@ -447,7 +447,9 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   // thousands of states, and recalculating ratings/roles at each visit stalls UI.
   const scoreMatrix=new Map(starters.map(candidate=>[
    key(candidate.player_id),new Map(slots.map(slot=>[
-    slot.slot,assignmentScore(candidate,slot.fitPosition,slot.targetRole,scores,rotationOpportunity,scoringData)
+    slot.slot,assignmentScore(candidate,slot.fitPosition,slot.targetRole,scores,rotationOpportunity,scoringData)-
+     (1-clamp(Number(availabilityOverrides[key(candidate.player_id)]?.fitness??100)/100))*3-
+     (Number(availabilityOverrides[key(candidate.player_id)]?.maxMinutes)>0&&Number(availabilityOverrides[key(candidate.player_id)]?.maxMinutes)<40?1.25:0)
    ]))
   ]));
   const cachedScore=(candidate,slot)=>scoreMatrix.get(key(candidate.player_id))?.get(slot.slot)??-Infinity;
@@ -464,7 +466,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
    const picked=assignment.player,slotPosition=assignment.slot,slot=slotPosition.slot,targetRole=slotPosition.targetRole;
    const restriction=availabilityOverrides[key(picked.player_id)]||{};
    const fitness=clamp(Number(restriction.fitness??100)/100);
-   totalChoice+=assignment.weight-(1-fitness)*3-(Number(restriction.maxMinutes)>0&&Number(restriction.maxMinutes)<40?1.25:0);
+   totalChoice+=assignment.weight;
    const positionAdjustment=positionalAdjustment(picked.player_id,slotPosition.fitPosition||slotPosition,targetRole,data);
    movementSum+=positionAdjustment.movement;
    const affinity=roleFitForSlot(picked.player_id,slotPosition.fitPosition||slotPosition,targetRole,data);
@@ -512,7 +514,7 @@ export function buildHypotheticalLineup({fixture,targetMatch,data,matchData,team
   contexts.set(formation,{slots,cachedScore,makeProposal});
  }
  candidates.sort((a,b)=>b.tacticalScore-a.tacticalScore||b.roleCoverage-a.roleCoverage||a.formation.localeCompare(b.formation));
- const shortlist=candidates.filter(c=>c.players.length>=Math.min(11,available.length));
+ const shortlist=candidates.filter(c=>c.players.length>=Math.min(11,starters.length));
  const chosen=(shortlist.length>=3?shortlist:candidates).slice(0,3);
  const all=[];
  for(const [moduleIndex,base] of chosen.entries()){
