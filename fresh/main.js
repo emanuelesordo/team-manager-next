@@ -1,4 +1,4 @@
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc,uploadPlayerPhoto} from './api.js?prematch=20261015playerphoto1';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc,uploadPlayerPhoto,readPrematchAvailability as fetchPrematchAvailability,savePrematchAvailability} from './api.js?prematch=20261015playerphoto1';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
@@ -1173,10 +1173,8 @@ async function hydrateProjection(){
   if(target)target.textContent='Proiezione non disponibile: '+(error.message||error);
  }finally{projectionBusy=false}
 }
-const prematchAvailabilityKey=fixtureId=>'tm-prematch-availability:'+String(fixtureId);
-function readPrematchAvailability(fixtureId){
- try{const value=JSON.parse(localStorage.getItem(prematchAvailabilityKey(fixtureId))||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return {}}
-}
+function readPrematchAvailability(fixtureId){return prematchSharedAvailability[fixtureId]||{}}
+const prematchSharedAvailability=Object.create(null);
 function editPrematchPlayerAvailability(root,fixtureId,model){
  root.addEventListener('click',event=>{
   const button=event.target.closest('[data-prematch-player-config]');
@@ -1197,19 +1195,22 @@ function editPrematchPlayerAvailability(root,fixtureId,model){
   dialog.querySelector('[name="arrival"]').value=current.arrival||'kickoff';
   dialog.querySelector('[name="fitness"]').addEventListener('input',e=>dialog.querySelector('[data-fitness-label]').textContent=e.target.value+'%');
   dialog.querySelector('[data-clear]').addEventListener('click',()=>dialog.close('clear'));
-  dialog.addEventListener('close',()=>{
+  dialog.addEventListener('close',async()=>{
    const value=dialog.returnValue;
-   if(value==='save'){
-    const form=dialog.querySelector('form'),fitness=Math.max(0,Math.min(100,Number(form.elements.fitness.value)));
-    const arrival=form.elements.arrival.value,maxMinutes=Math.max(0,Number(form.elements.maxMinutes.value)||0);
-    if(fitness===100&&arrival==='kickoff'&&!maxMinutes)delete overrides[id];
-    else overrides[id]={fitness,arrival,maxMinutes:maxMinutes||null};
-   }else if(value==='clear')delete overrides[id];
    if(value==='save'||value==='clear'){
-    localStorage.setItem(prematchAvailabilityKey(fixtureId),JSON.stringify(overrides));
-    const target=document.querySelector('[data-prematch-prediction="'+CSS.escape(String(fixtureId))+'"]');
-    if(target)target.dataset.ready='';
-    hydrateMatchPrediction();
+    const form=dialog.querySelector('form');
+    const settings=value==='clear'?{fitness:100,arrival:'kickoff',maxMinutes:null}:{
+     fitness:Number(form.elements.fitness.value),arrival:form.elements.arrival.value,
+     maxMinutes:Number(form.elements.maxMinutes.value)||null
+    };
+    try{
+     await savePrematchAvailability(fixtureId,id,settings);
+     prematchSharedAvailability[fixtureId]=await fetchPrematchAvailability(fixtureId);
+     const target=document.querySelector('[data-prematch-prediction="'+CSS.escape(String(fixtureId))+'"]');
+     if(target)target.dataset.ready='';
+     await hydrateMatchPrediction();
+     toast('Disponibilità condivisa aggiornata');
+    }catch(error){toast('Salvataggio non riuscito: '+(error.message||error))}
    }
    dialog.remove();
   },{once:true});
@@ -1271,6 +1272,7 @@ async function hydrateMatchPrediction(){
      playerStats:freshStats.length?freshStats:(state.data.playerStats||[]),
      seasonRatings:freshRatings.length?freshRatings:(state.data.seasonRatings||[])
     };
+    prematchSharedAvailability[f.id]=await fetchPrematchAvailability(f.id);
     const model=buildHypotheticalLineup({
      fixture:f,targetMatch:operational,data:lineupData,matchData:state.matchData,team:team(),competition:comp,
      competitions:state.data?.competitions||[],prediction:result,kit,events,
