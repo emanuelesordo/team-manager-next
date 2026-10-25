@@ -302,7 +302,7 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
   const f=eventFixture(e,matchesById,fixturesById);if(!f)continue;
   const list=byFixture.get(key(f.id))||[];list.push(e);byFixture.set(key(f.id),list);
  }
- let timelineSample=0,trailed=0,recovered=0,comebackWins=0,led=0,heldLead=0,lostLead=0;
+ let timelineSample=0,trailed=0,recovered=0,comebackWins=0,led=0,heldLead=0,lostLead=0,leadPointsLost=0,leadPointsLostGames=0;
  let scoredFirst=0,scoredFirstWins=0,concededFirst=0,concededFirstWins=0,concededFirstRecoveredPoints=0;
  let opponentReds=0,ownReds=0,cardSample=0;
  const timing=new Map(),gameStates=[];
@@ -351,14 +351,14 @@ function situationalMetrics(club,completed,matches,events,competitions,primaryTe
   if(firstScorer===club){scoredFirst++;if(s[0]>s[1])scoredFirstWins++}
   else if(firstScorer){concededFirst++;if(s[0]>s[1])concededFirstWins++;if(s[0]>=s[1])concededFirstRecoveredPoints++}
   if(wasBehind){trailed++;if(reachedEqualAfterBehind)recovered++;if(s[0]>s[1])comebackWins++}
-  if(wasAhead){led++;if(s[0]>s[1])heldLead++;if(reachedEqualAfterAhead)lostLead++}
+  if(wasAhead){led++;if(s[0]>s[1])heldLead++;if(reachedEqualAfterAhead)lostLead++;if(s[0]<=s[1]){leadPointsLost+=s[0]===s[1]?2:3;leadPointsLostGames++}}
  }
  const goalWindows=[...timing.values()].sort((a,b)=>a.start-b.start);
  const totalFor=goalWindows.reduce((s,x)=>s+x.for,0),totalAgainst=goalWindows.reduce((s,x)=>s+x.against,0);
  const strongestFor=goalWindows.slice().sort((a,b)=>b.for-a.for||a.start-b.start)[0]||null;
  const weakestAgainst=goalWindows.slice().sort((a,b)=>b.against-a.against||a.start-b.start)[0]||null;
  const gameState=mergeGameStateAnalyses(gameStates);
- return {timelineSample,trailed,recovered,comebackWins,led,heldLead,lostLead,cardSample,opponentReds,ownReds,
+ return {timelineSample,trailed,recovered,comebackWins,led,heldLead,lostLead,leadPointsLost,leadPointsLostGames,cardSample,opponentReds,ownReds,
   scoredFirst,scoredFirstWins,concededFirst,concededFirstWins,concededFirstRecoveredPoints,
   scoredFirstWinRate:scoredFirst?scoredFirstWins/scoredFirst:null,
   concededFirstWinRate:concededFirst?concededFirstWins/concededFirst:null,
@@ -383,7 +383,7 @@ function attentionPoints(homeName,awayName,homeBase,awayBase,homeSitu,awaySitu){
   if((teamRoles.equalizer||0)>=2)push(name,'Reazione al vantaggio avversario',teamRoles.equalizer,(teamRoles.equalizer||0)+' pareggi trovati durante la timeline dopo uno svantaggio','strength');
   if((teamRoles.deficit_reduction||0)>=2)push(name,'Riapre gare compromesse',teamRoles.deficit_reduction,(teamRoles.deficit_reduction||0)+' gol di accorciamento segnati restando ancora sotto','watch');
   if((oppRoles.equalizer||0)>=2)push(name,'Si fa raggiungere',oppRoles.equalizer,(oppRoles.equalizer||0)+' gol del pareggio concessi mentre era avanti','risk');
-  if((oppRoles.deficit_reduction||0)>=2)push(name,'Non chiude il vantaggio',oppRoles.deficit_reduction,(oppRoles.deficit_reduction||0)+' gol di accorciamento concessi con vantaggio di almeno due reti','risk');
+  if(situ.leadPointsLost>0)push(name,'Punti persi dopo il vantaggio',situ.leadPointsLost,situ.leadPointsLost+' punti non conquistati in '+situ.leadPointsLostGames+' gare concluse senza vittoria dopo essere stata avanti','risk');
   if((gs.quickResponsesFor||0)>=2)push(name,'Risposta rapida',gs.quickResponsesFor,(gs.quickResponsesFor||0)+' risposte entro 10 minuti da una rete avversaria','strength');
   if((gs.quickResponsesAgainst||0)>=2)push(name,'Vulnerabile dopo il gol',gs.quickResponsesAgainst,(gs.quickResponsesAgainst||0)+' reti subite entro 10 minuti da una propria marcatura','risk');
   if(base.played>=2&&base.gfPerGame>=base.gaPerGame+.75)push(name,'Produzione offensiva','+'+(base.gfPerGame-base.gaPerGame).toFixed(1),base.gfPerGame.toFixed(1)+' gol fatti/gara contro '+base.gaPerGame.toFixed(1)+' subiti','strength');
