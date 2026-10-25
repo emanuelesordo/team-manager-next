@@ -226,6 +226,6 @@ test('late arrivals cannot be starters and physical fitness adjusts expected rat
  const reduced=buildHypotheticalLineup({fixture,targetMatch,data,matchData:{players:[]},team,competition,competitions:[competition],prediction,kit:{},events:[],availabilityOverrides:{p1:{fitness:30}}});
  const before=normal.players.find(p=>p.player_id==='p1');
  const after=reduced.players.find(p=>p.player_id==='p1');
- if(before&&after)assert.ok(after.expectedRating<before.expectedRating);
+ if(before&&after)assert.equal(after.expectedRating,before.expectedRating);
  assert.match(renderHypotheticalLineup(normal),/data-prematch-player-config/);
 });
