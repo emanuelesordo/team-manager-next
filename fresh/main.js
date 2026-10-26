@@ -15,7 +15,7 @@ import {projectionContainer,updateProjection} from './projection-ui.js?history=2
 import {profilePanel,installAccountUI,maybeRequirePasswordChange} from './account-ui.js';
 import {eventDetailStatisticsPanel,eventAnalyticsPlaceholder,renderEventAnalytics,fixtureEventsPanel} from './analytics-ui.js?stats=20261015teamcompare5';
 import {reconcilePlayerSeasonFacts} from './player-season-facts.js';
-import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,timelinePeriodFromMinute} from './match-minutes.js?live=20261014periodplacement1';
+import {cumulativeEventMinute,displayEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,timelinePeriodFromMinute} from './match-minutes.js?live=20261026periodend1';
 import {loadFixtureEvents} from './api.js?callups=20261004v2';
 import {eventAdvancedMarkup,eventBaseMotivationMarkup,readEventAdvanced,mergeEventAdvanced} from './event-details.js';
 
