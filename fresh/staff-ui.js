@@ -7,7 +7,7 @@ import {pitchMarkup,formationModules} from './lineup-pitch.js?callups=20261004mo
 import {availabilityDefault,normalizedReason,unavailabilityReasons} from './availability.js';
 import {staffTacticsPanel,tacticalPayload} from './tactics.js';
 import {parseKickoff} from './import-domain.js';
-import {reviewPanel} from './postmatch-review.js?live=20261015advanced1';
+import {reviewPanel} from './postmatch-review.js?live=20261026minuteform1';
 import {eventAdvancedMarkup,eventBaseMotivationMarkup,readEventAdvanced,mergeEventAdvanced} from './event-details.js';
 import {csiReviewPanel} from './csi-review.js?csi=20261011recovery1';
 import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261026periodend1';
@@ -1213,7 +1213,7 @@ export async function staffSubmit(e,ctx){
    const d=dataForm(form);
    const competition=(ctx.state.data?.competitions||[]).find(c=>c.id===m.competition_id);
    const relativeMinute=numberOrNull(d.minute);
-   const cumulativeMinute=cumulativeMinuteFromPeriod(relativeMinute,ev.payload?.period_no||ev.payload?.period||m.live_period_no||m.live_period,matchRules(m,competition));
+   const cumulativeMinute=cumulativeMinuteFromPeriod(relativeMinute,ev.payload?.period_no||ev.payload?.period||(Number(ev.minute)>Number(competition?.minutes_per_period||40)?'second_half':'first_half'),matchRules(m,competition));
    const advanced=readEventAdvanced(form);
    const changes={event_type:d.event_type,team_side:d.team_side,
     player_id:d.team_side==='team'?d.player_id||null:null,
