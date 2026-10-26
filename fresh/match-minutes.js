@@ -36,7 +36,13 @@ export function cumulativeEventMinute(event,competition){
  if(event?.minute===null||event?.minute===undefined||event.minute==='')return null;
  const n=Number(event.minute);if(!Number.isFinite(n))return null;
  const length=matchPeriodLength(competition);
- if(length!==null&&legacyRelativeMinute(event))return n+length;
+ // A completed second-half period may already store the absolute end minute.
+ // Do not add the first-half offset again (80+8 must not become 120+8).
+ const periods=Number(competition?.periods)||2;
+ const lastPeriodEnd=event?.event_type==='period_end'&&
+  event?.payload?.period==='second_half'&&
+  n>=length*periods;
+ if(length!==null&&legacyRelativeMinute(event)&&!lastPeriodEnd)return n+length;
  return n;
 }
 export function storedEventMinute(event,cumulative,competition){
