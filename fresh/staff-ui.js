@@ -10,7 +10,7 @@ import {parseKickoff} from './import-domain.js';
 import {reviewPanel} from './postmatch-review.js?live=20261015advanced1';
 import {eventAdvancedMarkup,eventBaseMotivationMarkup,readEventAdvanced,mergeEventAdvanced} from './event-details.js';
 import {csiReviewPanel} from './csi-review.js?csi=20261011recovery1';
-import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261005roundup10';
+import {storedEventMinute,cumulativeMinuteFromPeriod,periodRelativeMinute,displayEventMinute} from './match-minutes.js?live=20261026periodend1';
 import {logoPicker,handleLogoEditorEvent,prepareLogoForUpload} from './logo-editor.js?layout=20261003d';
 import {renderRoleAffinityEditor,collectRoleAffinityForm,groupForPosition} from './player-role-heatmap.js?v=20261016roles1';
 import {exportRoster,importRoster} from './roster-spreadsheet.js?v=20261017bulk1';
