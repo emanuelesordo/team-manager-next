@@ -1660,3 +1660,27 @@ body[data-page="competitions"] .comp-rounds .fixture-clubs strong{flex:0 1 auto}
  body[data-page="competitions"] .comp-rounds .fixture-row{grid-template-columns:34px minmax(0,1fr) auto 11px;gap:4px}
  body[data-page="competitions"] .comp-rounds .fixture-clubs{gap:3px}
 }
+
+
+/* Competizioni mobile: classifica completa senza scorrimento laterale. */
+@media(max-width:760px){
+ body[data-page="competitions"] .comp-stand .table-scroller{overflow-x:visible}
+ body[data-page="competitions"] .comp-stand .standing-table{min-width:0;width:100%;table-layout:fixed;font-size:10px}
+ body[data-page="competitions"] .comp-stand .standing-table th,
+ body[data-page="competitions"] .comp-stand .standing-table td{padding-left:1px;padding-right:1px;font-size:10px}
+ body[data-page="competitions"] .comp-stand .standing-table th:nth-child(1),
+ body[data-page="competitions"] .comp-stand .standing-table td:nth-child(1){width:5%}
+ body[data-page="competitions"] .comp-stand .standing-table th:nth-child(2),
+ body[data-page="competitions"] .comp-stand .standing-table td:nth-child(2){width:38%;min-width:0}
+ body[data-page="competitions"] .comp-stand .standing-table th:nth-child(n+3),
+ body[data-page="competitions"] .comp-stand .standing-table td:nth-child(n+3){width:7.125%}
+ body[data-page="competitions"] .comp-stand .standing-table .standing-team{gap:4px;font-size:10px}
+ body[data-page="competitions"] .comp-stand .standing-table .standing-team .crest{width:20px;height:20px;min-width:20px;max-width:20px;flex-basis:20px}
+ body[data-page="competitions"] .comp-stand .standing-table .standing-team>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:390px){
+ body[data-page="competitions"] .comp-stand .standing-table th,
+ body[data-page="competitions"] .comp-stand .standing-table td{font-size:9px}
+ body[data-page="competitions"] .comp-stand .standing-table .standing-team{font-size:9px}
+ body[data-page="competitions"] .comp-stand .standing-table .standing-team .crest{width:17px;height:17px;min-width:17px;max-width:17px;flex-basis:17px}
+}
