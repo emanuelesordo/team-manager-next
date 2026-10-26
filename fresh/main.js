@@ -6,7 +6,7 @@ import {monthIndex,renderMonthCalendar,opponentAdjustedResults,renderPointsTrend
 import {clubPage,personalPanel} from './ui-extensions.js?clubs=20261003id';
 import {votesPanel,saveVote,deleteVote} from './votes.js?ratings=20261006picker4';
 import {matchMvpAwards,describePlayerSeason} from './player-mvp.js';
-import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection,loadCsiReview,mayEditCallups,handleRosterSpreadsheetFile,mountRosterRoleMatrix} from './staff-ui.js?csi=20261019autosave1';
+import {adminPage,staffMatchPanel,isStaff,staffClick,staffSelect,staffSubmit,staffLogoEvent,startStaffClock,openNewPlayer,persistCallupChange,persistLineupSnapshot,matchLineup,staffMatchSection,loadCsiReview,mayEditCallups,handleRosterSpreadsheetFile,mountRosterRoleMatrix} from './staff-ui.js?csi=20261026periodend1';
 import {overviewLineup} from './match-overview.js?lineup=20261005eventicons-v4';
 import {collectionForClub,shirtSvg} from './kit-editor.js';
 import {installCalendarImport} from './calendar-import.js';
