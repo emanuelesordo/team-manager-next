@@ -154,8 +154,7 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
   :chooseGoalMinutes(goals,{fixture,fixtures,matches,events:historicalEvents,duration,rng,patterns});
  const events=[{minute:0,type:'phase',label:'Calcio d’inizio',basis:'Assetto iniziale della formazione'},
   {minute:Math.round(duration/2),type:'phase',label:'Intervallo',basis:'Valutazione del parziale'}];
- // Each session is one stoppage, with one or more substitutions.
- // Up to three in play, plus one free interval session; max seven players.
+ // No limit on substitution sessions; at most seven player substitutions.
  const benchCount=Math.min(7,bench.length);
  const half=Math.round(duration/2);
  // Aim to use the available substitutions when the predicted match state
@@ -166,13 +165,17 @@ export function simulatePrematchTimeline({fixture,prediction,lineup,roster=[],pl
  const changeCount=starter.length?Math.min(benchCount,desiredChanges):0;
  const intervalChanges=changeCount>=4&&rng()<.48?Math.min(2,changeCount-2):0;
  const remaining=changeCount-intervalChanges;
- const playSessions=remaining?Math.min(3,remaining):0;
+ const playSessions=remaining;
  const sizes=Array(playSessions).fill(1);
  for(let i=playSessions;i<remaining;i++)sizes[Math.floor(rng()*playSessions)]++;
  const changes=[];
  if(intervalChanges)changes.push({minute:half,type:'changeCandidate',count:intervalChanges,session:'HT'});
- const windows=[.63,.76,.88];
- for(let i=0;i<playSessions;i++)changes.push({minute:clamp(Math.round(duration*windows[i]+(rng()-.5)*6),half+1,duration-1),type:'changeCandidate',count:sizes[i],session:'S'+(i+1)});
+ for(let i=0;i<playSessions;i++){
+  // Distinct chronological windows, without grouping changes into only three slots.
+  const fraction=(i+1)/(playSessions+1);
+  const minute=clamp(Math.round(half+(duration-half-1)*fraction),half+1,duration-1);
+  changes.push({minute,type:'changeCandidate',count:sizes[i],session:'S'+(i+1)});
+ }
  const happenings=[...schedule,...changes].sort((a,b)=>a.minute-b.minute||(a.type==='goal'?-1:1));
  const partial={home:0,away:0};
  for(const item of happenings){
