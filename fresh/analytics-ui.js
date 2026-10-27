@@ -1,3 +1,4 @@
+import {playerStintPoints} from './player-stint-points.js';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {aggregateEventDetails,DETAIL_METRICS} from './event-detail-stats.js';
 import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers} from './analytics.js?stats=20261013sourcefacts1';
@@ -253,15 +254,15 @@ function rankingRows(title,players,key,unit=''){
   '<div class="stats-rank-track"><i style="width:'+Math.round(Math.abs(Number(p[key]))/max*100)+'%"></i></div>'+
   '<b>'+E(key==='plus_minus_on'?plus(Number(p[key])):Number(p[key]).toLocaleString('it-IT',{maximumFractionDigits:2}))+E(unit)+'</b></div>').join('')+'</div></section>';
 }
-function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],mvpCounts=new Map()){
+function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],mvpCounts=new Map(),stintPoints=new Map()){
  const impactMap=new Map(impacts.map(x=>[String(x.player_id),x])),ratingMap=new Map(ratings.map(x=>[String(x.player_id),x]));
- const merged=(comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}))).map(p=>({...p,mvp_awards:mvpCounts.get(String(p.player_id))||0}));
+ const merged=(comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}))).map(p=>({...p,mvp_awards:mvpCounts.get(String(p.player_id))||0,...stintPoints.get(String(p.player_id))}));
  const groups=[
  ['usage','Impiego',[['Presenze','appearances'],['Minuti','minutes'],['Subentri','subentries'],
   ['Minuti per presenza','minutes_per_appearance'],['Titolarità %','start_rate']]],
- ['attack','Attacco',[['Gol','goals'],['Assist','assists'],['Gol / 80′','goals_per_80'],
-  ['Assist / 80′','assists_per_80'],['Gol del pareggio','equalizers'],
-  ['Gol del vantaggio','go_ahead_goals'],['Porta al +1','goals_to_plus_1'],
+ ['attack','Attacco',[['Gol','goals'],['Assist','assists'],['Gol / 80′','goals_per_80'],['Assist / 80′','assists_per_80']]],
+ ['goal-impact','Valore dei gol',[
+  ['Gol del pareggio','equalizers'],['Gol del vantaggio','go_ahead_goals'],['Porta al +1','goals_to_plus_1'],
   ['Porta al +2','goals_to_plus_2'],['Porta al +3 o più','goals_to_plus_3'],
   ['Gol che riducono il distacco','deficit_reducers'],['Gol sotto nel punteggio','trailing_goals'],
   ['Pareggi in rimonta','comeback_equalizers'],['Vantaggi in rimonta','comeback_go_ahead_goals'],
@@ -269,6 +270,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  ['impact','Impatto',[['GF in campo','goals_for_on'],['GS in campo','goals_against_on'],
   ['Plus/minus','plus_minus_on'],['GF / 80′','gf_on_per_80'],
   ['GS / 80′','ga_on_per_80'],['+/- / 80′','plus_minus_per_80']]],
+ ['parziali','Parziali e punti', [['Gare con parziale verificato','stint_games'],['GF dal proprio ingresso','stint_gf'],['GS dal proprio ingresso','stint_ga'],['Punti dei parziali giocati','stint_points'],['Variazione punti durante la presenza','stint_points_delta']]],
  ['rating','Rating',[['MVP','mvp_awards'],['Media voto','avg_rating'],['Gare valutate','rated_matches'],
   ['Voti ricevuti','votes_received'],['Gare ≥7','high_rating_games'],
   ['Gare <6','low_rating_games'],['Voto massimo','highest_rating'],
@@ -278,18 +280,27 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  ];
  const tabs='<div class="stats-ranking-tabs" role="tablist" aria-label="Tipo statistiche giocatore">'+groups.map(([id,title],i)=>
  '<button type="button" data-stats-ranking="'+id+'" role="tab" aria-selected="'+(i===0)+'">'+E(title)+'</button>').join('')+'</div>';
- const panels=groups.map(([id,title,metrics],i)=>
- '<div class="stats-player-grid" data-stats-ranking-panel="'+id+'"'+(i?' hidden':'')+'>'+
- metrics.map(([metric,key])=>rankingRows(metric,merged,key)).filter(Boolean).join('')+'</div>').join('');
  const detailGroups=DETAIL_METRICS.map(([key,title,options])=>{
   const values=merged.map(p=>{
    const detail=aggregateEventDetails(events,{playerId:p.player_id,side:'team'}).groups[key];
-   return {...p,event_detail_value:detail.known,detail_counts:detail.counts};
+   return {...p,detail_counts:detail.counts};
   });
   return options.map(([code,label])=>rankingRows(title+' · '+label,values.map(v=>({...v,event_detail_value:v.detail_counts[code]})),'event_detail_value')).filter(Boolean).join('');
  }).filter(Boolean).join('');
- return '<div class="stats-player-section"><p class="stats-hint">Confronti stagionali dei giocatori Caselle · dati certificati nella vista SQL unica. Le voci senza dati sono omesse.</p>'+
- tabs+panels+'<section class="stats-player-detail-block"><h3>Dettagli eventi · confronti giocatori</h3>'+detailGroups+'</section></div>';
+ groups.push(['goal-details','Dinamiche dei gol',[]]);
+ const tabsFinal='<div class="stats-ranking-tabs" role="tablist" aria-label="Tipo statistiche giocatore">'+groups.map(([id,title],i)=>
+ '<button type="button" data-stats-ranking="'+id+'" role="tab" aria-selected="'+(i===0)+'">'+E(title)+'</button>').join('')+'</div>';
+ const panels=groups.map(([id,title,metrics],i)=>{
+  const slides=id==='goal-details'?detailGroups:metrics.map(([metric,key])=>rankingRows(metric,merged,key)).filter(Boolean);
+  return '<section class="stats-player-carousel" data-stats-ranking-panel="'+id+'"'+(i?' hidden':'')+'>'+
+  '<div class="stats-player-carousel-top"><div><span class="eyebrow">CONFRONTO GIOCATORI</span><h3>'+E(title)+'</h3></div>'+
+  '<div class="stats-player-carousel-controls"><button type="button" data-stats-slide="-1" aria-label="Statistica precedente">‹</button>'+
+  '<span class="stats-player-carousel-count">1 / '+slides.length+'</span>'+
+  '<button type="button" data-stats-slide="1" aria-label="Statistica successiva">›</button></div></div>'+
+  (id==='parziali'?'<p class="stats-hint">Punti dei parziali: 3/1/0 secondo il risultato dei gol segnati e subiti mentre il giocatore è in campo. Variazione punti: differenza tra i punti corrispondenti al punteggio alla fine e all’inizio di ciascuna presenza. Solo gare con minutaggi verificati.</p>':'')+
+  '<div class="stats-player-carousel-track" tabindex="0">'+slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+slide+'</div>').join('')+'</div></section>';
+ }).join('');
+ return '<div class="stats-player-section"><p class="stats-hint">Confronti stagionali dei giocatori Caselle · scegli una categoria e scorri le metriche. I parziali richiedono eventi e minuti validati.</p>'+tabsFinal+panels+'</div>';
 }
 
 function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[],team=null,opponents=[]){
@@ -435,6 +446,6 @@ export function renderEventAnalytics(fixtures,matches,events,team,competitions=[
  '<button type="button" role="tab" data-stats-scope="'+id+'" aria-selected="'+(i===0)+'">'+E(label)+'</button>').join('')+'</nav>';
  return tabs+'<div class="stats-scope-panel" data-stats-panel="team">'+
  renderTeamAnalytics(fixtures,matches,events,team,competitions,playerStats,opponents,matchPlayers,venues,predictionSnapshots,history)+
- '</div><div class="stats-scope-panel" data-stats-panel="players" hidden>'+playersNumbers(playerStats,goalImpacts,ratingInsights,playerComparisons,events,mvpCounts)+
+ '</div><div class="stats-scope-panel" data-stats-panel="players" hidden>'+playersNumbers(playerStats,goalImpacts,ratingInsights,playerComparisons,events,mvpCounts,playerStintPoints(matches,matchPlayers,events,fixtures,competitions))+
  '</div><div class="stats-scope-panel" data-stats-panel="all" hidden>'+tournamentNumbers(fixtures,competitions,matchFlows,flowPhases,flowEventContexts,opponentFlows,teamComparisons,fixtureEvents,team,opponents)+'</div>';
 }
