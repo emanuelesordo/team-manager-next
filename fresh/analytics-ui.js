@@ -290,6 +290,17 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  groups.push(['goal-details','Dinamiche dei gol',[]]);
  const tabsFinal='<div class="stats-ranking-tabs" role="tablist" aria-label="Tipo statistiche giocatore">'+groups.map(([id,title],i)=>
  '<button type="button" data-stats-ranking="'+id+'" role="tab" aria-selected="'+(i===0)+'">'+E(title)+'</button>').join('')+'</div>';
+ const stintDescriptions={
+  stint_games:'Numero di gare con una presenza effettiva e con minuti, cambi e gol verificabili. È il denominatore delle medie di questa categoria.',
+  stint_gf:'Somma dei gol segnati dalla squadra esclusivamente negli intervalli in cui il giocatore era in campo.',
+  stint_ga:'Somma dei gol subiti dalla squadra esclusivamente negli intervalli in cui il giocatore era in campo.',
+  stint_points:'Per ogni gara assegna 3, 1 oppure 0 punti al parziale maturato mentre il giocatore era in campo; poi somma i punti di tutte le gare verificabili.',
+  stint_points_delta:'Per ogni intervallo confronta i punti relativi al risultato al momento dell’ingresso con quelli al momento dell’uscita. Esempio: da 1-0 a 1-1 = −2 punti; somma le differenze.',
+  stint_gf_avg:'Gol segnati mentre il giocatore era in campo, divisi per le sue gare con parziale verificato. È una media per presenza, non per 80 minuti.',
+  stint_ga_avg:'Gol subiti mentre il giocatore era in campo, divisi per le sue gare con parziale verificato. Anche gli ingressi brevi contano come una presenza.',
+  stint_points_avg:'Punti complessivi dei parziali giocati divisi per le gare con parziale verificato. Il massimo è 3 punti a partita.',
+  stint_points_delta_avg:'Somma delle variazioni dei punti maturate durante la presenza divisa per le gare verificate. Il segno positivo indica miglioramento, quello negativo peggioramento.'
+ };
  const panels=groups.map(([id,title,metrics],i)=>{
   const slides=id==='goal-details'?detailGroups:metrics.map(([metric,key])=>rankingRows(metric,merged,key)).filter(Boolean);
   return '<section class="stats-player-carousel" data-stats-ranking-panel="'+id+'"'+(i?' hidden':'')+'>'+
@@ -297,8 +308,8 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
   '<div class="stats-player-carousel-controls"><button type="button" data-stats-slide="-1" aria-label="Statistica precedente">‹</button>'+
   '<span class="stats-player-carousel-count">1 / '+slides.length+'</span>'+
   '<button type="button" data-stats-slide="1" aria-label="Statistica successiva">›</button></div></div>'+
-  (id==='parziali'?'<p class="stats-hint">Parziale giocato: conta soltanto i gol fatti e subiti mentre il giocatore è in campo, con punti 3/1/0 assegnati al parziale. Variazione punti: confronta i punti del risultato all’ingresso e all’uscita (es. entra sull’1-0, esce sull’1-1: −2). Le medie dividono ciascun totale per le gare con presenza e timeline interamente verificata, non per tutte le presenze stagionali. Gare prive di minuti o eventi completi escluse.</p>':'')+
-  '<div class="stats-player-carousel-track" tabindex="0">'+slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+slide+'</div>').join('')+'</div></section>';
+
+  '<div class="stats-player-carousel-track" tabindex="0">'+slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+(id==='parziali'?'<p class="stats-hint stats-stint-slide-description">'+E(stintDescriptions[metrics[n]?.[1]]||'')+'</p>':'')+slide+'</div>').join('')+'</div></section>';
  }).join('');
  return '<div class="stats-player-section"><p class="stats-hint">Confronti stagionali dei giocatori Caselle · scegli una categoria e scorri le metriche. I parziali richiedono eventi e minuti validati.</p>'+tabsFinal+panels+'</div>';
 }
