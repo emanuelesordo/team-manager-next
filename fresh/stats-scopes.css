@@ -79,3 +79,15 @@
 .stats-insight-empty{font-size:12px;opacity:.58;margin:0}
 .stats-insights [hidden]{display:none!important}
 @media(max-width:800px){.stats-insights{padding:20px 16px;border-radius:16px}.stats-insights-grid{grid-template-columns:1fr;gap:28px}.stats-insights-header h2{font-size:25px}.stats-insights-summary strong{font-size:36px}.stats-insight-row{grid-template-columns:20px minmax(100px,1fr) minmax(32px,.6fr) 40px;gap:7px}.stats-insights-nav button{padding:9px 12px;font-size:11px}}
+
+.stats-player-carousel{min-width:0;display:grid;gap:16px}.stats-player-carousel[hidden]{display:none}
+.stats-player-carousel-top{display:flex;align-items:end;justify-content:space-between;gap:12px;border-bottom:1px solid color-mix(in srgb,currentColor 13%,transparent);padding:0 0 14px}
+.stats-player-carousel-top h3{font-size:21px;letter-spacing:-.03em;margin:5px 0 0}
+.stats-player-carousel-controls{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.stats-player-carousel-controls button{width:34px;height:34px;border-radius:50%;color:inherit;border:1px solid color-mix(in srgb,currentColor 20%,transparent);background:color-mix(in srgb,currentColor 5%,transparent);font-size:22px;cursor:pointer}
+.stats-player-carousel-count{font-size:12px;font-variant-numeric:tabular-nums;opacity:.7}
+.stats-player-carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:thin;overscroll-behavior-inline:contain;gap:16px;padding-bottom:12px}
+.stats-player-carousel-slide{flex:0 0 100%;min-width:0;scroll-snap-align:start}
+.stats-player-carousel-slide .stats-player-ranking{padding:18px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:14px;background:color-mix(in srgb,currentColor 3%,transparent)}
+.stats-player-carousel-slide .stats-rank-rows{max-width:900px}
+@media(min-width:900px){.stats-player-carousel-slide{flex-basis:min(100%,850px)}}
