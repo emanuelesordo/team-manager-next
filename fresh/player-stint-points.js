@@ -25,16 +25,17 @@ export function playerStintPoints(matches=[],matchPlayers=[],events=[],fixtures=
   for(const p of players){
    const state=intervals.players.get(String(p.player_id));
    if(!state?.valid||!state.intervals.length)continue;
-   let gf=0,ga=0,delta=0,safe=true;
+   let gf=0,ga=0,delta=0,minutes=0,safe=true;
    for(const [start,end] of state.intervals){
     if(goals.some(g=>g.time===start&&start!==0||g.time===end&&end!==timing.duration)){safe=false;break}
+    minutes+=end-start;
     const before=scoreAt(start),after=scoreAt(end);
     gf+=after.for-before.for;ga+=after.against-before.against;
     delta+=point(after.for,after.against)-point(before.for,before.against);
    }
    if(!safe)continue;
-   const id=String(p.player_id),prior=output.get(id)||{stint_games:0,stint_gf:0,stint_ga:0,stint_points:0,stint_points_delta:0};
-   prior.stint_games++;prior.stint_gf+=gf;prior.stint_ga+=ga;prior.stint_points+=point(gf,ga);prior.stint_points_delta+=delta;output.set(id,prior);
+   const id=String(p.player_id),prior=output.get(id)||{stint_games:0,stint_minutes:0,stint_gf:0,stint_ga:0,stint_points:0,stint_points_delta:0};
+   prior.stint_games++;prior.stint_minutes+=minutes;prior.stint_gf+=gf;prior.stint_ga+=ga;prior.stint_points+=point(gf,ga);prior.stint_points_delta+=delta;output.set(id,prior);
   }
  }
  return output;
