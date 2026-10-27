@@ -286,7 +286,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
    return {...p,detail_counts:detail.counts};
   });
   return options.map(([code,label])=>rankingRows(title+' · '+label,values.map(v=>({...v,event_detail_value:v.detail_counts[code]})),'event_detail_value')).filter(Boolean).join('');
- }).filter(Boolean).join('');
+ }).filter(Boolean);
  groups.push(['goal-details','Dinamiche dei gol',[]]);
  const tabsFinal='<div class="stats-ranking-tabs" role="tablist" aria-label="Tipo statistiche giocatore">'+groups.map(([id,title],i)=>
  '<button type="button" data-stats-ranking="'+id+'" role="tab" aria-selected="'+(i===0)+'">'+E(title)+'</button>').join('')+'</div>';
