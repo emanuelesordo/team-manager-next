@@ -2,7 +2,10 @@ import {matchPlayerIntervals,matchElapsedMinute,matchTiming,confirmedMatchEvent}
 const point=(a,b)=>a>b?3:a===b?1:0;
 const counted=e=>['goal','penalty_scored','own_goal'].includes(e.event_type)&&e.payload?.count_score!==false;
 const side=(e,m)=>{let own=e.team_side==='team'||(e.team_side==='home'&&m.home_away==='home')||(e.team_side==='away'&&m.home_away==='away');if(e.event_type==='own_goal')own=!own;return own?'for':'against'};
-/** Only fully timed, fully reconciled match timelines can establish score at entry and exit. */
+/** Only fully timed, fully reconciled match timelines can establish score at entry and exit.
+ * stint_minutes sums actual player intervals across the verified sample; divide totals by
+ * this total and multiply by 80 for comparable 80-minute rates, never average match rates.
+ */
 export function playerStintPoints(matches=[],matchPlayers=[],events=[],fixtures=[],competitions=[]){
  const output=new Map(),fixturesById=new Map(fixtures.map(f=>[String(f.id),f]));
  const conf=new Map(competitions.map(c=>[String(c.id),c]));
