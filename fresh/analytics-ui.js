@@ -256,7 +256,7 @@ function rankingRows(title,players,key,unit=''){
 }
 function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],mvpCounts=new Map(),stintPoints=new Map()){
  const impactMap=new Map(impacts.map(x=>[String(x.player_id),x])),ratingMap=new Map(ratings.map(x=>[String(x.player_id),x]));
- const merged=(comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}))).map(p=>({...p,mvp_awards:mvpCounts.get(String(p.player_id))||0,...stintPoints.get(String(p.player_id)),...(()=>{const v=stintPoints.get(String(p.player_id));if(!v?.stint_games)return {};return {stint_gf_avg:v.stint_gf/v.stint_games,stint_ga_avg:v.stint_ga/v.stint_games,stint_points_avg:v.stint_points/v.stint_games,stint_points_delta_avg:v.stint_points_delta/v.stint_games}})()}));
+ const merged=(comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}))).map(p=>({...p,mvp_awards:mvpCounts.get(String(p.player_id))||0,...stintPoints.get(String(p.player_id)),...(()=>{const v=stintPoints.get(String(p.player_id));if(!(v?.stint_minutes>0))return {};return {stint_gf_per_80:v.stint_gf*80/v.stint_minutes,stint_ga_per_80:v.stint_ga*80/v.stint_minutes,stint_points_per_80:v.stint_points*80/v.stint_minutes,stint_points_delta_per_80:v.stint_points_delta*80/v.stint_minutes}})()}));
  const groups=[
  ['usage','Impiego',[['Presenze','appearances'],['Minuti','minutes'],['Subentri','subentries'],
   ['Minuti per presenza','minutes_per_appearance'],['Titolarità %','start_rate']]],
@@ -270,7 +270,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  ['impact','Impatto',[['GF in campo','goals_for_on'],['GS in campo','goals_against_on'],
   ['Plus/minus','plus_minus_on'],['GF / 80′','gf_on_per_80'],
   ['GS / 80′','ga_on_per_80'],['+/- / 80′','plus_minus_per_80']]],
- ['parziali','Parziali e punti', [['Gare con parziale verificato','stint_games'],['GF dal proprio ingresso','stint_gf'],['GS dal proprio ingresso','stint_ga'],['Punti dei parziali giocati','stint_points'],['Variazione punti durante la presenza','stint_points_delta'],['GF medi per gara','stint_gf_avg'],['GS medi per gara','stint_ga_avg'],['Punti medi dei parziali','stint_points_avg'],['Variazione media punti per gara','stint_points_delta_avg']]],
+ ['parziali','Parziali e punti', [['Gare con parziale verificato','stint_games'],['Minuti totali verificati','stint_minutes'],['GF dal proprio ingresso','stint_gf'],['GS dal proprio ingresso','stint_ga'],['Punti dei parziali giocati','stint_points'],['Variazione punti durante la presenza','stint_points_delta'],['GF / 80′','stint_gf_per_80'],['GS / 80′','stint_ga_per_80'],['Punti dei parziali / 80′','stint_points_per_80'],['Variazione punti / 80′','stint_points_delta_per_80']]],
  ['rating','Rating',[['MVP','mvp_awards'],['Media voto','avg_rating'],['Gare valutate','rated_matches'],
   ['Voti ricevuti','votes_received'],['Gare ≥7','high_rating_games'],
   ['Gare <6','low_rating_games'],['Voto massimo','highest_rating'],
@@ -291,15 +291,16 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  const tabsFinal='<div class="stats-ranking-tabs" role="tablist" aria-label="Tipo statistiche giocatore">'+groups.map(([id,title],i)=>
  '<button type="button" data-stats-ranking="'+id+'" role="tab" aria-selected="'+(i===0)+'">'+E(title)+'</button>').join('')+'</div>';
  const stintDescriptions={
-  stint_games:'Numero di gare con una presenza effettiva e con minuti, cambi e gol verificabili. È il denominatore delle medie di questa categoria.',
+  stint_games:'Numero di gare con una presenza effettiva e con minuti, cambi e gol verificabili. Identifica il campione verificato; per i valori su 80′ si usa invece la somma dei minuti effettivamente giocati.',
+  stint_minutes:'Somma dei minuti effettivamente giocati in tutte le presenze con timeline verificata. È il denominatore utilizzato per normalizzare le statistiche su 80 minuti.',
   stint_gf:'Somma dei gol segnati dalla squadra esclusivamente negli intervalli in cui il giocatore era in campo.',
   stint_ga:'Somma dei gol subiti dalla squadra esclusivamente negli intervalli in cui il giocatore era in campo.',
   stint_points:'Per ogni gara assegna 3, 1 oppure 0 punti al parziale maturato mentre il giocatore era in campo; poi somma i punti di tutte le gare verificabili.',
   stint_points_delta:'Per ogni intervallo confronta i punti relativi al risultato al momento dell’ingresso con quelli al momento dell’uscita. Esempio: da 1-0 a 1-1 = −2 punti; somma le differenze.',
-  stint_gf_avg:'Gol segnati mentre il giocatore era in campo, divisi per le sue gare con parziale verificato. È una media per presenza, non per 80 minuti.',
-  stint_ga_avg:'Gol subiti mentre il giocatore era in campo, divisi per le sue gare con parziale verificato. Anche gli ingressi brevi contano come una presenza.',
-  stint_points_avg:'Punti complessivi dei parziali giocati divisi per le gare con parziale verificato. Il massimo è 3 punti a partita.',
-  stint_points_delta_avg:'Somma delle variazioni dei punti maturate durante la presenza divisa per le gare verificate. Il segno positivo indica miglioramento, quello negativo peggioramento.'
+  stint_gf_per_80:'Gol segnati durante la presenza × 80 / totale minuti effettivi verificati. Gli spezzoni brevi pesano in proporzione alla loro durata.',
+  stint_ga_per_80:'Gol subiti durante la presenza × 80 / totale minuti effettivi verificati. Denominatore: tutti i minuti verificati del giocatore.',
+  stint_points_per_80:'Somma dei punti dei parziali × 80 / minuti totali verificati. È un tasso normalizzato, non un massimo di 3 punti a partita.',
+  stint_points_delta_per_80:'Somma delle variazioni di punti × 80 / minuti totali verificati. Valori negativi indicano peggioramento del risultato nel tempo giocato.'
  };
  const panels=groups.map(([id,title,metrics],i)=>{
   const slides=id==='goal-details'?detailGroups:metrics.map(([metric,key])=>rankingRows(metric,merged,key)).filter(Boolean);
