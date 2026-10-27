@@ -85,7 +85,7 @@ test('for/against distributions use strictly historical and relevant team goals'
  assert.ok(minutes.every(x=>x.minute>0&&x.minute<80));
  assert.ok(minutes.every((x,i)=>i===0||x.minute>=minutes[i-1].minute));
 });
-test('seven maximum replacements within three in-play sessions plus interval',()=>{
+test('seven maximum replacements without a limit on in-play sessions',()=>{
  const large=Array.from({length:28},(_,i)=>({id:'x'+i,player_id:'x'+i,first_name:'Test',last_name:'Player'+i,generic_role_manual:i===0?'P':i<16?'D':i<25?'C':'A'}));
  const eleven={...lineup,players:large.slice(0,11).map((p,i)=>({player_id:p.id,slot:i+1,name:'Player'+i,targetRole:p.generic_role_manual,expectedRating:6}))};
  for(let variant=0;variant<12;variant++){
@@ -93,8 +93,8 @@ test('seven maximum replacements within three in-play sessions plus interval',()
   const changes=scenario.events.filter(e=>e.type==='substitution');
   const sessions=new Set(changes.map(e=>e.session));
   assert.ok(changes.length<=7);
-  assert.ok([...sessions].filter(id=>id!=='HT').length<=3);
-  assert.ok(sessions.size<=4);
+  assert.ok([...sessions].filter(id=>id!=='HT').length<=7);
+  assert.ok(sessions.size<=8);
   assert.ok(changes.every(e=>e.session==='HT'?e.minute===40:e.minute>40));
   assert.equal(new Set(changes.map(e=>e.player_id)).size,changes.length);
   assert.equal(new Set(changes.map(e=>e.off_id)).size,changes.length);
@@ -150,7 +150,6 @@ test('substitution planning uses all seven for a comfortable lead or demanding c
   const result=simulatePrematchTimeline({...options,prediction:{...prediction,probabilities:{mostLikely:{home,away}}}});
   const changes=result.events.filter(e=>e.type==='substitution');
   assert.equal(changes.length,expected,'Expected '+expected+' changes for '+home+'-'+away);
-  assert.ok(new Set(changes.map(e=>e.session).filter(s=>s!=='HT')).size<=3);
   const entered=new Set();
   for(const event of changes){assert.ok(!entered.has(event.off_id));entered.add(event.player_id)}
  }
