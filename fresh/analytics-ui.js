@@ -256,7 +256,7 @@ function rankingRows(title,players,key,unit=''){
 }
 function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],mvpCounts=new Map(),stintPoints=new Map()){
  const impactMap=new Map(impacts.map(x=>[String(x.player_id),x])),ratingMap=new Map(ratings.map(x=>[String(x.player_id),x]));
- const merged=(comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}))).map(p=>({...p,mvp_awards:mvpCounts.get(String(p.player_id))||0,...stintPoints.get(String(p.player_id))}));
+ const merged=(comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}))).map(p=>({...p,mvp_awards:mvpCounts.get(String(p.player_id))||0,...stintPoints.get(String(p.player_id)),...(()=>{const v=stintPoints.get(String(p.player_id));if(!v?.stint_games)return {};return {stint_gf_avg:v.stint_gf/v.stint_games,stint_ga_avg:v.stint_ga/v.stint_games,stint_points_avg:v.stint_points/v.stint_games,stint_points_delta_avg:v.stint_points_delta/v.stint_games}})()}));
  const groups=[
  ['usage','Impiego',[['Presenze','appearances'],['Minuti','minutes'],['Subentri','subentries'],
   ['Minuti per presenza','minutes_per_appearance'],['Titolarità %','start_rate']]],
@@ -270,7 +270,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  ['impact','Impatto',[['GF in campo','goals_for_on'],['GS in campo','goals_against_on'],
   ['Plus/minus','plus_minus_on'],['GF / 80′','gf_on_per_80'],
   ['GS / 80′','ga_on_per_80'],['+/- / 80′','plus_minus_per_80']]],
- ['parziali','Parziali e punti', [['Gare con parziale verificato','stint_games'],['GF dal proprio ingresso','stint_gf'],['GS dal proprio ingresso','stint_ga'],['Punti dei parziali giocati','stint_points'],['Variazione punti durante la presenza','stint_points_delta']]],
+ ['parziali','Parziali e punti', [['Gare con parziale verificato','stint_games'],['GF dal proprio ingresso','stint_gf'],['GS dal proprio ingresso','stint_ga'],['Punti dei parziali giocati','stint_points'],['Variazione punti durante la presenza','stint_points_delta'],['GF medi per gara','stint_gf_avg'],['GS medi per gara','stint_ga_avg'],['Punti medi dei parziali','stint_points_avg'],['Variazione media punti per gara','stint_points_delta_avg']]],
  ['rating','Rating',[['MVP','mvp_awards'],['Media voto','avg_rating'],['Gare valutate','rated_matches'],
   ['Voti ricevuti','votes_received'],['Gare ≥7','high_rating_games'],
   ['Gare <6','low_rating_games'],['Voto massimo','highest_rating'],
@@ -297,7 +297,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
   '<div class="stats-player-carousel-controls"><button type="button" data-stats-slide="-1" aria-label="Statistica precedente">‹</button>'+
   '<span class="stats-player-carousel-count">1 / '+slides.length+'</span>'+
   '<button type="button" data-stats-slide="1" aria-label="Statistica successiva">›</button></div></div>'+
-  (id==='parziali'?'<p class="stats-hint">Punti dei parziali: 3/1/0 secondo il risultato dei gol segnati e subiti mentre il giocatore è in campo. Variazione punti: differenza tra i punti corrispondenti al punteggio alla fine e all’inizio di ciascuna presenza. Solo gare con minutaggi verificati.</p>':'')+
+  (id==='parziali'?'<p class="stats-hint">Parziale giocato: conta soltanto i gol fatti e subiti mentre il giocatore è in campo, con punti 3/1/0 assegnati al parziale. Variazione punti: confronta i punti del risultato all’ingresso e all’uscita (es. entra sull’1-0, esce sull’1-1: −2). Le medie dividono ciascun totale per le gare con presenza e timeline interamente verificata, non per tutte le presenze stagionali. Gare prive di minuti o eventi completi escluse.</p>':'')+
   '<div class="stats-player-carousel-track" tabindex="0">'+slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+slide+'</div>').join('')+'</div></section>';
  }).join('');
  return '<div class="stats-player-section"><p class="stats-hint">Confronti stagionali dei giocatori Caselle · scegli una categoria e scorri le metriche. I parziali richiedono eventi e minuti validati.</p>'+tabsFinal+panels+'</div>';
