@@ -11,7 +11,7 @@ const playerRows=[
 ];
 const event=(event_type,minute,team_side,player_id=null,secondary_player_id=null)=>({
  match_id:'m',event_type,minute,team_side,player_id,secondary_player_id,
- validation_status:'official',payload:{period:minute>40?'second_half':'first_half'}
+ validation_status:'official',payload:{period:minute>40?'second_half':'first_half',minute_relative:false}
 });
 test('bench player enters at 1-0 then concedes 0-2: partial loss and -3 points',()=>{
  const rows=playerStintPoints([match],playerRows,[
