@@ -1503,6 +1503,8 @@ document.addEventListener('click',event=>{
   wrapper.querySelectorAll('[data-team-metric-panel]').forEach(el=>{el.hidden=el.dataset.teamMetricPanel!==choice});
   return;
  }
+ const slider=event.target.closest('[data-stats-slide]');
+ if(slider){const panel=slider.closest('[data-stats-ranking-panel]');const track=panel?.querySelector('.stats-player-carousel-track');if(track){const slides=[...track.querySelectorAll('.stats-player-carousel-slide')];const nearest=slides.reduce((best,x,i)=>Math.abs(x.offsetLeft-track.scrollLeft)<Math.abs(slides[best].offsetLeft-track.scrollLeft)?i:best,0);const next=Math.min(slides.length-1,Math.max(0,nearest+Number(slider.dataset.statsSlide)));track.scrollTo({left:slides[next].offsetLeft-slides[0].offsetLeft,behavior:'smooth'});panel.querySelector('.stats-player-carousel-count').textContent=(next+1)+' / '+slides.length;}return;}
  const ranking=event.target.closest('[data-stats-ranking]');
  if(ranking){
   const wrapper=ranking.closest('.stats-player-section');if(!wrapper)return;
