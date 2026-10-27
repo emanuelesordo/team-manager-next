@@ -280,12 +280,12 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  ];
  const tabs='<div class="stats-ranking-tabs" role="tablist" aria-label="Tipo statistiche giocatore">'+groups.map(([id,title],i)=>
  '<button type="button" data-stats-ranking="'+id+'" role="tab" aria-selected="'+(i===0)+'">'+E(title)+'</button>').join('')+'</div>';
- const detailGroups=DETAIL_METRICS.map(([key,title,options])=>{
+ const detailGroups=DETAIL_METRICS.flatMap(([key,title,options])=>{
   const values=merged.map(p=>{
    const detail=aggregateEventDetails(events,{playerId:p.player_id,side:'team'}).groups[key];
    return {...p,detail_counts:detail.counts};
   });
-  return options.map(([code,label])=>rankingRows(title+' · '+label,values.map(v=>({...v,event_detail_value:v.detail_counts[code]})),'event_detail_value')).filter(Boolean).join('');
+  return options.map(([code,label])=>rankingRows(title+' · '+label,values.map(v=>({...v,event_detail_value:v.detail_counts[code]})),'event_detail_value')).filter(Boolean);
  }).filter(Boolean);
  groups.push(['goal-details','Dinamiche dei gol',[]]);
  const tabsFinal='<div class="stats-ranking-tabs" role="tablist" aria-label="Tipo statistiche giocatore">'+groups.map(([id,title],i)=>
