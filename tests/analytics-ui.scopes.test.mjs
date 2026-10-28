@@ -19,7 +19,8 @@ test('Numeri player comparison is sourced from consolidated SQL and includes goa
  assert.match(html,/Luca/);
  assert.match(html,/3,88/);
  assert.match(html,/Vantaggi in rimonta/);
- assert.match(html,/Variabilità/);
+ assert.match(html,/data-stats-ranking="rating"/);
+ assert.match(html,/data-rank-vis="diverging"/);
 });
 
 test('Team comparison visually ranks sides in each competition without a league table',()=>{
@@ -33,8 +34,8 @@ test('Team comparison visually ranks sides in each competition without a league 
  ];
  const html=renderEventAnalytics([],[],[],{id:'caselle'},[{id:'c',name:'Serie B'}],[],[],[],[],[],[],[],[],[],[],[],[],[],teams);
  const all=html.slice(html.indexOf('data-stats-panel="all"'));
- for(const label of ['Calcio Caselle','Justinense','Stato del risultato','Rimonte e vantaggi','Copertura','% in vantaggio','Pareggi in rimonta'])assert.ok(all.includes(label),label);
- assert.match(all,/data-team-metric-panel="changes" hidden/);
+ for(const label of ['Calcio Caselle','Justinense','Le squadre a confronto','Andamento','Affidabilità','Tempo in vantaggio','Pareggi in rimonta'])assert.ok(all.includes(label),label);
+ assert.match(all,/data-extended-metric-panel="flow" hidden/);
  assert.doesNotMatch(all,/standing-table/);
 });
 
@@ -52,7 +53,7 @@ test('Opponent tournament comparison reads ordered score slots without requiring
  assert.match(html,/Partite in rimonta con punti/);
  assert.match(html,/Justinense/);
  assert.match(html,/Rubano/);
- assert.match(html,/Vittorie in trasferta/);
+ assert.match(html,/Vittorie fuori casa/);
 });
 
 test('Caselle team/opponent cards map to fixture home-away without becoming zero',()=>{
@@ -69,7 +70,29 @@ test('Caselle team/opponent cards map to fixture home-away without becoming zero
  const html=renderEventAnalytics(...args);
  assert.match(html,/Calcio Caselle/);
  assert.match(html,/Rubano/);
- const gialli=html.match(/<h4>Cartellini gialli<\/h4>([\s\S]*?)<\/article>/)?.[1]||'';
+ const gialli=html.match(/<h3>Gialli documentati<\/h3>([\s\S]*?)<\/section>/)?.[1]||'';
  assert.match(gialli,/Calcio Caselle/);
  assert.match(gialli,/>6<\/b>/);
+});
+
+test('Team dashboard owns every main KPI once and uses six interactive categories',()=>{
+ const html=renderEventAnalytics([],[],[],{id:'caselle',name:'Calcio Caselle'});
+ const team=html.slice(html.indexOf('data-stats-panel="team"'),html.indexOf('data-stats-panel="players"'));
+ for(const id of ['snapshot','flow','goals','discipline','context','identity']){
+  assert.match(team,new RegExp('data-team-dash="'+id+'"'));
+  assert.match(team,new RegExp('data-team-dash-panel="'+id+'"'));
+ }
+ assert.equal((team.match(/>Porte inviolate</g)||[]).length,1);
+ assert.equal((team.match(/>Sostituzioni</g)||[]).length,1);
+ assert.match(team,/tm-analytics-kpis/);
+ assert.match(team,/tm-analytics-donut/);
+});
+test('Tournament analytics do not render duplicate league/team ranking panels',()=>{
+ const fixtures=[{id:'f1',competition_id:'c',status:'finished',home_team:'Caselle',away_team:'Rubano',home_score:2,away_score:0}];
+ const html=renderEventAnalytics(fixtures,[],[],{id:'none',name:'Caselle'},[{id:'c',name:'Girone D'}]);
+ const tournament=html.slice(html.indexOf('data-stats-panel="all"'));
+ assert.match(tournament,/tm-compare-scatter/);
+ assert.match(tournament,/data-extended-metric-panel="results"/);
+ assert.equal((tournament.match(/data-extended-metric="results"/g)||[]).length,1);
+ assert.doesNotMatch(tournament,/stats-tournament-section/);
 });
