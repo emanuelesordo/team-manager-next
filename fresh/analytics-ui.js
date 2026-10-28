@@ -293,7 +293,16 @@ function renderTeamAnalytics(fixtures,matches,events,team,competitions=[],player
   statSection('Rendimento per forza avversaria',contextRanks)+'</div>'+
   (intelligence.vsPrediction?.matches?statSection('Risultato rispetto alle attese',statTile('Differenza punti',((intelligence.vsPrediction.delta||0)>0?'+':'')+n2(intelligence.vsPrediction.delta),'form',statN(intelligence.vsPrediction.matches)+' partite con pronostico pre-gara')):'');
  const highlights=profileHighlights(profile,8).filter(x=>x.key!=='protect-multi-goal').slice(0,5);
- const identity=statSection('Tratti distintivi della squadra',
+ const pace=statSection('Rendimento per gara',
+   '<div class="tm-analytics-statgrid">'+
+    statValue('Punti / gara',games?statN((numbers.wins*3+numbers.draws)/games,2):'—')+
+    statValue('Gol fatti / gara',games?statN(numbers.gf/games,2):'—')+
+    statValue('Gol subiti / gara',games?statN(numbers.ga/games,2):'—')+
+    statValue('Porte inviolate (%)',games?statN(100*numbers.cleanSheets/games,1)+'%':'—')+
+    statValue('Entrambe a segno (%)',statPct(intelligence?.bothScore?.rate))+
+    statValue('Gare con 3+ gol (%)',statPct(profile.openRate))+
+   '</div>','Denominatore: partite ufficiali concluse');
+ const identity=pace+statSection('Tratti distintivi della squadra',
    highlights.length?'<div class="tm-analytics-identities">'+highlights.map(x=>
     '<div><div class="tm-analytics-identity-title"><strong>'+E(x.label)+'</strong><b>'+statPct(x.value)+'</b></div>'+
     '<div class="tm-analytics-identity-track"><span style="width:'+Math.max(0,Math.min(100,100*Number(x.value)))+'%"></span></div>'+
