@@ -1383,6 +1383,22 @@ function arrangePrematchStory(root){
  if(comparison)numbers.replaceChildren(comparison);else numbers.textContent='Confronto non disponibile.';
  if(attention){focus.replaceChildren(attention);if(narrative)focus.append(narrative)}else focus.textContent='Focus non disponibile.';
 }
+
+// Capture scroll completion to keep carousel arrows aligned with touch/trackpad swipes.
+document.addEventListener('scrollend',event=>{
+ const track=event.target?.closest?.('.stats-player-carousel-track');
+ if(!track)return;
+ const panel=track.closest('[data-stats-ranking-panel]'),slides=[...track.querySelectorAll('.stats-player-carousel-slide')];
+ if(!panel||!slides.length)return;
+ const start=slides[0].offsetLeft;
+ const index=slides.reduce((best,slide,i)=>
+  Math.abs(slide.offsetLeft-start-track.scrollLeft)<Math.abs(slides[best].offsetLeft-start-track.scrollLeft)?i:best,0);
+ panel.dataset.statsActiveIndex=String(index);
+ const counter=panel.querySelector('.stats-player-carousel-count');
+ if(counter)counter.textContent=(index+1)+' / '+slides.length;
+ panel.querySelector('[data-stats-slide="-1"]')?.toggleAttribute('disabled',index===0);
+ panel.querySelector('[data-stats-slide="1"]')?.toggleAttribute('disabled',index===slides.length-1);
+},true);
 function setupPrematchLineupCarousel(root,onSelection=()=>{}){
  const carousel=root.querySelector('[data-prematch-lineup-carousel]');
  if(!carousel)return;
@@ -1512,7 +1528,22 @@ document.addEventListener('click',event=>{
   return;
  }
  const slider=event.target.closest('[data-stats-slide]');
- if(slider){const panel=slider.closest('[data-stats-ranking-panel]');const track=panel?.querySelector('.stats-player-carousel-track');if(track){const slides=[...track.querySelectorAll('.stats-player-carousel-slide')];const nearest=slides.reduce((best,x,i)=>Math.abs(x.offsetLeft-track.scrollLeft)<Math.abs(slides[best].offsetLeft-track.scrollLeft)?i:best,0);const next=Math.min(slides.length-1,Math.max(0,nearest+Number(slider.dataset.statsSlide)));track.scrollTo({left:slides[next].offsetLeft-slides[0].offsetLeft,behavior:'smooth'});panel.querySelector('.stats-player-carousel-count').textContent=(next+1)+' / '+slides.length;}return;}
+ if(slider){
+  const panel=slider.closest('[data-stats-ranking-panel]');
+  const track=panel?.querySelector('.stats-player-carousel-track');
+  const slides=track?[...track.querySelectorAll('.stats-player-carousel-slide')]:[];
+  if(slides.length){
+   const current=Math.max(0,Math.min(slides.length-1,Number(panel.dataset.statsActiveIndex)||0));
+   const next=Math.max(0,Math.min(slides.length-1,current+Number(slider.dataset.statsSlide)));
+   panel.dataset.statsActiveIndex=String(next);
+   track.scrollTo({left:slides[next].offsetLeft-slides[0].offsetLeft,behavior:'smooth'});
+   const counter=panel.querySelector('.stats-player-carousel-count');
+   if(counter)counter.textContent=(next+1)+' / '+slides.length;
+   panel.querySelector('[data-stats-slide="-1"]')?.toggleAttribute('disabled',next===0);
+   panel.querySelector('[data-stats-slide="1"]')?.toggleAttribute('disabled',next===slides.length-1);
+  }
+  return;
+ }
  const ranking=event.target.closest('[data-stats-ranking]');
  if(ranking){
   const wrapper=ranking.closest('.stats-player-section');if(!wrapper)return;
