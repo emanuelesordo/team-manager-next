@@ -341,7 +341,7 @@ export function fixtureEventsPanel(events,competition=null,fixture=null){
 
 const plus=v=>v>0?'+'+v:String(v);
 function rankingRows(title,players,key,unit=''){
- const isDiverging=['plus_minus_on','plus_minus_per_80','stint_points_delta','stint_points_delta_per_80'].includes(key);
+ const isDiverging=['plus_minus_on','plus_minus_per_80','plus_minus_per_game','stint_points_delta','stint_points_delta_per_80'].includes(key);
  const isDot=['start_rate','avg_rating','rating_volatility','gf_on_per_80','ga_on_per_80'].includes(key);
  const numeric=p=>Number(p?.[key]);
  const usable=[...(players||[])].filter(p=>p?.[key]!=null&&Number.isFinite(numeric(p)))
@@ -410,14 +410,14 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
   stint_points_delta_per_80:'Somma delle variazioni di punti × 80 / minuti totali verificati. Valori negativi indicano peggioramento del risultato nel tempo giocato.'
  };
  const panels=groups.map(([id,title,metrics],i)=>{
-  const slides=(id==='goal-details'?detailGroups:metrics.map(([metric,key])=>rankingRows(metric,merged,key)).filter(Boolean));
+  const slides=(id==='goal-details'?detailGroups.map(html=>({html,key:'details'})):metrics.map(([metric,key])=>({html:rankingRows(metric,merged,key),key})).filter(item=>item.html));
   return '<section class="stats-player-carousel" data-stats-ranking-panel="'+id+'" data-stats-active-index="0"'+(i?' hidden':'')+'>'+
   '<div class="stats-player-carousel-top"><div><span class="eyebrow">CONFRONTO GIOCATORI</span><h3>'+E(title)+'</h3></div>'+
   '<div class="stats-player-carousel-controls"><button type="button" data-stats-slide="-1" disabled aria-label="Statistica precedente">‹</button>'+
   '<span class="stats-player-carousel-count">'+(slides.length?'1 / '+slides.length:'0 / 0')+'</span>'+
   '<button type="button" data-stats-slide="1"'+(slides.length<2?' disabled':'')+' aria-label="Statistica successiva">›</button></div></div>'+
 
-  '<div class="stats-player-carousel-track" tabindex="0">'+(slides.length?slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+(id==='parziali'?'<p class="stats-hint stats-stint-slide-description">'+E(stintDescriptions[metrics[n]?.[1]]||'')+'</p>':'')+slide+'</div>').join(''):'<p class="tm-analytics-empty">Nessun dato confrontabile in questa categoria.</p>')+'</div></section>';
+  '<div class="stats-player-carousel-track" tabindex="0">'+(slides.length?slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+(id==='parziali'?'<p class="stats-hint stats-stint-slide-description">'+E(stintDescriptions[slide.key]||'')+'</p>':'')+slide.html+'</div>').join(''):'<p class="tm-analytics-empty">Nessun dato confrontabile in questa categoria.</p>')+'</div></section>';
  }).join('');
  return '<div class="stats-player-section"><header class="tm-analytics-header"><span class="eyebrow">PLAYER INTELLIGENCE</span><h2>Ogni giocatore, nel suo contesto.</h2><p>Ranking comparabili, impatto e continuità. Una metrica per slide.</p></header>'+tabsFinal+panels+'<p class="stats-hint">Parziali e punti considerano soltanto spezzoni verificabili. Scorri orizzontalmente per confrontare gli indicatori.</p></div>';
 }
@@ -502,7 +502,7 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
    .sort((a,b)=>less?Number(a.value)-Number(b.value):Number(b.value)-Number(a.value));
   if(!values.length)return '<section class="tm-compare-ranking"><h3>'+E(title)+'</h3><p class="tm-analytics-empty">Dati non sufficienti.</p></section>';
   const high=Math.max(1,...values.map(x=>Math.abs(Number(x.value))));
-  return '<section class="tm-compare-ranking"><h3>'+E(title)+'</h3><div class="tm-compare-rows">'+values.map((x,i)=>
+  return '<section class="tm-compare-ranking"><h3>'+E(title)+'</h3><div class="tm-compare-rows" style="--stats-rows:'+Math.ceil(values.length/2)+'">'+values.map((x,i)=>
    '<div class="tm-compare-row" title="'+E(x.t.name)+'"><span>'+String(i+1).padStart(2,'0')+'</span>'+
    '<strong>'+E(x.t.name)+'</strong><div class="tm-compare-track"><i style="width:'+(100*Math.abs(Number(x.value))/high).toFixed(1)+'%"></i></div>'+
    '<b>'+E(statN(x.value,1)+unit)+'</b></div>').join('')+'</div></section>';
