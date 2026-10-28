@@ -340,14 +340,28 @@ export function fixtureEventsPanel(events,competition=null,fixture=null){
 
 const plus=v=>v>0?'+'+v:String(v);
 function rankingRows(title,players,key,unit=''){
- const usable=[...(players||[])].filter(p=>p?.[key]!=null&&Number.isFinite(Number(p[key]))&&
-  (key==='plus_minus_on'||Number(p[key])>0)).sort((a,b)=>Number(b[key])-Number(a[key])||playerName(a).localeCompare(playerName(b),'it'));
+ const isDiverging=['plus_minus_on','plus_minus_per_80','stint_points_delta','stint_points_delta_per_80'].includes(key);
+ const isDot=['start_rate','avg_rating','rating_volatility','gf_on_per_80','ga_on_per_80'].includes(key);
+ const numeric=p=>Number(p?.[key]);
+ const usable=[...(players||[])].filter(p=>p?.[key]!=null&&Number.isFinite(numeric(p))&&(isDiverging||numeric(p)>0))
+  .sort((a,b)=>numeric(b)-numeric(a)||playerName(a).localeCompare(playerName(b),'it'));
  if(!usable.length)return '';
- const max=Math.max(1,...usable.map(x=>Math.abs(Number(x[key]))));
- return '<section class="stats-player-ranking"><h3>'+E(title)+'</h3><div class="stats-rank-rows">'+usable.map((p,i)=>
-  '<div class="stats-rank-row"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+E(playerName(p))+'</strong>'+
-  '<div class="stats-rank-track"><i style="width:'+Math.round(Math.abs(Number(p[key]))/max*100)+'%"></i></div>'+
-  '<b>'+E(key==='plus_minus_on'?plus(Number(p[key])):Number(p[key]).toLocaleString('it-IT',{maximumFractionDigits:2}))+E(unit)+'</b></div>').join('')+'</div></section>';
+ const max=Math.max(1,...usable.map(x=>Math.abs(numeric(x))));
+ const vis=isDiverging?'diverging':isDot?'dot':'bar';
+ const format=p=>{
+  let v=numeric(p);
+  if(key==='start_rate')return statN(v<=1?v*100:v,0)+'%';
+  if(key==='plus_minus_on'||isDiverging)return (v>0?'+':'')+statN(v,2);
+  return statN(v,2)+unit;
+ };
+ return '<section class="stats-player-ranking" data-rank-vis="'+vis+'"><h3>'+E(title)+'</h3><div class="stats-rank-rows">'+usable.map((p,i)=>{
+  const v=numeric(p),percent=Math.min(100,Math.abs(v)/max*100),negative=v<0;
+  const style=isDiverging?'width:'+(percent/2).toFixed(1)+'%;left:'+(negative?(50-percent/2).toFixed(1):'50')+'%':
+   isDot?'left:'+percent.toFixed(1)+'%':'width:'+percent.toFixed(1)+'%';
+  return '<div class="stats-rank-row"><span>'+String(i+1).padStart(2,'0')+'</span><strong title="'+E(playerName(p))+'">'+E(playerName(p))+'</strong>'+
+   '<div class="stats-rank-track"><i'+(negative?' class="negative"':'')+' style="'+style+'"></i></div>'+
+   '<b>'+E(format(p))+'</b></div>';
+ }).join('')+'</div></section>';
 }
 function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],mvpCounts=new Map(),stintPoints=new Map()){
  const impactMap=new Map(impacts.map(x=>[String(x.player_id),x])),ratingMap=new Map(ratings.map(x=>[String(x.player_id),x]));
@@ -365,16 +379,13 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  ['impact','Impatto',[['GF in campo','goals_for_on'],['GS in campo','goals_against_on'],
   ['Plus/minus','plus_minus_on'],['GF / 80′','gf_on_per_80'],
   ['GS / 80′','ga_on_per_80'],['+/- / 80′','plus_minus_per_80']]],
- ['parziali','Parziali e punti', [['Gare con parziale verificato','stint_games'],['Minuti totali verificati','stint_minutes'],['GF dal proprio ingresso','stint_gf'],['GS dal proprio ingresso','stint_ga'],['Punti dei parziali giocati','stint_points'],['Variazione punti durante la presenza','stint_points_delta'],['GF / 80′','stint_gf_per_80'],['GS / 80′','stint_ga_per_80'],['Punti dei parziali / 80′','stint_points_per_80'],['Variazione punti / 80′','stint_points_delta_per_80']]],
+ ['parziali','Parziali e punti', [['Gare con parziale verificato','stint_games'],['Minuti totali verificati','stint_minutes'],['Punti dei parziali giocati','stint_points'],['Variazione punti durante la presenza','stint_points_delta'],['Punti dei parziali / 80′','stint_points_per_80'],['Variazione punti / 80′','stint_points_delta_per_80']]],
  ['rating','Rating',[['MVP','mvp_awards'],['Media voto','avg_rating'],['Gare valutate','rated_matches'],
   ['Voti ricevuti','votes_received'],['Gare ≥7','high_rating_games'],
   ['Gare <6','low_rating_games'],['Voto massimo','highest_rating'],
   ['Voto minimo','lowest_rating'],['Variabilità','rating_volatility']]],
- ['discipline','Disciplina',[['Ammonizioni','yellow_cards'],['Espulsioni','red_cards'],
-  ['Cartellini totali','disciplinary_cards']]]
+ ['discipline','Disciplina',[['Ammonizioni','yellow_cards'],['Espulsioni','red_cards'],['Cartellini blu','blue_cards']]]
  ];
- const tabs='<div class="stats-ranking-tabs" role="tablist" aria-label="Tipo statistiche giocatore">'+groups.map(([id,title],i)=>
- '<button type="button" data-stats-ranking="'+id+'" role="tab" aria-selected="'+(i===0)+'">'+E(title)+'</button>').join('')+'</div>';
  const detailGroups=DETAIL_METRICS.flatMap(([key,title,options])=>{
   const values=merged.map(p=>{
    const detail=aggregateEventDetails(events,{playerId:p.player_id,side:'team'}).groups[key];
@@ -398,16 +409,16 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
   stint_points_delta_per_80:'Somma delle variazioni di punti × 80 / minuti totali verificati. Valori negativi indicano peggioramento del risultato nel tempo giocato.'
  };
  const panels=groups.map(([id,title,metrics],i)=>{
-  const slides=id==='goal-details'?detailGroups:metrics.map(([metric,key])=>rankingRows(metric,merged,key)).filter(Boolean);
+  const slides=(id==='goal-details'?detailGroups:metrics.map(([metric,key])=>rankingRows(metric,merged,key)).filter(Boolean));
   return '<section class="stats-player-carousel" data-stats-ranking-panel="'+id+'"'+(i?' hidden':'')+'>'+
   '<div class="stats-player-carousel-top"><div><span class="eyebrow">CONFRONTO GIOCATORI</span><h3>'+E(title)+'</h3></div>'+
   '<div class="stats-player-carousel-controls"><button type="button" data-stats-slide="-1" aria-label="Statistica precedente">‹</button>'+
-  '<span class="stats-player-carousel-count">1 / '+slides.length+'</span>'+
+  '<span class="stats-player-carousel-count">'+(slides.length?'1 / '+slides.length:'0 / 0')+'</span>'+
   '<button type="button" data-stats-slide="1" aria-label="Statistica successiva">›</button></div></div>'+
 
-  '<div class="stats-player-carousel-track" tabindex="0">'+slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+(id==='parziali'?'<p class="stats-hint stats-stint-slide-description">'+E(stintDescriptions[metrics[n]?.[1]]||'')+'</p>':'')+slide+'</div>').join('')+'</div></section>';
+  '<div class="stats-player-carousel-track" tabindex="0">'+(slides.length?slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+(id==='parziali'?'<p class="stats-hint stats-stint-slide-description">'+E(stintDescriptions[metrics[n]?.[1]]||'')+'</p>':'')+slide+'</div>').join(''):'<p class="tm-analytics-empty">Nessun dato confrontabile in questa categoria.</p>')+'</div></section>';
  }).join('');
- return '<div class="stats-player-section"><p class="stats-hint">Confronti stagionali dei giocatori Caselle · scegli una categoria e scorri le metriche. I parziali richiedono eventi e minuti validati.</p>'+tabsFinal+panels+'</div>';
+ return '<div class="stats-player-section"><header class="tm-analytics-header"><span class="eyebrow">PLAYER INTELLIGENCE</span><h2>Ogni giocatore, nel suo contesto.</h2><p>Ranking comparabili, impatto e continuità. Una metrica per slide.</p></header>'+tabsFinal+panels+'<p class="stats-hint">Parziali e punti considerano soltanto spezzoni verificabili. Scorri orizzontalmente per confrontare gli indicatori.</p></div>';
 }
 
 function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[],team=null,opponents=[]){
