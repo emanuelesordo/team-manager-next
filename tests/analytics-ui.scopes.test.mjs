@@ -85,7 +85,8 @@ test('Team dashboard owns every main KPI once and uses six interactive categorie
  assert.equal((team.match(/>Porte inviolate</g)||[]).length,1);
  assert.equal((team.match(/>Sostituzioni</g)||[]).length,1);
  assert.match(team,/tm-analytics-kpis/);
- assert.match(team,/tm-analytics-donut/);
+ assert.match(team,/Tempo nelle situazioni di gara/);
+ assert.match(team,/Non ci sono minuti verificati/);
 });
 test('Tournament analytics do not render duplicate league/team ranking panels',()=>{
  const fixtures=[{id:'f1',competition_id:'c',status:'finished',home_team:'Caselle',away_team:'Rubano',home_score:2,away_score:0}];
