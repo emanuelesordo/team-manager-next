@@ -421,143 +421,137 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  return '<div class="stats-player-section"><header class="tm-analytics-header"><span class="eyebrow">PLAYER INTELLIGENCE</span><h2>Ogni giocatore, nel suo contesto.</h2><p>Ranking comparabili, impatto e continuità. Una metrica per slide.</p></header>'+tabsFinal+panels+'<p class="stats-hint">Parziali e punti considerano soltanto spezzoni verificabili. Scorri orizzontalmente per confrontare gli indicatori.</p></div>';
 }
 
-function extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents=[],team=null,opponents=[]){
- const finished=(fixtures||[]).filter(f=>f.status==='finished'&&!f.is_test&&Number.isInteger(Number(f.home_score))&&Number.isInteger(Number(f.away_score)));
- const ids=new Set(finished.map(f=>String(f.id)));
- const valid=fixtureEvents.filter(e=>ids.has(String(e.fixture_id))&&['official','community_confirmed'].includes(e.validation_status));
- const byFixture=new Map();for(const e of valid){const k=String(e.fixture_id);if(!byFixture.has(k))byFixture.set(k,[]);byFixture.get(k).push(e)}
- const rows=new Map();
- const label=(id,local)=>local?.id===id?local.name:(opponents||[]).find(o=>o.id===id)?.name||null;
- const update=(competition_id,name,home,gf,ga,f)=>{
-  const key=String(competition_id)+'|'+name.toLocaleLowerCase('it');let r=rows.get(key);
-  if(!r){r={competition_id,name,played:0,wins:0,draws:0,losses:0,gf:0,ga:0,home:0,away:0,verified:0,ordered:0,timed:0,yellows:0,reds:0,blues:0,changes:0,cardGames:0,changeGames:0,goalsFirst:0,goalsLast:0,comebackPoints:0,leadLost:0,fromBehind:0,fromAhead:0,homeWins:0,homeDraws:0,homeLosses:0,awayWins:0,awayDraws:0,awayLosses:0};rows.set(key,r)}
-  r.played++;r.gf+=gf;r.ga+=ga;r[gf>ga?'wins':gf<ga?'losses':'draws']++;r[home?'home':'away']++;
-  r[(home?'home':'away')+(gf>ga?'Wins':gf===ga?'Draws':'Losses')]++;
-  const events=byFixture.get(String(f.id))||[];
-  const side=home?'home':'away';
-  const teamHome=Boolean(f.home_team_id),teamAway=Boolean(f.away_team_id);
-  const normalizedSide=e=>e.team_side==='team'?(teamHome?'home':teamAway?'away':null):e.team_side==='opponent'?(teamHome?'away':teamAway?'home':null):e.team_side;
-  const card=events.filter(e=>normalizedSide(e)===side&&['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type));
-  const changes=events.filter(e=>normalizedSide(e)===side&&e.event_type==='substitution');
-  r.yellows+=card.filter(e=>e.event_type==='yellow_card').length;r.reds+=card.filter(e=>['red_card','second_yellow'].includes(e.event_type)).length;r.blues+=card.filter(e=>e.event_type==='blue_card').length;r.changes+=changes.length;
-  if(events.length){r.cardGames++;r.changeGames++}
-  const goals=events.filter(e=>['goal','own_goal','penalty_goal','penalty_scored'].includes(e.event_type)&&e.payload?.count_score!==false);
-  const scoreSide=e=>e.event_type==='own_goal'?(normalizedSide(e)==='home'?'away':'home'):normalizedSide(e);
-  if(goals.length!==Number(f.home_score)+Number(f.away_score)||goals.some(e=>!['home','away'].includes(scoreSide(e)))||goals.filter(e=>scoreSide(e)==='home').length!==Number(f.home_score)||goals.filter(e=>scoreSide(e)==='away').length!==Number(f.away_score))return;
-  r.verified++;
-  const canTime=goals.every(e=>Number.isInteger(e.minute));if(canTime)r.timed++;
-  // No chronological inference from created_at: upload order is not match event order.
-  const ordered=goals.every(e=>Number.isInteger(Number(e.payload?.sequence_order??e.payload?.event_order??e.source_raw?.sequence_order)));
-  if(ordered||canTime){
-   // Ordered score slots are suitable for score progression, not minute-based shares.
-   const orderedGoals=[...goals].sort((a,b)=>{
-    const order=e=>Number(e.payload?.sequence_order??e.payload?.event_order??e.source_raw?.sequence_order);
-    if(ordered)return order(a)-order(b);
-    return Number(a.minute)-Number(b.minute)||Number(a.stoppage_minute||0)-Number(b.stoppage_minute||0);
-   });
-   const indexes=orderedGoals.map(e=>ordered?Number(e.payload?.sequence_order??e.payload?.event_order??e.source_raw?.sequence_order):Number(e.minute)*100+Number(e.stoppage_minute||0));
-   if(new Set(indexes).size===indexes.length){
-    r.ordered++;
-    let us=0,them=0,wasAhead=false,wasBehind=false;
-    for(const goal of orderedGoals){
-     if(us>them)wasAhead=true;if(us<them)wasBehind=true;
-     if(scoreSide(goal)===side)us++;else them++;
-    }
-    if(wasBehind){r.fromBehind++;if(gf>=ga)r.comebackPoints++}
-    if(wasAhead){r.fromAhead++;if(gf<=ga)r.leadLost++}
-   }
-  }
- };
- for(const f of finished){const h=label(f.home_team_id,team)||label(f.home_opponent_id,team)||f.home_team;const a=label(f.away_team_id,team)||label(f.away_opponent_id,team)||f.away_team;if(h)update(f.competition_id,String(h),true,Number(f.home_score),Number(f.away_score),f);if(a)update(f.competition_id,String(a),false,Number(f.away_score),Number(f.home_score),f)}
- const all=[...rows.values()].sort((a,b)=>a.name.localeCompare(b.name,'it'));
- if(!all.length)return '<p class="stats-hint">Non ci sono risultati ufficiali disponibili.</p>';
- const fmt=v=>v==null?'—':Number(v).toLocaleString('it-IT',{maximumFractionDigits:2});
- const blocks=[
-  ['results','Bilancio',[
-   ['Vittorie','wins','',false],['Gol fatti','gf','',false],['Gol subiti','ga','',false],
-   ['Vittorie in casa','homeWins','',false],['Vittorie in trasferta','awayWins','',false]]],
-  ['progress','Andamento',[
-   ['Partite in rimonta con punti','comebackPoints','',true],['Vantaggio non conservato','leadLost','',true],
-   ['Partite sotto nel punteggio','fromBehind','',true],['Partite sopra nel punteggio','fromAhead','',true]]],
-  ['discipline','Disciplina e cambi',[
-   ['Cartellini gialli','yellows','',true],['Cartellini rossi','reds','',true],
-   ['Cartellini blu','blues','',true],['Sostituzioni','changes','',true],
-   ['Cambi per gara documentata',r=>r.changeGames?r.changes/r.changeGames:null,'',true]]],
-  ['coverage','Affidabilità',[['Partite con gol verificati','verified','',false],
-    ['Progressione gol ordinata','ordered','',false],['Timeline con minuti','timed','',false]]]
- ];
- const competitions=[...new Set(all.map(x=>String(x.competition_id)))];
- const panel=(comp,index)=>{
-  const teams=all.filter(x=>String(x.competition_id)===comp);
-  // Competition label is displayed through the dedicated tournament selector when required.
-  const groups=blocks.map(([id,label,metrics],groupIndex)=>
-   '<div class="stats-insights-panel" data-extended-metric-panel="'+id+'"'+(groupIndex?' hidden':'')+'>'+
-   '<div class="stats-insights-grid">'+metrics.map(([name,key,unit,requiresEvents])=>{
-    const eligible=teams.filter(t=>!requiresEvents||t.cardGames>0||['fromBehind','fromAhead','comebackPoints','leadLost'].includes(key)&&t.ordered>0)
-     .map(t=>({...t,metric:typeof key==='function'?key(t):t[key]}))
-     .filter(t=>t.metric!==null&&Number.isFinite(Number(t.metric)))
-     .sort((a,b)=>Number(b.metric)-Number(a.metric)||a.name.localeCompare(b.name,'it'));
-    if(!eligible.length)return '<article class="stats-insight"><h4>'+E(name)+'</h4><p class="stats-insight-empty">Dati insufficienti</p></article>';
-    const max=Math.max(1,...eligible.map(t=>Math.abs(Number(t.metric))));
-    return '<article class="stats-insight"><h4>'+E(name)+'</h4><div class="stats-insight-rows">'+eligible.map((t,i)=>
-     '<div class="stats-insight-row"><span class="stats-insight-pos">'+String(i+1).padStart(2,'0')+'</span>'+
-     '<strong title="'+E(t.name)+'">'+E(t.name)+'</strong><div class="stats-insight-track"><span style="width:'+
-     (Math.abs(Number(t.metric))/max*100).toFixed(1)+'%"></span></div><b>'+E(fmt(t.metric)+unit)+'</b></div>').join('')+
-     '</div></article>';
-   }).join('')+'</div></div>').join('');
-  return '<div data-extended-comp-panel="'+E(comp)+'"'+(index?' hidden':'')+'>'+
-   '<nav class="stats-insights-nav" aria-label="Categoria confronto squadre">'+blocks.map(([key,label],i)=>
-   '<button type="button" data-extended-metric="'+key+'" aria-pressed="'+(i===0)+'">'+E(label)+'</button>').join('')+'</nav>'+
-   groups+'</div>';
- };
- return '<section class="stats-insights" aria-label="Analisi squadre avversarie">'+
-  '<div class="stats-insights-header"><div><span class="eyebrow">ANALISI COMPARATA</span><h2>Le squadre, oltre la classifica.</h2>'+
-  '<p>Rendimento, andamento, disciplina e affidabilità dei dati. Un confronto alla volta.</p></div>'+
-  '<div class="stats-insights-summary"><strong>'+all.length+'</strong><small>squadre analizzate</small></div></div>'+
-  (competitions.length>1?'<nav class="stats-insights-competitions" aria-label="Torneo confronto">'+competitions.map((id,i)=>
-    '<button type="button" data-extended-comp="'+E(id)+'" aria-pressed="'+(i===0)+'">'+
-    E(id)+'</button>').join('')+'</nav>':'')+
-  competitions.map(panel).join('')+
-  '<footer class="stats-insights-foot">Esiti: risultati ufficiali. Progressioni: solo gol con ordine univoco; senza minuto non sono attribuite durate. Eventi disciplinari e cambi: dati confermati disponibili, non necessariamente tabellini completi.</footer></section>';
-}
+
+/* Competition intelligence: one source of results and one view per distinct metric. */
 function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventContexts=[],opponentFlows=[],teamComparisons=[],fixtureEvents=[],team=null,opponents=[]){
- const groups=[
-  ['states','Stato del risultato',[['% in vantaggio','lead_pct','%'],['% in svantaggio','trail_pct','%'],
-    ['% sullo 0-0','nil_pct','%'],['Minuti in vantaggio','leading_minutes','′'],['Minuti in svantaggio','trailing_minutes','′'],
-    ['Minuti sullo 0-0','nil_minutes','′'],['Parità dopo i gol','scored_draw_minutes','′']]],
-  ['changes','Rimonte e vantaggi',[['Pareggi in rimonta','comeback_equalizers',''],
-    ['Vantaggi conquistati','leads_taken','']]],
-  ['coverage','Copertura',[['Gare con timeline verificata','verified_games',''],
-    ['Gare non verificabili','missing_games','']]]
- ];
- const comps=[...new Set(teamComparisons.map(r=>String(r.competition_id)))];
- const scopes=comps.map((id,index)=>{
-  const rows=teamComparisons.filter(r=>String(r.competition_id)===id);
-  const name=competitions.find(c=>String(c.id)===id)?.name||'Competizione';
-  const metricPanels=groups.map(([group,title,items],gi)=>'<section data-team-metric-panel="'+group+'"'+(gi?' hidden':'')+'>'+
-   '<div class="stats-team-ranking-grid">'+items.map(([label,key,unit])=>{
-    const available=rows.filter(t=>Number(t.verified_games)>0||key==='verified_games'||key==='missing_games')
-     .filter(t=>t[key]!==null&&t[key]!==undefined&&Number.isFinite(Number(t[key])))
-     .sort((x,y)=>Number(y[key])-Number(x[key])||String(x.team_name).localeCompare(String(y.team_name),'it'));
-    if(!available.length)return '';
-    const peak=Math.max(1,...available.map(t=>Math.abs(Number(t[key]))));
-    return '<section class="stats-player-ranking"><h3>'+E(label)+'</h3><div class="stats-rank-rows">'+available.map((t,i)=>
-     '<div class="stats-rank-row" title="'+E(t.verified_games+' / '+t.played+' gare verificate')+'"><span>'+String(i+1).padStart(2,'0')+'</span>'+
-     '<strong>'+E(t.team_name)+'</strong><div class="stats-rank-track"><i style="width:'+(Math.abs(Number(t[key]))/peak*100).toFixed(1)+'%"></i></div>'+
-     '<b>'+E(Number(t[key]).toLocaleString('it-IT',{maximumFractionDigits:2})+unit)+'</b></div>').join('')+'</div></section>';
-   }).join('')+'</div></section>').join('');
-  return '<section data-team-comp-panel="'+E(id)+'"'+(index?' hidden':'')+'><p class="stats-hint">Confronto tra tutte le squadre del torneo. Percentuali calcolate solo sui minuti verificati. Passa sui nomi per vedere la copertura delle partite; i dati assenti non diventano zero.</p>'+
-   '<div class="stats-ranking-tabs" role="tablist" aria-label="Confronto squadra">'+groups.map(([key,title],i)=>
-   '<button data-team-metric="'+key+'" role="tab" type="button" aria-selected="'+(i===0)+'">'+E(title)+'</button>').join('')+'</div>'+
-   metricPanels+'</section>';
- }).join('');
- return '<div class="stats-tournament-section"><p class="stats-hint">Andamento delle partite per squadra · non una seconda classifica del campionato.</p>'+
-  (comps.length>1?'<div class="stats-ranking-tabs" role="tablist" aria-label="Competizione">'+comps.map((id,i)=>
-   '<button data-team-comp="'+E(id)+'" role="tab" type="button" aria-selected="'+(i===0)+'">'+
-   E(competitions.find(c=>String(c.id)===id)?.name||'Competizione')+'</button>').join('')+'</div>':'')+
-  (scopes||'<p class="stats-hint">Dati verificati non ancora disponibili.</p>')+extendedTournamentNumbers(fixtures,teamComparisons,fixtureEvents,team,opponents)+
-  '<p class="stats-hint">“Pressione” e “sofferenza” indicano solamente condizioni del punteggio; non misurano azioni o possesso.</p></div>';
+ const validScore=f=>f.home_score!==null&&f.away_score!==null&&Number.isInteger(Number(f.home_score))&&Number.isInteger(Number(f.away_score));
+ const finished=(fixtures||[]).filter(f=>f.status==='finished'&&!f.is_test&&validScore(f));
+ const ids=new Set(finished.map(f=>String(f.id)));
+ const byFixture=new Map();
+ for(const e of fixtureEvents||[]){
+  if(!ids.has(String(e.fixture_id))||!['official','community_confirmed'].includes(e.validation_status))continue;
+  const key=String(e.fixture_id);if(!byFixture.has(key))byFixture.set(key,[]);
+  byFixture.get(key).push(e);
+ }
+ const names=new Map((opponents||[]).map(o=>[String(o.id),o.short_name||o.name]));
+ if(team?.id)names.set(String(team.id),team.name||'Caselle');
+ const nameOf=(f,side)=>names.get(String(f[side+'_team_id']||f[side+'_opponent_id']||''))||f[side+'_team']||null;
+ const rows=new Map();
+ const add=(f,side)=>{
+  const name=nameOf(f,side);if(!name)return;
+  const home=side==='home',gf=Number(f[side+'_score']),ga=Number(f[home?'away_score':'home_score']);
+  const id=String(f.competition_id),key=id+'|'+name.toLocaleLowerCase('it');
+  let r=rows.get(key);
+  if(!r){r={competition_id:id,name,played:0,wins:0,draws:0,losses:0,gf:0,ga:0,home:0,away:0,
+   homeWins:0,awayWins:0,yellows:0,reds:0,blues:0,changes:0,observed:0,ordered:0,timed:0,goalsVerified:0,
+   fromBehind:0,comebackPoints:0,fromAhead:0,leadLost:0};rows.set(key,r)}
+  r.played++;r.gf+=gf;r.ga+=ga;r[gf>ga?'wins':gf===ga?'draws':'losses']++;
+  r[home?'home':'away']++;if(gf>ga)r[home?'homeWins':'awayWins']++;
+  const ev=byFixture.get(String(f.id))||[];
+  const homeTeam=Boolean(f.home_team_id),awayTeam=Boolean(f.away_team_id);
+  const sideOf=e=>e.team_side==='team'?(homeTeam?'home':awayTeam?'away':null):
+   e.team_side==='opponent'?(homeTeam?'away':awayTeam?'home':null):e.team_side;
+  if(ev.length)r.observed++;
+  for(const e of ev){
+   if(sideOf(e)!==side)continue;
+   if(e.event_type==='yellow_card')r.yellows++;
+   if(e.event_type==='red_card'||e.event_type==='second_yellow')r.reds++;
+   if(e.event_type==='blue_card')r.blues++;
+   if(e.event_type==='substitution')r.changes++;
+  }
+  const goals=ev.filter(e=>['goal','penalty_goal','penalty_scored','own_goal'].includes(e.event_type)&&e.payload?.count_score!==false);
+  const scorer=e=>e.event_type==='own_goal'?(sideOf(e)==='home'?'away':'home'):sideOf(e);
+  if(goals.length!==Number(f.home_score)+Number(f.away_score)||
+   goals.some(e=>!['home','away'].includes(scorer(e)))||
+   goals.filter(e=>scorer(e)==='home').length!==Number(f.home_score)||
+   goals.filter(e=>scorer(e)==='away').length!==Number(f.away_score))return;
+  r.goalsVerified++;
+  const indexOf=e=>e.payload?.sequence_order??e.payload?.event_order??e.source_raw?.sequence_order;
+  const hasOrder=goals.every(e=>indexOf(e)!==null&&indexOf(e)!==undefined&&Number.isInteger(Number(indexOf(e))));
+  const hasMinutes=goals.every(e=>e.minute!==null&&e.minute!==undefined&&Number.isInteger(Number(e.minute)));
+  if(hasMinutes)r.timed++;
+  if(!hasOrder&&!hasMinutes)return;
+  const sorted=[...goals].sort((a,b)=>hasOrder?Number(indexOf(a))-Number(indexOf(b)):
+   Number(a.minute)-Number(b.minute)||Number(a.stoppage_minute||0)-Number(b.stoppage_minute||0));
+  const keys=sorted.map(e=>hasOrder?Number(indexOf(e)):Number(e.minute)*100+Number(e.stoppage_minute||0));
+  if(new Set(keys).size!==keys.length)return;
+  r.ordered++;
+  let us=0,them=0,wasAhead=false,wasBehind=false;
+  for(const e of sorted){
+   if(scorer(e)===side)us++;else them++;
+   if(us>them)wasAhead=true;if(us<them)wasBehind=true;
+  }
+  if(wasBehind){r.fromBehind++;if(gf>=ga)r.comebackPoints++}
+  if(wasAhead){r.fromAhead++;if(gf<=ga)r.leadLost++}
+ };
+ for(const f of finished){add(f,'home');add(f,'away')}
+ const all=[...rows.values()].sort((a,b)=>a.name.localeCompare(b.name,'it'));
+ if(!all.length)return '<section class="tm-analytics-header"><h2>Confronto squadre</h2><p>Non ci sono risultati ufficiali completi per questa stagione.</p></section>';
+ const flowLookup=new Map((teamComparisons||[]).map(r=>[String(r.competition_id)+'|'+String(r.team_name||'').toLocaleLowerCase('it'),r]));
+ for(const r of all){r.flow=flowLookup.get(r.competition_id+'|'+r.name.toLocaleLowerCase('it'))||null}
+ const statRank=(title,data,get,unit='',less=false)=>{
+  const values=data.map(t=>({t,value:get(t)})).filter(x=>x.value!==null&&x.value!==undefined&&Number.isFinite(Number(x.value)))
+   .sort((a,b)=>less?Number(a.value)-Number(b.value):Number(b.value)-Number(a.value));
+  if(!values.length)return '<section class="tm-compare-ranking"><h3>'+E(title)+'</h3><p class="tm-analytics-empty">Dati non sufficienti.</p></section>';
+  const high=Math.max(1,...values.map(x=>Math.abs(Number(x.value))));
+  return '<section class="tm-compare-ranking"><h3>'+E(title)+'</h3><div class="tm-compare-rows">'+values.map((x,i)=>
+   '<div class="tm-compare-row" title="'+E(x.t.name)+'"><span>'+String(i+1).padStart(2,'0')+'</span>'+
+   '<strong>'+E(x.t.name)+'</strong><div class="tm-compare-track"><i style="width:'+(100*Math.abs(Number(x.value))/high).toFixed(1)+'%"></i></div>'+
+   '<b>'+E(statN(x.value,1)+unit)+'</b></div>').join('')+'</div></section>';
+ };
+ const scatter=data=>{
+  if(!data.length)return '<p class="tm-analytics-empty">Risultati non disponibili.</p>';
+  const xMax=Math.max(1,...data.map(r=>r.gf/Math.max(1,r.played)))*1.15,yMax=Math.max(1,...data.map(r=>r.ga/Math.max(1,r.played)))*1.15;
+  const x=v=>52+(Number(v)/xMax)*590,y=v=>260-(Number(v)/yMax)*216;
+  const marks=[0,.5,1].map(v=>'<line x1="52" y1="'+y(yMax*v)+'" x2="665" y2="'+y(yMax*v)+'" stroke="currentColor" opacity=".1"/>'+
+   '<text x="43" y="'+(y(yMax*v)+4)+'" text-anchor="end" font-size="11" fill="currentColor" opacity=".7">'+statN(yMax*v,1)+'</text>').join('');
+  return '<div class="tm-compare-scatter-wrap"><svg class="tm-compare-scatter" viewBox="0 0 720 320" role="img" aria-label="Gol fatti per gara in orizzontale, gol subiti per gara in verticale">'+
+   marks+'<line x1="52" y1="260" x2="665" y2="260" stroke="currentColor" opacity=".4"/><line x1="52" y1="32" x2="52" y2="260" stroke="currentColor" opacity=".4"/>'+
+   data.map(r=>{const xx=x(r.gf/r.played),yy=y(r.ga/r.played),isUs=String(r.name).toLocaleLowerCase('it')===String(team?.name||'').toLocaleLowerCase('it');
+    return '<g><circle cx="'+xx.toFixed(1)+'" cy="'+yy.toFixed(1)+'" r="'+(isUs?8:5)+'" fill="'+(isUs?'#f2c078':'#70c7ad')+'" stroke="currentColor" stroke-width="1"><title>'+E(r.name)+' · '+statN(r.gf/r.played,2)+' GF/g · '+statN(r.ga/r.played,2)+' GS/g</title></circle>'+
+     '<text x="'+(xx+9).toFixed(1)+'" y="'+(yy-8).toFixed(1)+'" fill="currentColor" font-size="10">'+E(String(r.name).slice(0,13))+'</text></g>';
+   }).join('')+
+   '<text x="352" y="305" font-size="12" fill="currentColor" text-anchor="middle">Gol fatti / gara →</text><text x="16" y="155" font-size="12" transform="rotate(-90 16 155)" fill="currentColor" text-anchor="middle">← Meno gol subiti / gara</text></svg>'+
+   '<p class="tm-analytics-note">Ogni punto è una squadra. In basso a destra: più produzione offensiva e meno gol subiti. Caselle evidenziato in oro.</p></div>';
+ };
+ const competitionsIds=[...new Set(all.map(x=>x.competition_id))];
+ const pane=(id,idx)=>{
+  const data=all.filter(x=>x.competition_id===id);
+  const options=[
+   ['results','Rendimento',scatter(data)+statRank('Vittorie sulle partite disputate',data,r=>r.played?100*r.wins/r.played:null,'%')],
+   ['flow','Andamento','<div class="tm-compare-grid">'+
+     statRank('Tempo in vantaggio',data,r=>r.flow?.verified_games>0?r.flow.lead_pct:null,'%')+
+     statRank('Tempo in svantaggio',data,r=>r.flow?.verified_games>0?r.flow.trail_pct:null,'% ',true)+
+     statRank('Partite in rimonta con punti',data,r=>r.ordered?r.comebackPoints:null)+
+     statRank('Vantaggi non conservati',data,r=>r.ordered?r.leadLost:null)+'</div>'],
+   ['venues','Casa e trasferta','<div class="tm-compare-grid">'+
+     statRank('Vittorie in casa (%)',data,r=>r.home?100*r.homeWins/r.home:null,'%')+
+     statRank('Vittorie fuori casa (%)',data,r=>r.away?100*r.awayWins/r.away:null,'%')+'</div>'],
+   ['discipline','Disciplina e cambi','<div class="tm-compare-grid">'+
+     statRank('Gialli documentati',data,r=>r.observed?r.yellows:null)+
+     statRank('Rossi documentati',data,r=>r.observed?r.reds:null)+
+     statRank('Cartellini blu documentati',data,r=>r.observed?r.blues:null)+
+     statRank('Cambi nelle gare documentate',data,r=>r.observed?r.changes/r.observed:null)+'</div>'],
+   ['coverage','Affidabilità','<div class="tm-compare-grid">'+
+     statRank('Gare con sequenza gol verificata',data,r=>r.played?100*r.ordered/r.played:null,'%')+
+     statRank('Gare con minutaggio completo',data,r=>r.played?100*r.timed/r.played:null,'%')+
+     statRank('Gare con almeno un evento registrato',data,r=>r.played?100*r.observed/r.played:null,'%')+'</div>']
+  ];
+  return '<section data-extended-comp-panel="'+E(id)+'"'+(idx?' hidden':'')+'>'+
+   '<nav class="stats-insights-nav" aria-label="Categoria del confronto">'+options.map(([key,label],i)=>
+    '<button type="button" data-extended-metric="'+key+'" aria-pressed="'+(i===0)+'">'+E(label)+'</button>').join('')+'</nav>'+
+   options.map(([key,label,body],i)=>'<div data-extended-metric-panel="'+key+'"'+(i?' hidden':'')+'>'+body+'</div>').join('')+'</section>';
+ };
+ return '<section class="stats-insights tm-compare-dashboard"><header class="tm-analytics-header">'+
+  '<span class="eyebrow">COMPETITION INTELLIGENCE</span><h2>Le squadre a confronto.</h2>'+
+  '<p>Rendimento, andamento e disciplina. Non una seconda classifica.</p></header>'+
+  (competitionsIds.length>1?'<nav class="stats-insights-competitions" aria-label="Seleziona competizione">'+competitionsIds.map((id,i)=>
+   '<button type="button" data-extended-comp="'+E(id)+'" aria-pressed="'+(i===0)+'">'+
+   E(competitions.find(c=>String(c.id)===id)?.name||'Torneo')+'</button>').join('')+'</nav>':'')+
+  competitionsIds.map(pane).join('')+
+  '<footer class="stats-insights-foot">Risultati ufficiali per tutte le squadre; avanzamento e disciplina basati solo su eventi confermati. “—” significa dato non verificabile, non zero.</footer></section>';
 }
+
 export function renderEventAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[],goalImpacts=[],ratingInsights=[],playerComparisons=[],matchFlows=[],flowPhases=[],flowEventContexts=[],opponentFlows=[],teamComparisons=[],mvpCounts=new Map(),fixtureEvents=[]){
  const tabs='<nav class="stats-scope-tabs" role="tablist" aria-label="Ambito delle statistiche">'+
  [['team','Squadra · Caselle'],['players','Giocatori · Caselle'],['all','Complessivo · Torneo']].map(([id,label],i)=>
