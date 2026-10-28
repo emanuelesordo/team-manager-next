@@ -309,7 +309,7 @@ function renderTeamAnalytics(fixtures,matches,events,team,competitions=[],player
   ['identity','Identità',statGlyph('data'),identity]
  ];
  return '<div class="tm-analytics-dashboard">'+
-  '<header class="tm-analytics-header"><span class="eyebrow">TEAM INTELLIGENCE · '+E(team?.name||'CASELLЕ')+'</span>'+
+  '<header class="tm-analytics-header"><span class="eyebrow">TEAM INTELLIGENCE · '+E(team?.name||'CASELLE')+'</span>'+
   '<h2>La stagione, letta sul campo.</h2><p>Risultati, dinamiche e contesto: ogni statistica nel suo posto.</p></header>'+
   '<nav class="tm-analytics-tabs" aria-label="Statistiche Caselle">'+sections.map(([key,name,icon],i)=>
    '<button type="button" data-team-dash="'+key+'" aria-selected="'+(i===0)+'">'+icon+'<span>'+E(name)+'</span></button>').join('')+'</nav>'+
@@ -442,10 +442,10 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
   const home=side==='home',gf=Number(f[side+'_score']),ga=Number(f[home?'away_score':'home_score']);
   const id=String(f.competition_id),key=id+'|'+name.toLocaleLowerCase('it');
   let r=rows.get(key);
-  if(!r){r={competition_id:id,name,played:0,wins:0,draws:0,losses:0,gf:0,ga:0,home:0,away:0,
+  if(!r){r={competition_id:id,name,resultGames:0,played:0,wins:0,draws:0,losses:0,gf:0,ga:0,home:0,away:0,
    homeWins:0,awayWins:0,yellows:0,reds:0,blues:0,changes:0,observed:0,ordered:0,timed:0,goalsVerified:0,
    fromBehind:0,comebackPoints:0,fromAhead:0,leadLost:0};rows.set(key,r)}
-  r.played++;r.gf+=gf;r.ga+=ga;r[gf>ga?'wins':gf===ga?'draws':'losses']++;
+  r.played++;r.resultGames++;r.gf+=gf;r.ga+=ga;r[gf>ga?'wins':gf===ga?'draws':'losses']++;
   r[home?'home':'away']++;if(gf>ga)r[home?'homeWins':'awayWins']++;
   const ev=byFixture.get(String(f.id))||[];
   const homeTeam=Boolean(f.home_team_id),awayTeam=Boolean(f.away_team_id);
@@ -485,6 +485,13 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
   if(wasAhead){r.fromAhead++;if(gf<=ga)r.leadLost++}
  };
  for(const f of finished){add(f,'home');add(f,'away')}
+ for(const f of teamComparisons||[]){
+  if(!f.team_name)continue;
+  const id=String(f.competition_id),name=String(f.team_name),key=id+'|'+name.toLocaleLowerCase('it');
+  if(!rows.has(key))rows.set(key,{competition_id:id,name,resultGames:0,played:Number(f.played)||0,wins:0,draws:0,losses:0,
+   gf:0,ga:0,home:0,away:0,homeWins:0,awayWins:0,yellows:0,reds:0,blues:0,changes:0,
+   observed:0,ordered:0,timed:0,goalsVerified:0,fromBehind:0,comebackPoints:0,fromAhead:0,leadLost:0});
+ }
  const all=[...rows.values()].sort((a,b)=>a.name.localeCompare(b.name,'it'));
  if(!all.length)return '<section class="tm-analytics-header"><h2>Confronto squadre</h2><p>Non ci sono risultati ufficiali completi per questa stagione.</p></section>';
  const flowLookup=new Map((teamComparisons||[]).map(r=>[String(r.competition_id)+'|'+String(r.team_name||'').toLocaleLowerCase('it'),r]));
@@ -499,7 +506,8 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
    '<strong>'+E(x.t.name)+'</strong><div class="tm-compare-track"><i style="width:'+(100*Math.abs(Number(x.value))/high).toFixed(1)+'%"></i></div>'+
    '<b>'+E(statN(x.value,1)+unit)+'</b></div>').join('')+'</div></section>';
  };
- const scatter=data=>{
+ const scatter=allData=>{
+  const data=allData.filter(r=>r.resultGames>0);
   if(!data.length)return '<p class="tm-analytics-empty">Risultati non disponibili.</p>';
   const xMax=Math.max(1,...data.map(r=>r.gf/Math.max(1,r.played)))*1.15,yMax=Math.max(1,...data.map(r=>r.ga/Math.max(1,r.played)))*1.15;
   const x=v=>52+(Number(v)/xMax)*590,y=v=>260-(Number(v)/yMax)*216;
@@ -518,11 +526,12 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
  const pane=(id,idx)=>{
   const data=all.filter(x=>x.competition_id===id);
   const options=[
-   ['results','Rendimento',scatter(data)+statRank('Vittorie sulle partite disputate',data,r=>r.played?100*r.wins/r.played:null,'%')],
+   ['results','Rendimento',scatter(data)+statRank('Vittorie sulle partite disputate',data,r=>r.resultGames?100*r.wins/r.resultGames:null,'%')],
    ['flow','Andamento','<div class="tm-compare-grid">'+
      statRank('Tempo in vantaggio',data,r=>r.flow?.verified_games>0?r.flow.lead_pct:null,'%')+
      statRank('Tempo in svantaggio',data,r=>r.flow?.verified_games>0?r.flow.trail_pct:null,'% ',true)+
      statRank('Partite in rimonta con punti',data,r=>r.ordered?r.comebackPoints:null)+
+     statRank('Pareggi in rimonta',data,r=>r.flow?.verified_games>0?r.flow.comeback_equalizers:null)+
      statRank('Vantaggi non conservati',data,r=>r.ordered?r.leadLost:null)+'</div>'],
    ['venues','Casa e trasferta','<div class="tm-compare-grid">'+
      statRank('Vittorie in casa (%)',data,r=>r.home?100*r.homeWins/r.home:null,'%')+
