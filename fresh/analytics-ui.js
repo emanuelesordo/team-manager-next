@@ -1,4 +1,5 @@
 import {playerStintPoints} from './player-stint-points.js';
+import {enrichPlayerNumbers} from './stat-rates.js?v=20261029rates1';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {aggregateEventDetails,DETAIL_METRICS} from './event-detail-stats.js';
 import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers} from './analytics.js?stats=20261013sourcefacts1';
@@ -343,7 +344,7 @@ function rankingRows(title,players,key,unit=''){
  const isDiverging=['plus_minus_on','plus_minus_per_80','stint_points_delta','stint_points_delta_per_80'].includes(key);
  const isDot=['start_rate','avg_rating','rating_volatility','gf_on_per_80','ga_on_per_80'].includes(key);
  const numeric=p=>Number(p?.[key]);
- const usable=[...(players||[])].filter(p=>p?.[key]!=null&&Number.isFinite(numeric(p))&&(isDiverging||numeric(p)>0))
+ const usable=[...(players||[])].filter(p=>p?.[key]!=null&&Number.isFinite(numeric(p)))
   .sort((a,b)=>numeric(b)-numeric(a)||playerName(a).localeCompare(playerName(b),'it'));
  if(!usable.length)return '';
  const max=Math.max(1,...usable.map(x=>Math.abs(numeric(x))));
@@ -364,27 +365,26 @@ function rankingRows(title,players,key,unit=''){
  }).join('')+'</div></section>';
 }
 function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],mvpCounts=new Map(),stintPoints=new Map()){
- const impactMap=new Map(impacts.map(x=>[String(x.player_id),x])),ratingMap=new Map(ratings.map(x=>[String(x.player_id),x]));
- const merged=(comparisons.length?comparisons:players.map(p=>({...p,...impactMap.get(String(p.player_id)),...ratingMap.get(String(p.player_id))}))).map(p=>({...p,mvp_awards:mvpCounts.get(String(p.player_id))||0,...stintPoints.get(String(p.player_id)),...(()=>{const v=stintPoints.get(String(p.player_id));if(!(v?.stint_minutes>0))return {};return {stint_gf_per_80:v.stint_gf*80/v.stint_minutes,stint_ga_per_80:v.stint_ga*80/v.stint_minutes,stint_points_per_80:v.stint_points*80/v.stint_minutes,stint_points_delta_per_80:v.stint_points_delta*80/v.stint_minutes}})()}));
+ const merged=enrichPlayerNumbers(players,comparisons,impacts,ratings,mvpCounts,stintPoints);
  const groups=[
- ['usage','Impiego',[['Presenze','appearances'],['Minuti','minutes'],['Subentri','subentries'],
-  ['Minuti per presenza','minutes_per_appearance'],['Titolarità %','start_rate']]],
- ['attack','Attacco',[['Gol','goals'],['Assist','assists'],['Gol / 80′','goals_per_80'],['Assist / 80′','assists_per_80']]],
+ ['usage','Impiego',[['Presenze','appearances'],['Titolarità','starts'],['Subentri','subentries'],['Minuti','minutes'],
+  ['Minuti per presenza','minutes_per_appearance'],['Titolarità %','start_rate'],['Subentri %','subentries_per_game']]],
+ ['attack','Attacco',[['Gol','goals'],['Assist','assists'],['Gol + assist','goals_assists'],['Gol / gara','goals_per_game'],['Assist / gara','assists_per_game'],['Gol + assist / gara','goals_assists_per_game'],['Gol / 80′','goals_per_80'],['Assist / 80′','assists_per_80'],['Gol + assist / 80′','goals_assists_per_80']]],
  ['goal-impact','Valore dei gol',[
   ['Gol del pareggio','equalizers'],['Gol del vantaggio','go_ahead_goals'],['Porta al +1','goals_to_plus_1'],
   ['Porta al +2','goals_to_plus_2'],['Porta al +3 o più','goals_to_plus_3'],
   ['Gol che riducono il distacco','deficit_reducers'],['Gol sotto nel punteggio','trailing_goals'],
   ['Pareggi in rimonta','comeback_equalizers'],['Vantaggi in rimonta','comeback_go_ahead_goals'],
-  ['Ampliano il vantaggio','lead_extenders']]],
+  ['Ampliano il vantaggio','lead_extenders'],['Pareggi / 80′','equalizers_per_80'],['Gol del vantaggio / 80′','go_ahead_goals_per_80'],['Gol in rimonta / 80′','comeback_go_ahead_goals_per_80'],['Gol sotto / 80′','trailing_goals_per_80'],['Ampliano il vantaggio / 80′','lead_extenders_per_80']]],
  ['impact','Impatto',[['GF in campo','goals_for_on'],['GS in campo','goals_against_on'],
-  ['Plus/minus','plus_minus_on'],['GF / 80′','gf_on_per_80'],
-  ['GS / 80′','ga_on_per_80'],['+/- / 80′','plus_minus_per_80']]],
- ['parziali','Parziali e punti', [['Gare con parziale verificato','stint_games'],['Minuti totali verificati','stint_minutes'],['Punti dei parziali giocati','stint_points'],['Variazione punti durante la presenza','stint_points_delta'],['Punti dei parziali / 80′','stint_points_per_80'],['Variazione punti / 80′','stint_points_delta_per_80']]],
- ['rating','Rating',[['MVP','mvp_awards'],['Media voto','avg_rating'],['Gare valutate','rated_matches'],
-  ['Voti ricevuti','votes_received'],['Gare ≥7','high_rating_games'],
-  ['Gare <6','low_rating_games'],['Voto massimo','highest_rating'],
+  ['Plus/minus','plus_minus_on'],['GF in campo / gara','gf_on_per_game'],['GS in campo / gara','ga_on_per_game'],['+/- per gara','plus_minus_per_game'],
+  ['GF / 80′','gf_on_per_80'],['GS / 80′','ga_on_per_80'],['+/- / 80′','plus_minus_per_80']]],
+ ['parziali','Parziali e punti', [['Gare con parziale verificato','stint_games'],['Minuti totali verificati','stint_minutes'],['GF nei parziali verificati','stint_gf'],['GS nei parziali verificati','stint_ga'],['Punti dei parziali giocati','stint_points'],['Variazione punti durante la presenza','stint_points_delta'],['GF verificati / 80′','stint_gf_per_80'],['GS verificati / 80′','stint_ga_per_80'],['Punti dei parziali / 80′','stint_points_per_80'],['Variazione punti / 80′','stint_points_delta_per_80']]],
+ ['rating','Rating',[['MVP','mvp_awards'],['MVP / gara','mvp_per_game'],['Media voto','avg_rating'],['Gare valutate','rated_matches'],
+  ['Voti ricevuti','votes_received'],['Voti / gara valutata','votes_per_rated_game'],['Gare ≥7','high_rating_games'],['Gare ≥7 (%)','high_rating_pct'],
+  ['Gare <6','low_rating_games'],['Gare <6 (%)','low_rating_pct'],['Voto massimo','highest_rating'],
   ['Voto minimo','lowest_rating'],['Variabilità','rating_volatility']]],
- ['discipline','Disciplina',[['Ammonizioni','yellow_cards'],['Espulsioni','red_cards'],['Cartellini blu','blue_cards']]]
+ ['discipline','Disciplina',[['Ammonizioni','yellow_cards'],['Espulsioni','red_cards'],['Cartellini blu','blue_cards'],['Gialli / gara','yellows_per_game'],['Gialli / 80′','yellows_per_80'],['Rossi / 80′','reds_per_80'],['Cartellini / 80′','cards_per_80']]]
  ];
  const detailGroups=DETAIL_METRICS.flatMap(([key,title,options])=>{
   const values=merged.map(p=>{
@@ -410,11 +410,11 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
  };
  const panels=groups.map(([id,title,metrics],i)=>{
   const slides=(id==='goal-details'?detailGroups:metrics.map(([metric,key])=>rankingRows(metric,merged,key)).filter(Boolean));
-  return '<section class="stats-player-carousel" data-stats-ranking-panel="'+id+'"'+(i?' hidden':'')+'>'+
+  return '<section class="stats-player-carousel" data-stats-ranking-panel="'+id+'" data-stats-active-index="0"'+(i?' hidden':'')+'>'+
   '<div class="stats-player-carousel-top"><div><span class="eyebrow">CONFRONTO GIOCATORI</span><h3>'+E(title)+'</h3></div>'+
-  '<div class="stats-player-carousel-controls"><button type="button" data-stats-slide="-1" aria-label="Statistica precedente">‹</button>'+
+  '<div class="stats-player-carousel-controls"><button type="button" data-stats-slide="-1" disabled aria-label="Statistica precedente">‹</button>'+
   '<span class="stats-player-carousel-count">'+(slides.length?'1 / '+slides.length:'0 / 0')+'</span>'+
-  '<button type="button" data-stats-slide="1" aria-label="Statistica successiva">›</button></div></div>'+
+  '<button type="button" data-stats-slide="1"'+(slides.length<2?' disabled':'')+' aria-label="Statistica successiva">›</button></div></div>'+
 
   '<div class="stats-player-carousel-track" tabindex="0">'+(slides.length?slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+(id==='parziali'?'<p class="stats-hint stats-stint-slide-description">'+E(stintDescriptions[metrics[n]?.[1]]||'')+'</p>':'')+slide+'</div>').join(''):'<p class="tm-analytics-empty">Nessun dato confrontabile in questa categoria.</p>')+'</div></section>';
  }).join('');
