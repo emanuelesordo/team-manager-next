@@ -1,5 +1,5 @@
 import {playerStintPoints} from './player-stint-points.js';
-import {enrichPlayerNumbers} from './stat-rates.js?v=20261029rates1';
+import {enrichPlayerNumbers} from './stat-rates.js?v=20261029rates2';
 import {cumulativeEventMinute,displayEventMinute} from './match-minutes.js';
 import {aggregateEventDetails,DETAIL_METRICS} from './event-detail-stats.js';
 import {resultSplit,eventCoverage,verifiedEvents,seasonNumbers} from './analytics.js?stats=20261013sourcefacts1';
@@ -385,7 +385,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
   ['Porta al +2','goals_to_plus_2'],['Porta al +3 o più','goals_to_plus_3'],
   ['Gol che riducono il distacco','deficit_reducers'],['Gol sotto nel punteggio','trailing_goals'],
   ['Pareggi in rimonta','comeback_equalizers'],['Vantaggi in rimonta','comeback_go_ahead_goals'],
-  ['Ampliano il vantaggio','lead_extenders'],['Pareggi / 80′','equalizers_per_80'],['Gol del vantaggio / 80′','go_ahead_goals_per_80'],['Gol in rimonta / 80′','comeback_go_ahead_goals_per_80'],['Gol sotto / 80′','trailing_goals_per_80'],['Ampliano il vantaggio / 80′','lead_extenders_per_80']]],
+  ['Ampliano il vantaggio','lead_extenders'],['Pareggi / 80′','equalizers_per_80'],['Gol del vantaggio / 80′','go_ahead_goals_per_80'],['Gol in rimonta / 80′','comeback_go_ahead_goals_per_80'],['Gol sotto / 80′','trailing_goals_per_80'],['Ampliano il vantaggio / 80′','lead_extenders_per_80'],['Pareggi in rimonta / 80′','comeback_equalizers_per_80'],['Gol al +1 / 80′','goals_to_plus_1_per_80'],['Gol al +2 / 80′','goals_to_plus_2_per_80'],['Gol al +3 / 80′','goals_to_plus_3_per_80'],['Accorciamenti / 80′','deficit_reducers_per_80']]],
  ['impact','Impatto',[['GF in campo','goals_for_on'],['GS in campo','goals_against_on'],
   ['Plus/minus','plus_minus_on'],['GF in campo / gara','gf_on_per_game'],['GS in campo / gara','ga_on_per_game'],['+/- per gara','plus_minus_per_game'],
   ['GF / 80′','gf_on_per_80'],['GS / 80′','ga_on_per_80'],['+/- / 80′','plus_minus_per_80']]],
@@ -394,7 +394,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
   ['Voti ricevuti','votes_received'],['Voti / gara valutata','votes_per_rated_game'],['Gare ≥7','high_rating_games'],['Gare ≥7 (%)','high_rating_pct'],
   ['Gare <6','low_rating_games'],['Gare <6 (%)','low_rating_pct'],['Voto massimo','highest_rating'],
   ['Voto minimo','lowest_rating'],['Variabilità','rating_volatility']]],
- ['discipline','Disciplina',[['Ammonizioni','yellow_cards'],['Espulsioni','red_cards'],['Cartellini blu','blue_cards'],['Gialli / gara','yellows_per_game'],['Gialli / 80′','yellows_per_80'],['Rossi / 80′','reds_per_80'],['Cartellini / 80′','cards_per_80']]]
+ ['discipline','Disciplina',[['Ammonizioni','yellow_cards'],['Espulsioni','red_cards'],['Cartellini blu','blue_cards'],['Gialli / gara','yellows_per_game'],['Gialli / 80′','yellows_per_80'],['Rossi / 80′','reds_per_80'],['Blu / 80′','blues_per_80'],['Cartellini / 80′','cards_per_80']]]
  ];
  const detailGroups=DETAIL_METRICS.flatMap(([key,title,options])=>{
   const values=merged.map(p=>{
@@ -428,7 +428,7 @@ function playersNumbers(players,impacts=[],ratings=[],comparisons=[],events=[],m
 
   '<div class="stats-player-carousel-track" tabindex="0">'+(slides.length?slides.map((slide,n)=>'<div class="stats-player-carousel-slide" aria-label="Statistica '+(n+1)+' di '+slides.length+'">'+(id==='parziali'?'<p class="stats-hint stats-stint-slide-description">'+E(stintDescriptions[slide.key]||'')+'</p>':'')+slide.html+'</div>').join(''):'<p class="tm-analytics-empty">Nessun dato confrontabile in questa categoria.</p>')+'</div></section>';
  }).join('');
- return '<div class="stats-player-section"><header class="tm-analytics-header"><span class="eyebrow">PLAYER INTELLIGENCE</span><h2>Ogni giocatore, nel suo contesto.</h2><p>Ranking comparabili, impatto e continuità. Una metrica per slide.</p></header>'+tabsFinal+panels+'<p class="stats-hint">Parziali e punti considerano soltanto spezzoni verificabili. Scorri orizzontalmente per confrontare gli indicatori.</p></div>';
+ return '<div class="stats-player-section"><header class="tm-analytics-header"><span class="eyebrow">PLAYER INTELLIGENCE</span><h2>Ogni giocatore, nel suo contesto.</h2><p>Ranking comparabili, impatto e continuità. Una metrica per slide.</p></header>'+tabsFinal+panels+'<p class="stats-hint">Le medie per 80′ dividono i conteggi per la somma dei minuti verificati (×80). I gol di contesto riguardano quelli documentati; N/D indica dati non verificabili.</p></div>';
 }
 
 
