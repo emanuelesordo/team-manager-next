@@ -320,3 +320,33 @@
  .stats-player-section .stats-player-carousel-slide .stats-rank-row{min-height:16px;padding:0}
  .stats-player-section .stats-player-carousel-slide .stats-rank-rows{row-gap:1px}
 }
+
+
+/* Tournament: one complete comparison per snap slide, no nested vertical scrollers. */
+.tm-compare-carousel{min-width:0;gap:8px}
+.tm-compare-carousel .stats-player-carousel-top{border-bottom:1px solid color-mix(in srgb,currentColor 11%,transparent);padding:0 0 8px}
+.tm-compare-carousel .stats-player-carousel-top h3{font-size:17px;letter-spacing:-.03em}
+.tm-compare-carousel .stats-player-carousel-track{display:flex;gap:0;overflow-x:auto;overflow-y:visible;scroll-snap-type:x mandatory;scrollbar-width:none;padding:0;align-items:start}
+.tm-compare-carousel .stats-player-carousel-track::-webkit-scrollbar{display:none}
+.tm-compare-carousel .stats-player-carousel-slide{flex:0 0 100%;width:100%;max-width:none;min-width:0;scroll-snap-align:start}
+.tm-compare-carousel .tm-compare-slide-label{display:none}
+.tm-compare-carousel .tm-compare-ranking{padding:15px 18px}
+.tm-compare-carousel .tm-compare-ranking h3{display:none}
+.tm-compare-carousel .tm-compare-rows{display:grid;gap:5px}
+.tm-compare-carousel .tm-compare-row{min-height:21px}
+.tm-compare-carousel .tm-compare-scatter-wrap{max-width:100%;padding:0 12px 9px}
+.tm-compare-carousel .tm-compare-scatter{max-height:min(54vh,400px)}
+.tm-compare-carousel .stats-player-carousel-controls button:disabled{opacity:.25;cursor:default}
+@media(min-width:1200px){
+ .tm-compare-carousel .tm-compare-rows{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:repeat(var(--stats-rows),minmax(21px,auto));
+  grid-auto-flow:column;column-gap:22px;row-gap:5px
+ }
+}
+@media(max-width:650px){
+ .tm-compare-carousel .tm-compare-ranking{padding:11px 10px}
+ .tm-compare-carousel .tm-compare-row{min-height:18px;font-size:10px;gap:6px}
+ .tm-compare-carousel .tm-compare-rows{gap:3px}
+ .tm-compare-carousel .stats-player-carousel-top h3{font-size:14px}
+}
