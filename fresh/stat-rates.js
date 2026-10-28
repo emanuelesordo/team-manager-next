@@ -35,6 +35,7 @@ export function enrichPlayerNumbers(players=[],comparisons=[],impacts=[],ratings
    goals_assists_per_80:per80(Number(r.goals||0)+Number(r.assists||0)),
    yellows_per_80:per80(r.yellow_cards),
    reds_per_80:per80(r.red_cards),
+   blues_per_80:per80(r.blue_cards),
    cards_per_80:per80(r.disciplinary_cards),
    yellows_per_game:rate(r.yellow_cards,r.appearances),
    assists_per_game:rate(r.assists,r.appearances),
@@ -56,7 +57,7 @@ export function enrichPlayerNumbers(players=[],comparisons=[],impacts=[],ratings
   for(const key of [
    'equalizers','go_ahead_goals','deficit_reducers','trailing_goals',
    'comeback_equalizers','comeback_go_ahead_goals','lead_extenders',
-   'goals_to_plus_1','goals_to_plus_2','goals_to_plus_3'
+   'goals_to_plus_1','goals_to_plus_2','goals_to_plus_3','goals_to_minus_1','goals_to_minus_2','goals_to_draw'
   ])fields[key+'_per_80']=per80(r[key]);
   return {...r,...fields};
  });
