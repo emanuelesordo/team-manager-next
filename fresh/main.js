@@ -1473,6 +1473,14 @@ document.addEventListener('click',event=>{
   }
   return;
  }
+ const teamDashboard=event.target.closest('[data-team-dash]');
+ if(teamDashboard){
+  const root=teamDashboard.closest('.tm-analytics-dashboard');if(!root)return;
+  const chosen=teamDashboard.dataset.teamDash;
+  root.querySelectorAll('[data-team-dash]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.teamDash===chosen)));
+  root.querySelectorAll('[data-team-dash-panel]').forEach(el=>{el.hidden=el.dataset.teamDashPanel!==chosen});
+  return;
+ }
  const extendedCompetition=event.target.closest('[data-extended-comp]');
  if(extendedCompetition){
   const root=extendedCompetition.closest('.stats-insights');if(!root)return;
