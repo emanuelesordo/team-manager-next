@@ -7,11 +7,11 @@ test('overview keeps exactly eight infographic cards in the mockup order',()=>{
   analysis:{teamGoalsDuringAppearances:7},games:3,starts:2,minutes:190,goals:2,assists:1,
   results:{W:2,D:0,L:1},resultsComplete:true,scoreResults:true});
  assert.equal((html.match(/class="psi-info-card /g)||[]).length,8);
- for(const title of ['Ultime 5 partite','Gol e assist per intervallo','Risultati con lui in campo',
-  'Trend rating','Rendimento','Eventi disciplinari','Risultati e impatto','Contributi decisivi'])
+ for(const title of ['Rating · ultime 5','Gol e assist per intervallo','Risultati con lui in campo',
+  'Minuti nelle ultime gare','Rendimento','Eventi disciplinari','Risultati e impatto','Contributi decisivi'])
   assert.ok(html.includes(title),title);
  assert.match(html,/data-psi-rating-recent/);
- assert.match(html,/data-psi-rating-trend/);
+ assert.doesNotMatch(html,/data-psi-rating-trend/);
  assert.doesNotMatch(html,/>NaN<|>undefined</);
 });
 
@@ -47,4 +47,13 @@ test('SQL goal context and on-field figures remain distinct from estimated outco
  assert.match(html,/>7<\/strong>/);
  assert.match(html,/>3<\/strong>/);
  assert.match(html,/>1<\/strong>/);
+});
+
+test('individual overview plots minutes separately and uses only one rating graph',()=>{
+ const html=renderPlayerOverview({id:'p',analysis:{matches:[{label:'03/10',minutes:75},{label:'10/10',minutes:45}]},games:2});
+ assert.match(html,/psi-minute-chart/);
+ assert.match(html,/75′/);
+ assert.match(html,/45′/);
+ assert.equal((html.match(/data-psi-rating-recent/g)||[]).length,1);
+ assert.doesNotMatch(html,/data-psi-rating-trend/);
 });
