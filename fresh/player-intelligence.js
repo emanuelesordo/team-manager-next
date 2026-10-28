@@ -1,5 +1,5 @@
 import {matchPlayerIntervals,matchElapsedMinute,confirmedMatchEvent} from './player-participation.js?v=20261014periodpriority1';
-import {renderPlayerOverview} from './player-infographic-overview.js?v=20261016mockup1';
+import {renderPlayerOverview} from './player-infographic-overview.js?v=20261029editorial2';
 import {renderPlayerRoleHeatmap} from './player-role-heatmap.js?v=20261016roles1';
 
 const K=x=>String(x??'');
