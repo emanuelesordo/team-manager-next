@@ -79,6 +79,18 @@ export async function hydratePlayerOverviewRatings(season,playerId,resolve=()=>(
  }
 }
 
+/** Minutes are a separate dimension from rating; missing participation is not plotted as zero. */
+function minutesChart(rows=[]){
+ const last=[...(rows||[])].filter(r=>r&&r.minutes!=null&&Number.isFinite(Number(r.minutes))&&Number(r.minutes)>=0).slice(-5);
+ if(!last.length)return empty('Minutaggio N/D: presenze senza minuti verificati.');
+ const top=Math.max(1,...last.map(r=>Number(r.minutes)));
+ return '<div class="psi-minute-chart" role="img" aria-label="Minuti giocati nelle ultime '+last.length+' gare verificabili">'+
+  last.map(r=>'<div class="psi-minute-row"><small>'+E(r.label||'Gara')+'</small>'+
+   '<span><i style="width:'+(Number(r.minutes)/top*100).toFixed(1)+'%"></i></span>'+
+   '<b>'+n(r.minutes)+'′</b></div>').join('')+'</div>'+
+  '<p class="psi-info-caption">Solo presenze con minutaggio verificabile.</p>';
+}
+
 /** Render the reference mockup's 4-by-2 overview without simulated sporting data. */
 export function renderPlayerOverview({
  id,stats={},analysis={},ratings=null,impact=null,games=null,starts=null,
@@ -105,12 +117,12 @@ export function renderPlayerOverview({
  const contextual=impact||{};
  const contextualValue=key=>contextual[key]==null?'—':safeValue(contextual[key]);
  return '<div class="psi-overview-grid" aria-label="Panoramica infografica di '+E(id)+'">'+
-  card('Ultime 5 partite','<div data-psi-rating-recent aria-live="polite">'+empty('Caricamento voti…')+'</div>','psi-card-rating')+
+  card('Rating · ultime 5','<div data-psi-rating-recent aria-live="polite">'+empty('Caricamento voti…')+'</div>','psi-card-rating')+
   card('Gol e assist per intervallo',intervalChart(v.scoredMinutes,v.assistedMinutes,{
    complete:firstHalf,goalCount:goals,assistCount:assists
   }),'psi-card-intervals')+
   card('Risultati con lui in campo',recordChart(r,resultsComplete,games),'psi-card-results')+
-  card('Trend rating','<div data-psi-rating-trend aria-live="polite">'+empty('Caricamento andamento…')+'</div>','psi-card-trend')+
+  card('Minuti nelle ultime gare',minutesChart(v.matches),'psi-card-trend')+
   card('Rendimento',metric('Media voto',ratingAvg)+metric('Minuti per gol',goalsPer)+metric('Minuti per assist',assistsPer)+metric('Coinvolgimento nei gol',participation),'psi-card-performance')+
   card('Eventi disciplinari',eventRows,'psi-card-discipline')+
   card('Risultati e impatto',metric('Punti con lui titolare',scoreResults&&starts>0?n(v.starterPoints/starts):'—')+
