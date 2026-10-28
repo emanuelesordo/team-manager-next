@@ -523,34 +523,64 @@ function tournamentNumbers(fixtures,competitions,flowRows=[],phaseRows=[],eventC
    '<text x="352" y="305" font-size="12" fill="currentColor" text-anchor="middle">Gol fatti / gara →</text><text x="16" y="155" font-size="12" transform="rotate(-90 16 155)" fill="currentColor" text-anchor="middle">← Meno gol subiti / gara</text></svg>'+
    '<p class="tm-analytics-note">Ogni punto è una squadra. In basso a destra: più produzione offensiva e meno gol subiti. Caselle evidenziato in oro.</p></div>';
  };
+
  const competitionsIds=[...new Set(all.map(x=>x.competition_id))];
+ const dashboardDeck=(id,items)=>{
+  if(!items.length)return '<p class="tm-analytics-empty">Dati non ancora sufficienti.</p>';
+  return '<section class="stats-player-carousel tm-compare-carousel" data-stats-ranking-panel="tournament-'+E(id)+'" data-stats-active-index="0">'+
+    '<div class="stats-player-carousel-top"><div><span class="eyebrow">CONFRONTO SQUADRE</span><h3>'+E(items[0][0])+'</h3></div>'+
+    '<div class="stats-player-carousel-controls"><button type="button" data-stats-slide="-1" disabled aria-label="Confronto precedente">‹</button>'+
+    '<span class="stats-player-carousel-count">1 / '+items.length+'</span>'+
+    '<button type="button" data-stats-slide="1"'+(items.length<2?' disabled':'')+' aria-label="Confronto successivo">›</button></div></div>'+
+    '<div class="stats-player-carousel-track" tabindex="0" aria-label="Metriche del torneo">'+
+    items.map(([title,html],i)=>'<div class="stats-player-carousel-slide" aria-label="'+E(title)+'"><div class="tm-compare-slide-label">'+E(title)+'</div>'+html+'</div>').join('')+
+    '</div></section>';
+ };
  const pane=(id,idx)=>{
   const data=all.filter(x=>x.competition_id===id);
+  const results=[
+   ['Profilo attacco / difesa',scatter(data)],
+   ['Punti per gara',statRank('Punti / gara',data,r=>r.resultGames?(r.wins*3+r.draws)/r.resultGames:null)],
+   ['Vittorie (%)',statRank('Vittorie sulle partite disputate',data,r=>r.resultGames?100*r.wins/r.resultGames:null,'%')],
+   ['Gol fatti per gara',statRank('Gol fatti / gara',data,r=>r.resultGames?r.gf/r.resultGames:null)],
+   ['Gol subiti per gara',statRank('Gol subiti / gara',data,r=>r.resultGames?r.ga/r.resultGames:null,'',true)],
+   ['Differenza reti per gara',statRank('Differenza reti / gara',data,r=>r.resultGames?(r.gf-r.ga)/r.resultGames:null)]
+  ];
+  const evolution=[
+   ['Tempo in vantaggio',statRank('Tempo in vantaggio',data,r=>r.flow?.verified_games>0?r.flow.lead_pct:null,'%')],
+   ['Tempo in svantaggio',statRank('Tempo in svantaggio',data,r=>r.flow?.verified_games>0?r.flow.trail_pct:null,'%',true)],
+   ['Partite in rimonta con punti',statRank('Partite in rimonta con punti',data,r=>r.ordered?r.comebackPoints:null)],
+   ['Pareggi in rimonta',statRank('Pareggi in rimonta',data,r=>r.flow?.verified_games>0?r.flow.comeback_equalizers:null)],
+   ['Vantaggi non conservati',statRank('Vantaggi non conservati',data,r=>r.ordered?r.leadLost:null)]
+  ];
+  const venue=[
+   ['Vittorie in casa (%)',statRank('Vittorie in casa (%)',data,r=>r.home?100*r.homeWins/r.home:null,'%')],
+   ['Vittorie fuori casa (%)',statRank('Vittorie fuori casa (%)',data,r=>r.away?100*r.awayWins/r.away:null,'%')]
+  ];
+  const discipline=[
+   ['Gialli documentati',statRank('Gialli documentati',data,r=>r.observed?r.yellows:null)],
+   ['Gialli per gara con eventi',statRank('Gialli / gara con eventi',data,r=>r.observed?r.yellows/r.observed:null)],
+   ['Rossi documentati',statRank('Rossi documentati',data,r=>r.observed?r.reds:null)],
+   ['Cartellini blu documentati',statRank('Cartellini blu documentati',data,r=>r.observed?r.blues:null)],
+   ['Sostituzioni documentate',statRank('Sostituzioni documentate',data,r=>r.observed?r.changes:null)],
+   ['Cambi per gara con eventi',statRank('Cambi / gara con eventi',data,r=>r.observed?r.changes/r.observed:null)]
+  ];
+  const coverage=[
+   ['Gare con sequenza gol verificata',statRank('Gare con sequenza gol verificata',data,r=>r.resultGames?100*r.ordered/r.resultGames:null,'%')],
+   ['Gare con minutaggio completo',statRank('Gare con minutaggio completo',data,r=>r.resultGames?100*r.timed/r.resultGames:null,'%')],
+   ['Gare con almeno un evento registrato',statRank('Gare con almeno un evento registrato',data,r=>r.resultGames?100*r.observed/r.resultGames:null,'%')]
+  ];
   const options=[
-   ['results','Rendimento',scatter(data)+statRank('Vittorie sulle partite disputate',data,r=>r.resultGames?100*r.wins/r.resultGames:null,'%')],
-   ['flow','Andamento','<div class="tm-compare-grid">'+
-     statRank('Tempo in vantaggio',data,r=>r.flow?.verified_games>0?r.flow.lead_pct:null,'%')+
-     statRank('Tempo in svantaggio',data,r=>r.flow?.verified_games>0?r.flow.trail_pct:null,'% ',true)+
-     statRank('Partite in rimonta con punti',data,r=>r.ordered?r.comebackPoints:null)+
-     statRank('Pareggi in rimonta',data,r=>r.flow?.verified_games>0?r.flow.comeback_equalizers:null)+
-     statRank('Vantaggi non conservati',data,r=>r.ordered?r.leadLost:null)+'</div>'],
-   ['venues','Casa e trasferta','<div class="tm-compare-grid">'+
-     statRank('Vittorie in casa (%)',data,r=>r.home?100*r.homeWins/r.home:null,'%')+
-     statRank('Vittorie fuori casa (%)',data,r=>r.away?100*r.awayWins/r.away:null,'%')+'</div>'],
-   ['discipline','Disciplina e cambi','<div class="tm-compare-grid">'+
-     statRank('Gialli documentati',data,r=>r.observed?r.yellows:null)+
-     statRank('Rossi documentati',data,r=>r.observed?r.reds:null)+
-     statRank('Cartellini blu documentati',data,r=>r.observed?r.blues:null)+
-     statRank('Cambi nelle gare documentate',data,r=>r.observed?r.changes/r.observed:null)+'</div>'],
-   ['coverage','Affidabilità','<div class="tm-compare-grid">'+
-     statRank('Gare con sequenza gol verificata',data,r=>r.played?100*r.ordered/r.played:null,'%')+
-     statRank('Gare con minutaggio completo',data,r=>r.played?100*r.timed/r.played:null,'%')+
-     statRank('Gare con almeno un evento registrato',data,r=>r.played?100*r.observed/r.played:null,'%')+'</div>']
+   ['results','Rendimento',results],
+   ['flow','Andamento',evolution],
+   ['venues','Casa e trasferta',venue],
+   ['discipline','Disciplina e cambi',discipline],
+   ['coverage','Affidabilità',coverage]
   ];
   return '<section data-extended-comp-panel="'+E(id)+'"'+(idx?' hidden':'')+'>'+
    '<nav class="stats-insights-nav" aria-label="Categoria del confronto">'+options.map(([key,label],i)=>
     '<button type="button" data-extended-metric="'+key+'" aria-pressed="'+(i===0)+'">'+E(label)+'</button>').join('')+'</nav>'+
-   options.map(([key,label,body],i)=>'<div data-extended-metric-panel="'+key+'"'+(i?' hidden':'')+'>'+body+'</div>').join('')+'</section>';
+   options.map(([key,label,items],i)=>'<div data-extended-metric-panel="'+key+'"'+(i?' hidden':'')+'>'+dashboardDeck(key,items)+'</div>').join('')+'</section>';
  };
  return '<section class="stats-insights tm-compare-dashboard"><header class="tm-analytics-header">'+
   '<span class="eyebrow">COMPETITION INTELLIGENCE</span><h2>Le squadre a confronto.</h2>'+
