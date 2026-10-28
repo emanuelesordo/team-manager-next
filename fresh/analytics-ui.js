@@ -191,35 +191,130 @@ export function eventDetailStatisticsPanel(events,{playerId=null,side='team'}={}
  if(!groups)return '<p class="subnote">Nessun dettaglio aggiuntivo compilato negli eventi confermati.</p>';
  return groups+'<p class="subnote">Conteggi riferiti ai soli eventi ufficiali o confermati. I dettagli mancanti non sono considerati osservazioni. I gol restano conteggiati dalle fonti ufficiali.</p>';
 }
+
+/* One metric, one home: the Caselle dashboard owns results, flow, goals, discipline and context. */
+const statN=(value,d=0)=>value==null||!Number.isFinite(Number(value))?'—':Number(value).toLocaleString('it-IT',{maximumFractionDigits:d});
+const statPct=v=>v==null||!Number.isFinite(Number(v))?'—':statN(Number(v)*100,0)+'%';
+const statGlyph=type=>{
+ const paths={
+  result:'<path d="M4 12h16M12 4v16"/><circle cx="12" cy="12" r="9"/>',
+  goal:'<circle cx="12" cy="12" r="9"/><path d="m12 5 4 3-1.5 5H9.5L8 8zM3 11l6 2m6 0 6-2m-7 8-2-6m-2 0-2 6"/>',
+  form:'<path d="m3 16 6-6 4 4 8-9M16 5h5v5"/>',
+  cards:'<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M9 8h6"/>',
+  field:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M12 4v16"/><circle cx="12" cy="12" r="3"/>',
+  data:'<path d="M4 20V9m5 11V4m5 16v-7m5 7v-12"/>'
+ };
+ return '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[type]||paths.data)+'</svg>';
+};
+const statTile=(label,value,icon,detail='')=>'<div class="tm-analytics-kpi"><span class="tm-analytics-kpi-icon">'+statGlyph(icon)+'</span><strong>'+E(value)+'</strong><span>'+E(label)+'</span>'+(detail?'<small>'+E(detail)+'</small>':'')+'</div>';
+const statSection=(title,body,description='')=>'<section class="tm-analytics-feature"><div class="tm-analytics-section-head"><h3>'+E(title)+'</h3>'+(description?'<span>'+E(description)+'</span>':'')+'</div>'+body+'</section>';
+const statValue=(label,value)=>'<div class="tm-analytics-small"><span>'+E(label)+'</span><b>'+E(value)+'</b></div>';
 function renderTeamAnalytics(fixtures,matches,events,team,competitions=[],playerStats=[],opponents=[],matchPlayers=[],venues=[],predictionSnapshots=[],history=[]){
- // These are already reconciled seasonal facts; never create a second independent minute total.
- const computedPlayers=playerStats||[];
- const numbers=seasonNumbers(fixtures,matches,events,team,competitions,computedPlayers);
+ const numbers=seasonNumbers(fixtures,matches,events,team,competitions,playerStats||[]);
  const coverage=eventCoverage(fixtures,matches,events,team,competitions);
  const intelligence=analyseResults(fixtures,team?.id?'team:'+team.id:null,{competitions,venues,predictionSnapshots,history});
- const specificEventMatches=new Set(verifiedEvents(events).filter(e=>['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type)).map(e=>e.match_id)).size;
- const profile=buildTeamProfile({numbers,gameState:coverage.gameState,eventMatches:specificEventMatches,resultAnalysis:intelligence});
- const validated=verifiedEvents(events);
- const proposed=(events||[]).filter(e=>e.validation_status==='proposed').length;
- const diff=numbers.gf-numbers.ga;
- const header='<section class="glass panel stats-intro"><div><span class="eyebrow">STAGIONE IN NUMERI</span><h2>'+numbers.gf+
-  ' gol segnati <span>/</span> '+numbers.ga+' subiti</h2><p>'+numbers.played+' gare concluse con risultato valido</p></div></section>';
- const core='<div class="team-metric-grid">'+cell('Partite',numbers.played)+cell('Gol fatti',numbers.gf)+cell('Gol subiti',numbers.ga)+
-  cell('Differenza reti',(diff>0?'+':'')+diff)+cell('Porte inviolate',numbers.cleanSheets)+cell('Sostituzioni',numbers.substitutions)+'</div>';
- const fullGoalCoverage=coverage.complete===coverage.possible;
- const period='<section class="glass panel"><div class="panel-heading"><h2>Gol per tempo</h2></div><div class="team-metric-grid">'+
-  cell('1° tempo',fullGoalCoverage?numbers.goalsByPeriod[0]:'—')+cell('2° tempo',fullGoalCoverage?numbers.goalsByPeriod[1]:'—')+
-  cell('Subiti 1° tempo',fullGoalCoverage?numbers.concededByPeriod[0]:'—')+cell('Subiti 2° tempo',fullGoalCoverage?numbers.concededByPeriod[1]:'—')+'</div>'+
-  (!fullGoalCoverage?'<p class="subnote">Distribuzione disponibile dopo la riconciliazione delle sequenze gol con i risultati ufficiali.</p>':'')+'</section>';
- const advanced='<section class="glass panel event-analysis"><div class="panel-heading"><h2>Copertura eventi</h2></div>'+
-  '<div class="team-metric-grid">'+cell('Eventi ufficializzati',validated.length)+cell('Proposte registrate',proposed)+
-  cell('Timeline complete',coverage.complete+'/'+coverage.possible)+'</div>'+
-  (!coverage.complete?'<p class="subnote">Le metriche sullo stato della gara richiedono la sequenza completa dei gol e vengono calcolate solo sulle timeline riconciliate.</p>':'')+'</section>';
- return header+'<section class="glass panel">'+core+'</section><div class="leaderboard-grid">'+
-  balance(numbers)+venue(numbers)+
-  (fullGoalCoverage?goalDistribution(numbers):'<section class="glass panel leaderboard"><div class="panel-heading"><h2>Distribuzione gol</h2></div><p class="subnote">Dati in verifica: la ripartizione non copre tutte le partite concluse.</p></section>')+discipline(numbers,computedPlayers)+'</div>'+
-  '<section class="glass panel"><div class="panel-heading"><h2>Ultime partite</h2></div>'+lastResults(numbers.matches,opponents)+'</section>'+
-  '<section class="glass panel event-detail-statistics"><div class="panel-heading"><h2>Dettagli gol, cartellini e cambi</h2></div>'+eventDetailStatisticsPanel(events,{side:'team'})+'<h3>Eventi avversari · gol subiti e provvedimenti</h3>'+eventDetailStatisticsPanel(events,{side:'opponent'})+'</section>'+teamProfilePanel(profile)+resultProfilePanel(profile)+resultIntelligencePanel(intelligence)+period+gameStatePanels(coverage.gameState)+progressionsPanel(coverage.gameState,coverage.halftime)+advanced+'<p class="subnote">Fonte: partite concluse, tabellini ed eventi registrati. Le metriche sul parziale usano solo timeline complete e riconciliate; gli eventi rifiutati sono esclusi.</p>';
+ const confirmed=verifiedEvents(events);
+ const profile=buildTeamProfile({numbers,gameState:coverage.gameState,
+  eventMatches:new Set(confirmed.filter(e=>['yellow_card','red_card','second_yellow','blue_card'].includes(e.event_type)).map(e=>e.match_id)).size,
+  resultAnalysis:intelligence});
+ const games=Math.max(0,Number(numbers.played)||0),goalsComplete=coverage.complete===coverage.possible&&coverage.possible>0;
+ const left=(a,b)=>!a&&!b?0:Math.round(100*a/(a+b));
+ const snapshot='<div class="tm-analytics-kpis">'+
+  statTile('Partite',statN(games),'field')+statTile('Vittorie',statN(numbers.wins),'result')+
+  statTile('Pareggi',statN(numbers.draws),'result')+statTile('Sconfitte',statN(numbers.losses),'result')+
+  statTile('Gol fatti',statN(numbers.gf),'goal')+statTile('Gol subiti',statN(numbers.ga),'goal')+
+  statTile('Differenza reti',(numbers.gf-numbers.ga>0?'+':'')+statN(numbers.gf-numbers.ga),'form')+
+  statTile('Porte inviolate',statN(numbers.cleanSheets),'field')+'</div>'+
+  statSection('Bilancio della stagione','<div class="tm-analytics-scorebar" role="img" aria-label="Vittorie '+numbers.wins+', pareggi '+numbers.draws+', sconfitte '+numbers.losses+'">'+
+   '<i class="win" style="width:'+(games?100*numbers.wins/games:0)+'%"></i><i class="draw" style="width:'+(games?100*numbers.draws/games:0)+'%"></i><i class="loss" style="width:'+(games?100*numbers.losses/games:0)+'%"></i></div>'+
+   '<div class="tm-analytics-legend"><span><i class="win"></i> Vittorie</span><span><i class="draw"></i> Pareggi</span><span><i class="loss"></i> Sconfitte</span></div>')+
+  statSection('Ultimi risultati',lastResults(numbers.matches,opponents));
+ const gs=coverage.gameState||{},state=gs.stateShare||{},timed=Number(gs.matches)||0;
+ const leadPct=timed?Math.max(0,Math.min(100,100*(Number(state.leading)||0))):0;
+ const drawPct=timed?Math.max(0,Math.min(100-leadPct,100*(Number(state.drawing)||0))):0;
+ const flowDonut=timed?
+  '<div class="tm-analytics-donut-layout"><div class="tm-analytics-donut" role="img" aria-label="Tempo in vantaggio '+Math.round(leadPct)+'%, in parità '+Math.round(drawPct)+'%, in svantaggio '+Math.round(Math.max(0,100-leadPct-drawPct))+'%" style="--lead:'+leadPct+'%;--draw:'+(leadPct+drawPct)+'%"><div><b>'+timed+'</b><small>gare</small></div></div>'+
+  '<div class="tm-analytics-donut-legend">'+[['In vantaggio',leadPct,'win'],['In parità',drawPct,'draw'],['In svantaggio',Math.max(0,100-leadPct-drawPct),'loss']].map(([name,p,cl])=>'<div><i class="'+cl+'"></i><span>'+name+'</span><b>'+statN(p)+'%</b></div>').join('')+'</div></div>':
+  '<p class="tm-analytics-empty">Non ci sono minuti verificati per questo grafico.</p>';
+ const firstGoals=coverage.gameState||{},fh=coverage.halftime||{};
+ const timingKpis='<div class="tm-analytics-statgrid">'+
+  statValue('Vantaggi persi',timed?statN(gs.leadsLost)+' / '+statN(gs.leadsTaken):'—')+
+  statValue('Svantaggi recuperati',timed?statN(gs.trailsRecovered)+' / '+statN(gs.trailsEntered):'—')+
+  statValue('Risposte entro 10′',timed?statN(gs.quickResponsesFor):'—')+'</div>';
+ const halfRows=[['In vantaggio',fh.leading],['In parità',fh.drawing],['In svantaggio',fh.trailing]];
+ const halfMatrix=(Number(fh.sample)||0)?
+   '<div class="tm-analytics-matrix"><div class="tm-analytics-matrix-head"><span>Intervallo → finale</span><span>V</span><span>N</span><span>P</span></div>'+
+   halfRows.map(([label,row])=>'<div class="tm-analytics-matrix-row"><b>'+E(label)+'</b>'+
+    ['wins','draws','losses'].map(k=>'<span style="--heat:'+(row?.matches?Math.max(0,Math.min(1,(Number(row[k])||0)/row.matches)):0)+'" title="'+E(label+': '+(row?.[k]||0)+' gare')+'">'+statN(row?.[k]||0)+'</span>').join('')+'</div>').join('')+'</div>'+
+    '<p class="tm-analytics-note">Campione: '+statN(fh.sample)+' gare con parziale all’intervallo verificabile.</p>':
+   '<p class="tm-analytics-empty">Nessun parziale HT verificabile.</p>';
+ const progression=Object.entries(gs.progressions||{}).flatMap(([side,x])=>Object.entries(x||{}).map(([step,count])=>({side,step,count:Number(count)||0}))).filter(x=>x.count>0).sort((a,b)=>b.count-a.count).slice(0,6);
+ const progressionMarkup=progression.length?
+  '<div class="tm-analytics-progression">'+progression.map(x=>'<div><span>'+E(x.step.replace(/-/g,' → '))+'</span><small>'+E(x.side==='team'?'Caselle':'Avversaria')+'</small><b>'+statN(x.count)+'</b></div>').join('')+'</div>':
+  '<p class="tm-analytics-empty">Sequenze del punteggio non ancora disponibili.</p>';
+ const flow=statSection('Tempo nelle situazioni di gara',flowDonut,'Solo timeline temporali verificate')+
+  statSection('Gestione dei vantaggi e delle rimonte',timingKpis)+
+  '<div class="tm-analytics-two">'+statSection('Intervallo → risultato',halfMatrix)+statSection('Passaggi di punteggio più frequenti',progressionMarkup)+'</div>';
+ const periods=[
+  {label:'1° tempo',gf:goalsComplete?Number(numbers.goalsByPeriod?.[0])||0:null,ga:goalsComplete?Number(numbers.concededByPeriod?.[0])||0:null},
+  {label:'2° tempo',gf:goalsComplete?Number(numbers.goalsByPeriod?.[1])||0:null,ga:goalsComplete?Number(numbers.concededByPeriod?.[1])||0:null}
+ ];
+ const peak=Math.max(1,...periods.flatMap(x=>[x.gf||0,x.ga||0]));
+ const goalChart=goalsComplete?'<div class="tm-analytics-paired">'+periods.map(p=>
+  '<div class="tm-analytics-paired-row"><h4>'+E(p.label)+'</h4><div class="tm-analytics-paired-bars">'+
+   '<div><span class="tm-analytics-paired-track"><i class="for" style="width:'+(p.gf/peak*100)+'%"></i></span><b>'+statN(p.gf)+'</b><small>Fatti</small></div>'+
+   '<div><span class="tm-analytics-paired-track"><i class="against" style="width:'+(p.ga/peak*100)+'%"></i></span><b>'+statN(p.ga)+'</b><small>Subiti</small></div>'+
+   '</div></div>').join('')+'</div>':
+  '<p class="tm-analytics-empty">Distribuzione dei gol non ancora completamente riconciliata.</p>';
+ const goals=statSection('Produzione per tempo',goalChart,'Gol fatti / subiti')+
+  statSection('Come nascono i gol',eventDetailStatisticsPanel(events,{side:'team'}),'Eventi con dettagli compilati')+
+  statSection('Come vengono subiti',eventDetailStatisticsPanel(events,{side:'opponent'}),'Eventi avversari confermati');
+ const hasCards=confirmed.some(e=>['yellow_card','red_card','second_yellow','blue_card','substitution'].includes(e.event_type));
+ const discipline='<div class="tm-analytics-kpis">'+
+  statTile('Ammonizioni',hasCards?statN(numbers.yellows):'—','cards')+
+  statTile('Espulsioni',hasCards?statN(numbers.reds):'—','cards')+
+  statTile('Cartellini blu',hasCards?statN(numbers.blues):'—','cards')+
+  statTile('Rossi avversari',hasCards?statN(numbers.opponentReds):'—','cards')+
+  statTile('Sostituzioni',hasCards?statN(numbers.substitutions):'—','form')+'</div>'+
+  '<p class="tm-analytics-note">Eventi registrati e confermati; l’assenza di un evento non dimostra che non sia avvenuto.</p>';
+ const n2=x=>x==null||!Number.isFinite(Number(x))?'—':statN(x,2);
+ const venueRows=[['Casa',intelligence.venue?.home],['Trasferta',intelligence.venue?.away],
+  ...(intelligence.venue?.bySurface||[]).filter(x=>x.matches>=2).map(x=>[x.label,x])];
+ const contextVenues='<div class="tm-analytics-context-list">'+venueRows.map(([name,r])=>
+  '<div class="tm-analytics-context-row"><strong>'+E(name)+'</strong><span>'+statN(r?.matches||0)+' gare</span>'+
+  '<b>'+n2(r?.ppg)+' <small>pt/g</small></b><span>'+n2(r?.gfpg)+' / '+n2(r?.gapg)+' <small>GF/GS</small></span></div>').join('')+'</div>';
+ const tiers=[['Superiore','higher'],['Simile','similar'],['Inferiore','lower']];
+ const contextRanks='<div class="tm-analytics-context-list">'+tiers.map(([name,key])=>{
+  const x=intelligence.opponentTier?.[key];
+  return '<div class="tm-analytics-context-row"><strong>'+name+'</strong><span>'+statN(x?.matches||0)+' gare</span><b>'+n2(x?.ppg)+' <small>pt/g</small></b><span>'+n2(x?.gfpg)+' / '+n2(x?.gapg)+' <small>GF/GS</small></span></div>';
+ }).join('')+'</div>';
+ const context='<div class="tm-analytics-two">'+statSection('Casa, trasferta e terreno',contextVenues)+
+  statSection('Rendimento per forza avversaria',contextRanks)+'</div>'+
+  (intelligence.vsPrediction?.matches?statSection('Risultato rispetto alle attese',statTile('Differenza punti',((intelligence.vsPrediction.delta||0)>0?'+':'')+n2(intelligence.vsPrediction.delta),'form',statN(intelligence.vsPrediction.matches)+' partite con pronostico pre-gara')):'');
+ const highlights=profileHighlights(profile,8).filter(x=>x.key!=='protect-multi-goal').slice(0,5);
+ const identity=statSection('Tratti distintivi della squadra',
+   highlights.length?'<div class="tm-analytics-identities">'+highlights.map(x=>
+    '<div><div class="tm-analytics-identity-title"><strong>'+E(x.label)+'</strong><b>'+statPct(x.value)+'</b></div>'+
+    '<div class="tm-analytics-identity-track"><span style="width:'+Math.max(0,Math.min(100,100*Number(x.value)))+'%"></span></div>'+
+    '<small>Campione '+statN(x.sample)+' · fonte '+E(x.confidence)+'</small></div>').join('')+'</div>':
+    '<p class="tm-analytics-empty">Campione ancora insufficiente per il profilo.</p>')+
+  (intelligence.strength?.index!=null?statSection('Forza stimata',statTile('Indice attuale',statN(intelligence.strength.index,1),'form',
+   'Variazione ultime 5: '+(intelligence.strength.deltaFive>0?'+':'')+statN(intelligence.strength.deltaFive,1))):'');
+ const sections=[
+  ['snapshot','Panoramica',statGlyph('result'),snapshot],
+  ['flow','Andamento',statGlyph('form'),flow],
+  ['goals','Gol',statGlyph('goal'),goals],
+  ['discipline','Disciplina e cambi',statGlyph('cards'),discipline],
+  ['context','Contesto',statGlyph('field'),context],
+  ['identity','Identità',statGlyph('data'),identity]
+ ];
+ return '<div class="tm-analytics-dashboard">'+
+  '<header class="tm-analytics-header"><span class="eyebrow">TEAM INTELLIGENCE · '+E(team?.name||'CASELLЕ')+'</span>'+
+  '<h2>La stagione, letta sul campo.</h2><p>Risultati, dinamiche e contesto: ogni statistica nel suo posto.</p></header>'+
+  '<nav class="tm-analytics-tabs" aria-label="Statistiche Caselle">'+sections.map(([key,name,icon],i)=>
+   '<button type="button" data-team-dash="'+key+'" aria-selected="'+(i===0)+'">'+icon+'<span>'+E(name)+'</span></button>').join('')+'</nav>'+
+  sections.map(([key,name,icon,body],i)=>'<div data-team-dash-panel="'+key+'"'+(i?' hidden':'')+'>'+body+'</div>').join('')+
+  '<footer class="tm-analytics-coverage"><span>Copertura</span><b>'+statN(coverage.complete)+' / '+statN(coverage.possible)+' timeline complete</b><small>Statistiche temporali solo con eventi verificabili</small></footer></div>';
 }
 
 export function fixtureEventsPanel(events,competition=null,fixture=null){
