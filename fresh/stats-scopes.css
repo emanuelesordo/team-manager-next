@@ -249,3 +249,19 @@
  .tm-compare-scatter-wrap{padding:10px 6px 14px}
  .tm-compare-scatter{min-width:0}
 }
+
+
+/* Bind visualizations to the existing dark/ice theme, not to a second palette. */
+.tm-analytics-dashboard,.stats-player-section,.tm-compare-dashboard{--tm-accent:var(--accent,#70c7ad)}
+.tm-analytics-donut:after{background:var(--surface-solid,#102d36)}
+.tm-analytics-donut b{color:var(--ink)}
+.tm-analytics-donut small{color:var(--muted)}
+.tm-analytics-matrix-row>span{background:color-mix(in srgb,var(--tm-accent) calc(10% + var(--heat) * 60%),transparent)}
+.tm-compare-track>i{background:var(--tm-accent)}
+@media(max-width:600px){
+ .tm-analytics-context-row{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+ .tm-analytics-context-row>strong{grid-column:1}
+ .tm-analytics-context-row>span:nth-child(2){grid-column:2;text-align:right}
+ .tm-analytics-context-row>b{grid-column:1}
+ .tm-analytics-context-row>span:last-child{grid-column:2;text-align:right}
+}
