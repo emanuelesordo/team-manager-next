@@ -1,3 +1,4 @@
+import {nextStatSlide,nearestStatSlide,statSlideOffset} from './stats-carousel.js?v=20261029carouselfix1';
 import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc,uploadPlayerPhoto,readPrematchAvailability as fetchPrematchAvailability,savePrematchAvailability} from './api.js?prematch=20261015playerphoto1';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
@@ -1390,12 +1391,13 @@ document.addEventListener('scrollend',event=>{
  if(!track)return;
  const panel=track.closest('[data-stats-ranking-panel]'),slides=[...track.querySelectorAll('.stats-player-carousel-slide')];
  if(!panel||!slides.length)return;
- const start=slides[0].offsetLeft;
- const index=slides.reduce((best,slide,i)=>
-  Math.abs(slide.offsetLeft-start-track.scrollLeft)<Math.abs(slides[best].offsetLeft-start-track.scrollLeft)?i:best,0);
+ const index=nearestStatSlide(slides.map(x=>x.offsetLeft),track.scrollLeft);
  panel.dataset.statsActiveIndex=String(index);
  const counter=panel.querySelector('.stats-player-carousel-count');
  if(counter)counter.textContent=(index+1)+' / '+slides.length;
+ const currentTitle=slides[index].querySelector('.tm-compare-slide-label')?.textContent;
+ const title=panel.querySelector('.stats-player-carousel-top h3');
+ if(currentTitle&&title)title.textContent=currentTitle;
  panel.querySelector('[data-stats-slide="-1"]')?.toggleAttribute('disabled',index===0);
  panel.querySelector('[data-stats-slide="1"]')?.toggleAttribute('disabled',index===slides.length-1);
 },true);
@@ -1534,11 +1536,14 @@ document.addEventListener('click',event=>{
   const slides=track?[...track.querySelectorAll('.stats-player-carousel-slide')]:[];
   if(slides.length){
    const current=Math.max(0,Math.min(slides.length-1,Number(panel.dataset.statsActiveIndex)||0));
-   const next=Math.max(0,Math.min(slides.length-1,current+Number(slider.dataset.statsSlide)));
+   const next=nextStatSlide(current,Number(slider.dataset.statsSlide),slides.length);
    panel.dataset.statsActiveIndex=String(next);
-   track.scrollTo({left:slides[next].offsetLeft-slides[0].offsetLeft,behavior:'smooth'});
+   track.scrollTo({left:statSlideOffset(slides.map(x=>x.offsetLeft),next),behavior:'smooth'});
    const counter=panel.querySelector('.stats-player-carousel-count');
    if(counter)counter.textContent=(next+1)+' / '+slides.length;
+   const slideTitle=slides[next].querySelector('.tm-compare-slide-label')?.textContent;
+   const header=panel.querySelector('.stats-player-carousel-top h3');
+   if(slideTitle&&header)header.textContent=slideTitle;
    panel.querySelector('[data-stats-slide="-1"]')?.toggleAttribute('disabled',next===0);
    panel.querySelector('[data-stats-slide="1"]')?.toggleAttribute('disabled',next===slides.length-1);
   }
