@@ -352,6 +352,7 @@ function rankingRows(title,players,key,unit=''){
  const format=p=>{
   let v=numeric(p);
   if(key==='start_rate')return statN(v<=1?v*100:v,0)+'%';
+  if(['subentries_per_game','high_rating_pct','low_rating_pct'].includes(key))return statN(v,1)+'%';
   if(key==='plus_minus_on'||isDiverging)return (v>0?'+':'')+statN(v,2);
   return statN(v,2)+unit;
  };
