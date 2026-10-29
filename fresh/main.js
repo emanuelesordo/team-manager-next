@@ -1231,14 +1231,18 @@ function editPrematchPlayerAvailability(root,fixtureId,model){
 // source fingerprint can initiate model generation; opening/reloading does not.
 const aiMemo=new Map();
 const aiPending=new Map();
+const aiOfficialCallupTimes=new Map();
 function aiSportsFingerprint(fixture){
  const completed=realFixtures().filter(f=>f.competition_id===fixture.competition_id&&f.status==='finished')
   .map(f=>[f.id,f.home_score,f.away_score]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
- const events=(predictionEventCache?.events||[]).filter(e=>['official','community_confirmed'].includes(e.validation_status))
-  .map(e=>[e.id,e.fixture_id,e.event_type,e.minute,e.stoppage_minute,e.team_side,e.validation_status]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
- const callups=(state.matchData?.players||[]).map(p=>[p.player_id,p.selection_status,p.unavailability_reason||null])
+ const finishedIds=new Set(completed.map(row=>String(row[0])));
+ const matchToFixture=new Map((state.data?.matches||[]).map(m=>[String(m.id),String(m.fixture_id||'')]));
+ const events=(predictionEventCache?.events||[])
+  .filter(e=>e.validation_status==='official'&&finishedIds.has(String(e.fixture_id||matchToFixture.get(String(e.match_id))||'')))
+  .map(e=>[e.id,e.fixture_id||matchToFixture.get(String(e.match_id)),e.event_type,e.minute,e.stoppage_minute,e.team_side])
   .sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
- const text=JSON.stringify(['sports-v1',fixture.id,completed,events,callups]);
+ const callupPublication=aiOfficialCallupTimes.get(String(fixture.id))||null;
+ const text=JSON.stringify(['sports-v2',fixture.id,completed,events,callupPublication]);
  let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}
  return (h>>>0).toString(16)+'-'+text.length;
 }
@@ -1317,6 +1321,13 @@ async function hydrateMatchPrediction(){
    events=[...merged.values()];
    if(chosen!==state.season)return;
    predictionEventCache={season:chosen,events};
+  }
+  // Fetch only the publication marker. Individual callup/autosave edits do not
+  // invalidate the AI report; an explicitly published import does.
+  const operationalMatch=matches.find(m=>String(m.fixture_id)===String(f.id));
+  if(operationalMatch&&hasSession()){
+   const publications=await get('tm_ai_callup_publications','select=published_at&match_id=eq.'+encodeURIComponent(operationalMatch.id)+'&limit=1').catch(()=>[]);
+   aiOfficialCallupTimes.set(String(f.id),publications[0]?.published_at||null);
   }
   const signature=predictionSignature({fixture:f,fixtures:realFixtures(),history:state.base?.clubHistory||[],venues:state.base?.venues||[],events});
   if(target.dataset.ready===signature)return;
