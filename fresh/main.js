@@ -1284,7 +1284,15 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   const pctAI=x=>Math.round(Math.max(0,Math.min(1,Number(x)||0))*100)+'%';
   const lines=Array.isArray(report.scorelines)?report.scorelines:[];
   const score=lines.length?lines:[{home:report.homeGoals,away:report.awayGoals,probability:null}];
-  const outcome=[['1',fixture.home_team,report.homeWin],['X','Pareggio',report.draw],['2',fixture.away_team,report.awayWin]];
+  const rawOutcomes=[report.homeWin,report.draw,report.awayWin].map(x=>Math.max(0,Number(x)||0));
+  const sumOutcomes=rawOutcomes.reduce((x,y)=>x+y,0)||1;
+  const exact=rawOutcomes.map(x=>x/sumOutcomes*100);
+  const integer=exact.map(Math.floor);
+  for(let n=100-integer.reduce((x,y)=>x+y,0);n>0;n--){
+   const ix=exact.map((x,i)=>({i,fraction:x-integer[i]})).sort((a,b)=>b.fraction-a.fraction)[0].i;
+   integer[ix]++;exact[ix]=integer[ix];
+  }
+  const outcome=[['1',fixture.home_team,integer[0]],['X','Pareggio',integer[1]],['2',fixture.away_team,integer[2]]];
   // Keep the existing five-page overview and let the AI own forecast-only fields.
   const summary=host.querySelector('.prematch-summary');
   if(summary){
@@ -1318,7 +1326,7 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   if(narrative){
    const steps=(report.scenario||[]).slice().sort((a,b)=>Number(a.minute)-Number(b.minute));
    const paragraphs=steps.map(e=>'<p><b>'+E(e.minute)+' min · '+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</p>').join('');
-   narrative.innerHTML='<div class="prematch-section-title"><span class="eyebrow">SCENARIO ATTESO</span><h4>Come può svilupparsi la gara</h4></div>'+(paragraphs||'<p>'+E(data.analysis||'')+'</p>');
+   narrative.innerHTML='<div class="prematch-section-title"><span class="eyebrow">SCENARIO ATTESO</span><h4>Come può svilupparsi la gara</h4></div>'+(paragraphs||'<p>Timeline AI non disponibile: eventi insufficienti per ricostruire il risultato atteso.</p>');
    narrative.hidden=false;
   }
   root?.querySelector('[data-ai-focus]')?.remove();
