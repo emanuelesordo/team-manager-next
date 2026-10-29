@@ -1308,7 +1308,19 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   }
   const foot=host.querySelector('.prematch-footnote');
   if(foot&&!foot.dataset.aiLabeled){foot.insertAdjacentHTML('afterbegin','<b>Pronostico AI</b> · ');foot.dataset.aiLabeled='true'}
-  output.innerHTML='<p>'+E(data.analysis||'')+'</p><small>'+E(report.confidence||'')+'</small>';
+  // The analysis belongs inside the original forecast panel, not a detached prose card.
+  panel.style.cssText='margin-top:10px;padding:10px 0;border-top:1px solid var(--border,rgba(128,128,128,.2))';
+  panel.querySelector('h3')?.remove();
+  output.innerHTML='<p style="margin:0 0 6px"><b>🤖 Analisi della gara e forma recente</b></p><p style="margin:0">'+E(data.analysis||'')+'</p>'+
+   (report.confidence?'<small>'+E(report.confidence)+'</small>':'');
+  const odds=host.querySelector('[data-ai-fair-odds]')||document.createElement('div');
+  odds.dataset.aiFairOdds='';
+  odds.className='prematch-score-alternatives';
+  odds.innerHTML=outcome.map(([key,,value])=>'<span><b>'+E(key)+'</b> '+(value>0?(100/value).toFixed(2):'—')+'</span>').join('');
+  odds.title='Quote teoriche senza margine del bookmaker, derivate dalle probabilità AI';
+  const barsHost=host.querySelector('.prematch-probabilities');
+  if(barsHost&&!odds.isConnected)barsHost.insertAdjacentElement('afterend',odds);
+  if(!odds.querySelector('[data-odds-label]'))odds.insertAdjacentHTML('afterbegin','<span data-odds-label>🤖 Quote eque</span>');
   markPrematchOrigin(host,'ai');
   const root=host.closest('[data-prematch-story]');
   const focus=root?.querySelector('[data-story-focus]');
@@ -1345,6 +1357,16 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   markPrematchOrigin(narrative,'ai');
   markPrematchOrigin(root?.querySelector('[data-prematch-lineup]'),'stats');
   markPrematchOrigin(root?.querySelector('[data-story-simulation]'),'stats');
+  const simulation=root?.querySelector('[data-story-simulation]');
+  if(simulation){
+   const steps=Array.isArray(report.scenario)?report.scenario:[];
+   const valid=steps.length>0&&steps.filter(e=>/gol|goal|rete/i.test(e.kind)).filter(e=>e.side==='home').length===Number(report.homeGoals)&&steps.filter(e=>/gol|goal|rete/i.test(e.kind)).filter(e=>e.side==='away').length===Number(report.awayGoals);
+   let timeline=simulation.querySelector('[data-ai-timeline]');
+   if(!timeline){timeline=document.createElement('section');timeline.dataset.aiTimeline='';simulation.prepend(timeline)}
+   timeline.innerHTML='<div class="prematch-section-title"><span class="eyebrow">🤖 PREVISIONE AI</span><h4>Timeline prevista</h4></div>'+
+    (valid?'<ol>'+steps.map(e=>'<li><b>'+E(e.minute)+"' · "+crestFor(e.side)+' '+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</li>').join('')+'</ol>':
+     '<p>La sequenza AI non copre coerentemente il risultato previsto. La simulazione statistica sottostante resta il riferimento.</p>');
+  }
   root?.querySelector('[data-ai-scenario]')?.remove();
  };
  const fingerprint=aiSportsFingerprint(fixture),id=String(fixture.id);
