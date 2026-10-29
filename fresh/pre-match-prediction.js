@@ -588,7 +588,7 @@ export function predictionSignature({fixture,fixtures=[],history=[],venues=[],ev
  ]);
 }
 
-export function predictMatch({fixture,competition,fixtures=[],history=[],venues=[],matches=[],events=[],team,competitions=[],retrospective=false}={}){
+export function predictMatch({fixture,competition,fixtures=[],history=[],venues=[],matches=[],events=[],team,competitions=[],retrospective=false,lineup=null}={}){
  if(!fixture?.id||!competition?.id)return null;
  if(!retrospective&&['live','finished','cancelled'].includes(fixture.status))return null;
  if(retrospective&&fixture.status==='cancelled')return null;
@@ -701,6 +701,25 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  homeLambda*=Math.exp(context);awayLambda*=Math.exp(-context);
  homeLambda=clamp(homeLambda,.15,4.5);awayLambda=clamp(awayLambda,.15,4.5);
 
+ // Adjust the managed team's expected goals using the selected XI, not all nine proposals.
+ if(lineup?.players?.length&&team?.id){
+  const clubSide=homeClub==='team:'+team.id?'home':awayClub==='team:'+team.id?'away':null;
+  if(clubSide){
+   const active=lineup.players;
+   const ratings=active.map(p=>Number(p.expectedRating)).filter(v=>Number.isFinite(v)&&v>=1&&v<=10);
+   const reliability=clamp(ratings.length/11)*clamp(Number(lineup.confidence??.5));
+   const average=ratings.length?ratings.reduce((x,y)=>x+y,0)/ratings.length:6;
+   const fitness=active.reduce((sum,p)=>sum+clamp(Number(p.fitness??100)/100),0)/active.length;
+   const coverage=clamp(active.length/11);
+   const fit=clamp(Number(lineup.roleCoverage??.75));
+   const boost=clamp((average-6)*.055*reliability,-.11,.11);
+   const penalty=(1-coverage)*.35+(1-fitness)*.18+(1-fit)*.09;
+   const modifier=clamp(Math.exp(boost-penalty),.68,1.13);
+   if(clubSide==='home'){homeLambda*=modifier;awayLambda/=Math.sqrt(modifier)}
+   else{awayLambda*=modifier;homeLambda/=Math.sqrt(modifier)}
+   homeLambda=clamp(homeLambda,.15,4.5);awayLambda=clamp(awayLambda,.15,4.5);
+  }
+ }
  // Forecast is now the distribution of simulated goal-event timelines, not
  // independent full-time Poisson scores subsequently decorated with events.
  const timelineForecast=simulateScoreTimeline({fixtureId:fixture.id,homeLambda,awayLambda,
