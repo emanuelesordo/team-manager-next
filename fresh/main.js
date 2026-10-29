@@ -1258,6 +1258,26 @@ function markPrematchOrigin(section,source){
  tag.setAttribute('aria-label',tag.title);
  tag.style.cssText='display:inline-flex;vertical-align:middle;margin-left:8px;font-size:.78em;line-height:1;border:1px solid currentColor;border-radius:7px;padding:4px 6px;opacity:.88;background:var(--glass-bg,rgba(128,128,128,.09))';
 }
+function verifiedRecentForm(fixture){
+ const series=realFixtures().filter(x=>x.competition_id===fixture.competition_id&&x.status==='finished'&&
+  Number.isInteger(x.home_score)&&Number.isInteger(x.away_score)&&
+  (!fixture.kickoff_at||Date.parse(x.kickoff_at)<Date.parse(fixture.kickoff_at)));
+ const one=(id,name)=>{
+  if(!id)return name+': dati non disponibili';
+  const rows=series.filter(x=>(x.home_team_id||x.home_opponent_id)===id||(x.away_team_id||x.away_opponent_id)===id)
+   .sort((a,b)=>Date.parse(a.kickoff_at)-Date.parse(b.kickoff_at)).slice(-5);
+  let w=0,d=0,l=0,gf=0,ga=0;
+  for(const x of rows){
+   const home=(x.home_team_id||x.home_opponent_id)===id;
+   const goals=home?x.home_score:x.away_score,conceded=home?x.away_score:x.home_score;
+   gf+=goals;ga+=conceded;
+   if(goals>conceded)w++;else if(goals===conceded)d++;else l++;
+  }
+  return name+': '+w+'V '+d+'N '+l+'P nelle ultime '+rows.length+' gare · '+gf+' GF / '+ga+' GS';
+ };
+ return [one(fixture.home_team_id||fixture.home_opponent_id,fixture.home_team),
+  one(fixture.away_team_id||fixture.away_opponent_id,fixture.away_team)].join(' · ');
+}
 function mountPrematchAI(fixture,prediction,proposal=null){
  const host=document.querySelector('[data-prematch-prediction="'+CSS.escape(String(fixture.id))+'"]');
  if(!host||!hasSession())return;
@@ -1312,7 +1332,7 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   panel.style.cssText='margin-top:10px;padding:10px 0;border-top:1px solid var(--border,rgba(128,128,128,.2))';
   panel.querySelector('h3')?.remove();
   output.innerHTML='<p style="margin:0 0 6px"><b>🤖 Analisi generale</b></p><p style="margin:0">'+E(data.analysis||'')+'</p>'+
-   (report.recentForm?'<p style="margin:8px 0 0"><b>📊 Forma recente</b> · '+E(report.recentForm)+'</p>':'')+
+   '<p style="margin:8px 0 0"><b>📊 Forma recente verificata</b> · '+E(verifiedRecentForm(fixture))+'</p>'+
    (report.confidence?'<small>'+E(report.confidence)+'</small>':'');
   const odds=host.querySelector('[data-ai-fair-odds]')||document.createElement('div');
   odds.dataset.aiFairOdds='';
