@@ -1292,31 +1292,23 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   output.innerHTML='<p>'+E(data.analysis||'')+'</p><small>'+E(report.confidence||'')+'</small>';
   const root=host.closest('[data-prematch-story]');
   const focus=root?.querySelector('[data-story-focus]');
-  if(focus){
-   let section=focus.querySelector('[data-ai-focus]');
-   if(!section){section=document.createElement('section');section.dataset.aiFocus='';focus.prepend(section)}
-   section.innerHTML='<div class="prematch-section-title"><span class="eyebrow">LETTURA AI</span><h4>Punti di forza e criticità</h4></div>'+
-    '<div class="prematch-attention-grid">'+
-    [...(report.advantages||[]).map(x=>({label:'Punto di forza',text:x,tone:'strength'})),...(report.risks||[]).map(x=>({label:'Criticità',text:x,tone:'risk'}))].map(x=>
-     '<article class="prematch-attention-item '+E(x.tone)+'"><strong>'+E(x.label)+'</strong><small>'+E(x.text)+'</small></article>').join('')+'</div>';
-   const old=focus.querySelector('.prematch-attention');if(old)old.hidden=true;
-   const narrative=focus.querySelector('.prematch-narrative');if(narrative)narrative.hidden=true;
+  const attention=focus?.querySelector('.prematch-attention');
+  if(attention){
+   const items=[...(report.advantages||[]).map(text=>({text,kind:'Punto di forza'})),...(report.risks||[]).map(text=>({text,kind:'Criticità'}))];
+   if(items.length)attention.innerHTML='<div class="prematch-section-title"><span class="eyebrow">PUNTI DI ATTENZIONE</span><h4>Pattern da tenere d’occhio</h4></div>'+
+    '<div class="prematch-attention-grid">'+items.map(item=>'<article class="prematch-attention-item watch"><div><strong>'+E(item.kind)+'</strong></div><small>'+E(item.text)+'</small></article>').join('')+'</div>';
+   attention.hidden=false;
   }
-  const lineup=root?.querySelector('[data-prematch-lineup]');
-  if(lineup&&report.lineupAssessment){
-   let note=lineup.querySelector('[data-ai-lineup]');
-   if(!note){note=document.createElement('section');note.dataset.aiLineup='';lineup.prepend(note)}
-   note.innerHTML='<div class="prematch-section-title"><span class="eyebrow">VALUTAZIONE AI</span><h4>Undici e alternative</h4></div><p>'+E(report.lineupAssessment)+'</p>';
-  }
-  const simulation=root?.querySelector('[data-story-simulation]');
-  if(simulation){
-   let aiTimeline=simulation.querySelector('[data-ai-scenario]');
-   if(!aiTimeline){aiTimeline=document.createElement('section');aiTimeline.dataset.aiScenario='';simulation.prepend(aiTimeline)}
+  const narrative=focus?.querySelector('.prematch-narrative');
+  if(narrative){
    const steps=(report.scenario||[]).slice().sort((a,b)=>Number(a.minute)-Number(b.minute));
-   aiTimeline.innerHTML='<div class="prematch-section-title"><span class="eyebrow">SCENARIO AI</span><h4>Come può svilupparsi la partita</h4></div>'+
-    (steps.length?'<ol>'+steps.map(e=>'<li><b>'+E(e.minute)+"' · "+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</li>').join('')+'</ol>':'<p>Nessuna sequenza prevista.</p>')+
-    '<small>La simulazione dettagliata sottostante resta il modello deterministico di riferimento.</small>';
+   const paragraphs=steps.map(e=>'<p><b>'+E(e.minute)+' min · '+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</p>').join('');
+   narrative.innerHTML='<div class="prematch-section-title"><span class="eyebrow">SCENARIO ATTESO</span><h4>Come può svilupparsi la gara</h4></div>'+(paragraphs||'<p>'+E(data.analysis||'')+'</p>');
+   narrative.hidden=false;
   }
+  root?.querySelector('[data-ai-focus]')?.remove();
+  root?.querySelector('[data-ai-lineup]')?.remove();
+  root?.querySelector('[data-ai-scenario]')?.remove();
  };
  const fingerprint=aiSportsFingerprint(fixture),id=String(fixture.id);
  const memo=aiMemo.get(id);
