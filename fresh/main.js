@@ -1243,7 +1243,7 @@ function aiSportsFingerprint(fixture){
   .map(e=>[e.id,e.fixture_id||matchToFixture.get(String(e.match_id)),e.event_type,e.minute,e.stoppage_minute,e.team_side])
   .sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
  const callupPublication=aiOfficialCallupTimes.get(String(fixture.id))||null;
- const text=JSON.stringify(['sports-v4-full-evidence',fixture.id,completed,events,callupPublication]);
+ const text=JSON.stringify(['sports-v5-ai-model-rules',fixture.id,completed,events,callupPublication]);
  let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}
  return (h>>>0).toString(16)+'-'+text.length;
 }
