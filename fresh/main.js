@@ -1243,7 +1243,7 @@ function aiSportsFingerprint(fixture){
   .map(e=>[e.id,e.fixture_id||matchToFixture.get(String(e.match_id)),e.event_type,e.minute,e.stoppage_minute,e.team_side])
   .sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
  const callupPublication=aiOfficialCallupTimes.get(String(fixture.id))||null;
- const text=JSON.stringify(['sports-v5-ai-model-rules',fixture.id,completed,events,callupPublication]);
+ const text=JSON.stringify(['sports-v6-ai-overview',fixture.id,completed,events,callupPublication]);
  let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}
  return (h>>>0).toString(16)+'-'+text.length;
 }
@@ -1311,7 +1311,8 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   // The analysis belongs inside the original forecast panel, not a detached prose card.
   panel.style.cssText='margin-top:10px;padding:10px 0;border-top:1px solid var(--border,rgba(128,128,128,.2))';
   panel.querySelector('h3')?.remove();
-  output.innerHTML='<p style="margin:0 0 6px"><b>🤖 Analisi della gara e forma recente</b></p><p style="margin:0">'+E(data.analysis||'')+'</p>'+
+  output.innerHTML='<p style="margin:0 0 6px"><b>🤖 Analisi generale</b></p><p style="margin:0">'+E(data.analysis||'')+'</p>'+
+   (report.recentForm?'<p style="margin:8px 0 0"><b>📊 Forma recente</b> · '+E(report.recentForm)+'</p>':'')+
    (report.confidence?'<small>'+E(report.confidence)+'</small>':'');
   const odds=host.querySelector('[data-ai-fair-odds]')||document.createElement('div');
   odds.dataset.aiFairOdds='';
@@ -1334,7 +1335,15 @@ function mountPrematchAI(fixture,prediction,proposal=null){
    const items=[...(report.advantages||[]).map(text=>({text,kind:'Punto di forza'})),...(report.risks||[]).map(text=>({text,kind:'Criticità'}))];
    let aiFocus=attention.querySelector('[data-ai-attention-items]');
    if(!aiFocus){aiFocus=document.createElement('div');aiFocus.dataset.aiAttentionItems='';aiFocus.className='prematch-attention-grid';attention.append(aiFocus)}
-   aiFocus.innerHTML=items.map(item=>{
+   const cross=Array.isArray(report.matchups)?report.matchups:[];
+   if(cross.length){
+    aiFocus.innerHTML=cross.map(m=>'<article class="prematch-attention-item watch">'+
+     '<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px">'+
+     '<span>'+crestFor('home')+' <b>'+E(fixture.home_team)+'</b><small>'+E(m.homePoint)+'</small></span>'+
+     '<b style="opacity:.65">VS</b>'+
+     '<span>'+crestFor('away')+' <b>'+E(fixture.away_team)+'</b><small>'+E(m.awayPoint)+'</small></span></div>'+
+     '<strong>🤖 '+E(m.impact)+'</strong><small>'+E(m.reason)+'</small></article>').join('');
+   }else aiFocus.innerHTML=items.map(item=>{
     const lower=String(item.text).toLowerCase();
     const side=lower.includes(String(fixture.away_team||'').toLowerCase())&&!lower.includes(String(fixture.home_team||'').toLowerCase())?'away':'home';
     return '<article class="prematch-attention-item watch"><div>'+crestFor(side)+'<strong>🤖 '+E(item.kind)+'</strong></div><small>'+E(item.text)+'</small></article>';
