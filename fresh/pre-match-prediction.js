@@ -152,6 +152,37 @@ function strengthRows(teams,completed,allCompetitionRows,config,history){
    attackRate:clamp(observedAttack*Math.exp(historicalRateBias),.25,3.8),
    defenseRate:clamp(observedDefense*Math.exp(-historicalRateBias),.25,3.8)});
  }
+ // Avoid using the direct encounter when estimating opponent difficulty.
+ const opponentRecord=(club,excludedFixtureId)=>{
+  const other=completed.filter(f=>f.id!==excludedFixtureId&&(homeId(f)===club||awayId(f)===club));
+  if(!other.length)return {ppg:.5,gf:leagueGoalRate,ga:leagueGoalRate};
+  let pts=0,gf=0,ga=0;
+  for(const f of other){const score=scoreFor(f,club);pts+=points(score[0],score[1],config)/maxWinPoints(config);gf+=score[0];ga+=score[1]}
+  const shrink=other.length/(other.length+4);
+  return {ppg:.5*(1-shrink)+pts/other.length*shrink,
+   gf:leagueGoalRate*(1-shrink)+gf/other.length*shrink,
+   ga:leagueGoalRate*(1-shrink)+ga/other.length*shrink};
+ };
+ for(const club of teams){
+  const entry=raw.get(club),games=completed.filter(f=>homeId(f)===club||awayId(f)===club);
+  if(!entry||!games.length)continue;
+  let difficulty=0,attack=0,defense=0;
+  for(const f of games){
+   const opponent=homeId(f)===club?awayId(f):homeId(f);
+   const opp=opponentRecord(opponent,f.id),score=scoreFor(f,club);
+   difficulty+=opp.ppg;
+   attack+=score[0]*clamp(leagueGoalRate/Math.max(.4,opp.ga),.75,1.25);
+   defense+=score[1]*clamp(leagueGoalRate/Math.max(.4,opp.gf),.75,1.25);
+  }
+  const n=games.length,shrink=n/(n+5),avgDifficulty=difficulty/n;
+  const scheduleDelta=clamp((avgDifficulty-.5)*shrink,-.12,.12);
+  const attackDelta=clamp((attack-entry.gf)/n/Math.max(.5,leagueGoalRate)*shrink,-.15,.15);
+  const defenseDelta=clamp((defense-entry.ga)/n/Math.max(.5,leagueGoalRate)*shrink,-.15,.15);
+  raw.set(club,{...entry,strength:clamp(entry.strength+.30*scheduleDelta),
+   opponentDifficulty:avgDifficulty,scheduleAdjustment:scheduleDelta,
+   adjustedAttackRate:clamp(entry.attackRate*Math.exp(attackDelta),.25,4.3),
+   adjustedDefenseRate:clamp(entry.defenseRate*Math.exp(defenseDelta),.25,4.3)});
+ }
  return {rows:raw,leagueGoalRate};
 }
 function rankBucket(diff){
@@ -642,8 +673,8 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
 
  const homeGoals=completed.reduce((s,f)=>s+Number(f.home_score||0),0),awayGoals=completed.reduce((s,f)=>s+Number(f.away_score||0),0);
  const homeFactor=clamp(Math.sqrt((homeGoals+4*leagueGoalRate)/(awayGoals+4*leagueGoalRate)),.88,1.15);
- let homeLambda=Math.sqrt(Math.max(.05,home.attackRate)*Math.max(.05,away.defenseRate))*homeFactor;
- let awayLambda=Math.sqrt(Math.max(.05,away.attackRate)*Math.max(.05,home.defenseRate))/homeFactor;
+ let homeLambda=Math.sqrt(Math.max(.05,home.adjustedAttackRate??home.attackRate)*Math.max(.05,away.adjustedDefenseRate??away.defenseRate))*homeFactor;
+ let awayLambda=Math.sqrt(Math.max(.05,away.adjustedAttackRate??away.attackRate)*Math.max(.05,home.adjustedDefenseRate??home.defenseRate))/homeFactor;
 
  const strengthDiff=home.strength-away.strength;
  homeLambda*=Math.exp(strengthDiff*.70);awayLambda*=Math.exp(-strengthDiff*.70);
@@ -682,6 +713,8 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
   homeComparison,awayComparison,homeSituational,awaySituational,homeIntelligence,awayIntelligence,venue:targetVenue,attention
  });
  const factors=[
+  {key:'schedule',label:'Difficoltà avversari affrontati',home:home.opponentDifficulty??.5,away:away.opponentDifficulty??.5,
+   detail:'Forza delle avversarie escluso lo scontro diretto. Corregge gol segnati e subiti e forza stimata, attenuando i campioni ridotti.'},
   {key:'adjusted-form',label:'Forma corretta per rango',home:homeIntelligence.form.opponentAdjusted??.5,away:awayIntelligence.form.opponentAdjusted??.5,
    detail:'Correzione della forma recente sulla forza dell’avversaria stimata prima della gara. Con meno di due precedenti affidabili il correttivo resta neutro.'},
   {key:'profile',label:'Team Profile',home:homeProfile.overall,away:awayProfile.overall,
