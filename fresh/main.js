@@ -1243,7 +1243,7 @@ function aiSportsFingerprint(fixture){
   .map(e=>[e.id,e.fixture_id||matchToFixture.get(String(e.match_id)),e.event_type,e.minute,e.stoppage_minute,e.team_side])
   .sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
  const callupPublication=aiOfficialCallupTimes.get(String(fixture.id))||null;
- const text=JSON.stringify(['sports-v2',fixture.id,completed,events,callupPublication]);
+ const text=JSON.stringify(['sports-v3-ai',fixture.id,completed,events,callupPublication]);
  let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}
  return (h>>>0).toString(16)+'-'+text.length;
 }
@@ -1267,11 +1267,38 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   host.append(panel);
  }
  const output=panel.querySelector('[data-ai-result]');
+ const renderAI=data=>{
+  const report=data?.forecast;
+  if(!report){output.textContent=data?.analysis||'Analisi non disponibile';return}
+  const num=x=>Math.round(Number(x||0)*100)+'%';
+  const esc=E;
+  const timeline=(report.scenario||[]).map(e=>'<li><b>'+esc(e.minute)+"' · "+esc(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+esc(e.reason)+'</li>').join('');
+  output.innerHTML='<p>'+esc(data.analysis||'')+'</p>'+
+   '<div class="prematch-expected"><span>PRONOSTICO AI</span><strong>'+esc(report.homeGoals)+' – '+esc(report.awayGoals)+'</strong></div>'+
+   '<div class="prematch-score-alternatives">'+(report.scorelines||[]).map(x=>'<span><b>'+esc(x.home)+'–'+esc(x.away)+'</b> '+num(x.probability)+'</span>').join('')+'</div>'+
+   '<p><b>1:</b> '+num(report.homeWin)+' · <b>X:</b> '+num(report.draw)+' · <b>2:</b> '+num(report.awayWin)+'</p>'+
+   (report.lineupAssessment?'<p><b>Formazione:</b> '+esc(report.lineupAssessment)+'</p>':'')+
+   (timeline?'<h4>Scenario atteso</h4><ol>'+timeline+'</ol>':'')+
+   (report.risks?.length?'<h4>Criticità</h4><ul>'+report.risks.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'')+
+   (report.advantages?.length?'<h4>Punti di forza</h4><ul>'+report.advantages.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'');
+  // AI predictions override estimated outputs, while raw observed statistics
+  // and the deterministic model remain accessible for comparison.
+  if(host.dataset.aiForecastApplied!==String(data.fingerprint||'')){
+   const base=host.querySelector('.prematch-summary');
+   if(base){base.hidden=true}
+   const bars=host.querySelector('.prematch-probabilities');
+   if(bars)bars.hidden=true;
+   const scenario=host.querySelector('.prematch-narrative');
+   if(scenario)scenario.hidden=true;
+   host.dataset.aiForecastApplied=String(data.fingerprint||'active');
+  }
+ };
+
  const fingerprint=aiSportsFingerprint(fixture),id=String(fixture.id);
  const memo=aiMemo.get(id);
- if(memo?.fingerprint===fingerprint){output.textContent=memo.analysis||'Nessuna analisi disponibile';return}
+ if(memo?.fingerprint===fingerprint){renderAI(memo);return}
  if(aiPending.has(id)){aiPending.get(id).then(()=>{if(panel.isConnected)mountPrematchAI(fixture,prediction,proposal)});return}
- const failedKey='tm-ai-error-new-model-'+id;
+ const failedKey='tm-ai-error-structured-v1-'+id;
  let failure=null;try{failure=JSON.parse(localStorage.getItem(failedKey)||'null')}catch{}
  if(failure?.fingerprint===fingerprint&&Date.now()<failure.until){
   output.textContent=failure.message||'Analisi temporaneamente non disponibile';
@@ -1280,13 +1307,13 @@ function mountPrematchAI(fixture,prediction,proposal=null){
  const job=(async()=>{
   try{
    const saved=await prematchAIReport(id,'read');
-   if(saved?.fingerprint===fingerprint&&saved.analysis){
-    aiMemo.set(id,{fingerprint,analysis:saved.analysis});return;
+   if(saved?.fingerprint===fingerprint&&saved.forecast){
+    aiMemo.set(id,{...saved,fingerprint});return;
    }
    // Only an actual change in finished results, confirmed timeline events or
    // persisted match callups reaches this point. Repeated page views use cache.
    const generated=await prematchAIReport(id,'generate',context,fingerprint);
-   aiMemo.set(id,{fingerprint,analysis:generated?.analysis||null});
+   aiMemo.set(id,{...generated,fingerprint,analysis:generated?.analysis||null});
    localStorage.removeItem(failedKey);
   }catch(error){
    const message='Analisi AI non aggiornata: '+(error.message||error);
@@ -1296,7 +1323,7 @@ function mountPrematchAI(fixture,prediction,proposal=null){
  })();
  aiPending.set(id,job);
  job.finally(()=>{if(aiPending.get(id)===job)aiPending.delete(id);
-  if(panel.isConnected){const current=aiMemo.get(id);output.textContent=current?.analysis||'Nessuna analisi disponibile';}
+  if(panel.isConnected){const current=aiMemo.get(id);renderAI(current);}
  });
 }
 async function hydrateMatchPrediction(){
