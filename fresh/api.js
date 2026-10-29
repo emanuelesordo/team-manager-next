@@ -289,3 +289,9 @@ export async function askPrematchAI(question,context){
  if(!hasSession())throw Error('Accedi per usare l’analista AI');
  return authorized('/functions/v1/tm-ai-analyst',{method:'POST',body:{question,context}});
 }
+
+/** Read cached report without an AI request, or regenerate after an official sports mutation. */
+export async function prematchAIReport(fixtureId,mode='read',context=null,fingerprint=''){
+ if(!hasSession())return null;
+ return authorized('/functions/v1/tm-ai-analyst',{method:'POST',body:{fixtureId,mode,context,fingerprint}});
+}
