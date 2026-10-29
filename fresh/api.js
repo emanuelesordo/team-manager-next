@@ -295,3 +295,15 @@ export async function prematchAIReport(fixtureId,mode='read',context=null,finger
  if(!hasSession())return null;
  return authorized('/functions/v1/tm-ai-analyst',{method:'POST',body:{fixtureId,mode,context,fingerprint}});
 }
+
+/** Mark a completed bulk callup import as the official list for AI cache revisions. */
+export async function publishOfficialCallups(matchId){
+ if(!hasSession())throw Error('Accesso richiesto');
+ const id=userId();if(!id)throw Error('Sessione non valida');
+ const rows=await authorized('/rest/v1/tm_ai_callup_publications?on_conflict=match_id',{
+  method:'POST',body:{match_id:matchId,published_by:id,published_at:new Date().toISOString()},
+  extraHeaders:{Prefer:'resolution=merge-duplicates,return=representation'}
+ });
+ if(!Array.isArray(rows)||rows.length!==1)throw Error('Pubblicazione convocazioni non confermata');
+ return rows[0];
+}
