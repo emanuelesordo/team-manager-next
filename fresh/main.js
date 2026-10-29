@@ -1303,7 +1303,7 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   }
   const bars=host.querySelector('.prematch-probabilities');
   if(bars){
-   bars.innerHTML=outcome.map(([key,label,value])=>'<div class="prematch-probability"><div><b>'+E(key)+'</b><span>'+E(label)+'</span><strong>'+pctAI(value)+'</strong></div><i><span style="width:'+pctAI(value)+'"></span></i></div>').join('');
+   bars.innerHTML=outcome.map(([key,label,value])=>'<div class="prematch-probability"><div><b>'+E(key)+'</b><span>'+E(label)+'</span><strong>'+(E(value)+'%')+'</strong></div><i><span style="width:'+(E(value)+'%')+'"></span></i></div>').join('');
    bars.hidden=false;
   }
   const foot=host.querySelector('.prematch-footnote');
