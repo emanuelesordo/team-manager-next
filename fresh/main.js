@@ -1466,7 +1466,10 @@ async function hydrateMatchPrediction(){
      seasonRatings:freshRatings.length?freshRatings:(state.data.seasonRatings||[])
     };
     prematchSharedAvailability[f.id]=await fetchPrematchAvailability(f.id);
-    const model=buildHypotheticalLineup({
+    const whispers=readPrematchAvailability(f.id);
+   // Unofficial staff edits are stored in Supabase and reapplied on every render.
+   // They are not official callups and must not trigger a new AI forecast.
+   const model=buildHypotheticalLineup({
      fixture:f,targetMatch:operational,data:lineupData,matchData:state.matchData,team:team(),competition:comp,
      competitions:state.data?.competitions||[],prediction:result,kit,events,
      availabilityOverrides:readPrematchAvailability(f.id)
@@ -1512,7 +1515,12 @@ async function hydrateMatchPrediction(){
      }
      return adjusted;
     };
-    lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
+    lineupTarget.innerHTML='<div class="prematch-section-title"><span class="eyebrow">📊 CASELLE · XI IPOTETICO</span><h4>Formazione prevista, voti e panchina</h4></div>'+
+     '<p class="prematch-footnote">Le modifiche manuali sono soffiate ufficiose: restano salvate e prevalgono sulle disponibilità stimate finché non vengono ripristinate.</p>'+
+     renderHypotheticalLineup(model,E);
+    const savedWhispers=Object.keys(whispers||{}).filter(id=>whispers[id]&&
+      (Number(whispers[id].fitness??100)!==100||whispers[id].arrival!=='kickoff'||whispers[id].maxMinutes));
+    if(savedWhispers.length)lineupTarget.insertAdjacentHTML('afterbegin','<small class="prematch-footnote">📌 '+savedWhispers.length+' soffiate ufficiose salvate</small>');
     editPrematchPlayerAvailability(lineupTarget,f.id,model);
     const destination=document.querySelector('[data-story-simulation]');
     const eligibleIds=new Set(model?.availablePlayerIds||[]);
@@ -1538,7 +1546,7 @@ async function hydrateMatchPrediction(){
     updateSimulation(model.proposals?.[0]||model);
    }
   }
-  if(lineupTarget&&!isStaff(staffContext())){
+  if(!lineupTarget||(lineupTarget&&!isStaff(staffContext()))){
    const destination=document.querySelector('[data-story-simulation]');
    if(destination)destination.innerHTML=renderSimulatedTimeline(simulatePrematchTimeline({fixture:f,prediction:result,competition:comp}),E);
   }
