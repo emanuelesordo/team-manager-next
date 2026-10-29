@@ -1307,8 +1307,11 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   const attention=focus?.querySelector('.prematch-attention');
   if(attention){
    const items=[...(report.advantages||[]).map(text=>({text,kind:'Punto di forza'})),...(report.risks||[]).map(text=>({text,kind:'Criticità'}))];
-   if(items.length)attention.innerHTML='<div class="prematch-section-title"><span class="eyebrow">PUNTI DI ATTENZIONE</span><h4>Pattern da tenere d’occhio</h4></div>'+
-    '<div class="prematch-attention-grid">'+items.map(item=>'<article class="prematch-attention-item watch"><div><strong>'+E(item.kind)+'</strong></div><small>'+E(item.text)+'</small></article>').join('')+'</div>';
+   let aiFocus=attention.querySelector('[data-ai-attention-items]');
+   if(!aiFocus){aiFocus=document.createElement('div');aiFocus.dataset.aiAttentionItems='';aiFocus.className='prematch-attention-grid';attention.append(aiFocus)}
+   aiFocus.innerHTML=items.map(item=>'<article class="prematch-attention-item watch"><div><strong>🤖 '+E(item.kind)+'</strong></div><small>'+E(item.text)+'</small></article>').join('');
+   const observed=attention.querySelector('.prematch-attention-grid:not([data-ai-attention-items])');
+   if(observed&&!observed.dataset.originMarked){observed.dataset.originMarked='true';observed.querySelectorAll('.prematch-attention-item strong').forEach(x=>x.insertAdjacentHTML('afterbegin','📊 '))}
    attention.hidden=false;
   }
   const narrative=focus?.querySelector('.prematch-narrative');
