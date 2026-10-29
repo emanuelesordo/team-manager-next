@@ -1313,6 +1313,21 @@ async function hydrateMatchPrediction(){
       proposal.xiExpectedRating=rated.length?rated.reduce((sum,p)=>sum+Number(p.expectedRating),0)/rated.length:null;
      }
     }
+    // Recalculate forecast from the best available XI after the lineup is built.
+    const predictionForProposal=proposal=>predictMatch({
+     fixture:f,competition:comp,fixtures:realFixtures(),history:state.base?.clubHistory||[],
+     venues:state.base?.venues||[],matches,events,team:team(),competitions:state.data?.competitions||[],
+     lineup:proposal
+    })||result;
+    const showLineupPrediction=proposal=>{
+     const adjusted=predictionForProposal(proposal);
+     if(current){
+      current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">XI IPOTETICO · DATI</span></div>'+
+       renderPreMatchPrediction(adjusted,E);
+      arrangePrematchStory(current.closest('[data-prematch-story]'));
+     }
+     return adjusted;
+    };
     lineupTarget.innerHTML=renderHypotheticalLineup(model,E);
     editPrematchPlayerAvailability(lineupTarget,f.id,model);
     const destination=document.querySelector('[data-story-simulation]');
@@ -1320,7 +1335,8 @@ async function hydrateMatchPrediction(){
     const eligibleBench=(lineupData.roster||[]).filter(r=>eligibleIds.has(r.player_id));
     const updateSimulation=(proposal)=>{
      if(!destination||!proposal||proposal.duplicate){if(destination)destination.textContent='Nessuna formazione distinta disponibile da simulare.';return}
-     const scenario=simulatePrematchTimeline({fixture:f,prediction:result,
+     const adjustedPrediction=showLineupPrediction(proposal);
+     const scenario=simulatePrematchTimeline({fixture:f,prediction:adjustedPrediction,
       lineup:{...proposal,teamSide:f.home_team_id===team()?.id?'home':'away',teamId:team()?.id},
       roster:eligibleBench,players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp,
       fixtures:realFixtures(),matches,historicalEvents:events,roleData:lineupData});
