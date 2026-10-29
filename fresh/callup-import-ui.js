@@ -1,5 +1,5 @@
 import {parseCallupMessage} from './callup-message.js';
-import {rpc,get} from './api.js';
+import {rpc,get,publishOfficialCallups} from './api.js';
 const reasons=[['illness','Malattia'],['injury','Infortunio'],['suspension','Squalifica'],['personal','Assenza giocatore'],['technical_choice','Scelta tecnica']];
 const allowed=ctx=>['admin','manager','coach','player'].includes(ctx.state.identity?.role?.role)&&ctx.state.identity?.profile?.is_active!==false;
 export function installCallupMessageImport(getContext){
@@ -48,10 +48,14 @@ export function installCallupMessageImport(getContext){
    await rpc('tm_app_save_callups',{p_match_id:matchId,p_rows:rows});
    const saved=await get('app_match_players','select=player_id,selection_status,unavailability_reason&match_id=eq.'+encodeURIComponent(matchId)+'&limit=200');
    if(rows.some(r=>!saved.some(s=>s.player_id===r.player_id&&s.selection_status===r.selection_status&&(s.unavailability_reason||null)===(r.unavailability_reason||null))))throw Error('Verifica dei dati salvati non riuscita');
+   let aiPublished=true;
+   try{await publishOfficialCallups(matchId)}catch(error){
+    aiPublished=false;console.warn('Convocazioni salvate, ma pubblicazione AI non registrata:',error);
+   }
    await ctx.reloadAll();
    ctx.state.matchData=await ctx.loadMatchInfo(matchId);
    ctx.render();
-   ctx.toast('Convocati importati: '+included.size+' · esclusi: '+selected.length);
+   ctx.toast('Convocati importati: '+included.size+' · esclusi: '+selected.length+(aiPublished?'':' · Aggiornamento AI non registrato'));
   }catch(error){button.disabled=false;ctx.toast('Importazione non salvata: '+error.message)}
  });
 }
