@@ -106,6 +106,7 @@ window.addEventListener('tm-calculated-source-changed',()=>{
  },350);
 });
 let predictionEventCache=null,predictionBusy=false,pastPredictionBusy=false,projectionBusy=false;
+window.addEventListener('tm-ai-official-source-changed',()=>{predictionEventCache=null});
 async function pollLive(){
  if(pollBusy||document.hidden||state.loading||!state.season||state.overlay||state.page==='admin'||state.page==='match'&&state.matchTab==='staff')return;
  pollBusy=true;const currentSeason=state.season;
