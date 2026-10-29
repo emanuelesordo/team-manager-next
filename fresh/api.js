@@ -283,3 +283,9 @@ export async function markNotificationRead(id,user){
  if(!Array.isArray(rows)||rows.length!==1)throw Error('Notifica non aggiornata');
  return rows[0];
 }
+
+/** Authenticated AI analyst. Provider key stays in Supabase Edge Function secrets. */
+export async function askPrematchAI(question,context){
+ if(!hasSession())throw Error('Accedi per usare l’analista AI');
+ return authorized('/functions/v1/tm-ai-analyst',{method:'POST',body:{question,context}});
+}
