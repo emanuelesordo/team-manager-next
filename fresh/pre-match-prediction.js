@@ -714,9 +714,19 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
    const fit=clamp(Number(lineup.roleCoverage??.75));
    const boost=clamp((average-6)*.055*reliability,-.11,.11);
    const penalty=(1-coverage)*.35+(1-fitness)*.18+(1-fit)*.09;
-   const modifier=clamp(Math.exp(boost-penalty),.68,1.13);
-   if(clubSide==='home'){homeLambda*=modifier;awayLambda/=Math.sqrt(modifier)}
-   else{awayLambda*=modifier;homeLambda/=Math.sqrt(modifier)}
+   // Specific positional shortages matter more than the generic XI average.
+   // A forced goalkeeper is primarily a defensive risk, not an attacking downgrade.
+   const goalkeeper=active.find(p=>p.slot===1||p.targetRole==='P');
+   const goalkeeperFit=goalkeeper?clamp(1-Number(goalkeeper.positionAdjustment?.ratingPenalty||0)/1.05):0;
+   const forcedKeeper=goalkeeper?clamp((1-goalkeeperFit)*.32,0,.32):.40;
+   const linePenalty=role=>active.filter(p=>p.targetRole===role).reduce((sum,p)=>sum+
+    clamp(Number(p.positionAdjustment?.ratingPenalty||0)/1.05)*.07,0);
+   const defensiveShortage=clamp(linePenalty('D'),0,.24);
+   const midfieldShortage=clamp(linePenalty('C'),0,.18);
+   const modifier=clamp(Math.exp(boost-penalty-midfieldShortage*.5),.62,1.15);
+   const defensiveModifier=clamp(Math.exp(forcedKeeper+defensiveShortage+midfieldShortage*.25),1,1.65);
+   if(clubSide==='home'){homeLambda*=modifier;awayLambda=awayLambda/Math.sqrt(modifier)*defensiveModifier}
+   else{awayLambda*=modifier;homeLambda=homeLambda/Math.sqrt(modifier)*defensiveModifier}
    homeLambda=clamp(homeLambda,.15,4.5);awayLambda=clamp(awayLambda,.15,4.5);
   }
  }
