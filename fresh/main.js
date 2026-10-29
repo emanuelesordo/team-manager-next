@@ -1247,6 +1247,17 @@ function aiSportsFingerprint(fixture){
  let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}
  return (h>>>0).toString(16)+'-'+text.length;
 }
+function markPrematchOrigin(section,source){
+ if(!section)return;
+ const heading=section.querySelector('.prematch-section-title h4, .prematch-prediction-head h3, h3, h4');
+ if(!heading)return;
+ let tag=heading.querySelector('[data-origin-tag]');
+ if(!tag){tag=document.createElement('span');tag.dataset.originTag='';heading.append(tag)}
+ tag.textContent=source==='ai'?'🤖':'📊';
+ tag.title=source==='ai'?'Previsione elaborata da Gemini':'Dato calcolato dalle statistiche';
+ tag.setAttribute('aria-label',tag.title);
+ tag.style.cssText='display:inline-flex;vertical-align:middle;margin-left:8px;font-size:.78em;line-height:1;border:1px solid currentColor;border-radius:7px;padding:4px 6px;opacity:.88;background:var(--glass-bg,rgba(128,128,128,.09))';
+}
 function mountPrematchAI(fixture,prediction,proposal=null){
  const host=document.querySelector('[data-prematch-prediction="'+CSS.escape(String(fixture.id))+'"]');
  if(!host||!hasSession())return;
@@ -1290,6 +1301,7 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   const foot=host.querySelector('.prematch-footnote');
   if(foot&&!foot.dataset.aiLabeled){foot.insertAdjacentHTML('afterbegin','<b>Pronostico AI</b> · ');foot.dataset.aiLabeled='true'}
   output.innerHTML='<p>'+E(data.analysis||'')+'</p><small>'+E(report.confidence||'')+'</small>';
+  markPrematchOrigin(host,'ai');
   const root=host.closest('[data-prematch-story]');
   const focus=root?.querySelector('[data-story-focus]');
   const attention=focus?.querySelector('.prematch-attention');
@@ -1308,6 +1320,11 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   }
   root?.querySelector('[data-ai-focus]')?.remove();
   root?.querySelector('[data-ai-lineup]')?.remove();
+  markPrematchOrigin(root?.querySelector('[data-story-numbers]'),'stats');
+  markPrematchOrigin(attention,'ai');
+  markPrematchOrigin(narrative,'ai');
+  markPrematchOrigin(root?.querySelector('[data-prematch-lineup]'),'stats');
+  markPrematchOrigin(root?.querySelector('[data-story-simulation]'),'stats');
   root?.querySelector('[data-ai-scenario]')?.remove();
  };
  const fingerprint=aiSportsFingerprint(fixture),id=String(fixture.id);
@@ -1449,6 +1466,7 @@ async function hydrateMatchPrediction(){
        renderPreMatchPrediction(adjusted,E);
       mountPrematchAI(f,adjusted,proposal);
       arrangePrematchStory(current.closest('[data-prematch-story]'));
+      mountPrematchAI(f,adjusted,proposal);
      }
      return adjusted;
     };
