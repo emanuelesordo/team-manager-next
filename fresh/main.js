@@ -1254,7 +1254,7 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   situations:prediction?.situational,
   comparison:prediction?.comparison,
   lineup:proposal?{formation:proposal.formation,expectedRating:proposal.xiExpectedRating,roleCoverage:proposal.roleCoverage,unfilled:proposal.unfilled,
-   players:proposal.players?.map(p=>({name:p.name,role:p.role,targetRole:p.targetRole,expectedRating:p.expectedRating,fitness:p.fitness,positionPenalty:p.positionAdjustment?.ratingPenalty}))}:null
+   players:proposal.players?.map(p=>({role:p.role,targetRole:p.targetRole,expectedRating:p.expectedRating,fitness:p.fitness,positionPenalty:p.positionAdjustment?.ratingPenalty}))}:null
  };
  let panel=host.querySelector('[data-ai-analyst]');
  if(!panel){panel=document.createElement('section');panel.dataset.aiAnalyst='';panel.style.cssText='margin-top:16px;padding:12px;border-top:1px solid currentColor';
@@ -1266,6 +1266,12 @@ function mountPrematchAI(fixture,prediction,proposal=null){
  const memo=aiMemo.get(id);
  if(memo?.fingerprint===fingerprint){output.textContent=memo.analysis||'Nessuna analisi disponibile';return}
  if(aiPending.has(id)){aiPending.get(id).then(()=>{if(panel.isConnected)mountPrematchAI(fixture,prediction,proposal)});return}
+ const failedKey='tm-ai-error-'+id;
+ let failure=null;try{failure=JSON.parse(localStorage.getItem(failedKey)||'null')}catch{}
+ if(failure?.fingerprint===fingerprint&&Date.now()<failure.until){
+  output.textContent=failure.message||'Analisi temporaneamente non disponibile';
+  return;
+ }
  const job=(async()=>{
   try{
    const saved=await prematchAIReport(id,'read');
@@ -1276,8 +1282,11 @@ function mountPrematchAI(fixture,prediction,proposal=null){
    // persisted match callups reaches this point. Repeated page views use cache.
    const generated=await prematchAIReport(id,'generate',context,fingerprint);
    aiMemo.set(id,{fingerprint,analysis:generated?.analysis||null});
+   localStorage.removeItem(failedKey);
   }catch(error){
-   aiMemo.set(id,{fingerprint,analysis:'Analisi AI non aggiornata: '+(error.message||error)});
+   const message='Analisi AI non aggiornata: '+(error.message||error);
+   aiMemo.set(id,{fingerprint,analysis:message});
+   try{localStorage.setItem(failedKey,JSON.stringify({fingerprint,until:Date.now()+60*60*1000,message}))}catch{}
   }
  })();
  aiPending.set(id,job);
