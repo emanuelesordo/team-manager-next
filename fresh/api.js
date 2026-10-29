@@ -217,6 +217,7 @@ export async function publicRpc(functionName,args={}){
  if(!/^[a-z_][a-z0-9_]*$/.test(functionName))throw new Error('Funzione non valida');
  const result=await authorized('/rest/v1/rpc/'+functionName,{method:'POST',body:args});
  if(/^tm_app_(submit|match_action|confirm|reject|void|save)/.test(functionName))window.dispatchEvent(new CustomEvent('tm-calculated-source-changed'));
+ if((functionName==='tm_app_review_event'&&args.p_decision==='approve')||(functionName==='tm_app_review_result'&&args.p_action==='confirm'))window.dispatchEvent(new Event('tm-ai-official-source-changed'));
  return result;
 }
 export async function rpc(functionName,args={}){
