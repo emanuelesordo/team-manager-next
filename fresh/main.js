@@ -1404,9 +1404,10 @@ async function hydrateMatchPrediction(){
   if(current){
    current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">DATI · NON QUOTE</span></div>'+
     renderPreMatchPrediction(result,E);
-   if(!isStaff(staffContext()))mountPrematchAI(f,result);
    current.dataset.ready=signature;
    const story=current.closest('[data-prematch-story]');arrangePrematchStory(story);setupPrematchStory(story);
+   // Every fixture, including opponents' matches, uses the same overview and cached AI forecast.
+   mountPrematchAI(f,result);
   }
   const lineupTarget=document.querySelector('[data-prematch-lineup="'+CSS.escape(f.id)+'"]');
   if(lineupTarget){
@@ -1467,7 +1468,6 @@ async function hydrateMatchPrediction(){
      if(current){
       current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">XI IPOTETICO · DATI</span></div>'+
        renderPreMatchPrediction(adjusted,E);
-      mountPrematchAI(f,adjusted,proposal);
       arrangePrematchStory(current.closest('[data-prematch-story]'));
       mountPrematchAI(f,adjusted,proposal);
      }
