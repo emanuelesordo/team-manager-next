@@ -884,7 +884,7 @@ function match(){
  else {
   const prediction=preMatchPredictionContainer(f,E);
   const preMatch=['scheduled','postponed'].includes(String(f.status||''))&&!extraMatch;
-  if(preMatch){const isCaselleMatch=involvesTeam(f,team());body='<div class="prematch-story" data-prematch-story><nav class="prematch-story-nav" aria-label="Sezioni prepartita"><button type="button" data-story-prev aria-label="Precedente">‹</button><span data-story-counter>1 / 5</span><button type="button" data-story-next aria-label="Successiva">›</button></nav>'+
+  if(preMatch){const isCaselleMatch=involvesTeam(f,team());body='<div class="prematch-story" data-prematch-story><nav class="prematch-story-nav" aria-label="Sezioni prepartita"><button type="button" data-story-prev aria-label="Precedente">‹</button><span data-story-counter>1 / '+(isCaselleMatch?'5':'4')+'</span><button type="button" data-story-next aria-label="Successiva">›</button></nav>'+
    '<div class="prematch-story-track" data-story-track>'+
    '<section class="prematch-story-slide" data-story-slide="0" aria-label="Pronostico">'+prediction+'</section>'+
    '<section class="prematch-story-slide" data-story-slide="1" aria-label="Numeri delle squadre"><div data-story-numbers class="glass prematch-story-content"><div class="prematch-loading">Numeri delle squadre…</div></div></section>'+
@@ -1313,11 +1313,20 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   const root=host.closest('[data-prematch-story]');
   const focus=root?.querySelector('[data-story-focus]');
   const attention=focus?.querySelector('.prematch-attention');
+  const crestFor=side=>{
+   const home=side==='home';
+   const name=home?fixture.home_team:fixture.away_team;
+   return club(name,'tiny',{team_id:home?fixture.home_team_id:fixture.away_team_id,opponent_id:home?fixture.home_opponent_id:fixture.away_opponent_id});
+  };
   if(attention){
    const items=[...(report.advantages||[]).map(text=>({text,kind:'Punto di forza'})),...(report.risks||[]).map(text=>({text,kind:'Criticità'}))];
    let aiFocus=attention.querySelector('[data-ai-attention-items]');
    if(!aiFocus){aiFocus=document.createElement('div');aiFocus.dataset.aiAttentionItems='';aiFocus.className='prematch-attention-grid';attention.append(aiFocus)}
-   aiFocus.innerHTML=items.map(item=>'<article class="prematch-attention-item watch"><div><strong>🤖 '+E(item.kind)+'</strong></div><small>'+E(item.text)+'</small></article>').join('');
+   aiFocus.innerHTML=items.map(item=>{
+    const lower=String(item.text).toLowerCase();
+    const side=lower.includes(String(fixture.away_team||'').toLowerCase())&&!lower.includes(String(fixture.home_team||'').toLowerCase())?'away':'home';
+    return '<article class="prematch-attention-item watch"><div>'+crestFor(side)+'<strong>🤖 '+E(item.kind)+'</strong></div><small>'+E(item.text)+'</small></article>';
+   }).join('');
    const observed=attention.querySelector('.prematch-attention-grid:not([data-ai-attention-items])');
    if(observed&&!observed.dataset.originMarked){observed.dataset.originMarked='true';observed.querySelectorAll('.prematch-attention-item strong').forEach(x=>x.insertAdjacentHTML('afterbegin','📊 '))}
    attention.hidden=false;
