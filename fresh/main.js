@@ -1270,30 +1270,54 @@ function mountPrematchAI(fixture,prediction,proposal=null){
  const renderAI=data=>{
   const report=data?.forecast;
   if(!report){output.textContent=data?.analysis||'Analisi non disponibile';return}
-  const num=x=>Math.round(Number(x||0)*100)+'%';
-  const esc=E;
-  const timeline=(report.scenario||[]).map(e=>'<li><b>'+esc(e.minute)+"' · "+esc(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+esc(e.reason)+'</li>').join('');
-  output.innerHTML='<p>'+esc(data.analysis||'')+'</p>'+
-   '<div class="prematch-expected"><span>PRONOSTICO AI</span><strong>'+esc(report.homeGoals)+' – '+esc(report.awayGoals)+'</strong></div>'+
-   '<div class="prematch-score-alternatives">'+(report.scorelines||[]).map(x=>'<span><b>'+esc(x.home)+'–'+esc(x.away)+'</b> '+num(x.probability)+'</span>').join('')+'</div>'+
-   '<p><b>1:</b> '+num(report.homeWin)+' · <b>X:</b> '+num(report.draw)+' · <b>2:</b> '+num(report.awayWin)+'</p>'+
-   (report.lineupAssessment?'<p><b>Formazione:</b> '+esc(report.lineupAssessment)+'</p>':'')+
-   (timeline?'<h4>Scenario atteso</h4><ol>'+timeline+'</ol>':'')+
-   (report.risks?.length?'<h4>Criticità</h4><ul>'+report.risks.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'')+
-   (report.advantages?.length?'<h4>Punti di forza</h4><ul>'+report.advantages.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'');
-  // AI predictions override estimated outputs, while raw observed statistics
-  // and the deterministic model remain accessible for comparison.
-  if(host.dataset.aiForecastApplied!==String(data.fingerprint||'')){
-   const base=host.querySelector('.prematch-summary');
-   if(base){base.hidden=true}
-   const bars=host.querySelector('.prematch-probabilities');
-   if(bars)bars.hidden=true;
-   const scenario=host.querySelector('.prematch-narrative');
-   if(scenario)scenario.hidden=true;
-   host.dataset.aiForecastApplied=String(data.fingerprint||'active');
+  const pctAI=x=>Math.round(Math.max(0,Math.min(1,Number(x)||0))*100)+'%';
+  const lines=Array.isArray(report.scorelines)?report.scorelines:[];
+  const score=lines.length?lines:[{home:report.homeGoals,away:report.awayGoals,probability:null}];
+  const outcome=[['1',fixture.home_team,report.homeWin],['X','Pareggio',report.draw],['2',fixture.away_team,report.awayWin]];
+  // Keep the existing five-page overview and let the AI own forecast-only fields.
+  const summary=host.querySelector('.prematch-summary');
+  if(summary){
+   const expected=summary.querySelector('.prematch-expected');
+   if(expected)expected.innerHTML='<span>RISULTATO ATTESO · AI</span><strong>'+E(report.homeGoals)+' <i>–</i> '+E(report.awayGoals)+'</strong>'+
+    '<div class="prematch-score-alternatives">'+score.slice(0,3).map(x=>'<span><b>'+E(x.home)+'–'+E(x.away)+'</b> '+(x.probability==null?'':pctAI(x.probability))+'</span>').join('')+'</div>';
+   summary.hidden=false;
+  }
+  const bars=host.querySelector('.prematch-probabilities');
+  if(bars){
+   bars.innerHTML=outcome.map(([key,label,value])=>'<div class="prematch-probability"><div><b>'+E(key)+'</b><span>'+E(label)+'</span><strong>'+pctAI(value)+'</strong></div><i><span style="width:'+pctAI(value)+'"></span></i></div>').join('');
+   bars.hidden=false;
+  }
+  const foot=host.querySelector('.prematch-footnote');
+  if(foot)foot.insertAdjacentHTML('afterbegin','<b>Pronostico AI</b> · ');
+  output.innerHTML='<p>'+E(data.analysis||'')+'</p><small>'+E(report.confidence||'')+'</small>';
+  const root=host.closest('[data-prematch-story]');
+  const focus=root?.querySelector('[data-story-focus]');
+  if(focus){
+   let section=focus.querySelector('[data-ai-focus]');
+   if(!section){section=document.createElement('section');section.dataset.aiFocus='';focus.prepend(section)}
+   section.innerHTML='<div class="prematch-section-title"><span class="eyebrow">LETTURA AI</span><h4>Punti di forza e criticità</h4></div>'+
+    '<div class="prematch-attention-grid">'+
+    [...(report.advantages||[]).map(x=>({label:'Punto di forza',text:x,tone:'strength'})),...(report.risks||[]).map(x=>({label:'Criticità',text:x,tone:'risk'}))].map(x=>
+     '<article class="prematch-attention-item '+E(x.tone)+'"><strong>'+E(x.label)+'</strong><small>'+E(x.text)+'</small></article>').join('')+'</div>';
+   const old=focus.querySelector('.prematch-attention');if(old)old.hidden=true;
+   const narrative=focus.querySelector('.prematch-narrative');if(narrative)narrative.hidden=true;
+  }
+  const lineup=root?.querySelector('[data-prematch-lineup]');
+  if(lineup&&report.lineupAssessment){
+   let note=lineup.querySelector('[data-ai-lineup]');
+   if(!note){note=document.createElement('section');note.dataset.aiLineup='';lineup.prepend(note)}
+   note.innerHTML='<div class="prematch-section-title"><span class="eyebrow">VALUTAZIONE AI</span><h4>Undici e alternative</h4></div><p>'+E(report.lineupAssessment)+'</p>';
+  }
+  const simulation=root?.querySelector('[data-story-simulation]');
+  if(simulation){
+   let aiTimeline=simulation.querySelector('[data-ai-scenario]');
+   if(!aiTimeline){aiTimeline=document.createElement('section');aiTimeline.dataset.aiScenario='';simulation.prepend(aiTimeline)}
+   const steps=(report.scenario||[]).slice().sort((a,b)=>Number(a.minute)-Number(b.minute));
+   aiTimeline.innerHTML='<div class="prematch-section-title"><span class="eyebrow">SCENARIO AI</span><h4>Come può svilupparsi la partita</h4></div>'+
+    (steps.length?'<ol>'+steps.map(e=>'<li><b>'+E(e.minute)+"' · "+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</li>').join('')+'</ol>':'<p>Nessuna sequenza prevista.</p>')+
+    '<small>La simulazione dettagliata sottostante resta il modello deterministico di riferimento.</small>';
   }
  };
-
  const fingerprint=aiSportsFingerprint(fixture),id=String(fixture.id);
  const memo=aiMemo.get(id);
  if(memo?.fingerprint===fingerprint){renderAI(memo);return}
