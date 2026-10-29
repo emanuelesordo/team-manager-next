@@ -1271,7 +1271,7 @@ function mountPrematchAI(fixture,prediction,proposal=null){
  const memo=aiMemo.get(id);
  if(memo?.fingerprint===fingerprint){output.textContent=memo.analysis||'Nessuna analisi disponibile';return}
  if(aiPending.has(id)){aiPending.get(id).then(()=>{if(panel.isConnected)mountPrematchAI(fixture,prediction,proposal)});return}
- const failedKey='tm-ai-error-permissions-fixed-'+id;
+ const failedKey='tm-ai-error-new-model-'+id;
  let failure=null;try{failure=JSON.parse(localStorage.getItem(failedKey)||'null')}catch{}
  if(failure?.fingerprint===fingerprint&&Date.now()<failure.until){
   output.textContent=failure.message||'Analisi temporaneamente non disponibile';
