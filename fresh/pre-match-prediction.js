@@ -140,13 +140,13 @@ function strengthRows(teams,completed,allCompetitionRows,config,history){
   const historyWeight=historicalWeight(n,totalGames.get(club));
   const historyShare=Math.min(.22,.22*historyWeight);
   const strength=clamp(current*(1-historyShare)+prior.score*historyShare);
-  const shrink=n/(n+3);
+  const shrink=n/(n+2);
   const observedAttack=leagueGoalRate*(1-shrink)+(n?gf/n:leagueGoalRate)*shrink;
   const observedDefense=leagueGoalRate*(1-shrink)+(n?ga/n:leagueGoalRate)*shrink;
   // In the opening rounds, historical level must also shape expected goal rates,
   // not only the generic strength score. This avoids flattening a clear tier/
   // performance gap into an artificial 50/50 just because current-season data is scarce.
-  const historicalRateBias=prior.seasons?(prior.score-.5)*2.2*historyWeight:0;
+  const historicalRateBias=prior.seasons?clamp((prior.score-.5)*.85*historyWeight,-.16,.16):0;
   raw.set(club,{club,played:n,gf,ga,ppg,recent,gd,current,structural,potential,prior:prior.score,historySeasons:prior.seasons,
    historyShare,historyWeight,historyTier:prior.tierScore,strength,totalGames:totalGames.get(club)||0,
    attackRate:clamp(observedAttack*Math.exp(historicalRateBias),.25,3.8),
@@ -685,8 +685,9 @@ export function predictMatch({fixture,competition,fixtures=[],history=[],venues=
  const tierGap=clamp((home.historyTier??.5)-(away.historyTier??.5),-.7,.7);
  const priorGap=clamp((home.prior??.5)-(away.prior??.5),-.7,.7);
  const historicalMatchupDelta=earlyEvidence*(.72*tierGap+.28*priorGap);
- homeLambda*=Math.exp(historicalMatchupDelta*1.05);
- awayLambda*=Math.exp(-historicalMatchupDelta*1.05);
+ // Historical tier already informs attack/defense and strengths; avoid counting it twice.
+ homeLambda*=Math.exp(historicalMatchupDelta*.25);
+ awayLambda*=Math.exp(-historicalMatchupDelta*.25);
  const managementDelta=(homeManagement?.delta||0)-(awayManagement?.delta||0);
  const numericalDelta=(homeNumerical?.delta||0)-(awayNumerical?.delta||0);
  const rankDelta=homeBehavior.delta-awayBehavior.delta;
