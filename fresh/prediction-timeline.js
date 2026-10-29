@@ -64,9 +64,11 @@ export function simulateScoreTimeline({fixtureId,homeLambda,awayLambda,homeSitua
    const bucket=Math.min(3,Math.floor((minute-1)*4/steps));
    // Conditional hazards respond to the current score after every event.
    const homeHazard=clamp(homeLambda*weightsHome[bucket]*4/steps*
-    stateMultiplier(homeSituational,awaySituational,home-away)*\n    responseMultiplier(homeSituational,awaySituational,lastAwayGoal===null?null:minute-lastAwayGoal,lastHomeGoal===null?null:minute-lastHomeGoal),0,.35);
+    stateMultiplier(homeSituational,awaySituational,home-away)*
+    responseMultiplier(homeSituational,awaySituational,lastAwayGoal===null?null:minute-lastAwayGoal,lastHomeGoal===null?null:minute-lastHomeGoal),0,.35);
    const awayHazard=clamp(awayLambda*weightsAway[bucket]*4/steps*
-    stateMultiplier(awaySituational,homeSituational,away-home)*\n    responseMultiplier(awaySituational,homeSituational,lastHomeGoal===null?null:minute-lastHomeGoal,lastAwayGoal===null?null:minute-lastAwayGoal),0,.35);
+    stateMultiplier(awaySituational,homeSituational,away-home)*
+    responseMultiplier(awaySituational,homeSituational,lastHomeGoal===null?null:minute-lastHomeGoal,lastAwayGoal===null?null:minute-lastAwayGoal),0,.35);
    // Sequential draws allow the second side to react to the updated score.
    if(rng()<1-Math.exp(-homeHazard)){home++;lastHomeGoal=minute;events.push({minute,side:'home',type:'goal'})}
    if(rng()<1-Math.exp(-awayHazard)){away++;lastAwayGoal=minute;events.push({minute,side:'away',type:'goal'})}
