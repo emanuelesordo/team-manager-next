@@ -1288,7 +1288,7 @@ function mountPrematchAI(fixture,prediction,proposal=null){
    bars.hidden=false;
   }
   const foot=host.querySelector('.prematch-footnote');
-  if(foot)foot.insertAdjacentHTML('afterbegin','<b>Pronostico AI</b> · ');
+  if(foot&&!foot.dataset.aiLabeled){foot.insertAdjacentHTML('afterbegin','<b>Pronostico AI</b> · ');foot.dataset.aiLabeled='true'}
   output.innerHTML='<p>'+E(data.analysis||'')+'</p><small>'+E(report.confidence||'')+'</small>';
   const root=host.closest('[data-prematch-story]');
   const focus=root?.querySelector('[data-story-focus]');
@@ -1473,6 +1473,7 @@ async function hydrateMatchPrediction(){
       roster:eligibleBench,players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp,
       fixtures:realFixtures(),matches,historicalEvents:events,roleData:lineupData});
      destination.innerHTML=renderSimulatedTimeline(scenario,E);
+     mountPrematchAI(f,adjustedPrediction,proposal);
      const exportButton=destination.querySelector('[data-simulation-export]');
      exportButton?.addEventListener('click',async()=>{
       exportButton.disabled=true;exportButton.textContent='Generazione…';
