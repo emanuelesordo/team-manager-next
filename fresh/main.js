@@ -884,14 +884,14 @@ function match(){
  else {
   const prediction=preMatchPredictionContainer(f,E);
   const preMatch=['scheduled','postponed'].includes(String(f.status||''))&&!extraMatch;
-  if(preMatch)body='<div class="prematch-story" data-prematch-story><nav class="prematch-story-nav" aria-label="Sezioni prepartita"><button type="button" data-story-prev aria-label="Precedente">‹</button><span data-story-counter>1 / 5</span><button type="button" data-story-next aria-label="Successiva">›</button></nav>'+
+  if(preMatch){const isCaselleMatch=involvesTeam(f,team());body='<div class="prematch-story" data-prematch-story><nav class="prematch-story-nav" aria-label="Sezioni prepartita"><button type="button" data-story-prev aria-label="Precedente">‹</button><span data-story-counter>1 / 5</span><button type="button" data-story-next aria-label="Successiva">›</button></nav>'+
    '<div class="prematch-story-track" data-story-track>'+
    '<section class="prematch-story-slide" data-story-slide="0" aria-label="Pronostico">'+prediction+'</section>'+
    '<section class="prematch-story-slide" data-story-slide="1" aria-label="Numeri delle squadre"><div data-story-numbers class="glass prematch-story-content"><div class="prematch-loading">Numeri delle squadre…</div></div></section>'+
    '<section class="prematch-story-slide" data-story-slide="2" aria-label="Focus"><div data-story-focus class="glass prematch-story-content"><div class="prematch-loading">Focus della gara…</div></div></section>'+
-   '<section class="prematch-story-slide" data-story-slide="3" aria-label="Formazione"><aside class="glass prematch-lineup-panel" data-prematch-lineup="'+E(f.id)+'"><div class="prematch-loading">Calcolo formazione ipotetica…</div></aside></section>'+
-   '<section class="prematch-story-slide" data-story-slide="4" aria-label="Simulazione"><div class="glass prematch-story-content" data-story-simulation><div class="prematch-loading">Simulazione della gara…</div></div></section></div>'+
-   '<div class="prematch-story-dots" role="group" aria-label="Sezioni">'+['Pronostico','Numeri','Focus','Formazione','Simulazione'].map((label,i)=>'<button type="button" data-story-to="'+i+'" aria-label="'+label+'" aria-current="'+(i===0?'true':'false')+'">'+label+'</button>').join('')+'</div></div>';
+   (isCaselleMatch?'<section class="prematch-story-slide" data-story-slide="3" aria-label="Formazione"><aside class="glass prematch-lineup-panel" data-prematch-lineup="'+E(f.id)+'"><div class="prematch-loading">Calcolo formazione ipotetica…</div></aside></section>':'')+
+   '<section class="prematch-story-slide" data-story-slide="4" aria-label="Timeline prevista"><div class="glass prematch-story-content" data-story-simulation><div class="prematch-loading">Simulazione della gara…</div></div></section></div>'+
+   '<div class="prematch-story-dots" role="group" aria-label="Sezioni">'+(isCaselleMatch?['Pronostico','Statistiche','Punti chiave','Formazione','Timeline']:['Pronostico','Statistiche','Punti chiave','Timeline']).map((label,i)=>'<button type="button" data-story-to="'+i+'" aria-label="'+label+'" aria-current="'+(i===0?'true':'false')+'">'+label+'</button>').join('')+'</div></div>';}
   else body=prediction+(extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
    '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>');
  }
