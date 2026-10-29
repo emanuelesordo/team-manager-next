@@ -1,5 +1,5 @@
 import {nextStatSlide,nearestStatSlide,statSlideOffset} from './stats-carousel.js?v=20261029carouselfix1';
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc,uploadPlayerPhoto,readPrematchAvailability as fetchPrematchAvailability,savePrematchAvailability} from './api.js?prematch=20261015playerphoto1';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc,uploadPlayerPhoto,readPrematchAvailability as fetchPrematchAvailability,savePrematchAvailability,askPrematchAI} from './api.js?prematch=20261015playerphoto1';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
@@ -1227,6 +1227,36 @@ function editPrematchPlayerAvailability(root,fixtureId,model){
   dialog.showModal();
  });
 }
+function mountPrematchAI(fixture,prediction,proposal=null){
+ const host=document.querySelector('[data-prematch-prediction="'+CSS.escape(String(fixture.id))+'"]');
+ if(!host||!hasSession())return;
+ const context={
+  fixture:{home:fixture.home_team,away:fixture.away_team,kickoff:fixture.kickoff_at},
+  scorelines:prediction?.probabilities?.topScorelines,
+  outcomes:prediction?.probabilities?{home:prediction.probabilities.home,draw:prediction.probabilities.draw,away:prediction.probabilities.away}:null,
+  expectedGoals:prediction?.expectedGoals,
+  factors:(prediction?.factors||[]).map(x=>({name:x.label,home:x.home,away:x.away,detail:x.detail})).slice(0,16),
+  situations:prediction?.situational,
+  comparison:prediction?.comparison,
+  lineup:proposal?{formation:proposal.formation,expectedRating:proposal.xiExpectedRating,roleCoverage:proposal.roleCoverage,unfilled:proposal.unfilled,players:proposal.players?.map(p=>({name:p.name,role:p.role,targetRole:p.targetRole,expectedRating:p.expectedRating,fitness:p.fitness,positionPenalty:p.positionAdjustment?.ratingPenalty}))}:null
+ };
+ let panel=host.querySelector('[data-ai-analyst]');
+ if(!panel){
+  panel=document.createElement('section');panel.setAttribute('data-ai-analyst','');panel.style.cssText='margin-top:16px;padding:12px;border-top:1px solid currentColor';
+  panel.innerHTML='<h3 style="margin:0 0 8px">Analista AI</h3><form data-ai-form style="display:flex;gap:8px;flex-wrap:wrap"><input name="question" aria-label="Domanda all’analista AI" maxlength="750" required placeholder="Perché questo pronostico?" style="flex:1;min-width:180px"><button type="submit">Analizza</button></form><p data-ai-result aria-live="polite" style="white-space:pre-wrap;margin:10px 0 0"></p>';
+  host.append(panel);
+  panel.querySelector('form').addEventListener('submit',async event=>{
+   event.preventDefault();
+   const form=event.currentTarget,button=form.querySelector('button'),output=panel.querySelector('[data-ai-result]');
+   const question=form.elements.question.value.trim();if(!question)return;
+   button.disabled=true;output.textContent='Analisi in corso…';
+   try{const data=await askPrematchAI(question,panel.aiContext);output.textContent=data.answer||'Nessuna risposta disponibile';}
+   catch(error){output.textContent=error.message||'Analisi non disponibile';}
+   finally{button.disabled=false;}
+  });
+ }
+ panel.aiContext=context;
+}
 async function hydrateMatchPrediction(){
  const target=document.querySelector('[data-prematch-prediction]');
  if(!target||predictionBusy||!state.data||!state.match)return;
@@ -1262,6 +1292,7 @@ async function hydrateMatchPrediction(){
   if(current){
    current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">DATI · NON QUOTE</span></div>'+
     renderPreMatchPrediction(result,E);
+   mountPrematchAI(f,result);
    current.dataset.ready=signature;
    const story=current.closest('[data-prematch-story]');arrangePrematchStory(story);setupPrematchStory(story);
   }
@@ -1324,6 +1355,7 @@ async function hydrateMatchPrediction(){
      if(current){
       current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">XI IPOTETICO · DATI</span></div>'+
        renderPreMatchPrediction(adjusted,E);
+      mountPrematchAI(f,adjusted,proposal);
       arrangePrematchStory(current.closest('[data-prematch-story]'));
      }
      return adjusted;
