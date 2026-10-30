@@ -1334,6 +1334,10 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   output.innerHTML='<p style="margin:0 0 6px"><b>🤖 Analisi generale</b></p><p style="margin:0">'+E(data.analysis||'')+'</p>'+
    '<p style="margin:8px 0 0"><b>📊 Forma recente verificata</b> · '+E(verifiedRecentForm(fixture))+'</p>'+
    (report.confidence?'<small>'+E(report.confidence)+'</small>':'');
+  let notes=host.querySelector('[data-opponent-notes]');
+  if(!notes){notes=document.createElement('section');notes.dataset.opponentNotes='';output.insertAdjacentElement('afterend',notes)}
+  notes.innerHTML='<p><b>🤖 Risultati contro le altre squadre</b></p>'+
+    (report.opponentNotes?['home','away'].map(side=>'<p><b>'+E(side==='home'?fixture.home_team:fixture.away_team)+'</b>: '+E(report.opponentNotes[side]||'Dati insufficienti')+'</p>').join(''):'<p>Approfondimento disponibile alla prossima analisi AI.</p>');
   const odds=host.querySelector('[data-ai-fair-odds]')||document.createElement('div');
   odds.dataset.aiFairOdds='';
   odds.className='prematch-score-alternatives';
