@@ -1294,7 +1294,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  };
  let panel=host.querySelector('[data-ai-analyst]');
  if(!panel){panel=document.createElement('section');panel.dataset.aiAnalyst='';panel.style.cssText='margin-top:16px;padding:12px;border-top:1px solid currentColor';
-  panel.innerHTML='<h3 style="margin:0 0 8px">Analisi AI salvata</h3><p data-ai-result aria-live="polite" style="white-space:pre-wrap;margin:10px 0 0">Lettura analisi…</p>';
+  panel.innerHTML='<h3 style="margin:0 0 8px">Analisi AI</h3><p data-ai-result aria-live="polite" style="white-space:pre-wrap;margin:10px 0 0">Lettura analisi…</p>';
   host.append(panel);
  }
  const output=panel.querySelector('[data-ai-result]');
@@ -1419,7 +1419,15 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  const fingerprint=aiSportsFingerprint(fixture),id=String(fixture.id);
  const memo=aiMemo.get(id);
  if(!forceRetry&&memo?.fingerprint===fingerprint&&memo.forecast){renderAI(memo);return}
- if(aiPending.has(id)){output.textContent='Richiesta a Gemini già in corso…';return}
+ if(aiPending.has(id)){
+  // Share the active request. Its completion must update every currently visible panel,
+  // including a panel recreated while the request was running.
+  output.textContent='Richiesta a Gemini in corso…';
+  aiPending.get(id).finally(()=>{
+   if(panel.isConnected)mountPrematchAI(fixture,prediction,proposal,false);
+  });
+  return;
+ }
  const failedKey='tm-ai-error-packed-v2-'+id;
  let failure=null;try{failure=JSON.parse(localStorage.getItem(failedKey)||'null')}catch{}
  if(!forceRetry&&failure?.fingerprint===fingerprint&&Date.now()<failure.until){
