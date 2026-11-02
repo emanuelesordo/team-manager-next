@@ -1278,7 +1278,7 @@ function verifiedRecentForm(fixture){
  return [one(fixture.home_team_id||fixture.home_opponent_id,fixture.home_team),
   one(fixture.away_team_id||fixture.away_opponent_id,fixture.away_team)].join(' · ');
 }
-function mountPrematchAI(fixture,prediction,proposal=null){
+function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  const host=document.querySelector('[data-prematch-prediction="'+CSS.escape(String(fixture.id))+'"]');
  if(!host||!hasSession())return;
  const context={
@@ -1298,6 +1298,20 @@ function mountPrematchAI(fixture,prediction,proposal=null){
   host.append(panel);
  }
  const output=panel.querySelector('[data-ai-result]');
+ const showFailure=message=>{
+  const temporary=/\b503\b|high demand|temporar|sovraccaric|unavailable/i.test(String(message));
+  output.innerHTML='<p style="margin:0 0 10px">'+(temporary
+   ?'Gemini temporaneamente sovraccarico. Nessun nuovo pronostico è stato salvato.'
+   :E(String(message||'Analisi AI non disponibile')))+
+   '</p><button type="button" class="soft-btn" data-ai-retry>Riprova Gemini</button>';
+ };
+ panel.onclick=event=>{
+  const button=event.target.closest('[data-ai-retry]');
+  if(!button||!panel.contains(button)||button.disabled)return;
+  button.disabled=true;
+  output.textContent='Nuova richiesta a Gemini…';
+  mountPrematchAI(fixture,prediction,proposal,true);
+ };
  const renderAI=data=>{
   const report=data?.forecast;
   if(!report){output.textContent=data?.analysis||'Analisi non disponibile';return}
@@ -1404,14 +1418,16 @@ function mountPrematchAI(fixture,prediction,proposal=null){
  };
  const fingerprint=aiSportsFingerprint(fixture),id=String(fixture.id);
  const memo=aiMemo.get(id);
- if(memo?.fingerprint===fingerprint){renderAI(memo);return}
- if(aiPending.has(id)){aiPending.get(id).then(()=>{if(panel.isConnected)mountPrematchAI(fixture,prediction,proposal)});return}
+ if(!forceRetry&&memo?.fingerprint===fingerprint&&memo.forecast){renderAI(memo);return}
+ if(aiPending.has(id)){output.textContent='Richiesta a Gemini già in corso…';return}
  const failedKey='tm-ai-error-packed-v2-'+id;
  let failure=null;try{failure=JSON.parse(localStorage.getItem(failedKey)||'null')}catch{}
- if(failure?.fingerprint===fingerprint&&Date.now()<failure.until){
-  output.textContent=failure.message||'Analisi temporaneamente non disponibile';
+ if(!forceRetry&&failure?.fingerprint===fingerprint&&Date.now()<failure.until){
+  showFailure(failure.message||'Analisi temporaneamente non disponibile');
   return;
  }
+ if(forceRetry){try{localStorage.removeItem(failedKey)}catch{}}
+ output.textContent='Richiesta a Gemini in corso…';
  const job=(async()=>{
   try{
    const saved=await prematchAIReport(id,'read');
@@ -1425,13 +1441,16 @@ function mountPrematchAI(fixture,prediction,proposal=null){
    localStorage.removeItem(failedKey);
   }catch(error){
    const message='Analisi AI non aggiornata: '+(error.message||error);
-   aiMemo.set(id,{fingerprint,analysis:message});
-   try{localStorage.setItem(failedKey,JSON.stringify({fingerprint,until:Date.now()+60*60*1000,message}))}catch{}
+   // An HTTP error is never a forecast: do not memoize it as a successful response.
+   aiMemo.delete(id);
+   const temporary=/\b503\b|high demand|temporar|unavailable/i.test(message);
+   try{localStorage.setItem(failedKey,JSON.stringify({fingerprint,until:Date.now()+(temporary?2:10)*60*1000,message}))}catch{}
+   if(panel.isConnected)showFailure(message);
   }
  })();
  aiPending.set(id,job);
  job.finally(()=>{if(aiPending.get(id)===job)aiPending.delete(id);
-  if(panel.isConnected){const current=aiMemo.get(id);renderAI(current);}
+  if(panel.isConnected){const current=aiMemo.get(id);if(current?.forecast)renderAI(current);}
  });
 }
 async function hydrateMatchPrediction(){
