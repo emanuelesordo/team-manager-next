@@ -308,3 +308,9 @@ export async function publishOfficialCallups(matchId){
  if(!Array.isArray(rows)||rows.length!==1)throw Error('Pubblicazione convocazioni non confermata');
  return rows[0];
 }
+
+/** Coach AI report: server validates staff membership, candidates and history. */
+export async function coachLineupAI(fixtureId,mode='read',payload=null,fingerprint=null,force=false){
+ if(!hasSession())throw Error('Accesso staff richiesto');
+ return authorized('/functions/v1/tm-coach-lineup',{method:'POST',body:{fixtureId,mode,payload,fingerprint,force}});
+}
