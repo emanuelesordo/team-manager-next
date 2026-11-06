@@ -1,5 +1,5 @@
 import {nextStatSlide,nearestStatSlide,statSlideOffset} from './stats-carousel.js?v=20261029carouselfix1';
-import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc,uploadPlayerPhoto,readPrematchAvailability as fetchPrematchAvailability,savePrematchAvailability,prematchAIReport} from './api.js?prematch=20261015playerphoto1';
+import {loadBase,loadSeason,loadIdentity,loadMatchInfo,login,logout,hasSession,get,adminWrite,rpc,publicRpc,uploadPlayerPhoto,readPrematchAvailability as fetchPrematchAvailability,savePrematchAvailability,prematchAIReport,coachLineupAI} from './api.js?prematch=20261106coach1';
 import {matchRoute,parseMatchRoute} from './match-route.js';
 import {normalized,involvesTeam,isFinished,isLive,hasScore,scoreOf,summary,rankRows,fixtureToMatch,roleName,matchMinutes} from './domain.js?clubs=20261005testisolated';
 import {CAROUSEL_INTERVAL,LOCALE,TIME_ZONE} from './config.js?home=20261004';
@@ -38,6 +38,7 @@ import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-
 import {simulatePrematchTimeline,renderSimulatedTimeline} from './pre-match-simulation.js?v=20261019tacticalfit1';
 import {saveTimelinePoster} from './pre-match-poster.js?v=20261019minutes2';
 import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261019story1';
+import {mountCoachAI} from './coach-ai-lineup.js?v=20261106coach1';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1603,6 +1604,7 @@ async function hydrateMatchPrediction(){
      });
     };
     setupPrematchLineupCarousel(lineupTarget,index=>updateSimulation(model.proposals?.[index]||model));
+    mountCoachAI(lineupTarget,{fixture:f,model,data:{...lineupData,teamId:team()?.id},availability:readPrematchAvailability(f.id),request:coachLineupAI});
     updateSimulation(model.proposals?.[0]||model);
    }
   }
