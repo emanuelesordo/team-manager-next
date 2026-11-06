@@ -488,6 +488,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   if(Number.isInteger(manualPeriod)&&manualPeriod>0)return manualPeriod;
   if(norm(e.payload?.period)==='unknown')return timelinePeriodFromMinute(e,competitionSettings);
   if(norm(e.payload?.period)==='halftime')return 2;
+  if(norm(e.payload?.period)==='post_match')return Math.max(2,Number(competitionSettings?.periods)||2);
   const explicit=Number(e.payload?.period_no);
   if(Number.isInteger(explicit)&&explicit>0)return explicit;
   const p=norm(e.payload?.period);if(p==='first_half')return 1;if(p==='second_half')return 2;
@@ -497,6 +498,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const recovery=e=>Math.max(0,Number(e.stoppage_minute)||0);
  const periodEnds=[...(events||[])].filter(e=>type(e)==='period_end'&&e.validation_status!=='rejected');
  const raw=[...(events||[])].filter(e=>type(e)!=='period_end'&&e.validation_status!=='rejected');
+ const postMatchCards=raw.filter(e=>norm(e.payload?.period)==='post_match');
  const goalEvents=raw.filter(goal);
  const explicitGoalOrder=new Map();
  for(const e of goalEvents){
@@ -524,7 +526,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   const manualTimelineOrder=Number(e.payload?.timeline_order);
   if(minute===null&&Number.isFinite(manualTimelineOrder))return manualTimelineOrder;
   // Interval changes precede all second-half events, even when both use the period boundary minute.
-  if(minute!==null)return minute+recovery(e)/100+(norm(e.payload?.period)==='halftime'?-0.001:0);
+  if(minute!==null)return minute+recovery(e)/100+(norm(e.payload?.period)==='halftime'?-0.001:norm(e.payload?.period)==='post_match'?0.5:0);
   if(goal(e)){
    const ordinal=goalOrdinal.get(e)||Number(e.payload?.sequence_order)||1;
    let prev=null,next=null,prevPeriod=null,nextPeriod=null;
@@ -671,6 +673,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  };
  const renderPeriod=p=>{
   const entries=descending.filter(x=>{
+   if(norm(x.event.payload?.period)==='post_match')return false;
    const ownPeriod=periodNo(x.event);
    if(ownPeriod===p)return true;
    if(ownPeriod!==0)return false;
@@ -693,6 +696,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   return output+groupedRows(regular);
  };
  let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI','title');
+ if(postMatchCards.length)parts+=heading('FINE PARTITA · PROVVEDIMENTI DISCIPLINARI')+groupedRows(descending.filter(x=>norm(x.event.payload?.period)==='post_match'));
  if(maxPeriod===2){
   parts+=renderPeriod(2)+(periodEndByPeriod.has(1)?'':heading('HT '+halfScore))+renderPeriod(1);
  }else if(maxPeriod>2){
@@ -725,10 +729,12 @@ function timelineEventEditor(){
  const stoppage=ev?.stoppage_minute??edit.stoppage??0;
  const rules=matchRules(m,competition(f.competition_id));
  const periodValue=ev?.payload?.period||(fixtureOnly&&rawMinute===''?'unknown':((Number(rawMinute)>=Number(rules.minutes_per_period||40))?'second_half':'first_half'));
+ const finalWhistle=(m?(state.matchData?.events||[]):(state.fixtureEvents||[])).filter(e=>e.event_type==='period_end'&&e.validation_status!=='rejected').sort((a,b)=>(Number(b.minute)||0)-(Number(a.minute)||0))[0];
+ const frozenFinalMinute=finalWhistle?.minute!=null?Number(finalWhistle.minute):Number(rules.minutes_per_period||40)*Number(rules.periods||2);
  // The editor always displays the minute within its period, whatever the stored origin.
  const cumulative=ev?cumulativeEventMinute(ev,rules):rawMinute;
  const relative=periodValue==='second_half'||periodValue==='extra'?periodRelativeMinute(cumulative,periodValue,rules):cumulative;
- const minute=fixtureOnly?rawMinute:(relative??'');
+ const minute=periodValue==='post_match'?frozenFinalMinute:fixtureOnly?rawMinute:(relative??'');
  const people=state.data?.players||[];
  const playerOptions='<option value="">—</option>'+people.map(p=>'<option value="'+E(p.id)+'" '+(ev?.player_id===p.id?'selected':'')+'>'+E(matchPlayerLabel(p))+'</option>').join('');
  const secondaryOptions='<option value="">—</option>'+people.map(p=>'<option value="'+E(p.id)+'" '+(ev?.secondary_player_id===p.id?'selected':'')+'>'+E(matchPlayerLabel(p))+'</option>').join('');
@@ -745,7 +751,7 @@ function timelineEventEditor(){
   '<form data-timeline-event-form class="staff-form live-sheet-form" data-event-id="'+E(ev?.id||'')+'" data-fixture-only="'+fixtureOnly+'">'+
    '<div class="live-sheet-grid"><label class="staff-field"><span>Tipo</span><select name="event_type">'+types.map(([k,l])=>'<option value="'+k+'" '+((ev?.event_type||'goal')===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
    '<label class="staff-field"><span>Squadra</span><select name="team_side">'+sideOptions.map(([k,l])=>'<option value="'+k+'" '+(sideValue===k?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
-   '<label class="staff-field"><span>Periodo</span><select name="period">'+(fixtureOnly?'<option value="unknown" '+(periodValue==='unknown'?'selected':'')+'>Non noto</option>':'')+'<option value="first_half" '+(periodValue==='first_half'?'selected':'')+'>1° tempo</option><option value="halftime" '+(periodValue==='halftime'?'selected':'')+'>Intervallo</option><option value="second_half" '+(periodValue==='second_half'?'selected':'')+'>2° tempo</option><option value="extra" '+(periodValue==='extra'?'selected':'')+'>Supplementari</option></select></label>'+
+   '<label class="staff-field"><span>Periodo</span><select name="period">'+(fixtureOnly?'<option value="unknown" '+(periodValue==='unknown'?'selected':'')+'>Non noto</option>':'')+'<option value="first_half" '+(periodValue==='first_half'?'selected':'')+'>1° tempo</option><option value="halftime" '+(periodValue==='halftime'?'selected':'')+'>Intervallo</option><option value="second_half" '+(periodValue==='second_half'?'selected':'')+'>2° tempo</option><option value="extra" '+(periodValue==='extra'?'selected':'')+'>Supplementari</option><option value="post_match" '+(periodValue==='post_match'?'selected':'')+'>Fine partita</option></select></label>'+
    '<label class="staff-field"><span>Minuto del tempo</span><input name="minute" inputmode="numeric" type="number" min="0" max="300" value="'+E(minute)+'"></label>'+
    '<label class="staff-field"><span>Recupero</span><input name="stoppage_minute" inputmode="numeric" type="number" min="0" max="30" value="'+E(stoppage)+'"></label>'+
    (!fixtureOnly?'<label class="staff-field"><span>Giocatore</span><select name="player_id">'+playerOptions+'</select></label><label class="staff-field"><span>Secondo giocatore</span><select name="secondary_player_id">'+secondaryOptions+'</select></label>':'')+
@@ -2324,6 +2330,13 @@ document.addEventListener('submit',async e=>{
   const minuteRaw=String(fd.get('minute')??'').trim(),stoppageRaw=String(fd.get('stoppage_minute')??'').trim();
   const minute=minuteRaw===''?null:Number(minuteRaw),stoppage=stoppageRaw===''?0:Number(stoppageRaw);
   const type=String(fd.get('event_type')||'goal'),teamSide=String(fd.get('team_side')||(m?'team':'home'));
+  const isPostMatch=String(fd.get('period'))==='post_match';
+  if(isPostMatch&&!['yellow_card','blue_card','red_card'].includes(type)){toast('A fine partita sono ammessi solo cartellini gialli, blu o rossi');return}
+  const finalEvent=(m?(state.matchData?.events||[]):(state.fixtureEvents||[])).filter(x=>x.event_type==='period_end'&&x.validation_status!=='rejected').sort((a,b)=>(Number(b.minute)||0)-(Number(a.minute)||0))[0];
+  const rulesForEnd=matchRules(m,competition(f.competition_id));
+  const finalMinute=finalEvent?.minute!=null?Number(finalEvent.minute):Number(rulesForEnd.minutes_per_period||40)*Number(rulesForEnd.periods||2);
+  const savedMinute=isPostMatch?finalMinute:minute;
+  const savedStoppage=isPostMatch?0:stoppage;
   if(minute!==null&&(!Number.isInteger(minute)||minute<0||minute>300)){toast('Minuto non valido');return}
   if(!Number.isInteger(stoppage)||stoppage<0||stoppage>30){toast('Recupero non valido');return}
   try{
@@ -2331,9 +2344,9 @@ document.addEventListener('submit',async e=>{
     const period=String(fd.get('period')||'first_half');
     const advanced=readEventAdvanced(form);
     const periodLen=Number(matchRules(m,competition(f.competition_id))?.minutes_per_period||40);
-    const eventMinute=type==='substitution'&&period==='halftime'?periodLen:cumulativeMinuteFromPeriod(minute,period,matchRules(m,competition(f.competition_id)));
-    const eventStoppage=type==='substitution'&&period==='halftime'?0:stoppage;
-    const periodNo=period==='second_half'?2:period==='extra'?3:1;
+    const eventMinute=isPostMatch?savedMinute:type==='substitution'&&period==='halftime'?periodLen:cumulativeMinuteFromPeriod(minute,period,matchRules(m,competition(f.competition_id)));
+    const eventStoppage=isPostMatch||type==='substitution'&&period==='halftime'?0:stoppage;
+    const periodNo=period==='post_match'?Number(rulesForEnd.periods||2):period==='second_half'?2:period==='extra'?3:1;
     if(eventId){
      const ev=state.matchData?.events?.find(x=>String(x.id)===String(eventId));if(!ev)throw Error('Evento non trovato');
      const counted=Boolean(ev.payload?.counted_in_score);
@@ -2354,7 +2367,7 @@ document.addEventListener('submit',async e=>{
     state.matchData=await loadMatchInfo(m.id);
    }else{
     const period=String(fd.get('period')||(minute===null?'unknown':'first_half'));
-    const periodNo=period==='unknown'?null:period==='second_half'?2:period==='extra'?3:1;
+    const periodNo=period==='unknown'?null:period==='post_match'?Number(rulesForEnd.periods||2):period==='second_half'?2:period==='extra'?3:1;
     const existingEvent=eventId?(state.fixtureEvents||[]).find(x=>String(x.id)===String(eventId)):null;
     const sequenceOrder=Number(existingEvent?.payload?.sequence_order)||fixtureEventSequence(state.fixtureEvents||[])+1;
     const goalOrderRaw=String(fd.get('goal_order')||'').trim();
@@ -2371,8 +2384,8 @@ document.addEventListener('submit',async e=>{
     const payload={
      event_type:type,
      team_side:teamSide,
-     minute,
-     stoppage_minute:stoppage,
+     minute:savedMinute,
+     stoppage_minute:savedStoppage,
      source:'manual',
      source_raw:{period:periodNo},
      payload:periodPayload,
