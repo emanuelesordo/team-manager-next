@@ -56,8 +56,18 @@ Deno.serve(async(req:Request)=>{
  // Check that referenced past matches truly belong to this season and predate kickoff.
  const authoritative=await rows('app_matches',{season_id:'eq.'+season.id,select:'id,kickoff_at,status,formation',limit:'200'});
  const valid=new Map(authoritative.filter((m:any)=>m.status==='finished'&&Date.parse(m.kickoff_at)<cutoff).map((m:any)=>[m.id,m]));
- const evidence=hist.filter((h:any)=>valid.has(h.matchId)).map((h:any)=>({...h,kickoff:valid.get(h.matchId).kickoff_at}));
- if(evidence.length<3)return respond({status:'insufficient',error:'Lo storico non corrisponde a partite concluse della stagione.'});
+ const historicalIds=hist.filter((h:any)=>valid.has(h.matchId)).map((h:any)=>h.matchId);
+ const officialRows=historicalIds.length?await rows('app_match_players',{match_id:'in.('+historicalIds.join(',')+')',select:'match_id,player_id,started,selection_status,unavailability_reason',limit:'2500'}):[];
+ const grouped=new Map<string,any[]>();
+ for(const p of officialRows){const key=String(p.match_id);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key)!.push(p)}
+ const evidence=hist.filter((h:any)=>valid.has(h.matchId)).map((h:any)=>{
+  const record:any=valid.get(h.matchId),p=grouped.get(h.matchId)||[];
+  const starters=[...new Set(p.filter((x:any)=>x.started===true||x.selection_status==='starter').map((x:any)=>x.player_id))];
+  const available=[...new Set(p.filter((x:any)=>x.selection_status!=='absent'&&!x.unavailability_reason).map((x:any)=>x.player_id))];
+  return {matchId:h.matchId,kickoff:record.kickoff_at,formation:record.formation,opponent:h.opponent,
+   venue:h.venue,homeScore:h.homeScore,awayScore:h.awayScore,starters,available};
+ }).filter((h:any)=>h.starters.length>=10&&h.available.length>=11);
+ if(evidence.length<3)return respond({status:'insufficient',error:'Le distinte ufficiali non contengono abbastanza disponibilità e titolari verificabili.'});
  const apiKey=Deno.env.get('GEMINI_API_KEY');
  if(!apiKey)return respond({error:'GEMINI_API_KEY non configurata'},503);
  const prompt='Sei un analista delle abitudini decisionali di un allenatore di calcio amatoriale. Analizza cronologicamente solo le partite precedenti. Non interpretare un assente come scelta tecnica, non inventare disponibilità storiche, non usare risultati successivi alla data della partita. Devi SELEZIONARE ESCLUSIVAMENTE uno degli id delle proposte ricevute, motivandolo con frequenza dei titolari, sistema di gioco, rotazioni, precedenti contro avversari comparabili, assenze e continuità. Non inventare giocatori. JSON obbligatorio: {"selectedId":"id","reason":"testo italiano sintetico","signals":["massimo 4 motivi"],"confidence":"bassa|media|alta"}. La confidence è qualitativa. I dati dei match sono una sequenza temporale; evita causalità non supportata.';
@@ -65,7 +75,7 @@ Deno.serve(async(req:Request)=>{
  let failure='Errore Gemini',status=503;
  for(let attempt=0;attempt<3;attempt++){
   try{
-   const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+encodeURIComponent(apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});
+   const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key='+encodeURIComponent(apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});
    if(!response.ok){status=response.status;failure='Gemini HTTP '+status;if(![429,500,502,503,504].includes(status))break;await delay(500*(attempt+1)**2);continue}
    const data=await response.json(),raw=data?.candidates?.[0]?.content?.parts?.map((p:any)=>p.text||'').join('')||'';
    const result=JSON.parse(raw);
