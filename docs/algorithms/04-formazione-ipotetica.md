@@ -66,3 +66,15 @@ Nessun ID doppio; nessun non tesserato alla data; nessun indisponibile; rispetto
 - Una variante del medesimo modulo deve includere **almeno un titolare differente**. Scambi fra due titolari su slot simmetrici non sono alternative significative.
 - Il simulatore esclude a turno un titolare da *tutto l'undici* e cerca la migliore combinazione con gli altri disponibili; poi conserva le due nuove combinazioni migliori per ogni modulo. Se la rosa non permette varianti reali, segnalarlo anziché spacciare per diversa una semplice inversione di posizione.
 - Restano invariati filtro disponibilità, tre moduli preferiti, dati pre-kickoff e indice euristico di fattibilità (non probabilità statistica).
+
+## Integrazione Gemini — previsione delle scelte del mister (06/11/2026)
+
+- L'algoritmo in `fresh/pre-match-lineup.js` rimane fonte dell'undici ottimale, del voto atteso, dei filtri di disponibilità, dell'affinità di ruolo e delle nove proposte (3 moduli × 3 varianti).
+- `fresh/coach-ai-lineup.js` raccoglie solo partite concluse **prima** del kickoff; usa distinte con almeno dieci titolari e undici giocatori classificati disponibili. Non inventare disponibilità mancanti.
+- Gemini analizza in ordine temporale disponibilità, titolari, modulo, avversario e risultati, e seleziona **soltanto** una proposta già consentita dall'algoritmo: nessun giocatore nuovo o fuori lista.
+- `supabase/functions/tm-coach-lineup/index.ts` verifica autenticazione, appartenenza allo staff, rosa tesserata e distinte storiche direttamente sul database prima di inoltrare i dati pseudonimizzati al modello.
+- Cache privata `tm_ai_coach_lineup_cache`: un risultato valido viene riutilizzato per la stessa impronta dei dati. Errori e riprova sono separati dal risultato; mai considerare una risposta HTTP di errore una previsione.
+- Dopo un errore temporaneo il server tenta fino a tre volte, quindi mantiene il modello deterministico disponibile e mostra il comando **Riprova Gemini**.
+- La proposta AI e la proposta ottimale rappresentano due finalità differenti; la confidenza generata non è una probabilità calibrata.
+- Test automatici: `tests/coach-ai-lineup.test.mjs` verifica esclusione delle partite future e uso delle disponibilità dichiarate.
+- Punto da validare con account staff: generazione completa di una previsione, lettura cache, aggiornamento a seguito di modifiche delle disponibilità, e simulazione di HTTP 429/503.
