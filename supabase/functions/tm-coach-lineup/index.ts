@@ -44,7 +44,7 @@ Deno.serve(async(req:Request)=>{
  const fingerprint=String(input.fingerprint||'');
  if(!/^[0-9a-f]{64}$/.test(fingerprint))return respond({error:'Fingerprint non valido'},400);
  if(saved?.fingerprint===fingerprint&&saved?.status==='success'&&saved.result)return respond({cached:true,status:'success',result:saved.result});
- if(saved?.fingerprint===fingerprint&&saved?.retry_after&&Date.parse(saved.retry_after)>now&&!input.force)return respond({status:'error',error:saved.last_error||'Riprovare più tardi',retryAfter:saved.retry_after},429);
+ if(saved?.fingerprint===fingerprint&&saved?.retry_after&&Date.parse(saved.retry_after)>now&&(!input.force||saved.last_error==='Gemini HTTP 429'))return respond({status:'error',error:saved.last_error||'Riprovare più tardi',retryAfter:saved.retry_after},429);
  if(!Array.isArray(payload.proposals)||!payload.proposals.length||payload.proposals.length>9)return respond({error:'Formazioni candidate non valide'},400);
  if(!Array.isArray(payload.history)||payload.history.length<3)return respond({status:'insufficient',error:'Servono almeno 3 formazioni storiche ufficiali con convocati attendibili.'});
  const currentIds=new Set((await rows('app_roster',{season_id:'eq.'+season.id,active:'eq.true',select:'player_id',limit:'150'})).map((r:any)=>r.player_id));
@@ -75,7 +75,7 @@ Deno.serve(async(req:Request)=>{
  let failure='Errore Gemini',status=503;
  for(let attempt=0;attempt<3;attempt++){
   try{
-   const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key='+encodeURIComponent(apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});
+   const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key='+encodeURIComponent(apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(13000)});
    if(!response.ok){status=response.status;failure='Gemini HTTP '+status;if(![429,500,502,503,504].includes(status))break;await delay(500*(attempt+1)**2);continue}
    const data=await response.json(),raw=data?.candidates?.[0]?.content?.parts?.map((p:any)=>p.text||'').join('')||'';
    const result=JSON.parse(raw);
