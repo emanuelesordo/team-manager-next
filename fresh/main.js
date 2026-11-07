@@ -650,7 +650,7 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
  const sameMoment=(a,b)=>{
   const am=absoluteMinute(a.event),bm=absoluteMinute(b.event);
   if(am===null||bm===null)return false;
-  return periodNo(a.event)===periodNo(b.event)&&am===bm&&recovery(a.event)===recovery(b.event)&&
+  return norm(a.event.payload?.period)!=='post_match'&&norm(b.event.payload?.period)!=='post_match'&&periodNo(a.event)===periodNo(b.event)&&am===bm&&recovery(a.event)===recovery(b.event)&&
    (norm(a.event.payload?.period)==='halftime')===(norm(b.event.payload?.period)==='halftime');
  };
  const groupedRows=items=>{
@@ -666,7 +666,8 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
       '<div class="mt-group-item">'+eventContent(x)+'</div>';
     }).join('');
    const targetOrder=order(first),targetPeriod=periodNo(first);
-   output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"'+(adminEdit?' data-timeline-drop-order="'+E(targetOrder)+'" data-timeline-drop-period="'+E(targetPeriod)+'"':'')+'><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+minutes(first)+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
+   const postMatch=norm(first.payload?.period)==='post_match';
+   output+='<div class="mt-row'+(group.length>1?' mt-minute-group':'')+'"'+(adminEdit?' data-timeline-drop-order="'+E(targetOrder)+'" data-timeline-drop-period="'+E(targetPeriod)+'"':'')+'><div class="mt-side mt-home"><div class="mt-stack">'+contentFor('home')+'</div></div><b class="mt-minute">'+(postMatch?'':minutes(first))+'</b><div class="mt-side mt-away"><div class="mt-stack">'+contentFor('away')+'</div></div></div>';
    i=j;
   }
   return output;
@@ -695,8 +696,9 @@ function matchEventTimeline(events,fixture,playerName,ourTeam,competitionSetting
   if(declared>0||stoppage.length)output+=heading(declared>0?'RECUPERO '+E(declared)+"'":'RECUPERO','recovery');
   return output+groupedRows(regular);
  };
- let parts=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI','title');
+ let parts='';
  if(postMatchCards.length)parts+=heading('FINE PARTITA · PROVVEDIMENTI DISCIPLINARI')+groupedRows(descending.filter(x=>norm(x.event.payload?.period)==='post_match'));
+ parts+=heading(complete?'FT '+E(fixture.home_score??home)+' - '+E(fixture.away_score??away):'EVENTI','title');
  if(maxPeriod===2){
   parts+=renderPeriod(2)+(periodEndByPeriod.has(1)?'':heading('HT '+halfScore))+renderPeriod(1);
  }else if(maxPeriod>2){
