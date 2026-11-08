@@ -314,3 +314,9 @@ export async function coachLineupAI(fixtureId,mode='read',payload=null,fingerpri
  if(!hasSession())throw Error('Accesso staff richiesto');
  return authorized('/functions/v1/tm-coach-lineup',{method:'POST',body:{fixtureId,mode,payload,fingerprint,force}});
 }
+
+/** Read or generate a persisted post-match Gemini report. */
+export async function postmatchAIReport(fixtureId,mode='read',force=false){
+ if(!hasSession())throw Error('Accesso richiesto');
+ return authorized('/functions/v1/tm-ai-postmatch',{method:'POST',body:{fixtureId,mode,force}});
+}
