@@ -39,6 +39,7 @@ import {simulatePrematchTimeline,renderSimulatedTimeline} from './pre-match-simu
 import {saveTimelinePoster} from './pre-match-poster.js?v=20261019minutes2';
 import {buildHypotheticalLineup,renderHypotheticalLineup} from './pre-match-lineup.js?v=20261019story1';
 import {mountCoachAI} from './coach-ai-lineup.js?v=20261106coach1';
+import {postmatchAIContainer,installPostmatchAI} from './postmatch-ai.js?v=20261108';
 
 const $=s=>document.querySelector(s);
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -901,7 +902,7 @@ function match(){
    (isCaselleMatch?'<section class="prematch-story-slide" data-story-slide="3" aria-label="Formazione"><aside class="glass prematch-lineup-panel" data-prematch-lineup="'+E(f.id)+'"><div class="prematch-loading">Calcolo formazione ipotetica…</div></aside></section>':'')+
    '<section class="prematch-story-slide" data-story-slide="4" aria-label="Timeline prevista"><div class="glass prematch-story-content" data-story-simulation><div class="prematch-loading">Simulazione della gara…</div></div></section></div>'+
    '<div class="prematch-story-dots" role="group" aria-label="Sezioni">'+(isCaselleMatch?['Pronostico','Statistiche','Punti chiave','Formazione','Timeline']:['Pronostico','Statistiche','Punti chiave','Timeline']).map((label,i)=>'<button type="button" data-story-to="'+i+'" aria-label="'+label+'" aria-current="'+(i===0?'true':'false')+'">'+label+'</button>').join('')+'</div></div>';}
-  else body=prediction+(extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
+  else body=postmatchAIContainer(f.id,f.status==='finished',hasSession())+prediction+(extraMatch?'<div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+'</div>':'<div class="match-overview-grid"><div class="inner-card match-overview-events"><h3>Eventi</h3>'+timeline+
    '</div><div class="inner-card match-overview-formation">'+formation+'</div></div>');
  }
  return '<div class="match-header-sentinel" aria-hidden="true"></div>'+header+compactHeader+'<section class="glass panel detail-panel"><div class="tab-scroll" role="tablist" aria-label="Dettaglio partita">'+
@@ -2481,3 +2482,5 @@ window.visualViewport?.addEventListener('resize',sizeClubEditor);
 bootstrap();
 
 
+
+installPostmatchAI();
