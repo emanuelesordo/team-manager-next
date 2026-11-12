@@ -1648,20 +1648,26 @@ function setupPrematchStory(root){
  root.querySelector('[data-story-next]')?.addEventListener('click',()=>go(current()+1));
  dots.forEach((b,i)=>b.addEventListener('click',()=>go(i)));
  // A swipe beyond either end returns to the opposite end, matching arrow loop.
- let startX=null,startIndex=0;
+ let startX=null,startY=null,startIndex=0;
  track.addEventListener('touchstart',event=>{
   if(event.target.closest('[data-prematch-lineup-carousel]')){startX=null;return}
-  startX=event.changedTouches?.[0]?.clientX??null;startIndex=current();
+  startX=event.changedTouches?.[0]?.clientX??null;startY=event.changedTouches?.[0]?.clientY??null;startIndex=current();
  },{passive:true});
  track.addEventListener('touchend',event=>{
   if(startX===null)return;
   const delta=(event.changedTouches?.[0]?.clientX??startX)-startX;
-  startX=null;
-  if(Math.abs(delta)<35)return;
+  const vertical=(event.changedTouches?.[0]?.clientY??startY)-startY;
+  startX=null;startY=null;
+  if(Math.abs(delta)<35||Math.abs(delta)<=Math.abs(vertical))return;
   if(startIndex===0&&delta>0)go(slides.length-1);
   else if(startIndex===slides.length-1&&delta<0)go(0);
  },{passive:true});
- track.addEventListener('scroll',update,{passive:true});update();
+ track.addEventListener('touchcancel',()=>{startX=null;startY=null},{passive:true});
+ // Keep native snapping; update the layout once the swipe settles, not mid-gesture.
+ let settleTimer;
+ track.addEventListener('scroll',()=>{clearTimeout(settleTimer);settleTimer=setTimeout(update,100)},{passive:true});
+ track.addEventListener('scrollend',()=>{clearTimeout(settleTimer);update()},{passive:true});
+ update();
 }
 function arrangePrematchStory(root){
  const forecast=root?.querySelector('[data-prematch-prediction]'),numbers=root?.querySelector('[data-story-numbers]'),focus=root?.querySelector('[data-story-focus]');
