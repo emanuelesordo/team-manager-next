@@ -35,7 +35,7 @@ import {installCallupMessageImport} from './callup-import-ui.js';
 import {weightedTeamRating} from './team-rating.js?facts=20261014peruzzo1';
 import {predictMatch,predictionSignature} from './pre-match-prediction.js?v=20261014peruzzo1';
 import {preMatchPredictionContainer,renderPreMatchPrediction} from './pre-match-prediction-ui.js?v=20261013intelligence1';
-import {simulatePrematchTimeline,renderSimulatedTimeline} from './pre-match-simulation.js?v=20261019tacticalfit1';
+import {renderSimulatedTimeline} from './pre-match-simulation.js?v=20261019tacticalfit1';
 import {saveTimelinePoster} from './pre-match-poster.js?v=20261019minutes2';
 import {buildHypotheticalLineup,renderLineupComparison} from './pre-match-lineup.js?v=20261019story1';
 import {mountCoachAI} from './coach-ai-lineup.js?v=20261106coach1';
@@ -1291,9 +1291,14 @@ function verifiedRecentForm(fixture){
 function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  const host=document.querySelector('[data-prematch-prediction="'+CSS.escape(String(fixture.id))+'"]');
  if(!host||!hasSession())return;
- const unified=host.closest('[data-prematch-story]')?.querySelector('[data-story-simulation]')?.__unifiedScenario;
+ const simulationHost=host.closest('[data-prematch-story]')?.querySelector('[data-story-simulation]');
+ const duration=Number(competition(fixture.competition_id)?.minutes_per_period||40)*Number(competition(fixture.competition_id)?.periods||2);
+ const requestToken={}; if(simulationHost)simulationHost.__aiRequestToken=requestToken;
+ const isCurrent=()=>host.isConnected&&(!simulationHost||simulationHost.__aiRequestToken===requestToken);
+ const unified=null;
  const context={
-  unifiedTimeline:unified?{instruction:'Interpreta questa sequenza come scenario vincolante: conserva risultato, ordine, lato e minuto dei gol; motiva ciascun gol con dati storici, senza inventare eventi.',score:unified.score,events:unified.events.map(e=>({minute:e.minute,type:e.type,side:e.side,label:e.label,partial:e.partial,basis:e.basis}))}:null,
+  timelineInstruction:'Genera autonomamente uno scenario cronologico coerente con il tuo pronostico, con minuti assoluti, squadra home/away, tipo gol e motivazione. Nessuna sequenza algoritmica vincolante. I gol devono coincidere con homeGoals e awayGoals.',
+  duration,
   fixture:{home:fixture.home_team,away:fixture.away_team,kickoff:fixture.kickoff_at},
   scorelines:prediction?.probabilities?.topScorelines,
   outcomes:prediction?.probabilities?{home:prediction.probabilities.home,draw:prediction.probabilities.draw,away:prediction.probabilities.away}:null,
@@ -1312,7 +1317,8 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  const output=panel.querySelector('[data-ai-result]');
  const showFailure=message=>{
   const simulation=host.closest('[data-prematch-story]')?.querySelector('[data-story-simulation]');
-  if(simulation?.__unifiedScenario){simulation.__renderUnified?.({...simulation.__unifiedScenario,label:'Timeline statistica · Gemini non disponibile'});const retry=document.createElement('button');retry.type='button';retry.className='soft-btn';retry.textContent='Riprova integrazione AI';retry.onclick=()=>mountPrematchAI(fixture,prediction,proposal,true);simulation.prepend(retry)}
+  if(!isCurrent())return;
+  if(simulation){simulation.innerHTML='<p class="prematch-footnote">Timeline AI non disponibile.</p>';const retry=document.createElement('button');retry.type='button';retry.className='soft-btn';retry.textContent='Riprova Gemini';retry.onclick=()=>mountPrematchAI(fixture,prediction,proposal,true);simulation.append(retry)}
   const temporary=/\b503\b|high demand|temporar|sovraccaric|unavailable/i.test(String(message));
   output.innerHTML='<p style="margin:0 0 10px">'+(temporary
    ?'Gemini temporaneamente sovraccarico. Nessun nuovo pronostico è stato salvato.'
@@ -1327,6 +1333,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   mountPrematchAI(fixture,prediction,proposal,true);
  };
  const renderAI=data=>{
+  if(!isCurrent())return;
   const report=data?.forecast;
   if(!report){output.textContent=data?.analysis||'Analisi non disponibile';return}
   const pctAI=x=>Math.round(Math.max(0,Math.min(1,Number(x)||0))*100)+'%';
@@ -1408,29 +1415,33 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   const narrative=root?.querySelector('[data-story-slide="4"] .prematch-narrative');
   if(narrative)narrative.hidden=true;
   const simulation=root?.querySelector('[data-story-simulation]');
-  const scenario=simulation?.__unifiedScenario;
-  if(scenario){
+  if(simulation){
    const steps=Array.isArray(report.scenario)?report.scenario:[];
-   const goals=scenario.events.filter(e=>e.type==='goal');
-   const aiGoals=steps.filter(e=>/^(gol|goal|rete)(\b|$)/i.test(String(e.kind||''))).sort((a,b)=>Number(a.minute)-Number(b.minute));
-   const compatible=aiGoals.length===goals.length&&goals.every((e,i)=>e.side===aiGoals[i].side&&Number(e.minute)===Number(aiGoals[i].minute)&&String(aiGoals[i].reason||'').trim());
-   const merged={...scenario,label:compatible?'Timeline integrata · Gemini + statistiche':'Timeline statistica · integrazione AI non disponibile',events:scenario.events.map(e=>{
-    if(e.type!=='goal'||!compatible)return e;
-    const i=goals.indexOf(e),ai=aiGoals[i];
-    return {...e,aiReason:String(ai.reason||'')};
-   })};
-   simulation.__renderUnified?.(merged);
-   if(!compatible){const warning=document.createElement('p');warning.className='prematch-footnote';warning.textContent='Gemini non ha restituito una sequenza compatibile.';const retry=document.createElement('button');retry.type='button';retry.className='soft-btn';retry.textContent='Riprova integrazione AI';retry.onclick=()=>mountPrematchAI(fixture,prediction,proposal,true);simulation.prepend(warning,retry)}
+   const goals=steps.filter(e=>/^(gol|goal|rete)(\b|$)/i.test(String(e.kind||''))).sort((a,b)=>Number(a.minute)-Number(b.minute));
+   const h=Number(report.homeGoals),a=Number(report.awayGoals);
+   const valid=Number.isInteger(h)&&h>=0&&Number.isInteger(a)&&a>=0&&goals.length===h+a&&goals.filter(e=>e.side==='home').length===h&&goals.filter(e=>e.side==='away').length===a&&goals.every(e=>Number.isInteger(Number(e.minute))&&Number(e.minute)>0&&Number(e.minute)<=duration);
+   if(!valid){showFailure('Scenario Gemini incoerente con il risultato previsto.');return}
+   let home=0,away=0;
+   const events=steps.filter(e=>Number.isInteger(Number(e.minute))&&Number(e.minute)>0&&Number(e.minute)<=duration&&!/intervallo|fine gara|fine partita|full.time|half.time/i.test(String(e.kind||''))).sort((a,b)=>Number(a.minute)-Number(b.minute)).map(e=>{
+    const goal=goals.includes(e);if(goal){if(e.side==='home')home++;else away++}
+    return {minute:Number(e.minute),type:goal?'goal':'phase',side:e.side,label:goal?'Gol · '+(e.side==='home'?fixture.home_team:fixture.away_team):String(e.kind||'Fase di gioco'),method:goal?'Scenario AI':'',dynamics:goal?String(e.reason||''):'',basis:String(e.reason||''),partial:goal?home+'–'+away:null};
+   });
+   const half=goals.filter(e=>Number(e.minute)<=duration/2);
+   const ht=half.filter(e=>e.side==='home').length+'–'+half.filter(e=>e.side==='away').length;
+   events.push({minute:duration/2,type:'phase',label:'Intervallo',basis:'Risultato '+ht,partial:ht},{minute:duration,type:'phase',label:'Fine gara',basis:'Risultato '+h+'–'+a,partial:h+'–'+a});
+   events.sort((a,b)=>a.minute-b.minute);
+   const model={events,duration,score:h+'–'+a,homeName:fixture.home_team,awayName:fixture.away_team,label:'Timeline prevista · Gemini'};
+   simulation.innerHTML=renderSimulatedTimeline(model,E);
+   simulation.querySelector('[data-simulation-export]')?.addEventListener('click',async()=>{try{await saveTimelinePoster(model,'simulazione-'+String(fixture.id).slice(0,16)+'.png')}catch(error){toast('Immagine non disponibile: '+error.message)}});
    const expected=host.querySelector('.prematch-expected');
-   const half=scenario.events.filter(e=>e.type==='goal'&&e.minute<=scenario.duration/2);
-   if(expected){const label=expected.querySelector('span');if(label)label.textContent='RISULTATO ATTESO · MODELLO INTEGRATO';const scoreNode=expected.querySelector('strong');if(scoreNode)scoreNode.textContent=scenario.score;let ht=expected.querySelector('.prematch-ht');if(!ht){ht=document.createElement('small');ht.className='prematch-ht';expected.append(ht)}ht.textContent='Intervallo previsto · '+half.filter(e=>e.side==='home').length+'–'+half.filter(e=>e.side==='away').length;}
+   if(expected){let node=expected.querySelector('.prematch-ht');if(!node){node=document.createElement('small');node.className='prematch-ht';expected.append(node)}node.textContent='Intervallo previsto · '+ht}
   }
   markPrematchOrigin(root?.querySelector('[data-story-numbers]'),'stats');
   markPrematchOrigin(attention,'ai');
   markPrematchOrigin(root?.querySelector('[data-prematch-lineup]'),'stats');
   root?.querySelector('[data-ai-scenario]')?.remove();
  };
- const fingerprint=aiSportsFingerprint(fixture)+'-unified-validated-'+(unified?JSON.stringify(unified.events.map(e=>[e.minute,e.type,e.side,e.player_id,e.partial])).split('').reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261)>>>0:'base'),id=String(fixture.id);
+ const fingerprint=aiSportsFingerprint(fixture)+'-gemini-scenario-'+(JSON.stringify(context.lineup||null).split('').reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261)>>>0),id=String(fixture.id);
  const memo=aiMemo.get(id);
  if(!forceRetry&&memo?.fingerprint===fingerprint&&memo.forecast){renderAI(memo);return}
  if(aiPending.has(id)){
@@ -1438,7 +1449,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   // including a panel recreated while the request was running.
   output.textContent='Richiesta a Gemini in corso…';
   aiPending.get(id).finally(()=>{
-   if(panel.isConnected)mountPrematchAI(fixture,prediction,proposal,false);
+   if(panel.isConnected&&isCurrent())mountPrematchAI(fixture,prediction,proposal,false);
   });
   return;
  }
@@ -1605,22 +1616,7 @@ async function hydrateMatchPrediction(){
     const updateSimulation=(proposal)=>{
      if(!destination||!proposal||proposal.duplicate){if(destination)destination.textContent='Nessuna formazione distinta disponibile da simulare.';return}
      const adjustedPrediction=showLineupPrediction(proposal);
-     const scenario=simulatePrematchTimeline({fixture:f,prediction:adjustedPrediction,
-      lineup:{...proposal,teamSide:f.home_team_id===team()?.id?'home':'away',teamId:team()?.id},
-      roster:eligibleBench,players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp,
-      fixtures:realFixtures(),matches,historicalEvents:events,roleData:lineupData});
-     destination.__unifiedScenario=scenario;
-     destination.__renderUnified=(displayScenario)=>{
-     destination.innerHTML=renderSimulatedTimeline(displayScenario,E);
-     const exportButton=destination.querySelector('[data-simulation-export]');
-     exportButton?.addEventListener('click',async()=>{
-      exportButton.disabled=true;exportButton.textContent='Generazione…';
-      try{await saveTimelinePoster(displayScenario,'simulazione-'+String(f.id).slice(0,16)+'.png')}
-      catch(error){toast('Immagine non disponibile: '+error.message)}
-      finally{exportButton.disabled=false;exportButton.textContent='Genera immagine 9:16'}
-     });
-     };
-     destination.__renderUnified(scenario);
+     destination.innerHTML='<p class="prematch-footnote">Generazione timeline Gemini…</p>';
      mountPrematchAI(f,adjustedPrediction,proposal);
     };
     mountCoachAI(lineupTarget,{fixture:f,model,data:{...lineupData,teamId:team()?.id},availability:readPrematchAvailability(f.id),request:coachLineupAI,onSelection:(selected)=>{if(!comparison.isConnected)return;comparison.innerHTML=renderLineupComparison(selected,best,E);updateSimulation(selected)}});
@@ -1629,7 +1625,7 @@ async function hydrateMatchPrediction(){
   }
   if(!lineupTarget||(lineupTarget&&!isStaff(staffContext()))){
    const destination=document.querySelector('[data-story-simulation]');
-   if(destination){const scenario=simulatePrematchTimeline({fixture:f,prediction:result,competition:comp});destination.__unifiedScenario=scenario;destination.__renderUnified=m=>{destination.innerHTML=renderSimulatedTimeline(m,E)};destination.__renderUnified(scenario);mountPrematchAI(f,result)}
+   if(destination){destination.textContent='Generazione timeline Gemini…';mountPrematchAI(f,result)}
   }
  }catch(error){
   const current=document.querySelector('[data-prematch-prediction]');
