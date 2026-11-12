@@ -594,3 +594,13 @@ export function renderHypotheticalLineup(model,escape=value=>String(value??'')){
   '<span data-prematch-slide-index>1 / '+proposals.length+'</span>'+
   '<button type="button" data-prematch-slide-step="1" aria-label="Formazione successiva"'+(proposals.length<=1?' disabled':'')+'>›</button></div>';
 }
+
+export function renderLineupComparison(predicted,best,escape=value=>String(value??'')){
+ const card=(p,label)=>'<section class="prematch-xi-comparison-card"><h4>'+label+'</h4>'+ (p?proposalMarkup({...p,reason:''},escape).replace(/MODULO \d+ \/ 3 · VARIANTE \d+ \/ 3/,'UNDICI TITOLARE'):'<p class="prematch-lineup-empty">In attesa della previsione Gemini.</p>')+'</section>';
+ const predictedIds=new Set((predicted?.players||[]).map(p=>String(p.player_id)));
+ const bestIds=new Set((best?.players||[]).map(p=>String(p.player_id)));
+ const shared=[...predictedIds].filter(id=>bestIds.has(id)).length;
+ const names=(p,other)=>(p?.players||[]).filter(x=>!other.has(String(x.player_id))).map(x=>escape(x.name)).join(', ')||'—';
+ return '<div class="prematch-xi-comparison">'+card(predicted,'Scelta prevista del mister')+card(best,'Miglior XI secondo algoritmo')+'</div>'+
+ (predicted&&best?'<section class="prematch-xi-diff"><h4>'+shared+' / 11 titolari in comune</h4><p><b>Solo nella previsione:</b> '+names(predicted,bestIds)+'</p><p><b>Solo nel miglior XI:</b> '+names(best,predictedIds)+'</p></section>':'');
+}
