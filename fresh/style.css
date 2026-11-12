@@ -1574,7 +1574,7 @@ body[data-match-header-mode="live-compact"] .match-compact-bar.is-live .match-he
 .prematch-story-nav button{border:1px solid var(--border);border-radius:9px;background:transparent;color:var(--ink);font-size:23px;line-height:1;padding:5px 13px}
 .prematch-story-track{display:flex;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;gap:0;align-items:flex-start}
 .prematch-story-track::-webkit-scrollbar{display:none}
-.prematch-story-slide{scroll-snap-align:start;flex:0 0 100%;width:100%;min-width:0}
+.prematch-story-slide{scroll-snap-align:start;scroll-snap-stop:always;flex:0 0 100%;width:100%;min-width:0}
 .prematch-story-slide>.prematch-prediction,.prematch-story-slide>.prematch-lineup-panel{position:static;width:100%;margin:0;max-width:none;min-width:0}
 .prematch-story-slide .prematch-lineup-field{max-width:560px;margin:0 auto}
 .prematch-story-content{padding:18px;min-height:0;border-radius:14px}
