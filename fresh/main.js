@@ -1293,7 +1293,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  if(!host||!hasSession())return;
  const unified=host.closest('[data-prematch-story]')?.querySelector('[data-story-simulation]')?.__unifiedScenario;
  const context={
-  unifiedTimeline:unified?{score:unified.score,events:unified.events.map(e=>({minute:e.minute,type:e.type,side:e.side,label:e.label,partial:e.partial,basis:e.basis}))}:null,
+  unifiedTimeline:unified?{instruction:'Interpreta questa sequenza come scenario vincolante: conserva risultato, ordine, lato e minuto dei gol; motiva ciascun gol con dati storici, senza inventare eventi.',score:unified.score,events:unified.events.map(e=>({minute:e.minute,type:e.type,side:e.side,label:e.label,partial:e.partial,basis:e.basis}))}:null,
   fixture:{home:fixture.home_team,away:fixture.away_team,kickoff:fixture.kickoff_at},
   scorelines:prediction?.probabilities?.topScorelines,
   outcomes:prediction?.probabilities?{home:prediction.probabilities.home,draw:prediction.probabilities.draw,away:prediction.probabilities.away}:null,
@@ -1341,14 +1341,14 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   const outcome=[['1',fixture.home_team,integer[0]],['X','Pareggio',integer[1]],['2',fixture.away_team,integer[2]]];
   // Keep the existing five-page overview and let the AI own forecast-only fields.
   const summary=host.querySelector('.prematch-summary');
-  if(summary){
+  if(summary&&!unified){
    const expected=summary.querySelector('.prematch-expected');
    if(expected)expected.innerHTML='<span>RISULTATO ATTESO · AI</span><strong>'+E(report.homeGoals)+' <i>–</i> '+E(report.awayGoals)+'</strong>'+
     '<div class="prematch-score-alternatives">'+score.slice(0,3).map(x=>'<span><b>'+E(x.home)+'–'+E(x.away)+'</b> '+(x.probability==null?'':pctAI(x.probability))+'</span>').join('')+'</div>';
    summary.hidden=false;
   }
   const bars=host.querySelector('.prematch-probabilities');
-  if(bars){
+  if(bars&&!unified){
    bars.innerHTML=outcome.map(([key,label,value])=>'<div class="prematch-probability"><div><b>'+E(key)+'</b><span>'+E(label)+'</span><strong>'+(E(value)+'%')+'</strong></div><i><span style="width:'+(E(value)+'%')+'"></span></i></div>').join('');
    bars.hidden=false;
   }
@@ -1370,7 +1370,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   odds.innerHTML=outcome.map(([key,,value])=>'<span><b>'+E(key)+'</b> '+(value>0?(100/value).toFixed(2):'—')+'</span>').join('');
   odds.title='Quote teoriche senza margine del bookmaker, derivate dalle probabilità AI';
   const barsHost=host.querySelector('.prematch-probabilities');
-  if(barsHost&&!odds.isConnected)barsHost.insertAdjacentElement('afterend',odds);
+  if(!unified&&barsHost&&!odds.isConnected)barsHost.insertAdjacentElement('afterend',odds);
   if(!odds.querySelector('[data-odds-label]'))odds.insertAdjacentHTML('afterbegin','<span data-odds-label>🤖 Quote eque</span>');
   markPrematchOrigin(host,'ai');
   const root=host.closest('[data-prematch-story]');
@@ -1420,14 +1420,14 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
    simulation.__renderUnified?.(merged);
    const expected=host.querySelector('.prematch-expected');
    const half=scenario.events.filter(e=>e.type==='goal'&&e.minute<=scenario.duration/2);
-   if(expected)expected.innerHTML='<span>RISULTATO ATTESO · MODELLO INTEGRATO</span><strong>'+E(scenario.score)+'</strong><small class="prematch-ht">Intervallo previsto · <b>'+half.filter(e=>e.side==='home').length+'–'+half.filter(e=>e.side==='away').length+'</b></small>';
+   if(expected){const label=expected.querySelector('span');if(label)label.textContent='RISULTATO ATTESO · MODELLO INTEGRATO';const scoreNode=expected.querySelector('strong');if(scoreNode)scoreNode.textContent=scenario.score;let ht=expected.querySelector('.prematch-ht');if(!ht){ht=document.createElement('small');ht.className='prematch-ht';expected.append(ht)}ht.textContent='Intervallo previsto · '+half.filter(e=>e.side==='home').length+'–'+half.filter(e=>e.side==='away').length;}
   }
   markPrematchOrigin(root?.querySelector('[data-story-numbers]'),'stats');
   markPrematchOrigin(attention,'ai');
   markPrematchOrigin(root?.querySelector('[data-prematch-lineup]'),'stats');
   root?.querySelector('[data-ai-scenario]')?.remove();
  };
- const fingerprint=aiSportsFingerprint(fixture),id=String(fixture.id);
+ const fingerprint=aiSportsFingerprint(fixture)+'-unified-'+(unified?JSON.stringify(unified.events.map(e=>[e.minute,e.type,e.side,e.player_id,e.partial])).split('').reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261)>>>0:'base'),id=String(fixture.id);
  const memo=aiMemo.get(id);
  if(!forceRetry&&memo?.fingerprint===fingerprint&&memo.forecast){renderAI(memo);return}
  if(aiPending.has(id)){
