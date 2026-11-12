@@ -1709,3 +1709,26 @@ body[data-page="competitions"] .comp-rounds .fixture-clubs strong{flex:0 1 auto}
 .prematch-story [data-ai-timeline] ol{padding-left:20px;line-height:1.5}
 .prematch-story [data-ai-timeline] li{padding:7px 0;border-bottom:1px solid var(--border)}
 .prematch-story .prematch-narrative[hidden]{display:none}
+
+
+/* Match focus: editorial matchup cards with a clear two-team comparison. */
+.prematch-story [data-story-focus] .prematch-attention-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.prematch-story [data-story-focus] .prematch-attention-item{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--surface-solid);min-width:0}
+.prematch-story [data-story-focus] .prematch-attention-item>div{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.prematch-story [data-story-focus] .prematch-attention-item>div span{font-size:11px;letter-spacing:0;text-transform:none;color:var(--muted)}
+.prematch-story [data-story-focus] .prematch-attention-item strong{font-size:15px;line-height:1.35}
+.prematch-story [data-story-focus] .prematch-attention-item>b{align-self:flex-start;font-size:25px;line-height:1;color:var(--accent)}
+.prematch-story [data-story-focus] .prematch-attention-item small{display:block;font-size:13px;line-height:1.55;color:var(--muted);overflow-wrap:anywhere}
+.prematch-story [data-story-focus] [data-ai-attention-items] .prematch-attention-item>div{display:grid!important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important;align-items:stretch!important}
+.prematch-story [data-story-focus] [data-ai-attention-items] .prematch-attention-item>div>span{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px;border-radius:10px;background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.prematch-story [data-story-focus] [data-ai-attention-items] .prematch-attention-item>div>span:last-child{background:color-mix(in srgb,#6498c8 12%,transparent)}
+.prematch-story [data-story-focus] [data-ai-attention-items] .prematch-attention-item>div>b{align-self:center;font-size:11px}
+.prematch-story [data-story-focus] [data-opponent-notes]{font-size:13px;line-height:1.6}
+.prematch-xi-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.prematch-xi-comparison-card{min-width:0;border:1px solid var(--border);border-radius:14px;padding:12px}
+.prematch-xi-comparison-card>h4{font-size:14px;margin:0 0 12px}
+.prematch-xi-diff{margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:12px;font-size:13px}
+.prematch-xi-diff p{margin:6px 0}
+.prematch-story-slide{align-self:flex-start;height:auto;min-height:0;max-height:none;display:flow-root}
+.prematch-story-track{overflow-y:hidden;box-sizing:border-box}
+@media(max-width:760px){.prematch-xi-comparison{grid-template-columns:minmax(0,1fr)}}
