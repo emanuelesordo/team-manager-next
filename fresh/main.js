@@ -1637,7 +1637,13 @@ function setupPrematchStory(root){
  const slides=[...track.querySelectorAll('[data-story-slide]')],dots=[...root.querySelectorAll('[data-story-to]')],counter=root.querySelector('[data-story-counter]');
  const current=()=>Math.max(0,Math.min(slides.length-1,Math.round(track.scrollLeft/Math.max(1,track.clientWidth))));
  const go=n=>{const i=(n+slides.length)%slides.length;track.scrollTo({left:slides[i].offsetLeft-slides[0].offsetLeft,behavior:'smooth'})};
- const update=()=>{const i=current();if(counter)counter.textContent=(i+1)+' / '+slides.length;dots.forEach((b,j)=>b.setAttribute('aria-current',String(i===j)))};
+ const fitHeight=()=>{const slide=slides[current()];if(!slide||!track.isConnected)return;const height=Math.ceil(slide.getBoundingClientRect().height);if(height>0&&track.style.height!==height+'px')track.style.height=height+'px'};
+ const update=()=>{const i=current();if(counter)counter.textContent=(i+1)+' / '+slides.length;dots.forEach((b,j)=>b.setAttribute('aria-current',String(i===j)));fitHeight()};
+ // Observe intrinsic slide heights, including async statistics, AI and lineup updates.
+ if(typeof ResizeObserver==='function'){
+  const observer=new ResizeObserver(()=>{if(!track.isConnected){observer.disconnect();return}fitHeight()});
+  slides.forEach(slide=>observer.observe(slide));
+ }
  root.querySelector('[data-story-prev]')?.addEventListener('click',()=>go(current()-1));
  root.querySelector('[data-story-next]')?.addEventListener('click',()=>go(current()+1));
  dots.forEach((b,i)=>b.addEventListener('click',()=>go(i)));
