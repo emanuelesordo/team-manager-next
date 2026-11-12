@@ -1296,8 +1296,10 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  const requestToken={}; if(simulationHost)simulationHost.__aiRequestToken=requestToken;
  const isCurrent=()=>host.isConnected&&(!simulationHost||simulationHost.__aiRequestToken===requestToken);
  const unified=null;
+ const pendingFields=host.querySelectorAll('.prematch-summary,.prematch-probabilities,.prematch-footnote');
+ pendingFields.forEach(el=>el.hidden=true);
  const context={
-  timelineInstruction:'Genera autonomamente uno scenario cronologico coerente con il tuo pronostico, con minuti assoluti, squadra home/away, tipo gol e motivazione. Nessuna sequenza algoritmica vincolante. I gol devono coincidere con homeGoals e awayGoals.',
+  timelineInstruction:'Genera autonomamente uno scenario cronologico coerente con il tuo pronostico, con minuti assoluti, squadra home/away, tipo gol e motivazione. Nessuna sequenza algoritmica vincolante. I gol devono coincidere con homeGoals e awayGoals. Includi sostituzioni realistiche (kind: cambio, playerIn e playerOut, oppure entrambi i nomi in reason), cartellini e altre fasi pertinenti. Rispetta massimo 7 cambi in 3 sessioni oltre intervallo per Caselle, non inventare nomi avversari. Usa lo storico e la formazione prevista.',
   duration,
   fixture:{home:fixture.home_team,away:fixture.away_team,kickoff:fixture.kickoff_at},
   scorelines:prediction?.probabilities?.topScorelines,
@@ -1307,7 +1309,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   situations:prediction?.situational,
   comparison:prediction?.comparison,
   lineup:proposal?{formation:proposal.formation,expectedRating:proposal.xiExpectedRating,roleCoverage:proposal.roleCoverage,unfilled:proposal.unfilled,
-   players:proposal.players?.map(p=>({role:p.role,targetRole:p.targetRole,expectedRating:p.expectedRating,fitness:p.fitness,positionPenalty:p.positionAdjustment?.ratingPenalty}))}:null
+   players:proposal.players?.map(p=>({id:p.player_id,name:p.name||p.playerName||p.fullName,role:p.role,targetRole:p.targetRole,expectedRating:p.expectedRating,fitness:p.fitness,positionPenalty:p.positionAdjustment?.ratingPenalty}))}:null
  };
  let panel=host.querySelector('[data-ai-analyst]');
  if(!panel){panel=document.createElement('section');panel.dataset.aiAnalyst='';panel.style.cssText='margin-top:16px;padding:12px;border-top:1px solid currentColor';
@@ -1336,6 +1338,9 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   if(!isCurrent())return;
   const report=data?.forecast;
   if(!report){output.textContent=data?.analysis||'Analisi non disponibile';return}
+  const rawSteps=Array.isArray(report.scenario)?report.scenario:[];
+  const rawGoals=rawSteps.filter(e=>/^(gol|goal|rete)(\b|$)/i.test(String(e.kind||'')));
+  if(!Array.isArray(report.scenario)||rawGoals.length!==Number(report.homeGoals)+Number(report.awayGoals)||rawGoals.filter(e=>e.side==='home').length!==Number(report.homeGoals)||rawGoals.filter(e=>e.side==='away').length!==Number(report.awayGoals)||rawGoals.some(e=>!Number.isInteger(Number(e.minute))||Number(e.minute)<1||Number(e.minute)>duration)){showFailure('Scenario Gemini incoerente con il risultato previsto.');return}
   const pctAI=x=>Math.round(Math.max(0,Math.min(1,Number(x)||0))*100)+'%';
   const lines=Array.isArray(report.scorelines)?report.scorelines:[];
   const score=lines.length?lines:[{home:report.homeGoals,away:report.awayGoals,probability:null}];
@@ -1362,7 +1367,9 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
    bars.hidden=false;
   }
   const foot=host.querySelector('.prematch-footnote');
-  if(foot&&!foot.dataset.aiLabeled){foot.insertAdjacentHTML('afterbegin','<b>Pronostico AI</b> · ');foot.dataset.aiLabeled='true'}
+  if(foot)foot.hidden=true;
+  host.querySelector('.prematch-prediction-head h3').textContent='Pronostico Gemini';
+  host.querySelector('.prematch-model-badge')?.remove();
   // The analysis belongs inside the original forecast panel, not a detached prose card.
   panel.style.cssText='margin-top:10px;padding:10px 0;border-top:1px solid var(--border,rgba(128,128,128,.2))';
   panel.querySelector('h3')?.remove();
@@ -1424,7 +1431,8 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
    let home=0,away=0;
    const events=steps.filter(e=>Number.isInteger(Number(e.minute))&&Number(e.minute)>0&&Number(e.minute)<=duration&&!/intervallo|fine gara|fine partita|full.time|half.time/i.test(String(e.kind||''))).sort((a,b)=>Number(a.minute)-Number(b.minute)).map(e=>{
     const goal=goals.includes(e);if(goal){if(e.side==='home')home++;else away++}
-    return {minute:Number(e.minute),type:goal?'goal':'phase',side:e.side,label:goal?'Gol · '+(e.side==='home'?fixture.home_team:fixture.away_team):String(e.kind||'Fase di gioco'),method:goal?'Scenario AI':'',dynamics:goal?String(e.reason||''):'',basis:String(e.reason||''),partial:goal?home+'–'+away:null};
+    const change=/cambio|sostituz|substitution/i.test(String(e.kind||''));
+    return {minute:Number(e.minute),type:goal?'goal':change?'substitution':'phase',side:e.side,label:goal?'Gol · '+(e.side==='home'?fixture.home_team:fixture.away_team):change?'Sostituzione · '+(e.side==='home'?fixture.home_team:e.side==='away'?fixture.away_team:''):String(e.kind||'Fase di gioco'),playerIn:e.playerIn||e.incoming||'',playerOut:e.playerOut||e.outgoing||'',assistman:e.assist||'',method:goal?'Scenario AI':'',dynamics:goal?String(e.reason||''):'',basis:String(e.reason||''),partial:goal?home+'–'+away:null};
    });
    const half=goals.filter(e=>Number(e.minute)<=duration/2);
    const ht=half.filter(e=>e.side==='home').length+'–'+half.filter(e=>e.side==='away').length;
@@ -1441,7 +1449,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   markPrematchOrigin(root?.querySelector('[data-prematch-lineup]'),'stats');
   root?.querySelector('[data-ai-scenario]')?.remove();
  };
- const fingerprint=aiSportsFingerprint(fixture)+'-gemini-scenario-'+(JSON.stringify(context.lineup||null).split('').reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261)>>>0),id=String(fixture.id);
+ const fingerprint=aiSportsFingerprint(fixture)+'-gemini-events-'+(JSON.stringify(context.lineup||null).split('').reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261)>>>0),id=String(fixture.id);
  const memo=aiMemo.get(id);
  if(!forceRetry&&memo?.fingerprint===fingerprint&&memo.forecast){renderAI(memo);return}
  if(aiPending.has(id)){
@@ -1528,6 +1536,8 @@ async function hydrateMatchPrediction(){
   if(current){
    current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">DATI · NON QUOTE</span></div>'+
     renderPreMatchPrediction(result,E);
+   current.querySelectorAll('.prematch-summary,.prematch-probabilities,.prematch-footnote,.prematch-model-badge').forEach(el=>el.hidden=true);
+   current.querySelector('h3').textContent='Pronostico Gemini · caricamento';
    current.dataset.ready=signature;
    const story=current.closest('[data-prematch-story]');arrangePrematchStory(story);setupPrematchStory(story);
    // Every fixture, including opponents' matches, uses the same overview and cached AI forecast.
@@ -1592,12 +1602,6 @@ async function hydrateMatchPrediction(){
     })||result;
     const showLineupPrediction=proposal=>{
      const adjusted=predictionForProposal(proposal);
-     if(current){
-      current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">XI IPOTETICO · DATI</span></div>'+
-       renderPreMatchPrediction(adjusted,E);
-      arrangePrematchStory(current.closest('[data-prematch-story]'));
-      // AI is mounted after the simulation is ready.
-     }
      return adjusted;
     };
     lineupTarget.innerHTML='<div class="prematch-section-title"><span class="eyebrow">📊 CASELLE · XI IPOTETICO</span><h4>Formazione prevista, voti e panchina</h4></div>'+
@@ -1620,7 +1624,7 @@ async function hydrateMatchPrediction(){
      mountPrematchAI(f,adjustedPrediction,proposal);
     };
     mountCoachAI(lineupTarget,{fixture:f,model,data:{...lineupData,teamId:team()?.id},availability:readPrematchAvailability(f.id),request:coachLineupAI,onSelection:(selected)=>{if(!comparison.isConnected)return;comparison.innerHTML=renderLineupComparison(selected,best,E);updateSimulation(selected)}});
-    updateSimulation(best);
+    if(destination)destination.textContent='In attesa della formazione prevista da Gemini…';
    }
   }
   if(!lineupTarget||(lineupTarget&&!isStaff(staffContext()))){
@@ -1693,7 +1697,7 @@ function arrangePrematchStory(root){
  if(comparison)numbers.replaceChildren(comparison);else numbers.textContent='Confronto non disponibile.';
  if(attention){focus.replaceChildren(attention)}else focus.textContent='Focus non disponibile.';
  const simulation=root.querySelector('[data-story-simulation]');
- if(simulation&&narrative){simulation.parentElement.querySelector('.prematch-narrative')?.remove();simulation.insertAdjacentElement('afterend',narrative)}
+ if(simulation&&narrative)narrative.remove();
 }
 
 // Capture scroll completion to keep carousel arrows aligned with touch/trackpad swipes.
