@@ -277,6 +277,7 @@ export function renderSimulatedTimeline(model,escape=x=>String(x??'')){
   (e.changes?.length>1?e.changes.map(c=>'<small>'+escape(c.label)+'</small>').join(''):'')+
   (e.type==='goal'&&e.assistman?'<small>Assist: '+escape(e.assistman)+'</small>':'')+
   (e.type==='goal'?'<small>'+escape(e.method)+' · '+escape(e.dynamics)+'</small>':e.changes?.length>1?'':'<small>'+escape(e.basis)+'</small>')+
+  (e.aiReason?'<small class="prematch-ai-event-reason">'+escape(e.aiReason)+'</small>':'')+
   '</div>'+(e.partial?'<b class="prematch-simulation-partial">'+escape(e.partial)+'</b>':'')+'</li>').join('');
  return head+'<ol class="prematch-simulation-events">'+rows+'</ol>'+
   '<p class="prematch-simulation-disclaimer">SIMULAZIONE · Timeline generata da dati disponibili prima della gara. Non modifica i tabellini.</p>';
