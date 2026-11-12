@@ -1401,7 +1401,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
    if(observed&&!observed.dataset.originMarked){observed.dataset.originMarked='true';observed.querySelectorAll('.prematch-attention-item strong').forEach(x=>x.insertAdjacentHTML('afterbegin','📊 '))}
    attention.hidden=false;
   }
-  const narrative=root?.querySelector('[data-story-simulation] .prematch-narrative');
+  const narrative=root?.querySelector('[data-story-slide="4"] .prematch-narrative');
   if(narrative){
    const steps=(report.scenario||[]).slice().sort((a,b)=>Number(a.minute)-Number(b.minute));
    const paragraphs=steps.map(e=>'<p><b>'+E(e.minute)+' min · '+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</p>').join('');
@@ -1421,6 +1421,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
    const valid=steps.length>0&&steps.filter(e=>/gol|goal|rete/i.test(e.kind)).filter(e=>e.side==='home').length===Number(report.homeGoals)&&steps.filter(e=>/gol|goal|rete/i.test(e.kind)).filter(e=>e.side==='away').length===Number(report.awayGoals);
    let timeline=simulation.querySelector('[data-ai-timeline]');
    if(!timeline){timeline=document.createElement('section');timeline.dataset.aiTimeline='';simulation.prepend(timeline)}
+   if(narrative)narrative.hidden=valid;
    timeline.innerHTML='<div class="prematch-section-title"><span class="eyebrow">🤖 PREVISIONE AI</span><h4>Timeline prevista</h4></div>'+
     (valid?'<ol>'+steps.map(e=>'<li><b>'+E(e.minute)+"' · "+crestFor(e.side)+' '+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</li>').join('')+'</ol>':
      '<p>La sequenza AI non copre coerentemente il risultato previsto. La simulazione statistica sottostante resta il riferimento.</p>');
@@ -1677,7 +1678,7 @@ function arrangePrematchStory(root){
  if(comparison)numbers.replaceChildren(comparison);else numbers.textContent='Confronto non disponibile.';
  if(attention){focus.replaceChildren(attention)}else focus.textContent='Focus non disponibile.';
  const simulation=root.querySelector('[data-story-simulation]');
- if(simulation&&narrative){simulation.querySelector('.prematch-narrative')?.remove();simulation.append(narrative)}
+ if(simulation&&narrative){simulation.parentElement.querySelector('.prematch-narrative')?.remove();simulation.insertAdjacentElement('afterend',narrative)}
 }
 
 // Capture scroll completion to keep carousel arrows aligned with touch/trackpad swipes.
