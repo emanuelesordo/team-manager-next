@@ -1291,7 +1291,9 @@ function verifiedRecentForm(fixture){
 function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  const host=document.querySelector('[data-prematch-prediction="'+CSS.escape(String(fixture.id))+'"]');
  if(!host||!hasSession())return;
+ const unified=host.closest('[data-prematch-story]')?.querySelector('[data-story-simulation]')?.__unifiedScenario;
  const context={
+  unifiedTimeline:unified?{score:unified.score,events:unified.events.map(e=>({minute:e.minute,type:e.type,side:e.side,label:e.label,partial:e.partial,basis:e.basis}))}:null,
   fixture:{home:fixture.home_team,away:fixture.away_team,kickoff:fixture.kickoff_at},
   scorelines:prediction?.probabilities?.topScorelines,
   outcomes:prediction?.probabilities?{home:prediction.probabilities.home,draw:prediction.probabilities.draw,away:prediction.probabilities.away}:null,
@@ -1402,30 +1404,27 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
    attention.hidden=false;
   }
   const narrative=root?.querySelector('[data-story-slide="4"] .prematch-narrative');
-  if(narrative){
-   const steps=(report.scenario||[]).slice().sort((a,b)=>Number(a.minute)-Number(b.minute));
-   const paragraphs=steps.map(e=>'<p><b>'+E(e.minute)+' min · '+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</p>').join('');
-   narrative.innerHTML='<div class="prematch-section-title"><span class="eyebrow">SCENARIO ATTESO</span><h4>Come può svilupparsi la gara</h4></div>'+(paragraphs||'<p>Timeline AI non disponibile: eventi insufficienti per ricostruire il risultato atteso.</p>');
-   narrative.hidden=false;
+  if(narrative)narrative.hidden=true;
+  const simulation=root?.querySelector('[data-story-simulation]');
+  const scenario=simulation?.__unifiedScenario;
+  if(scenario){
+   const steps=Array.isArray(report.scenario)?report.scenario:[];
+   const goals=scenario.events.filter(e=>e.type==='goal');
+   const aiGoals=steps.filter(e=>/^(gol|goal|rete)(\\b|$)/i.test(String(e.kind||''))).sort((a,b)=>Number(a.minute)-Number(b.minute));
+   const compatible=aiGoals.length===goals.length&&goals.every((e,i)=>e.side===aiGoals[i].side);
+   const merged={...scenario,events:scenario.events.map(e=>{
+    if(e.type!=='goal'||!compatible)return e;
+    const i=goals.indexOf(e),ai=aiGoals[i];
+    return {...e,aiReason:String(ai.reason||'')};
+   })};
+   simulation.__renderUnified?.(merged);
+   const expected=host.querySelector('.prematch-expected');
+   const half=scenario.events.filter(e=>e.type==='goal'&&e.minute<=scenario.duration/2);
+   if(expected)expected.innerHTML='<span>RISULTATO ATTESO · MODELLO INTEGRATO</span><strong>'+E(scenario.score)+'</strong><small class="prematch-ht">Intervallo previsto · <b>'+half.filter(e=>e.side==='home').length+'–'+half.filter(e=>e.side==='away').length+'</b></small>';
   }
-  root?.querySelector('[data-ai-focus]')?.remove();
-  root?.querySelector('[data-ai-lineup]')?.remove();
   markPrematchOrigin(root?.querySelector('[data-story-numbers]'),'stats');
   markPrematchOrigin(attention,'ai');
-  markPrematchOrigin(narrative,'ai');
   markPrematchOrigin(root?.querySelector('[data-prematch-lineup]'),'stats');
-  markPrematchOrigin(root?.querySelector('[data-story-simulation]'),'stats');
-  const simulation=root?.querySelector('[data-story-simulation]');
-  if(simulation){
-   const steps=Array.isArray(report.scenario)?report.scenario:[];
-   const valid=steps.length>0&&steps.filter(e=>/gol|goal|rete/i.test(e.kind)).filter(e=>e.side==='home').length===Number(report.homeGoals)&&steps.filter(e=>/gol|goal|rete/i.test(e.kind)).filter(e=>e.side==='away').length===Number(report.awayGoals);
-   let timeline=simulation.querySelector('[data-ai-timeline]');
-   if(!timeline){timeline=document.createElement('section');timeline.dataset.aiTimeline='';simulation.prepend(timeline)}
-   if(narrative)narrative.hidden=valid;
-   timeline.innerHTML='<div class="prematch-section-title"><span class="eyebrow">🤖 PREVISIONE AI</span><h4>Timeline prevista</h4></div>'+
-    (valid?'<ol>'+steps.map(e=>'<li><b>'+E(e.minute)+"' · "+crestFor(e.side)+' '+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</li>').join('')+'</ol>':
-     '<p>La sequenza AI non copre coerentemente il risultato previsto. La simulazione statistica sottostante resta il riferimento.</p>');
-  }
   root?.querySelector('[data-ai-scenario]')?.remove();
  };
  const fingerprint=aiSportsFingerprint(fixture),id=String(fixture.id);
@@ -1583,7 +1582,7 @@ async function hydrateMatchPrediction(){
       current.innerHTML='<div class="prematch-prediction-head"><div><span class="eyebrow">MODELLO PRE-PARTITA</span><h3>Pronostico statistico</h3></div><span class="prematch-model-badge">XI IPOTETICO · DATI</span></div>'+
        renderPreMatchPrediction(adjusted,E);
       arrangePrematchStory(current.closest('[data-prematch-story]'));
-      mountPrematchAI(f,adjusted,proposal);
+      // AI is mounted after the simulation is ready.
      }
      return adjusted;
     };
@@ -1607,15 +1606,19 @@ async function hydrateMatchPrediction(){
       lineup:{...proposal,teamSide:f.home_team_id===team()?.id?'home':'away',teamId:team()?.id},
       roster:eligibleBench,players:lineupData.players||[],stats:lineupData.playerStats||[],competition:comp,
       fixtures:realFixtures(),matches,historicalEvents:events,roleData:lineupData});
-     destination.innerHTML=renderSimulatedTimeline(scenario,E);
-     mountPrematchAI(f,adjustedPrediction,proposal);
+     destination.__unifiedScenario=scenario;
+     destination.__renderUnified=(displayScenario)=>{
+     destination.innerHTML=renderSimulatedTimeline(displayScenario,E);
      const exportButton=destination.querySelector('[data-simulation-export]');
      exportButton?.addEventListener('click',async()=>{
       exportButton.disabled=true;exportButton.textContent='Generazione…';
-      try{await saveTimelinePoster(scenario,'simulazione-'+String(f.id).slice(0,16)+'.png')}
+      try{await saveTimelinePoster(displayScenario,'simulazione-'+String(f.id).slice(0,16)+'.png')}
       catch(error){toast('Immagine non disponibile: '+error.message)}
       finally{exportButton.disabled=false;exportButton.textContent='Genera immagine 9:16'}
      });
+     };
+     destination.__renderUnified(scenario);
+     mountPrematchAI(f,adjustedPrediction,proposal);
     };
     mountCoachAI(lineupTarget,{fixture:f,model,data:{...lineupData,teamId:team()?.id},availability:readPrematchAvailability(f.id),request:coachLineupAI,onSelection:(selected)=>{if(!comparison.isConnected)return;comparison.innerHTML=renderLineupComparison(selected,best,E);updateSimulation(selected)}});
     updateSimulation(best);
@@ -1623,7 +1626,7 @@ async function hydrateMatchPrediction(){
   }
   if(!lineupTarget||(lineupTarget&&!isStaff(staffContext()))){
    const destination=document.querySelector('[data-story-simulation]');
-   if(destination)destination.innerHTML=renderSimulatedTimeline(simulatePrematchTimeline({fixture:f,prediction:result,competition:comp}),E);
+   if(destination){const scenario=simulatePrematchTimeline({fixture:f,prediction:result,competition:comp});destination.__unifiedScenario=scenario;destination.__renderUnified=m=>{destination.innerHTML=renderSimulatedTimeline(m,E)};destination.__renderUnified(scenario);mountPrematchAI(f,result)}
   }
  }catch(error){
   const current=document.querySelector('[data-prematch-prediction]');
