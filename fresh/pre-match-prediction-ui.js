@@ -86,6 +86,9 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
    ['Forma corretta per rango',fmtRate(hRich.form?.opponentAdjusted,hRich.form?.adjustedSample),fmtRate(aRich.form?.opponentAdjusted,aRich.form?.adjustedSample)]
   );
  }
+ const half=Number(result.simulation?.minutesPerPeriod||40);
+ const firstHalf=(result.simulation?.timeline||[]).filter(e=>e.type==='goal'&&Number(e.minute)<=half);
+ const ht=result.simulation?firstHalf.filter(e=>e.side==='home').length+'–'+firstHalf.filter(e=>e.side==='away').length:null;
  const attention=(result.attention||[]);
  const outcomes=[
   ['1',result.home.name,p.home],
@@ -101,14 +104,20 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
   '<small>'+escape(venueLabel(result.venue)||'Profilo non definito')+'</small></div>':'';
  const comparisonMarkup='<section class="prematch-compare"><div class="prematch-section-title"><span class="eyebrow">CONFRONTO</span><h4>Numeri delle due squadre</h4></div>'+
   '<div class="prematch-compare-head"><strong>'+escape(result.home.name)+'</strong><span></span><strong>'+escape(result.away.name)+'</strong></div>'+
-  comparisonRows.map(row=>'<div class="prematch-compare-row"><b>'+escape(row[1])+'</b><span>'+escape(row[0])+'</span><b>'+escape(row[2])+'</b></div>').join('')+'</section>';
+  comparisonRows.map(row=>{
+   const values=row.slice(1).map(v=>/^[-+]?\d+(?:[,.]\d+)?(?:%|$)/.test(v)?Number.parseFloat(v.replace(',','.')):NaN);
+   const comparable=values.every(Number.isFinite)&&values.every(v=>v>=0)&&values[0]+values[1]>0;
+   const share=comparable?Math.round(100*values[0]/(values[0]+values[1])):50;
+   return '<div class="prematch-compare-metric"><div class="prematch-compare-row"><b>'+escape(row[1])+'</b><span>'+escape(row[0])+'</span><b>'+escape(row[2])+'</b></div>'+
+    (comparable?'<div class="prematch-duel-bar" aria-hidden="true"><i style="width:'+share+'%"></i><i style="width:'+(100-share)+'%"></i></div>':'')+'</div>';
+  }).join('')+'</section>';
  const attentionMarkup='<section class="prematch-attention"><div class="prematch-section-title"><span class="eyebrow">PUNTI DI ATTENZIONE</span><h4>Pattern da tenere d’occhio</h4></div>'+
   (attention.length?'<div class="prematch-attention-grid">'+attention.map(item=>'<article class="prematch-attention-item '+escape(item.tone||'watch')+'">'+
    '<div><span>'+escape(item.club)+'</span><strong>'+escape(item.label)+'</strong></div><b>'+escape(item.value)+'</b><small>'+escape(item.detail)+'</small></article>').join('')+'</div>':
    '<p class="prematch-attention-empty">Campione ancora troppo ridotto per evidenziare pattern situazionali affidabili.</p>')+'</section>';
  return '<div class="prematch-summary">'+
   '<div class="prematch-expected"><span>RISULTATO ATTESO</span><strong>'+escape(most.home)+' <i>–</i> '+escape(most.away)+'</strong>'+
-  '<small class="prematch-score-main">Probabilità score esatto: <b>'+pct(most.probability)+'%</b></small>'+
+  '<small class="prematch-score-main">Probabilità score esatto: <b>'+pct(most.probability)+'%</b></small>'+(ht?'<small class="prematch-ht">Intervallo previsto · <b>'+escape(ht)+'</b></small>':'')+
   (scorelines.length>1?'<div class="prematch-score-alternatives">'+scorelines.slice(1,3).map(s=>'<span><b>'+escape(s.home)+'–'+escape(s.away)+'</b> '+pct(s.probability)+'%</span>').join('')+'</div>':'')+
   '</div>'+
   '<div class="prematch-ranks"><span><small>Potenziale atteso</small><b>#'+escape(result.home.potentialRank)+' '+escape(result.home.name)+'</b></span>'+
