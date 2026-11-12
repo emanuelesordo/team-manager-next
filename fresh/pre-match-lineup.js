@@ -601,6 +601,6 @@ export function renderLineupComparison(predicted,best,escape=value=>String(value
  const bestIds=new Set((best?.players||[]).map(p=>String(p.player_id)));
  const shared=[...predictedIds].filter(id=>bestIds.has(id)).length;
  const names=(p,other)=>(p?.players||[]).filter(x=>!other.has(String(x.player_id))).map(x=>escape(x.name)).join(', ')||'—';
- return '<div class="prematch-xi-comparison">'+card(predicted,'Scelta prevista del mister')+card(best,'Miglior XI secondo algoritmo')+'</div>'+
- (predicted&&best?'<section class="prematch-xi-diff"><h4>'+shared+' / 11 titolari in comune</h4><p><b>Solo nella previsione:</b> '+names(predicted,bestIds)+'</p><p><b>Solo nel miglior XI:</b> '+names(best,predictedIds)+'</p></section>':'');
+ return '<div class="prematch-xi-comparison prematch-xi-single">'+card(predicted,'Scelta prevista del mister')+'</div><details class="prematch-xi-toggle"><summary>Mostra miglior XI e confronto</summary>'+card(best,'Miglior XI secondo algoritmo')+
+ (predicted&&best?'<section class="prematch-xi-diff"><h4>'+shared+' / 11 titolari in comune</h4><p><b>Solo nella previsione:</b> '+names(predicted,bestIds)+'</p><p><b>Solo nel miglior XI:</b> '+names(best,predictedIds)+'</p></section>':'')+'</details>';
 }
