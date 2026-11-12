@@ -39,7 +39,7 @@ export async function coachFingerprint(payload){
  return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 /** Render a non-blocking advisor. The algorithmic XI always remains visible. */
-export function mountCoachAI(host,{fixture,model,data,availability,request}){
+export function mountCoachAI(host,{fixture,model,data,availability,request,onSelection=()=>{}}){
  if(!host||!fixture||!model)return;
  const old=host.querySelector('[data-coach-ai]');
  old?.remove();
@@ -52,7 +52,7 @@ export function mountCoachAI(host,{fixture,model,data,availability,request}){
  const line=panel.querySelector('[data-coach-ai-state]'),retry=panel.querySelector('[data-coach-ai-retry]');
  const evidence=buildCoachEvidence({fixture,model,data,availability});
  if(!evidence||evidence.history.length<3){
-  line.textContent='Storico insufficiente: servono almeno 3 partite con titolari e disponibili registrati. Le 9 formazioni statistiche restano consultabili.';
+  line.textContent='Storico insufficiente: servono almeno 3 partite con titolari e disponibili registrati. Il confronto algoritmico resta disponibile.';
   return;
  }
  if(!evidence.proposals.length){line.textContent='Nessun undici completo disponibile per la previsione AI.';return}
@@ -60,18 +60,12 @@ export function mountCoachAI(host,{fixture,model,data,availability,request}){
  const renderResult=result=>{
   const proposal=evidence.proposals.find(p=>p.id===String(result.selectedId));
   if(!proposal){line.textContent='Risposta Gemini non compatibile con le proposte attuali.';retry.hidden=false;return}
-  const number=Number(proposal.id);
-  line.innerHTML='<b>'+escape(proposal.formation)+' · proposta '+escape(number)+'</b> · confidenza '+escape(result.confidence||'bassa')+
+  const selected=(model.proposals||[]).find(p=>String(p.rank)===proposal.id);
+  if(!selected)return;
+  onSelection(selected,result);
+  line.innerHTML='<b>'+escape(proposal.formation)+'</b> · confidenza '+escape(result.confidence||'bassa')+
    '<p>'+escape(result.reason||'')+'</p>'+
-   (result.signals?.length?'<small>'+result.signals.map(escape).join(' · ')+'</small>':'')+
-   '<p><button type="button" class="soft-btn" data-coach-ai-show>Mostra la formazione prevista</button></p>';
-  line.querySelector('[data-coach-ai-show]')?.addEventListener('click',()=>{
-   // Module and variant buttons already own the carousel state and simulation.
-   const selected=(model.proposals||[]).find(p=>String(p.rank)===proposal.id);
-   if(!selected)return;
-   host.querySelector('[data-prematch-module="'+selected.moduleIndex+'"]')?.click();
-   host.querySelector('[data-prematch-variant="'+selected.variantIndex+'"]')?.click();
-  });
+   (result.signals?.length?'<small>'+result.signals.map(escape).join(' · ')+'</small>':'');
   retry.hidden=true;
  };
  const run=async(force=false)=>{
