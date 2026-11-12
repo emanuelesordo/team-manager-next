@@ -1649,22 +1649,30 @@ function setupPrematchStory(root){
  root.querySelector('[data-story-prev]')?.addEventListener('click',()=>go(current()-1));
  root.querySelector('[data-story-next]')?.addEventListener('click',()=>go(current()+1));
  dots.forEach((b,i)=>b.addEventListener('click',()=>go(i)));
- // A swipe beyond either end returns to the opposite end, matching arrow loop.
- let startX=null,startY=null,startIndex=0;
+ // Require a deliberate horizontal gesture; keep vertical page scrolling native.
+ let startX=null,startY=null,startIndex=0,horizontal=false;
  track.addEventListener('touchstart',event=>{
-  if(event.target.closest('[data-prematch-lineup-carousel]')){startX=null;return}
-  startX=event.changedTouches?.[0]?.clientX??null;startY=event.changedTouches?.[0]?.clientY??null;startIndex=current();
+  if(event.touches.length!==1||event.target.closest('[data-prematch-lineup-carousel],input,select,textarea')){startX=null;return}
+  startX=event.touches[0].clientX;startY=event.touches[0].clientY;startIndex=current();horizontal=false;
  },{passive:true});
+ track.addEventListener('touchmove',event=>{
+  if(startX===null||event.touches.length!==1)return;
+  const dx=event.touches[0].clientX-startX,dy=event.touches[0].clientY-startY;
+  if(!horizontal&&Math.abs(dy)>12&&Math.abs(dy)>=Math.abs(dx)){startX=null;return}
+  if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.5)horizontal=true;
+  if(horizontal&&event.cancelable)event.preventDefault();
+ },{passive:false});
  track.addEventListener('touchend',event=>{
   if(startX===null)return;
-  const delta=(event.changedTouches?.[0]?.clientX??startX)-startX;
-  const vertical=(event.changedTouches?.[0]?.clientY??startY)-startY;
+  const dx=(event.changedTouches?.[0]?.clientX??startX)-startX;
+  const dy=(event.changedTouches?.[0]?.clientY??startY)-startY;
+  const threshold=Math.max(65,track.clientWidth*.22);
   startX=null;startY=null;
-  if(Math.abs(delta)<35||Math.abs(delta)<=Math.abs(vertical))return;
-  if(startIndex===0&&delta>0)go(slides.length-1);
-  else if(startIndex===slides.length-1&&delta<0)go(0);
+  if(horizontal&&Math.abs(dx)>=threshold&&Math.abs(dx)>Math.abs(dy)*1.5)go(startIndex+(dx<0?1:-1));
+  else if(horizontal)go(startIndex);
+  horizontal=false;
  },{passive:true});
- track.addEventListener('touchcancel',()=>{startX=null;startY=null},{passive:true});
+ track.addEventListener('touchcancel',()=>{startX=null;startY=null;horizontal=false},{passive:true});
  // Keep native snapping; update the layout once the swipe settles, not mid-gesture.
  let settleTimer;
  track.addEventListener('scroll',()=>{clearTimeout(settleTimer);settleTimer=setTimeout(update,100)},{passive:true});
