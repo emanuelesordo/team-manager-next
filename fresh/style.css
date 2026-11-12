@@ -1732,3 +1732,11 @@ body[data-page="competitions"] .comp-rounds .fixture-clubs strong{flex:0 1 auto}
 .prematch-story-slide{align-self:flex-start;height:auto;min-height:0;max-height:none;display:flow-root}
 .prematch-story-track{overflow-y:hidden;box-sizing:border-box}
 @media(max-width:760px){.prematch-xi-comparison{grid-template-columns:minmax(0,1fr)}}
+
+/* Predicted match: restrained event accents */
+.prematch-simulation-event.prematch-event-goal{border-inline-start:3px solid #c6a45e;background:rgba(198,164,94,.08);padding-inline-start:8px;border-radius:6px}
+.prematch-event-goal .prematch-simulation-partial{font-weight:750;color:inherit}
+.prematch-event-substitution .prematch-simulation-type{opacity:.78}
+.prematch-change-names{display:flex!important;flex-wrap:wrap;gap:4px 12px}
+.prematch-change-in{color:#459b73;font-weight:600}.prematch-change-out{color:#c17b79;font-weight:600}
+[data-prematch-prediction] [hidden]{display:none!important}
