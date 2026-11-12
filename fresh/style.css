@@ -1685,3 +1685,27 @@ body[data-page="competitions"] .comp-rounds .fixture-clubs strong{flex:0 1 auto}
  body[data-page="competitions"] .comp-stand .standing-table .standing-team{font-size:9px}
  body[data-page="competitions"] .comp-stand .standing-table .standing-team .crest{width:17px;height:17px;min-width:17px;max-width:17px;flex-basis:17px}
 }
+
+
+/* Match story: compact editorial infographics, scoped to the five overview slides. */
+.prematch-story .prematch-expected{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 16%,var(--surface)),var(--surface));border:1px solid var(--border);border-radius:18px;padding:18px 12px;text-align:center}
+.prematch-story .prematch-expected>strong{font-size:clamp(38px,8vw,64px);line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.05em}
+.prematch-story .prematch-ht{display:block;margin:8px auto 0;font-size:12px;color:var(--muted)}
+.prematch-story .prematch-probabilities{gap:9px}
+.prematch-story .prematch-probability>i{height:7px;border-radius:99px;overflow:hidden}
+.prematch-story .prematch-compare-metric{padding:8px 0;border-bottom:1px solid var(--border)}
+.prematch-story .prematch-compare-metric .prematch-compare-row{border:0;padding:3px 0;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr) minmax(0,1fr)}
+.prematch-story .prematch-compare-row>b{font-variant-numeric:tabular-nums;font-size:13px}
+.prematch-duel-bar{display:flex;height:5px;gap:3px;margin:5px 0 2px;overflow:hidden;border-radius:99px;background:var(--border)}
+.prematch-duel-bar>i{display:block;background:var(--accent);border-radius:99px}
+.prematch-duel-bar>i+ i{background:#6498c8}
+.prematch-story .prematch-attention-item{border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:12px;background:color-mix(in srgb,var(--surface) 90%,var(--accent))}
+.prematch-story [data-opponent-notes],.prematch-story .prematch-narrative{margin-top:14px;padding:12px;border:1px solid var(--border);border-radius:12px;line-height:1.5}
+.prematch-story .prematch-lineup-panel{border-radius:16px}
+.prematch-story .prematch-lineup-field{border-radius:12px;overflow:hidden}
+.prematch-story .prematch-simulation-events{position:relative}
+.prematch-story .prematch-simulation-event{border-bottom:1px solid var(--border);padding-block:10px}
+.prematch-story .prematch-simulation-partial{padding:4px 7px;border-radius:8px;background:color-mix(in srgb,var(--accent) 18%,var(--surface))}
+.prematch-story [data-ai-timeline] ol{padding-left:20px;line-height:1.5}
+.prematch-story [data-ai-timeline] li{padding:7px 0;border-bottom:1px solid var(--border)}
+.prematch-story .prematch-narrative[hidden]{display:none}
