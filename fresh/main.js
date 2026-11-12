@@ -1311,6 +1311,8 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  }
  const output=panel.querySelector('[data-ai-result]');
  const showFailure=message=>{
+  const simulation=host.closest('[data-prematch-story]')?.querySelector('[data-story-simulation]');
+  if(simulation?.__unifiedScenario){simulation.__renderUnified?.({...simulation.__unifiedScenario,label:'Timeline statistica · Gemini non disponibile'});const retry=document.createElement('button');retry.type='button';retry.className='soft-btn';retry.textContent='Riprova integrazione AI';retry.onclick=()=>mountPrematchAI(fixture,prediction,proposal,true);simulation.prepend(retry)}
   const temporary=/\b503\b|high demand|temporar|sovraccaric|unavailable/i.test(String(message));
   output.innerHTML='<p style="margin:0 0 10px">'+(temporary
    ?'Gemini temporaneamente sovraccarico. Nessun nuovo pronostico è stato salvato.'
@@ -1410,14 +1412,15 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   if(scenario){
    const steps=Array.isArray(report.scenario)?report.scenario:[];
    const goals=scenario.events.filter(e=>e.type==='goal');
-   const aiGoals=steps.filter(e=>/^(gol|goal|rete)(\\b|$)/i.test(String(e.kind||''))).sort((a,b)=>Number(a.minute)-Number(b.minute));
-   const compatible=aiGoals.length===goals.length&&goals.every((e,i)=>e.side===aiGoals[i].side);
-   const merged={...scenario,events:scenario.events.map(e=>{
+   const aiGoals=steps.filter(e=>/^(gol|goal|rete)(\b|$)/i.test(String(e.kind||''))).sort((a,b)=>Number(a.minute)-Number(b.minute));
+   const compatible=aiGoals.length===goals.length&&goals.every((e,i)=>e.side===aiGoals[i].side&&Number(e.minute)===Number(aiGoals[i].minute)&&String(aiGoals[i].reason||'').trim());
+   const merged={...scenario,label:compatible?'Timeline integrata · Gemini + statistiche':'Timeline statistica · integrazione AI non disponibile',events:scenario.events.map(e=>{
     if(e.type!=='goal'||!compatible)return e;
     const i=goals.indexOf(e),ai=aiGoals[i];
     return {...e,aiReason:String(ai.reason||'')};
    })};
    simulation.__renderUnified?.(merged);
+   if(!compatible){const warning=document.createElement('p');warning.className='prematch-footnote';warning.textContent='Gemini non ha restituito una sequenza compatibile.';const retry=document.createElement('button');retry.type='button';retry.className='soft-btn';retry.textContent='Riprova integrazione AI';retry.onclick=()=>mountPrematchAI(fixture,prediction,proposal,true);simulation.prepend(warning,retry)}
    const expected=host.querySelector('.prematch-expected');
    const half=scenario.events.filter(e=>e.type==='goal'&&e.minute<=scenario.duration/2);
    if(expected){const label=expected.querySelector('span');if(label)label.textContent='RISULTATO ATTESO · MODELLO INTEGRATO';const scoreNode=expected.querySelector('strong');if(scoreNode)scoreNode.textContent=scenario.score;let ht=expected.querySelector('.prematch-ht');if(!ht){ht=document.createElement('small');ht.className='prematch-ht';expected.append(ht)}ht.textContent='Intervallo previsto · '+half.filter(e=>e.side==='home').length+'–'+half.filter(e=>e.side==='away').length;}
@@ -1427,7 +1430,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   markPrematchOrigin(root?.querySelector('[data-prematch-lineup]'),'stats');
   root?.querySelector('[data-ai-scenario]')?.remove();
  };
- const fingerprint=aiSportsFingerprint(fixture)+'-unified-'+(unified?JSON.stringify(unified.events.map(e=>[e.minute,e.type,e.side,e.player_id,e.partial])).split('').reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261)>>>0:'base'),id=String(fixture.id);
+ const fingerprint=aiSportsFingerprint(fixture)+'-unified-validated-'+(unified?JSON.stringify(unified.events.map(e=>[e.minute,e.type,e.side,e.player_id,e.partial])).split('').reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261)>>>0:'base'),id=String(fixture.id);
  const memo=aiMemo.get(id);
  if(!forceRetry&&memo?.fingerprint===fingerprint&&memo.forecast){renderAI(memo);return}
  if(aiPending.has(id)){
@@ -1450,7 +1453,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  const job=(async()=>{
   try{
    const saved=await prematchAIReport(id,'read');
-   if(saved?.fingerprint===fingerprint&&saved.forecast){
+   if(!forceRetry&&saved?.fingerprint===fingerprint&&saved.forecast){
     aiMemo.set(id,{...saved,fingerprint});return;
    }
    // Only an actual change in finished results, confirmed timeline events or
@@ -1469,7 +1472,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
  })();
  aiPending.set(id,job);
  job.finally(()=>{if(aiPending.get(id)===job)aiPending.delete(id);
-  if(panel.isConnected){const current=aiMemo.get(id);if(current?.forecast)renderAI(current);}
+  if(panel.isConnected){const current=aiMemo.get(id);if(current?.forecast&&current.fingerprint===fingerprint)renderAI(current);}
  });
 }
 async function hydrateMatchPrediction(){
@@ -1517,7 +1520,7 @@ async function hydrateMatchPrediction(){
    current.dataset.ready=signature;
    const story=current.closest('[data-prematch-story]');arrangePrematchStory(story);setupPrematchStory(story);
    // Every fixture, including opponents' matches, uses the same overview and cached AI forecast.
-   mountPrematchAI(f,result);
+   // Wait for the final simulation before requesting Gemini.
   }
   const lineupTarget=document.querySelector('[data-prematch-lineup="'+CSS.escape(f.id)+'"]');
   if(lineupTarget){
