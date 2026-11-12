@@ -1374,6 +1374,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
   const root=host.closest('[data-prematch-story]');
   const focus=root?.querySelector('[data-story-focus]');
   const attention=focus?.querySelector('.prematch-attention');
+  if(focus&&notes){focus.querySelector('[data-opponent-notes]')?.remove();focus.append(notes)}
   const crestFor=side=>{
    const home=side==='home';
    const name=home?fixture.home_team:fixture.away_team;
@@ -1400,7 +1401,7 @@ function mountPrematchAI(fixture,prediction,proposal=null,forceRetry=false){
    if(observed&&!observed.dataset.originMarked){observed.dataset.originMarked='true';observed.querySelectorAll('.prematch-attention-item strong').forEach(x=>x.insertAdjacentHTML('afterbegin','📊 '))}
    attention.hidden=false;
   }
-  const narrative=focus?.querySelector('.prematch-narrative');
+  const narrative=root?.querySelector('[data-story-simulation] .prematch-narrative');
   if(narrative){
    const steps=(report.scenario||[]).slice().sort((a,b)=>Number(a.minute)-Number(b.minute));
    const paragraphs=steps.map(e=>'<p><b>'+E(e.minute)+' min · '+E(e.side==='home'?fixture.home_team:fixture.away_team)+'</b> — '+E(e.reason||e.kind)+'</p>').join('');
@@ -1674,7 +1675,9 @@ function arrangePrematchStory(root){
  if(!forecast||!numbers||!focus)return;
  const comparison=forecast.querySelector('.prematch-compare'),attention=forecast.querySelector('.prematch-attention'),narrative=forecast.querySelector('.prematch-narrative');
  if(comparison)numbers.replaceChildren(comparison);else numbers.textContent='Confronto non disponibile.';
- if(attention){focus.replaceChildren(attention);if(narrative)focus.append(narrative)}else focus.textContent='Focus non disponibile.';
+ if(attention){focus.replaceChildren(attention)}else focus.textContent='Focus non disponibile.';
+ const simulation=root.querySelector('[data-story-simulation]');
+ if(simulation&&narrative){simulation.querySelector('.prematch-narrative')?.remove();simulation.append(narrative)}
 }
 
 // Capture scroll completion to keep carousel arrows aligned with touch/trackpad swipes.
