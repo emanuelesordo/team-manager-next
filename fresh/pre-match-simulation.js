@@ -270,11 +270,12 @@ export function renderSimulatedTimeline(model,escape=x=>String(x??'')){
  if(!model)return '<p>Simulazione non disponibile.</p>';
  const head='<div class="prematch-simulation-head"><div><strong>'+escape(model.homeName)+' '+escape(model.score)+' '+escape(model.awayName)+'</strong>'+
   '<small>'+escape(model.label)+'</small></div><button type="button" data-simulation-export class="prematch-export-btn">Genera immagine 9:16</button></div>';
- const rows=timelinePresentationEvents(model.events).map(e=>'<li class="prematch-simulation-event">'+
+ const rows=timelinePresentationEvents(model.events).map(e=>'<li class="prematch-simulation-event prematch-event-'+escape(e.type)+'">'+
   '<span class="prematch-simulation-minute">'+e.minute+'′</span>'+
   '<span class="prematch-simulation-type">'+simulationEventIcon(e.type)+'<small>'+(e.type==='goal'?'GOL':e.type==='substitution'?'CAMBIO':'FASE')+'</small></span>'+
   '<div><strong>'+escape(e.changes?.length>1?e.changes.length+' cambi · '+(e.session==='HT'?'Intervallo':'Sessione '+e.session):e.label)+'</strong>'+
   (e.changes?.length>1?e.changes.map(c=>'<small>'+escape(c.label)+'</small>').join(''):'')+
+  (e.type==='substitution'&&(e.playerIn||e.playerOut)?'<small class="prematch-change-names">'+(e.playerIn?'<span class="prematch-change-in">↑ '+escape(e.playerIn)+'</span>':'')+(e.playerOut?'<span class="prematch-change-out">↓ '+escape(e.playerOut)+'</span>':'')+'</small>':'')+
   (e.type==='goal'&&e.assistman?'<small>Assist: '+escape(e.assistman)+'</small>':'')+
   (e.type==='goal'?'<small>'+escape(e.method)+' · '+escape(e.dynamics)+'</small>':e.changes?.length>1?'':'<small>'+escape(e.basis)+'</small>')+
   (e.aiReason?'<small class="prematch-ai-event-reason">'+escape(e.aiReason)+'</small>':'')+
