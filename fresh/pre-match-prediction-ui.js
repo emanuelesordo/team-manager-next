@@ -102,15 +102,22 @@ export function renderPreMatchPrediction(result,escape=value=>String(value??''))
  }).join('');
  const field=result.venue?'<div class="prematch-field-profile"><span>CAMPO</span><strong>'+escape(result.venue.name||'Campo partita')+'</strong>'+
   '<small>'+escape(venueLabel(result.venue)||'Profilo non definito')+'</small></div>':'';
- const comparisonMarkup='<section class="prematch-compare"><div class="prematch-section-title"><span class="eyebrow">CONFRONTO</span><h4>Numeri delle due squadre</h4></div>'+
-  '<div class="prematch-compare-head"><strong>'+escape(result.home.name)+'</strong><span></span><strong>'+escape(result.away.name)+'</strong></div>'+
-  comparisonRows.map(row=>{
+ const renderGroup=(label,rows,open=false)=>rows.length?'<details class="prematch-stat-group"'+(open?' open':'')+'><summary>'+escape(label)+'</summary>'+rows.map(row=>{
    const values=row.slice(1).map(v=>/^[-+]?\d+(?:[,.]\d+)?(?:%|$)/.test(v)?Number.parseFloat(v.replace(',','.')):NaN);
    const comparable=values.every(Number.isFinite)&&values.every(v=>v>=0)&&values[0]+values[1]>0;
    const share=comparable?Math.round(100*values[0]/(values[0]+values[1])):50;
    return '<div class="prematch-compare-metric"><div class="prematch-compare-row"><b>'+escape(row[1])+'</b><span>'+escape(row[0])+'</span><b>'+escape(row[2])+'</b></div>'+
     (comparable?'<div class="prematch-duel-bar" aria-hidden="true"><i style="width:'+share+'%"></i><i style="width:'+(100-share)+'%"></i></div>':'')+'</div>';
-  }).join('')+'</section>';
+  }).join('')+'</details>':'';
+ const comparisonMarkup='<section class="prematch-compare"><div class="prematch-section-title"><span class="eyebrow">CONFRONTO</span><h4>Numeri delle due squadre</h4></div>'+
+  '<div class="prematch-compare-head"><strong>'+escape(result.home.name)+'</strong><span></span><strong>'+escape(result.away.name)+'</strong></div>'+
+  renderGroup('Generale',comparisonRows.slice(0,5),true)+
+  renderGroup('Situazionale',[
+   ['Recupera lo svantaggio',fmtRate(homeSitu.recoveryRate,homeSitu.trailed),fmtRate(awaySitu.recoveryRate,awaySitu.trailed)],
+   ['Mantiene il vantaggio',fmtRate(homeSitu.leadHoldRate,homeSitu.led),fmtRate(awaySitu.leadHoldRate,awaySitu.led)],
+   ...comparisonRows.slice(7,10)
+  ])+renderGroup('Temporale',comparisonRows.slice(5,7))+
+  renderGroup('Avversari',comparisonRows.slice(10))+'</section>';
  const attentionMarkup='<section class="prematch-attention"><div class="prematch-section-title"><span class="eyebrow">PUNTI DI ATTENZIONE</span><h4>Pattern da tenere d’occhio</h4></div>'+
   (attention.length?'<div class="prematch-attention-grid">'+attention.map(item=>'<article class="prematch-attention-item '+escape(item.tone||'watch')+'">'+
    '<div><span>'+escape(item.club)+'</span><strong>'+escape(item.label)+'</strong></div><b>'+escape(item.value)+'</b><small>'+escape(item.detail)+'</small></article>').join('')+'</div>':
