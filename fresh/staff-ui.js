@@ -525,14 +525,18 @@ export function assignLineupShirts(roster,data,match){
  for(const n of new Set(pending.map(x=>x.saved).filter(n=>n!==null))){
   const group=pending.filter(x=>x.saved===n).sort(priority(n));result.set(group[0].id,n);used.add(n);
  }
- let remaining=pending.filter(x=>!result.has(x.id));
- while(remaining.length){
-  const claims=new Map();
-  for(const x of remaining){const n=x.choices.find(n=>!used.has(n));if(n===undefined)continue;const g=claims.get(n)||[];g.push(x);claims.set(n,g)}
-  if(!claims.size)break;
-  for(const [n,g] of claims){g.sort(priority(n));result.set(g[0].id,n);used.add(n)}
-  remaining=remaining.filter(x=>!result.has(x.id));
+ const queue=pending.filter(x=>!result.has(x.id)).map(x=>({...x,index:0}));
+ const claims=new Map();
+ while(queue.length){
+  const x=queue.shift();
+  while(x.index<x.choices.length&&used.has(x.choices[x.index]))x.index++;
+  if(x.index>=x.choices.length)continue;
+  const n=x.choices[x.index++], incumbent=claims.get(n);
+  if(!incumbent||priority(n)(x,incumbent)<0){claims.set(n,x);if(incumbent)queue.push(incumbent)}
+  else queue.push(x);
  }
+ for(const [n,x] of claims){result.set(x.id,n);used.add(n)}
+ const remaining=pending.filter(x=>!result.has(x.id));
  for(const x of remaining){const n=Array.from({length:99},(_,i)=>i+1).find(n=>!used.has(n));if(n!==undefined){result.set(x.id,n);used.add(n)}}
  return result;
 }
