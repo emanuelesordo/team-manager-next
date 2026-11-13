@@ -501,6 +501,42 @@ function matchCallups(ctx,m){
  '<section class="callup-list"><h3>Indisponibili <span data-callup-count="absent"></span></h3><div data-callup-list="absent"></div></section>'+
  '</div><div class="callup-store" data-callup-store>'+rows+'</div><p class="staff-help" role="status">Salvataggio automatico a ogni modifica.</p></form></section>';
 }
+export function assignLineupShirts(roster,data,match){
+ const valid=v=>Number.isInteger(Number(v))&&Number(v)>=1&&Number(v)<=99;
+ const prior=new Set((data.matches||[]).filter(m=>m.id!==match.id&&m.status==='finished'&&Date.parse(m.kickoff_at)<Date.parse(match.kickoff_at)).map(m=>String(m.id)));
+ const history=new Map(),seen=new Set();
+ for(const r of data.priorSelections||[]){
+  if(!prior.has(String(r.match_id))||!valid(r.shirt_number)||!(Number(r.minutes_played)>0||r.started))continue;
+  const id=String(r.player_id),n=Number(r.shirt_number),k=JSON.stringify([id,r.match_id,n]);
+  if(seen.has(k))continue;seen.add(k);
+  if(!history.has(id))history.set(id,new Map());
+  const h=history.get(id),v=h.get(n)||{n,minutes:0,games:0};
+  v.minutes+=Math.max(0,Number(r.minutes_played)||0);v.games++;h.set(n,v);
+ }
+ const result=new Map(),used=new Set();
+ const compare=(a,b)=>b.minutes-a.minutes||b.games-a.games;
+ const pending=roster.map(x=>{
+  const id=String(x.player_id),h=history.get(id)||new Map();
+  const saved=valid(x.saved?.shirt_number)?Number(x.saved.shirt_number):null;
+  const ranked=[...h.values()].sort((a,b)=>compare(a,b)||a.n-b.n);
+  return {id,h,saved,choices:[...new Set([...ranked.map(v=>v.n),...[x.shirt_number,x.person?.shirt_number].filter(valid).map(Number)])]};
+ });
+ const priority=n=>(a,b)=>compare(a.h.get(n)||{minutes:0,games:0},b.h.get(n)||{minutes:0,games:0})||a.id.localeCompare(b.id);
+ for(const n of new Set(pending.map(x=>x.saved).filter(n=>n!==null))){
+  const group=pending.filter(x=>x.saved===n).sort(priority(n));result.set(group[0].id,n);used.add(n);
+ }
+ let remaining=pending.filter(x=>!result.has(x.id));
+ while(remaining.length){
+  const claims=new Map();
+  for(const x of remaining){const n=x.choices.find(n=>!used.has(n));if(n===undefined)continue;const g=claims.get(n)||[];g.push(x);claims.set(n,g)}
+  if(!claims.size)break;
+  for(const [n,g] of claims){g.sort(priority(n));result.set(g[0].id,n);used.add(n)}
+  remaining=remaining.filter(x=>!result.has(x.id));
+ }
+ for(const x of remaining){const n=Array.from({length:99},(_,i)=>i+1).find(n=>!used.has(n));if(n!==undefined){result.set(x.id,n);used.add(n)}}
+ return result;
+}
+
 export function matchLineup(ctx,m){
  const data=ctx.state.data||{},players=data.players||[],current=ctx.state.matchData?.players||[];
  const roster=(data.roster||[]).map(x=>({...x,person:players.find(p=>p.id===x.player_id)}))
@@ -519,11 +555,12 @@ export function matchLineup(ctx,m){
    competitionLinks:data.competitionLinks||[]});
   return {...x,saved,availability};
  }).filter(x=>x.availability.status!=='absent');
- const fields=lineupRoster.map(x=>{
+ const assigned=assignLineupShirts(lineupRoster,data,m);
+ const fields=lineupRoster.slice().sort((a,b)=>(assigned.get(String(a.player_id))??100)-(assigned.get(String(b.player_id))??100)).map(x=>{
   const old=x.saved;
   // In Formazione every convocato not in the XI is a bench player, never a generic "available".
   const status=old?.selection_status==='starter'?'starter':'bench';
-  const shirt=old?.shirt_number??(data.habitual||[]).find(h=>h.player_id===x.player_id)?.shirt_number??x.shirt_number??x.person?.shirt_number??'';
+  const shirt=assigned.get(String(x.player_id))??'';
   const stat=(data.playerStats||[]).find(p=>p.player_id===x.player_id||p.id===x.player_id);
   const avg=stat?.avg_rating??stat?.rating_average??null;
   const rating=avg!==null&&Number.isFinite(Number(avg))?Number(avg).toFixed(1).replace('.',','):'—';
